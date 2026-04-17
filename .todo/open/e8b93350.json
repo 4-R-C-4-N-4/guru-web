@@ -7,5 +7,14 @@
     "type": "agent"
   },
   "created_at": "2026-04-17T19:43:01.014Z",
-  "updated_at": "2026-04-17T19:43:01.014Z"
+  "updated_at": "2026-04-17T19:43:41.958Z",
+  "relationships": {
+    "children": [
+      "ae5b9f1d",
+      "70d71c0f",
+      "53a51958",
+      "6d027500",
+      "25b3f893"
+    ]
+  }
 }
