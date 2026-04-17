@@ -1,0 +1,22 @@
+{
+  "id": "f9f54546",
+  "type": "chore",
+  "state": "done",
+  "summary": "Test: sign-up flow creates users row, protected routes accessible, sign-out redirects",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:20.219Z",
+  "updated_at": "2026-04-17T15:39:47.566Z",
+  "relationships": {
+    "parent": "55f8b35d"
+  },
+  "resolution": {
+    "commit": "dbc8d316546b51ce446f7f2e75c0c9059e8958bd",
+    "resolved_at": "2026-04-17T15:39:47.566Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/auth.test.ts",
+    "test_function": "POST /api/webhooks/clerk",
+    "note": "28 tests total passing. Webhook: user.created INSERT, user.updated email UPDATE, user.deleted soft-delete, no-op if not found, 400 no email, 500 missing secret. svix mocked via class syntax."
+  }
+}
