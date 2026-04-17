@@ -1,0 +1,22 @@
+{
+  "id": "953591d0",
+  "type": "feature",
+  "state": "open",
+  "summary": "Phase 1: Foundation — scaffold project, database, design tokens",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:03.779Z",
+  "updated_at": "2026-04-17T13:55:03.999Z",
+  "relationships": {
+    "children": [
+      "c5c0760e",
+      "daadbb84",
+      "caa77d62",
+      "e04fd0a8",
+      "3cab9e7e",
+      "dfb2d237",
+      "a04f25aa"
+    ]
+  }
+}

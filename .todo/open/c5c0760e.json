@@ -1,0 +1,14 @@
+{
+  "id": "c5c0760e",
+  "type": "chore",
+  "state": "open",
+  "summary": "Scaffold Next.js project with TypeScript, Tailwind, ESLint, App Router",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:03.811Z",
+  "updated_at": "2026-04-17T13:55:03.811Z",
+  "relationships": {
+    "parent": "953591d0"
+  }
+}
