@@ -1,0 +1,14 @@
+{
+  "id": "25537656",
+  "type": "chore",
+  "state": "open",
+  "summary": "Chat page: empty state with sample prompts, input bar, streaming message rendering",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.705Z",
+  "updated_at": "2026-04-17T13:55:37.705Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "4eb7c500",
+  "type": "chore",
+  "state": "open",
+  "summary": "Mobile responsive pass on all pages: hamburger nav, stacked layouts, 44px touch targets",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.883Z",
+  "updated_at": "2026-04-17T13:55:37.883Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "c2a8d51d",
+  "type": "chore",
+  "state": "open",
+  "summary": "Account page: plan cards (Free/Pro), usage bar, account details, billing actions",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.850Z",
+  "updated_at": "2026-04-17T13:55:37.850Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  }
+}

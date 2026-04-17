@@ -1,0 +1,14 @@
+{
+  "id": "a7e964c4",
+  "type": "chore",
+  "state": "open",
+  "summary": "Landing page (public): hero, tradition badges, sample query preview with citations",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.662Z",
+  "updated_at": "2026-04-17T13:55:37.662Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  }
+}

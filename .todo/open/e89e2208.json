@@ -1,0 +1,14 @@
+{
+  "id": "e89e2208",
+  "type": "chore",
+  "state": "open",
+  "summary": "Root layout: Clerk provider, next/font Google fonts (Cormorant Garamond + IBM Plex Mono), NavBar component",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.624Z",
+  "updated_at": "2026-04-17T13:55:37.624Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  }
+}
