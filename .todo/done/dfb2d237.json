@@ -1,0 +1,20 @@
+{
+  "id": "dfb2d237",
+  "type": "chore",
+  "state": "done",
+  "summary": "Load sample corpus data (2-3 traditions, ~50 chunks) via scripts/seed-dev.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:03.969Z",
+  "updated_at": "2026-04-17T14:58:47.865Z",
+  "relationships": {
+    "parent": "953591d0"
+  },
+  "resolution": {
+    "commit": "66ddeb26ea7695274d4fbe6b4b26ca56474948e6",
+    "resolved_at": "2026-04-17T14:58:47.865Z",
+    "resolved_by": "unknown",
+    "note": "scripts/seed-dev.ts seeds 3 traditions (Gnosticism, Hermeticism, Vedanta), 5 texts, 12 chunks with zeroed 768-dim embeddings, 4 concepts, 8 edges. Transactional, ON CONFLICT DO NOTHING. npm run seed-dev wired."
+  }
+}

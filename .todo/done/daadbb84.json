@@ -1,0 +1,20 @@
+{
+  "id": "daadbb84",
+  "type": "chore",
+  "state": "done",
+  "summary": "Set up lib/db.ts with Postgres connection pool and query helpers",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:03.842Z",
+  "updated_at": "2026-04-17T14:56:15.080Z",
+  "relationships": {
+    "parent": "953591d0"
+  },
+  "resolution": {
+    "commit": "590f36a167bcacceb8d1b2e927488cc147a32136",
+    "resolved_at": "2026-04-17T14:56:15.080Z",
+    "resolved_by": "unknown",
+    "note": "Pool configured with DATABASE_URL, ssl=false in dev, max=10. query<T>, one<T>, exec helpers exported. type-check clean."
+  }
+}

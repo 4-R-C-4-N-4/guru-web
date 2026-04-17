@@ -1,0 +1,20 @@
+{
+  "id": "3cab9e7e",
+  "type": "chore",
+  "state": "done",
+  "summary": "Create scripts/migrate.ts to run SQL migrations against DATABASE_URL",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:03.938Z",
+  "updated_at": "2026-04-17T14:57:35.740Z",
+  "relationships": {
+    "parent": "953591d0"
+  },
+  "resolution": {
+    "commit": "cbf8fbe1b42b266b8d7f8bcb551c3a0429fb1190",
+    "resolved_at": "2026-04-17T14:57:35.740Z",
+    "resolved_by": "unknown",
+    "note": "scripts/migrate.ts reads migrations/*.sql in sort order, runs each against DATABASE_URL. Idempotent. npm run migrate wired via tsx."
+  }
+}

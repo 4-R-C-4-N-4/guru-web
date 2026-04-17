@@ -1,0 +1,63 @@
+/* src/app/globals.css */
+/* Guru design system — base resets, fonts, scrollbar, selection */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #0a0a0f;
+  color: #d4cfc4;
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: #c4a35a44;
+  color: #d4cfc4;
+}
+
+/* Thin scrollbar on desktop */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a34;
+  border-radius: 3px;
+}
+
+/* Hide scrollbar on mobile */
+@media (max-width: 640px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+input::placeholder {
+  color: #5a5650;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 0.6; transform: scale(1.1); }
+}
