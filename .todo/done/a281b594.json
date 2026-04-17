@@ -1,0 +1,20 @@
+{
+  "id": "a281b594",
+  "type": "chore",
+  "state": "done",
+  "summary": "History page: session list with tradition badges, query count, date",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.783Z",
+  "updated_at": "2026-04-17T16:37:12.514Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  },
+  "resolution": {
+    "commit": "946608176584976c54d0146264217224ac160c9d",
+    "resolved_at": "2026-04-17T16:37:12.514Z",
+    "resolved_by": "unknown",
+    "note": "Fetches /api/sessions?limit=50, renders list with title, date, session id prefix. Empty state with CTA. Click navigates to /chat/[id]."
+  }
+}
