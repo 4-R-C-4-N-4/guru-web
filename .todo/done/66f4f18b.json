@@ -1,0 +1,26 @@
+{
+  "id": "66f4f18b",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase 4: API Routes — query endpoint, sessions, preferences, quota enforcement",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:27.969Z",
+  "updated_at": "2026-04-17T16:23:34.245Z",
+  "relationships": {
+    "children": [
+      "4114e6de",
+      "0ba74a27",
+      "c4af25fb",
+      "746c3039",
+      "0a66488a"
+    ]
+  },
+  "resolution": {
+    "commit": "0947a9b4b915eec88df07f6aaa9de89f3a5a1cf2",
+    "resolved_at": "2026-04-17T16:23:34.245Z",
+    "resolved_by": "unknown",
+    "note": "Phase 4 complete: POST /api/query (stream+persist), GET+POST /api/sessions, GET /api/sessions/[id], GET+PUT /api/preferences, GET /api/quota, lib/prefs.ts, lib/quota.ts. 45 unit tests green."
+  }
+}
