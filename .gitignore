@@ -44,3 +44,6 @@ yarn-error.log*
 *.tsbuildinfo
 # next-env.d.ts is auto-generated and should be committed
 # next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/
