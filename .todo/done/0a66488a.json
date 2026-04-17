@@ -1,0 +1,22 @@
+{
+  "id": "0a66488a",
+  "type": "chore",
+  "state": "done",
+  "summary": "Test: end-to-end query flow (auth -> quota -> retrieve -> prompt -> stream -> persist)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.161Z",
+  "updated_at": "2026-04-17T16:23:28.619Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  },
+  "resolution": {
+    "commit": "66eac005ad22b9d52931bc116265d091fdd274e9",
+    "resolved_at": "2026-04-17T16:23:28.619Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "POST /api/query",
+    "note": "11 API route unit tests: sessions list/create/get, preferences get/put/invalid, query 429/400/stream. All mocked. 45 tests total green."
+  }
+}
