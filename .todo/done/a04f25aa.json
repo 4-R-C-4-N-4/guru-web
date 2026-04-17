@@ -1,0 +1,20 @@
+{
+  "id": "a04f25aa",
+  "type": "chore",
+  "state": "done",
+  "summary": "Set up styles/tokens.ts design tokens and globals.css (fonts, scrollbar, resets)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:03.999Z",
+  "updated_at": "2026-04-17T15:04:31.516Z",
+  "relationships": {
+    "parent": "953591d0"
+  },
+  "resolution": {
+    "commit": "fdd81cee83f80939dcabc52517fbd91dd40a0c58",
+    "resolved_at": "2026-04-17T15:04:31.516Z",
+    "resolved_by": "unknown",
+    "note": "src/styles/tokens.ts: bg/text/border/tradition/tier/font token maps as const, Tradition and Tier types exported. globals.css: Google Fonts import, Tailwind v4, box-sizing reset, thin scrollbar, selection, pulse keyframe."
+  }
+}
