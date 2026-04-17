@@ -1,0 +1,20 @@
+{
+  "id": "b7b97496",
+  "type": "chore",
+  "state": "done",
+  "summary": "Wire account page upgrade button to /api/checkout and redirect to Stripe hosted checkout",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:44.257Z",
+  "updated_at": "2026-04-17T18:07:24.741Z",
+  "relationships": {
+    "parent": "3ab60d3d"
+  },
+  "resolution": {
+    "commit": "8317c1c237116e4ff91171c47ebf3cb0724e70cc",
+    "resolved_at": "2026-04-17T18:07:24.741Z",
+    "resolved_by": "unknown",
+    "note": "Account page upgrade button already wired: handleUpgrade() calls POST /api/checkout, receives {url}, redirects to Stripe Checkout. On return ?success=true in URL."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "7e719c3c",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement POST /api/checkout — create Stripe checkout session for Pro upgrade",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:44.191Z",
+  "updated_at": "2026-04-17T18:05:12.949Z",
+  "relationships": {
+    "parent": "3ab60d3d"
+  },
+  "resolution": {
+    "commit": "c75740b99887ddece83f9e4d05a9ad9808ac48be",
+    "resolved_at": "2026-04-17T18:05:12.949Z",
+    "resolved_by": "unknown",
+    "note": "POST /api/checkout: requireUser, create Stripe Checkout Session (subscription mode, Pro price), return {url}. Reuses existing stripe_customer_id if available."
+  }
+}

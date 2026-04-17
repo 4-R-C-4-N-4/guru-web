@@ -1,0 +1,26 @@
+{
+  "id": "432180c3",
+  "type": "chore",
+  "state": "done",
+  "summary": "Configure Stripe product and Pro price (monthly, USD) in Stripe dashboard",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:44.160Z",
+  "updated_at": "2026-04-17T17:57:58.976Z",
+  "relationships": {
+    "parent": "3ab60d3d"
+  },
+  "work": {
+    "branch": "todo/3ab60d3d",
+    "base_branch": "main",
+    "started_at": "2026-04-17T17:53:54.472Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "dfd1b0f3b4694f8935f698ba19f27739dba666ca",
+    "resolved_at": "2026-04-17T17:57:58.976Z",
+    "resolved_by": "unknown",
+    "note": "Stripe product config documented in docs/stripe-setup.md. Pro plan: 2/mo recurring. Webhook events: checkout.session.completed, customer.subscription.updated/deleted. Local dev via stripe CLI documented."
+  }
+}
