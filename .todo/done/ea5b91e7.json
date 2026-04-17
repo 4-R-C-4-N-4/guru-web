@@ -1,0 +1,20 @@
+{
+  "id": "ea5b91e7",
+  "type": "chore",
+  "state": "done",
+  "summary": "Build sign-in and sign-up pages using Clerk hosted components",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:20.150Z",
+  "updated_at": "2026-04-17T15:37:59.730Z",
+  "relationships": {
+    "parent": "55f8b35d"
+  },
+  "resolution": {
+    "commit": "2ba27873be3549e7e396133db10450411d466e8f",
+    "resolved_at": "2026-04-17T15:37:59.730Z",
+    "resolved_by": "unknown",
+    "note": "sign-in/[[...sign-in]]/page.tsx and sign-up/[[...sign-up]]/page.tsx with Clerk SignIn/SignUp components centered on dark bg. Root layout wrapped with ClerkProvider. Metadata updated."
+  }
+}
