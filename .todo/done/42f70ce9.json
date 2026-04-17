@@ -1,0 +1,20 @@
+{
+  "id": "42f70ce9",
+  "type": "chore",
+  "state": "done",
+  "summary": "Settings page: corpus scope panel with expandable tradition/text toggle tree",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.813Z",
+  "updated_at": "2026-04-17T16:38:07.240Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  },
+  "resolution": {
+    "commit": "ec1946ca2c88db6c83a9222123cc064e95c6fb3f",
+    "resolved_at": "2026-04-17T16:38:07.240Z",
+    "resolved_by": "unknown",
+    "note": "9 traditions with expandable text lists, checkboxes, tradition count badge. Loads prefs on mount, saves as blacklist on Save. Reset restores defaults. Saving/Saved feedback states."
+  }
+}
