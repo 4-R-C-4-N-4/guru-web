@@ -1,2 +1,62 @@
-# guru-web
-I am the utterance of my name.
+# guru-web — TypeScript / Next.js front-end for the Guru esoteric research platform.
+
+## Local development
+
+### 1. Start Postgres with pgvector
+
+```bash
+docker compose up -d
+```
+
+This starts `pgvector/pgvector:pg16` on port 5432 with:
+- DB: `guru`
+- User: `guru`
+- Password: `guru_dev`
+
+### 2. Copy and fill in environment variables
+
+```bash
+cp .env.example .env.local
+# edit .env.local — set DATABASE_URL, OPENROUTER_API_KEY, Clerk keys, Stripe keys
+```
+
+The default `DATABASE_URL` for local dev:
+```
+DATABASE_URL=postgresql://guru:guru_dev@localhost:5432/guru
+```
+
+### 3. Run migrations
+
+```bash
+npm run migrate
+```
+
+### 4. Seed sample corpus data
+
+```bash
+npm run seed-dev
+```
+
+### 5. Start the dev server
+
+```bash
+npm run dev
+# → http://localhost:3000
+```
+
+## Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server (Turbopack) |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npm run type-check` | TypeScript check |
+| `npm run migrate` | Run SQL migrations |
+| `npm run seed-dev` | Load sample corpus data |
+
+## Integration contract
+
+This repo consumes a Postgres database populated by `guru-pipeline` (Python).
+The pipeline produces `guru-corpus.sql.gz` — load it into the same Postgres instance.
+The TypeScript app never writes to corpus tables (`chunks`, `traditions`, `texts`, `concepts`, `edges`).
