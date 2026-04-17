@@ -1,0 +1,14 @@
+{
+  "id": "0ba74a27",
+  "type": "chore",
+  "state": "open",
+  "summary": "Implement GET+POST /api/sessions and GET /api/sessions/[id] — session CRUD",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.047Z",
+  "updated_at": "2026-04-17T13:55:28.047Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  }
+}

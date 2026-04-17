@@ -1,0 +1,14 @@
+{
+  "id": "0a66488a",
+  "type": "chore",
+  "state": "open",
+  "summary": "Test: end-to-end query flow (auth -> quota -> retrieve -> prompt -> stream -> persist)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.161Z",
+  "updated_at": "2026-04-17T13:55:28.161Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  }
+}
