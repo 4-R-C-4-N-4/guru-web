@@ -1,0 +1,20 @@
+{
+  "id": "0ba74a27",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement GET+POST /api/sessions and GET /api/sessions/[id] — session CRUD",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.047Z",
+  "updated_at": "2026-04-17T16:21:19.522Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  },
+  "resolution": {
+    "commit": "c1a0e5cbc135740c84bfa4275ccce57f88d512f2",
+    "resolved_at": "2026-04-17T16:21:19.522Z",
+    "resolved_by": "unknown",
+    "note": "GET /api/sessions: paginated list (limit/offset), total count. POST /api/sessions: create with optional title, returns 201. GET /api/sessions/[id]: session + ordered messages, 404 if not owned by user."
+  }
+}
