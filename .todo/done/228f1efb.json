@@ -1,0 +1,20 @@
+{
+  "id": "228f1efb",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/retriever.ts — vector search, graph walk, merge/rerank with diversity boost",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.208Z",
+  "updated_at": "2026-04-17T15:08:47.214Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  },
+  "resolution": {
+    "commit": "b9d8ee43d5b1cdfc0d9a950f5e2a9897f03de76d",
+    "resolved_at": "2026-04-17T15:08:47.214Z",
+    "resolved_by": "unknown",
+    "note": "retrieve() runs vectorSearch+graphSearch in parallel. mergeAndRerank: dedup by id (vector wins), scores = distanceScore * tierWeight * diversityBoost, sliced to topK."
+  }
+}
