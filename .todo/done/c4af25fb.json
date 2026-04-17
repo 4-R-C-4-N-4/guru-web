@@ -1,0 +1,20 @@
+{
+  "id": "c4af25fb",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement GET+PUT /api/preferences — load and save user tradition scope",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.083Z",
+  "updated_at": "2026-04-17T16:21:44.801Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  },
+  "resolution": {
+    "commit": "bcc5a03a64fd0f22d5db201b3d6c45c3ec100c39",
+    "resolved_at": "2026-04-17T16:21:44.801Z",
+    "resolved_by": "unknown",
+    "note": "GET returns current prefs (defaults if none). PUT validates scopeMode, merges partial body over existing prefs, upserts via savePreferences. Returns updated prefs."
+  }
+}

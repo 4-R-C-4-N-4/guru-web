@@ -1,0 +1,26 @@
+{
+  "id": "4114e6de",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement POST /api/query — streaming LLM response with retrieve, prompt, persist",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.012Z",
+  "updated_at": "2026-04-17T16:20:45.529Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  },
+  "work": {
+    "branch": "todo/66f4f18b",
+    "base_branch": "main",
+    "started_at": "2026-04-17T16:19:44.764Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "dda68a24de39cfe8c514e84acab073482d9a9655",
+    "resolved_at": "2026-04-17T16:20:45.529Z",
+    "resolved_by": "unknown",
+    "note": "POST /api/query: requireUser->checkAndIncrement->loadPreferences->retrieve->buildPrompt->completeStream. Streams text/plain with X-Quota headers. Persists to queries table after stream. lib/prefs.ts and lib/quota.ts written alongside."
+  }
+}

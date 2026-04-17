@@ -1,0 +1,22 @@
+{
+  "id": "746c3039",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/quota.ts and wire quota enforcement into POST /api/query (429 on limit)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:28.115Z",
+  "updated_at": "2026-04-17T16:22:33.609Z",
+  "relationships": {
+    "parent": "66f4f18b"
+  },
+  "resolution": {
+    "commit": "6d16a75d1710ee55600c60e277a025d3efae271f",
+    "resolved_at": "2026-04-17T16:22:33.609Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/quota.test.ts",
+    "test_function": "checkAndIncrement",
+    "note": "lib/quota.ts: atomic upsert, free=30/pro=500 limits, null row treated as 1. GET /api/quota for frontend usage bar. 34 tests total passing."
+  }
+}
