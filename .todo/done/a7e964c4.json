@@ -1,0 +1,20 @@
+{
+  "id": "a7e964c4",
+  "type": "chore",
+  "state": "done",
+  "summary": "Landing page (public): hero, tradition badges, sample query preview with citations",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.662Z",
+  "updated_at": "2026-04-17T16:35:24.393Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  },
+  "resolution": {
+    "commit": "ce234c3cecc81c6354672bc6319f5e97071c1873",
+    "resolved_at": "2026-04-17T16:35:24.393Z",
+    "resolved_by": "unknown",
+    "note": "src/app/page.tsx: radial glow bg, grid, GURU hero, tradition badge pills, tagline, Begin/Sign In CTAs, sample query preview with Citations. src/components/citation.tsx: tradition-colored left border, tier symbols, optional quote."
+  }
+}

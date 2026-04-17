@@ -1,0 +1,20 @@
+{
+  "id": "8ba6a714",
+  "type": "chore",
+  "state": "done",
+  "summary": "Citation component: tradition-colored left border, tier symbols (verified/proposed/inferred)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.752Z",
+  "updated_at": "2026-04-17T16:36:40.001Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  },
+  "resolution": {
+    "commit": "110d84856cb5dd6bb61bb648ef3b033a03a5db9f",
+    "resolved_at": "2026-04-17T16:36:40.001Z",
+    "resolved_by": "unknown",
+    "note": "src/components/citation.tsx already shipped with a7e964c4. Tradition-colored left border, tier symbol (◆/◇/○), tier color, optional italic quote. useIsMobile for responsive padding."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "c2a8d51d",
+  "type": "chore",
+  "state": "done",
+  "summary": "Account page: plan cards (Free/Pro), usage bar, account details, billing actions",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:37.850Z",
+  "updated_at": "2026-04-17T16:38:53.987Z",
+  "relationships": {
+    "parent": "a0ab46cf"
+  },
+  "resolution": {
+    "commit": "9598e562524a7831d079e4df494d47bae5455493",
+    "resolved_at": "2026-04-17T16:38:53.987Z",
+    "resolved_by": "unknown",
+    "note": "Free/Pro plan cards, active tier highlighted. Usage bar animates from /api/quota. Account details: email, memberSince, tier from Clerk user. Upgrade calls /api/checkout -> Stripe redirect."
+  }
+}
