@@ -5,7 +5,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
-import { estimateTokens } from '@/lib/budget';
 import type { RetrievedChunk, UserPreferences } from '@/lib/types';
 
 const DEFAULT_PREFS: UserPreferences = {

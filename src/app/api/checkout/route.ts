@@ -8,7 +8,6 @@
 
 import Stripe from 'stripe';
 import { requireUser } from '@/lib/auth';
-import { exec } from '@/lib/db';
 
 export const runtime = 'nodejs';
 

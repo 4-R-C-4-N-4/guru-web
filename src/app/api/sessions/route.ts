@@ -6,7 +6,7 @@
  */
 
 import { requireUser } from '@/lib/auth';
-import { query, one, exec } from '@/lib/db';
+import { query, one } from '@/lib/db';
 import type { Session } from '@/lib/types';
 
 export async function GET(req: Request) {

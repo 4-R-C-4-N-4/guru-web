@@ -30,7 +30,7 @@ vi.mock('next/headers', () => ({
 }));
 
 vi.mock('stripe', () => {
-  function Stripe(_key: string, _config?: Record<string, unknown>) {
+  function Stripe() {
     return {
       webhooks: { constructEvent: mockConstructEvent },
       checkout:  { sessions: { create: vi.fn() } },
