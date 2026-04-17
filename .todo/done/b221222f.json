@@ -1,0 +1,20 @@
+{
+  "id": "b221222f",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement /api/webhooks/clerk — user lifecycle events creating users row on sign-up",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:20.186Z",
+  "updated_at": "2026-04-17T15:38:40.336Z",
+  "relationships": {
+    "parent": "55f8b35d"
+  },
+  "resolution": {
+    "commit": "48ce332b5e0612a8b026b0207c7b765368e7d476",
+    "resolved_at": "2026-04-17T15:38:40.336Z",
+    "resolved_by": "unknown",
+    "note": "svix Webhook.verify() against CLERK_WEBHOOK_SECRET. user.created: INSERT users ON CONFLICT DO NOTHING. user.updated: UPDATE email. user.deleted: soft delete (deleted_at=now()). 400 on bad sig, 500 on DB error."
+  }
+}

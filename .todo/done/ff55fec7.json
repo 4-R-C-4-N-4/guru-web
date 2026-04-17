@@ -1,0 +1,20 @@
+{
+  "id": "ff55fec7",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/auth.ts — requireUser() and requireTier() helpers",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:20.102Z",
+  "updated_at": "2026-04-17T15:37:21.479Z",
+  "relationships": {
+    "parent": "55f8b35d"
+  },
+  "resolution": {
+    "commit": "379b2f0836eb1a09748dc21dec3c675305981a34",
+    "resolved_at": "2026-04-17T15:37:21.479Z",
+    "resolved_by": "unknown",
+    "note": "requireUser(): auth() -> userId -> DB lookup -> User | 401 Response. requireTier(pro): wraps requireUser, checks tier -> 403 if mismatch. getClerkUser(): currentUser() for email sync. Pattern: caller checks instanceof Response."
+  }
+}

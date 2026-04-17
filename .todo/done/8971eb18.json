@@ -1,0 +1,26 @@
+{
+  "id": "8971eb18",
+  "type": "chore",
+  "state": "done",
+  "summary": "Configure Clerk dev application with Google and GitHub social providers",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:20.022Z",
+  "updated_at": "2026-04-17T15:35:30.405Z",
+  "relationships": {
+    "parent": "55f8b35d"
+  },
+  "work": {
+    "branch": "todo/55f8b35d",
+    "base_branch": "main",
+    "started_at": "2026-04-17T15:35:04.035Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "e17f03a3be0d3daad765ebeaf4b205d55f6dbd21",
+    "resolved_at": "2026-04-17T15:35:30.405Z",
+    "resolved_by": "unknown",
+    "note": "Documented in docs/clerk-setup.md: create app at dashboard.clerk.com, enable Google+GitHub providers, configure redirect URLs (/sign-in, /sign-up, after=/chat), webhook to /api/webhooks/clerk (user.created/updated/deleted). Clerk v7 async auth() notes included."
+  }
+}

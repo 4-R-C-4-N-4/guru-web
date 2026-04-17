@@ -1,0 +1,27 @@
+{
+  "id": "55f8b35d",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase 3: Auth + User Management — Clerk integration, middleware, user lifecycle",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:19.986Z",
+  "updated_at": "2026-04-17T15:39:52.792Z",
+  "relationships": {
+    "children": [
+      "8971eb18",
+      "85371e00",
+      "ff55fec7",
+      "ea5b91e7",
+      "b221222f",
+      "f9f54546"
+    ]
+  },
+  "resolution": {
+    "commit": "857fbf0eaea4e64263df64c1f7203c847a5d3aae",
+    "resolved_at": "2026-04-17T15:39:52.792Z",
+    "resolved_by": "unknown",
+    "note": "Phase 3 complete: docs/clerk-setup.md, middleware.ts (clerkMiddleware), lib/auth.ts (requireUser/requireTier), sign-in+sign-up pages, ClerkProvider in root layout, /api/webhooks/clerk (svix verified, user lifecycle). 28 tests green."
+  }
+}
