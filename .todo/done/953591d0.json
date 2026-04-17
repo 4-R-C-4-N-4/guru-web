@@ -1,0 +1,28 @@
+{
+  "id": "953591d0",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase 1: Foundation — scaffold project, database, design tokens",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:03.779Z",
+  "updated_at": "2026-04-17T15:04:35.962Z",
+  "relationships": {
+    "children": [
+      "c5c0760e",
+      "daadbb84",
+      "caa77d62",
+      "e04fd0a8",
+      "3cab9e7e",
+      "dfb2d237",
+      "a04f25aa"
+    ]
+  },
+  "resolution": {
+    "commit": "0409f53acb4bb4afd90d2bab38e710289748f2ef",
+    "resolved_at": "2026-04-17T15:04:35.962Z",
+    "resolved_by": "unknown",
+    "note": "Phase 1 complete: Next.js 16 scaffold, lib/db.ts, migrations 001-004, docker-compose pgvector, scripts/migrate.ts, scripts/seed-dev.ts, design tokens, globals.css."
+  }
+}
