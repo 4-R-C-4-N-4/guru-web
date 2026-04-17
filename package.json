@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
-    "migrate": "tsx scripts/migrate.ts"
+    "migrate": "tsx scripts/migrate.ts",
+    "seed-dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.2.2",
