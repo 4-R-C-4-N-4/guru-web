@@ -1,0 +1,14 @@
+{
+  "id": "27330855",
+  "type": "chore",
+  "state": "open",
+  "summary": "Run migrations on production database",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:52.942Z",
+  "updated_at": "2026-04-17T13:55:52.942Z",
+  "relationships": {
+    "parent": "e81bbb19"
+  }
+}

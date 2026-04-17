@@ -1,0 +1,14 @@
+{
+  "id": "219f10a0",
+  "type": "chore",
+  "state": "open",
+  "summary": "Set up Vercel project, connect GitHub repo, configure auto-deploy on push to main",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:52.842Z",
+  "updated_at": "2026-04-17T13:55:52.842Z",
+  "relationships": {
+    "parent": "e81bbb19"
+  }
+}
