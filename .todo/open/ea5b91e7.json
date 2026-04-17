@@ -1,0 +1,14 @@
+{
+  "id": "ea5b91e7",
+  "type": "chore",
+  "state": "open",
+  "summary": "Build sign-in and sign-up pages using Clerk hosted components",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:20.150Z",
+  "updated_at": "2026-04-17T13:55:20.150Z",
+  "relationships": {
+    "parent": "55f8b35d"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "55f8b35d",
+  "type": "feature",
+  "state": "open",
+  "summary": "Phase 3: Auth + User Management — Clerk integration, middleware, user lifecycle",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:19.986Z",
+  "updated_at": "2026-04-17T13:55:20.219Z",
+  "relationships": {
+    "children": [
+      "8971eb18",
+      "85371e00",
+      "ff55fec7",
+      "ea5b91e7",
+      "b221222f",
+      "f9f54546"
+    ]
+  }
+}
