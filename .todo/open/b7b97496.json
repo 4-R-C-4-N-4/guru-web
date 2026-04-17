@@ -1,0 +1,14 @@
+{
+  "id": "b7b97496",
+  "type": "chore",
+  "state": "open",
+  "summary": "Wire account page upgrade button to /api/checkout and redirect to Stripe hosted checkout",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:44.257Z",
+  "updated_at": "2026-04-17T13:55:44.257Z",
+  "relationships": {
+    "parent": "3ab60d3d"
+  }
+}

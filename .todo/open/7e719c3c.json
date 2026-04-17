@@ -1,0 +1,14 @@
+{
+  "id": "7e719c3c",
+  "type": "chore",
+  "state": "open",
+  "summary": "Implement POST /api/checkout — create Stripe checkout session for Pro upgrade",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:44.191Z",
+  "updated_at": "2026-04-17T13:55:44.191Z",
+  "relationships": {
+    "parent": "3ab60d3d"
+  }
+}
