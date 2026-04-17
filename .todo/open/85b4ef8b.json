@@ -1,0 +1,23 @@
+{
+  "id": "85b4ef8b",
+  "type": "feature",
+  "state": "open",
+  "summary": "Phase 2: Retrieval Engine — embed, vector+graph retrieval, prompt pipeline",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:11.106Z",
+  "updated_at": "2026-04-17T13:55:11.371Z",
+  "relationships": {
+    "children": [
+      "de5666ff",
+      "734bef8a",
+      "228f1efb",
+      "1b2d8965",
+      "1fb1ba50",
+      "d06ae55b",
+      "10b87d58",
+      "ba08be88"
+    ]
+  }
+}

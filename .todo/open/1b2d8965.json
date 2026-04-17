@@ -1,0 +1,14 @@
+{
+  "id": "1b2d8965",
+  "type": "chore",
+  "state": "open",
+  "summary": "Implement lib/budget.ts — TokenBudget for context window management",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.240Z",
+  "updated_at": "2026-04-17T13:55:11.240Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  }
+}
