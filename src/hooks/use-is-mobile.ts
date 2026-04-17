@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 
 export function useIsMobile(breakpoint = 640): boolean {
-  const [mobile, setMobile] = useState(false);
+  const query = `(max-width: ${breakpoint}px)`;
 
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
-    setMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [breakpoint]);
+  const subscribe = (callback: () => void) => {
+    const mq = window.matchMedia(query);
+    mq.addEventListener('change', callback);
+    return () => mq.removeEventListener('change', callback);
+  };
 
-  return mobile;
+  const getSnapshot = () => window.matchMedia(query).matches;
+
+  // Server snapshot: return false (desktop-first)
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }

@@ -1,0 +1,23 @@
+{
+  "id": "779f2223",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add GitHub Actions CI workflow: lint, type-check, test on push/PR",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T20:01:28.444Z",
+  "updated_at": "2026-04-17T20:09:31.469Z",
+  "work": {
+    "branch": "todo/779f2223",
+    "base_branch": "main",
+    "started_at": "2026-04-17T20:01:49.462Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "75f8db406cbaa835c9f79279863edbb22fb40bbc",
+    "resolved_at": "2026-04-17T20:09:31.469Z",
+    "resolved_by": "unknown",
+    "note": ".github/workflows/ci.yml: Node 22, npm ci, lint, type-check, test on push/PR to main. Fixed all lint errors: useSyncExternalStore in useIsMobile, removed unused imports, excluded docs/ from eslint."
+  }
+}
