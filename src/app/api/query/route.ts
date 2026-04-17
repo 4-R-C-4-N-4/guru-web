@@ -19,7 +19,7 @@ import { buildPrompt } from '@/lib/prompt';
 import { completeStream, MODELS } from '@/lib/model';
 import { checkAndIncrement } from '@/lib/quota';
 import { loadPreferences } from '@/lib/prefs';
-import { exec } from '@/lib/db';
+import { one, exec } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -43,7 +43,12 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  // 3. Quota check
+  // 3. Retrieve + build prompt (before quota consumption)
+  const prefs = await loadPreferences(user.id);
+  const chunks = await retrieve(queryText, prefs);
+  const prompt = buildPrompt(queryText, chunks, prefs, user.tier);
+
+  // 4. Quota check (after retrieval succeeds — failed queries shouldn't consume quota)
   const quota = await checkAndIncrement(user.id, user.tier);
   if (!quota.allowed) {
     return Response.json(
@@ -52,15 +57,11 @@ export async function POST(req: Request) {
     );
   }
 
-  // 4. Load prefs + retrieve + build prompt
-  const prefs = await loadPreferences(user.id);
-  const chunks = await retrieve(queryText, prefs);
-  const prompt = buildPrompt(queryText, chunks, prefs, user.tier);
-
   // 5. Stream
   const stream = await completeStream(prompt, user.tier);
 
   let fullResponse = '';
+  let streamError: Error | null = null;
 
   const readable = new ReadableStream({
     async start(controller) {
@@ -72,27 +73,25 @@ export async function POST(req: Request) {
             controller.enqueue(new TextEncoder().encode(text));
           }
         }
+      } catch (err) {
+        streamError = err instanceof Error ? err : new Error(String(err));
+        console.error('[api/query] stream error:', streamError);
       } finally {
         controller.close();
       }
 
-      // 6. Persist after stream closes — fire and forget inside the ReadableStream
-      // so the HTTP response isn't delayed.
+      // 6. Persist after stream closes — save partial response on error
       const model = MODELS[user.tier];
       try {
         if (!sessionId) {
           // Auto-create a session if none provided
-          const sessionRow = await exec(
+          const sessionRow = await one<{ id: string }>(
             `INSERT INTO sessions (user_id, title, created_at, updated_at)
              VALUES ($1, $2, now(), now())
              RETURNING id`,
             [user.id, queryText.slice(0, 80)]
           );
-          // exec() returns void — re-fetch the new id via a SELECT in the same upsert
-          // pattern; simpler to use db.one here but we only have exec imported.
-          // We'll leave sessionId null in the query record (nullable FK not ideal;
-          // caller should always supply sessionId in production).
-          void sessionRow;
+          if (sessionRow) sessionId = sessionRow.id;
         }
 
         await exec(
@@ -123,6 +122,7 @@ export async function POST(req: Request) {
       'Content-Type': 'text/plain; charset=utf-8',
       'X-Quota-Used':  String(quota.used),
       'X-Quota-Limit': String(quota.limit),
+      ...(streamError ? { 'X-Stream-Error': 'truncated' } : {}),
     },
   });
 }

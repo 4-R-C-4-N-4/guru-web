@@ -1,0 +1,22 @@
+{
+  "id": "6d027500",
+  "type": "bug",
+  "state": "done",
+  "summary": "Fix landing page mobile overflow: 600px glow div, 72px font, 80px grid cells — add responsive fallbacks",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T19:43:41.912Z",
+  "updated_at": "2026-04-17T19:57:42.713Z",
+  "relationships": {
+    "parent": "e8b93350"
+  },
+  "resolution": {
+    "commit": "3d193e69e0f6cbf5b1f3dbdc3c7d5ac30fdf35f7",
+    "resolved_at": "2026-04-17T19:57:42.713Z",
+    "resolved_by": "unknown",
+    "test_file": "src/app/page.tsx",
+    "test_function": "LandingPage",
+    "note": "Converted to client component, useIsMobile hook. Glow 300/600px, font 48/72, grid 40/80px cells, buttons stacked on mobile."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "e8b93350",
+  "type": "bug",
+  "state": "done",
+  "summary": "Fix query route bugs: session auto-creation, persist-on-error, quota-before-retrieval",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T19:43:01.014Z",
+  "updated_at": "2026-04-17T20:00:51.019Z",
+  "relationships": {
+    "children": [
+      "ae5b9f1d",
+      "70d71c0f",
+      "53a51958",
+      "6d027500",
+      "25b3f893"
+    ]
+  },
+  "resolution": {
+    "commit": "b7efaff678d79597f0dde3261de85010b46fce25",
+    "resolved_at": "2026-04-17T20:00:51.019Z",
+    "resolved_by": "unknown",
+    "note": "5 bugfixes: session auto-creation (one() not exec()), persist partial on stream errors, quota after retrieval, landing page mobile, LIKE wildcard sanitisation."
+  }
+}

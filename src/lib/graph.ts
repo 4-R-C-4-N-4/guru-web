@@ -16,6 +16,7 @@ import type { RetrievedChunk, UserPreferences } from './types';
 export async function extractConcepts(queryText: string): Promise<string[]> {
   const words = queryText
     .toLowerCase()
+    .replace(/[%_]/g, '')       // strip LIKE wildcards before matching
     .split(/\s+/)
     .filter(w => w.length > 2); // skip short stop-words
 

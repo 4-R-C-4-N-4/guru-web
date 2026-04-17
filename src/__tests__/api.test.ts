@@ -186,6 +186,9 @@ describe('POST /api/query', () => {
 
   it('returns 429 when quota exceeded', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('prompt');
     mockQuota.mockResolvedValueOnce({ allowed: false, used: 31, limit: 30 });
 
     const res = await queryPOST(req('POST', '/api/query', { query: 'test', sessionId: 's1' }));
