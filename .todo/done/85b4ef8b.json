@@ -1,0 +1,29 @@
+{
+  "id": "85b4ef8b",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase 2: Retrieval Engine — embed, vector+graph retrieval, prompt pipeline",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-17T13:55:11.106Z",
+  "updated_at": "2026-04-17T15:13:00.383Z",
+  "relationships": {
+    "children": [
+      "de5666ff",
+      "734bef8a",
+      "228f1efb",
+      "1b2d8965",
+      "1fb1ba50",
+      "d06ae55b",
+      "10b87d58",
+      "ba08be88"
+    ]
+  },
+  "resolution": {
+    "commit": "781e8439eaacf0f81165d10d11b6b38f13b23e58",
+    "resolved_at": "2026-04-17T15:13:00.383Z",
+    "resolved_by": "unknown",
+    "note": "Phase 2 complete: embed.ts, graph.ts (extractConcepts+walkGraph+buildScopeFilter), retriever.ts (parallel hybrid+rerank), budget.ts (TokenBudget), compress.ts (extractive), prompt.ts (SYSTEM_PROMPT+buildPrompt), model.ts (OpenRouter free/pro). 22 unit tests green."
+  }
+}

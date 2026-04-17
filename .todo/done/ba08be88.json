@@ -1,0 +1,22 @@
+{
+  "id": "ba08be88",
+  "type": "chore",
+  "state": "done",
+  "summary": "Write retrieval tests: golden queries against sample corpus, verify citation accuracy",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.371Z",
+  "updated_at": "2026-04-17T15:12:55.344Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  },
+  "resolution": {
+    "commit": "9c950c66173701b4424d35f95789960a504ec0d4",
+    "resolved_at": "2026-04-17T15:12:55.344Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/budget.test.ts",
+    "test_function": "TokenBudget",
+    "note": "22 unit tests passing: budget (9), compress (6), prompt (7). 4 integration tests for golden queries (divine spark, atman brahman, scope blacklist) skip unless INTEGRATION_TEST=1."
+  }
+}

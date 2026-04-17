@@ -1,0 +1,20 @@
+{
+  "id": "10b87d58",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/model.ts — OpenRouter completion client with streaming support",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.339Z",
+  "updated_at": "2026-04-17T15:10:44.553Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  },
+  "resolution": {
+    "commit": "d8a1ae43742b9b90089f4814ae38ee5775e29076",
+    "resolved_at": "2026-04-17T15:10:44.553Z",
+    "resolved_by": "unknown",
+    "note": "complete() and completeStream() via OpenRouter. free=deepseek/deepseek-chat, pro=anthropic/claude-sonnet-4-5. Both send SYSTEM_PROMPT as system message. HTTP-Referer + X-Title headers set."
+  }
+}

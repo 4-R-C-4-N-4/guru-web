@@ -1,0 +1,26 @@
+{
+  "id": "de5666ff",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/embed.ts — query embedding via OpenRouter nomic-embed-text",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.137Z",
+  "updated_at": "2026-04-17T15:07:24.227Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  },
+  "work": {
+    "branch": "todo/85b4ef8b",
+    "base_branch": "main",
+    "started_at": "2026-04-17T15:07:08.673Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "a44a1c5e4304242fb4f07d0a881dd79319a3bd08",
+    "resolved_at": "2026-04-17T15:07:24.227Z",
+    "resolved_by": "unknown",
+    "note": "embed() calls OpenRouter nomic-ai/nomic-embed-text-v1.5, returns number[768]. Must match Python pipeline embedding model."
+  }
+}

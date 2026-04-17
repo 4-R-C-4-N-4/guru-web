@@ -1,0 +1,20 @@
+{
+  "id": "1b2d8965",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/budget.ts — TokenBudget for context window management",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.240Z",
+  "updated_at": "2026-04-17T15:09:15.739Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  },
+  "resolution": {
+    "commit": "23892847c1949be9ef576038b82aa14d2b0c59fd",
+    "resolved_at": "2026-04-17T15:09:15.739Z",
+    "resolved_by": "unknown",
+    "note": "TokenBudget: contextWindow - systemReserve - responseReserve. fitChunks() accepts chunks in rank order consuming budget. makeBudget(tier) factory: free=8192, pro=32768 tokens."
+  }
+}

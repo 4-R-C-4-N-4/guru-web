@@ -1,0 +1,20 @@
+{
+  "id": "d06ae55b",
+  "type": "chore",
+  "state": "done",
+  "summary": "Implement lib/prompt.ts — system prompt template and chunk formatting",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:11.306Z",
+  "updated_at": "2026-04-17T15:10:19.966Z",
+  "relationships": {
+    "parent": "85b4ef8b"
+  },
+  "resolution": {
+    "commit": "9013e6116d1454f100a94c57727e83e838507331",
+    "resolved_at": "2026-04-17T15:10:19.966Z",
+    "resolved_by": "unknown",
+    "note": "SYSTEM_PROMPT: scholarly cross-tradition synthesis rules + CITATIONS block format. buildPrompt: compress per-chunk to budget, fitChunks, format with tier symbol/tradition/section header, append QUERY."
+  }
+}
