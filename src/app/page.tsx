@@ -1,65 +1,119 @@
-import Image from "next/image";
+import Link from 'next/link';
+import Citation from '@/components/citation';
+import { tokens } from '@/styles/tokens';
 
-export default function Home() {
+export default function LandingPage() {
+  const traditionKeys = Object.keys(tokens.tradition) as (keyof typeof tokens.tradition)[];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{
+      minHeight: '100vh', background: tokens.bg.deep,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      position: 'relative', overflow: 'hidden',
+      padding: '40px 20px',
+    }}>
+      {/* Radial glow */}
+      <div style={{
+        position: 'absolute', width: 600, height: 600, borderRadius: '50%',
+        top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+        background: `radial-gradient(circle, ${tokens.text.accent}08 0%, transparent 70%)`,
+        filter: 'blur(60px)', pointerEvents: 'none',
+      }} />
+
+      {/* Grid */}
+      <div style={{
+        position: 'absolute', inset: 0, opacity: 0.03,
+        backgroundImage: `linear-gradient(0deg, ${tokens.text.primary} 1px, transparent 1px),
+                          linear-gradient(90deg, ${tokens.text.primary} 1px, transparent 1px)`,
+        backgroundSize: '80px 80px',
+      }} />
+
+      <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, width: '100%', maxWidth: 560 }}>
+        {/* Logo */}
+        <div style={{
+          fontFamily: tokens.font.display, fontSize: 72, fontWeight: 300,
+          color: tokens.text.accent, letterSpacing: 16, marginBottom: 8,
+        }}>GURU</div>
+
+        <div style={{
+          fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted,
+          letterSpacing: 4, marginBottom: 48, textTransform: 'uppercase',
+        }}>Cross-Tradition Esoteric Analysis</div>
+
+        {/* Tradition badges */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginBottom: 48 }}>
+          {traditionKeys.map(t => (
+            <span key={t} style={{
+              fontFamily: tokens.font.mono, fontSize: 9, color: tokens.tradition[t],
+              padding: '3px 8px', border: `1px solid ${tokens.tradition[t]}33`,
+              borderRadius: 2, textTransform: 'uppercase', letterSpacing: 1,
+            }}>{t}</span>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Tagline */}
+        <p style={{
+          fontFamily: tokens.font.display, fontSize: 18, color: tokens.text.secondary,
+          maxWidth: 480, margin: '0 auto', marginBottom: 40, lineHeight: 1.7,
+          fontStyle: 'italic',
+        }}>
+          Discover the hidden threads between Gnostic aeons, Kabbalistic sefirot,
+          Neoplatonic emanations, and Vedantic consciousness — traced to their sources,
+          every claim cited.
+        </p>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/sign-up" style={{
+            fontFamily: tokens.font.mono, fontSize: 12, padding: '12px 32px',
+            background: tokens.text.accent, color: tokens.bg.deep,
+            border: 'none', borderRadius: 2, cursor: 'pointer',
+            fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
+            textDecoration: 'none', display: 'inline-block',
+          }}>Begin</Link>
+          <Link href="/sign-in" style={{
+            fontFamily: tokens.font.mono, fontSize: 12, padding: '12px 32px',
+            background: 'none', color: tokens.text.secondary,
+            border: `1px solid ${tokens.border.medium}`, borderRadius: 2,
+            letterSpacing: 1, textDecoration: 'none', display: 'inline-block',
+          }}>Sign In</Link>
         </div>
-      </main>
+
+        {/* Sample query preview */}
+        <div style={{
+          marginTop: 64, background: tokens.bg.surface,
+          border: `1px solid ${tokens.border.subtle}`,
+          borderRadius: 4, padding: 20, textAlign: 'left',
+        }}>
+          <div style={{
+            fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted,
+            marginBottom: 10, letterSpacing: 1,
+          }}>SAMPLE QUERY</div>
+
+          <div style={{
+            fontFamily: tokens.font.display, fontSize: 15, color: tokens.text.primary,
+            marginBottom: 14, lineHeight: 1.6,
+          }}>
+            &ldquo;How does the concept of divine spark appear across traditions?&rdquo;
+          </div>
+
+          <Citation
+            tradition="Gnosticism" text="Gospel of Thomas" section="Logion 77"
+            quote="I am the light that is over all things."
+            tier="verified"
+          />
+          <Citation tradition="Vedanta" text="Chandogya Upanishad" section="6.8.7" tier="verified" />
+          <Citation tradition="Hermeticism" text="Corpus Hermeticum" section="Tractate I.6" tier="proposed" />
+
+          <div style={{
+            fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted,
+            marginTop: 10, display: 'flex', gap: 16, flexWrap: 'wrap',
+          }}>
+            <span>◆ 4 verified</span><span>◇ 2 proposed</span><span>5 traditions</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
