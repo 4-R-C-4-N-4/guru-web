@@ -8,7 +8,7 @@
 docker compose up -d
 ```
 
-This starts `pgvector/pgvector:pg16` on port 5432 with:
+This starts `pgvector/pgvector:pg17` on port 5432 with:
 - DB: `guru`
 - User: `guru`
 - Password: `guru_dev`
@@ -60,3 +60,8 @@ npm run dev
 This repo consumes a Postgres database populated by `guru-pipeline` (Python).
 The pipeline produces `guru-corpus.sql.gz` — load it into the same Postgres instance.
 The TypeScript app never writes to corpus tables (`chunks`, `traditions`, `texts`, `concepts`, `edges`).
+
+## Deployment
+
+Production runs self-hosted on a Hetzner VPS behind Caddy + Cloudflare (no Vercel).
+See `deploy/` for systemd units, Caddyfile, deploy script, and incident-response runbook.

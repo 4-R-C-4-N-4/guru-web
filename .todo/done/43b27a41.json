@@ -1,0 +1,25 @@
+{
+  "id": "43b27a41",
+  "type": "chore",
+  "state": "done",
+  "summary": "A2: docker-compose.yml — bump pgvector image to pg17, document volume wipe",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.264Z",
+  "updated_at": "2026-04-20T18:32:14.032Z",
+  "files": [
+    {
+      "path": "docker-compose.yml"
+    }
+  ],
+  "relationships": {
+    "parent": "abb6fd35"
+  },
+  "resolution": {
+    "commit": "4745b40f9ea7e83f1b98a3ce33d23b0934ca2464",
+    "resolved_at": "2026-04-20T18:32:14.032Z",
+    "resolved_by": "unknown",
+    "note": "Bumped pgvector/pgvector:pg16 → pg17 to match prod §7.4. Added comment that pg major bump requires wiping guru_pgdata volume (pg refuses to start pg16 datadir under pg17 binary)."
+  }
+}

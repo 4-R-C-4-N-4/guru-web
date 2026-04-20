@@ -1,0 +1,31 @@
+{
+  "id": "f03e676f",
+  "type": "chore",
+  "state": "done",
+  "summary": "A1: next.config.ts — set output:standalone, poweredByHeader:false, compress:false (§5.2)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.233Z",
+  "updated_at": "2026-04-20T18:31:54.213Z",
+  "files": [
+    {
+      "path": "next.config.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "abb6fd35"
+  },
+  "work": {
+    "branch": "todo/abb6fd35",
+    "base_branch": "main",
+    "started_at": "2026-04-20T18:31:35.316Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "cdf2dd6ef2b3f047fd9af29bc6a8437d9a3d6275",
+    "resolved_at": "2026-04-20T18:31:54.213Z",
+    "resolved_by": "unknown",
+    "note": "Set output=standalone (Caddy reverse-proxies to /srv/guru-web/current/server.js), poweredByHeader=false, compress=false (Caddy handles compression). Type-check passes."
+  }
+}
