@@ -1,3 +1,16 @@
+> **HISTORICAL — v1 build plan (pre-revision).**
+>
+> This document predates the post-Vercel-breach revision. It assumes Vercel
+> deployment, Google `text-embedding-005`, Postgres 16 / ivfflat, and other
+> choices that have since changed. Sections describing the data model,
+> retrieval pipeline, and route surface are still broadly accurate, but
+> infrastructure and embedding choices have moved on.
+>
+> For the current direction (self-hosted VPS, local Ollama
+> `nomic-embed-text:v1.5`, Postgres 17 / HNSW, Caddy + Cloudflare),
+> see `docs/guru-web-v2-tasks.md`. The revised proposal itself will be
+> vendored as `docs/guru-v2-proposal-revised.md` (Phase G25).
+
 # guru-web — TypeScript Build Plan
 
 ## Repository: `guru-web`
