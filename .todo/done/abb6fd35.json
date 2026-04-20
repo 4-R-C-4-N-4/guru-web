@@ -1,0 +1,26 @@
+{
+  "id": "abb6fd35",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase A: Configuration & docs drift (next.config, docker-compose pg17, README, .env, build plan)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.203Z",
+  "updated_at": "2026-04-20T18:33:56.937Z",
+  "relationships": {
+    "children": [
+      "f03e676f",
+      "43b27a41",
+      "3ee7fbed",
+      "8a93967f",
+      "09386954"
+    ]
+  },
+  "resolution": {
+    "commit": "5c0e553ecd96b8b93fcae9e004946ccbb51c0a25",
+    "resolved_at": "2026-04-20T18:33:56.937Z",
+    "resolved_by": "unknown",
+    "note": "All 5 Phase A children closed: A1 next.config.ts (output=standalone, poweredByHeader=false, compress=false), A2 docker-compose pg16→pg17, A3 README pg17 + Deployment pointer, A4 .env.example NEXT_PUBLIC_APP_URL + prod-env note, A5 build-plan v1 historical banner. Type-check clean."
+  }
+}
