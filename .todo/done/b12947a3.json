@@ -1,0 +1,25 @@
+{
+  "id": "b12947a3",
+  "type": "chore",
+  "state": "done",
+  "summary": "B6b: docker-compose.yml — add ollama service (ollama/ollama:latest, volume, port 11434) for dev bootstrap",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:56.098Z",
+  "updated_at": "2026-04-20T18:40:18.772Z",
+  "files": [
+    {
+      "path": "docker-compose.yml"
+    }
+  ],
+  "relationships": {
+    "parent": "7717ec96"
+  },
+  "resolution": {
+    "commit": "7a37500346d852f801503ed57e118b0962cb8232",
+    "resolved_at": "2026-04-20T18:40:18.772Z",
+    "resolved_by": "unknown",
+    "note": "docker-compose.yml: added ollama service (ollama/ollama:latest, port 11434, ollama_models volume, container_name guru-ollama). README dev bootstrap updated with the one-time pull command (docker exec guru-ollama ollama pull nomic-embed-text:v1.5). Pull persists across restarts."
+  }
+}
