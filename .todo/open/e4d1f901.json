@@ -1,13 +1,13 @@
 {
   "id": "e4d1f901",
   "type": "chore",
-  "state": "open",
+  "state": "active",
   "summary": "G25: vendor docs/guru-v2-proposal-revised.md into repo so it carries its own north star (referenced by A5)",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-04-20T17:30:53.552Z",
-  "updated_at": "2026-04-20T17:30:53.552Z",
+  "updated_at": "2026-04-20T23:27:46.030Z",
   "files": [
     {
       "path": "docs/guru-v2-proposal-revised.md"
@@ -15,5 +15,11 @@
   ],
   "relationships": {
     "parent": "e09915ee"
+  },
+  "work": {
+    "branch": "todo/e09915ee",
+    "base_branch": "main",
+    "started_at": "2026-04-20T23:27:46.030Z",
+    "started_by": "anonlessness"
   }
 }
