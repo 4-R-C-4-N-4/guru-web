@@ -2,16 +2,18 @@
 
 ## Local development
 
-### 1. Start Postgres with pgvector
+### 1. Start Postgres + Ollama
 
 ```bash
 docker compose up -d
+docker exec guru-ollama ollama pull nomic-embed-text:v1.5
 ```
 
-This starts `pgvector/pgvector:pg17` on port 5432 with:
-- DB: `guru`
-- User: `guru`
-- Password: `guru_dev`
+This starts:
+- `pgvector/pgvector:pg17` on port 5432 (DB `guru`, user `guru`, password `guru_dev`)
+- `ollama/ollama:latest` on port 11434 (used by `src/lib/embed.ts` for query embeddings)
+
+The model pull is one-time — it persists in the `ollama_models` volume.
 
 ### 2. Copy and fill in environment variables
 

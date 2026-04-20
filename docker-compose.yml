@@ -1,6 +1,10 @@
 # Bumping the pg major version requires wiping the volume:
 #   docker compose down && docker volume rm guru-web_guru_pgdata
 # Postgres refuses to start a pg16 datadir under a pg17 binary.
+#
+# After `docker compose up -d`, pull the embedding model once:
+#   docker exec guru-ollama ollama pull nomic-embed-text:v1.5
+# (Persists in the ollama_models volume; only re-runs after a volume wipe.)
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -13,5 +17,14 @@ services:
     volumes:
       - guru_pgdata:/var/lib/postgresql/data
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: guru-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
 volumes:
   guru_pgdata:
+  ollama_models:

@@ -1,0 +1,33 @@
+{
+  "id": "af35a47a",
+  "type": "chore",
+  "state": "done",
+  "summary": "B6: src/lib/embed.ts — replace OpenRouter client with fetch to local Ollama /api/embed (nomic-embed-text:v1.5, 768-dim)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:56.027Z",
+  "updated_at": "2026-04-20T18:39:25.003Z",
+  "files": [
+    {
+      "path": "src/lib/embed.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "7717ec96"
+  },
+  "work": {
+    "branch": "todo/7717ec96",
+    "base_branch": "main",
+    "started_at": "2026-04-20T18:38:11.276Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "e4aa32a4c1988d134f9abd82675fa86104ef5aee",
+    "resolved_at": "2026-04-20T18:39:25.003Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/embed.test.ts",
+    "test_function": "embed",
+    "note": "embed.ts now uses fetch to local Ollama /api/embed with nomic-embed-text:v1.5. Public API unchanged. Typed EmbedError for unreachable/non-200/malformed cases. 4 unit tests, full suite passes (62 passed)."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "77272cb5",
+  "type": "chore",
+  "state": "done",
+  "summary": "B6c: VPS deploy surface — install Ollama via vps-bootstrap.sh, add ollama.service systemd unit (bind 127.0.0.1:11434), add Requires/After ordering to guru-web.service, document in deploy/README.md",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:56.131Z",
+  "updated_at": "2026-04-20T18:41:21.742Z",
+  "relationships": {
+    "parent": "7717ec96"
+  },
+  "resolution": {
+    "commit": "9e1c9e1b884d25523ef1e64cde4b47462ced2056",
+    "resolved_at": "2026-04-20T18:41:21.742Z",
+    "resolved_by": "unknown",
+    "note": "Created deploy/ollama.service — Type=exec, OLLAMA_HOST=127.0.0.1:11434 (loopback only, not 0.0.0.0). Updated D11 description (add Requires/After=ollama.service), D14 (install Ollama + pull model + replace default unit), D16 (Ollama incident-response section). Phase D will pick these up when implemented."
+  }
+}
