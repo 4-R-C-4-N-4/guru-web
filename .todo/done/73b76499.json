@@ -1,0 +1,25 @@
+{
+  "id": "73b76499",
+  "type": "chore",
+  "state": "done",
+  "summary": "B6a: .env.example — add OLLAMA_URL (default http://localhost:11434), keep OPENROUTER_API_KEY for completions",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:56.060Z",
+  "updated_at": "2026-04-20T18:39:47.908Z",
+  "files": [
+    {
+      "path": ".env.example"
+    }
+  ],
+  "relationships": {
+    "parent": "7717ec96"
+  },
+  "resolution": {
+    "commit": "7a1a26941199d99de6e1ca96ca5d919ecad3272f",
+    "resolved_at": "2026-04-20T18:39:47.908Z",
+    "resolved_by": "unknown",
+    "note": "Added commented OLLAMA_URL with note that prod is always localhost (systemd-bound 127.0.0.1:11434). OPENROUTER_API_KEY kept for completions."
+  }
+}
