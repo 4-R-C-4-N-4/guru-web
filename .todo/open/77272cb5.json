@@ -1,13 +1,13 @@
 {
   "id": "77272cb5",
   "type": "chore",
-  "state": "open",
+  "state": "active",
   "summary": "B6c: VPS deploy surface — install Ollama via vps-bootstrap.sh, add ollama.service systemd unit (bind 127.0.0.1:11434), add Requires/After ordering to guru-web.service, document in deploy/README.md",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-04-20T17:29:56.131Z",
-  "updated_at": "2026-04-20T17:29:56.131Z",
+  "updated_at": "2026-04-20T18:40:22.506Z",
   "relationships": {
     "parent": "7717ec96"
   }

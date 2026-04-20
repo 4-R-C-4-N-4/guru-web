@@ -7,8 +7,9 @@
     "type": "agent"
   },
   "created_at": "2026-04-20T17:30:27.660Z",
-  "updated_at": "2026-04-20T17:30:27.660Z",
+  "updated_at": "2026-04-20T18:41:12.185Z",
   "relationships": {
     "parent": "59a6551c"
-  }
+  },
+  "description": "Incident-response playbook from §9.3. Run-at-3am doc covering:\n- Cloudflare outage → DNS flip to direct origin\n- VPS rebuild\n- Secret rotation\n\nADDITION (per B6c, commit todo:77272cb5): Ollama incident response —\nrestart (systemctl restart ollama), re-pull model (ollama pull nomic-embed-text:v1.5),\nverify port (curl 127.0.0.1:11434/api/tags). guru-web depends on Ollama for query\nembeddings; if Ollama is down, /api/query will return EmbedError."
 }
