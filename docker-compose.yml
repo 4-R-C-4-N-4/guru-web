@@ -1,6 +1,9 @@
+# Bumping the pg major version requires wiping the volume:
+#   docker compose down && docker volume rm guru-web_guru_pgdata
+# Postgres refuses to start a pg16 datadir under a pg17 binary.
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_DB: guru
       POSTGRES_USER: guru
