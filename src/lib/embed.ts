@@ -1,24 +1,57 @@
 /**
  * src/lib/embed.ts
  *
- * Query embedding via OpenRouter using nomic-ai/nomic-embed-text-v1.5.
- * Dimension: 768. Must match whatever the Python pipeline used when
- * generating corpus embeddings — dimension mismatch breaks vector search.
+ * Query embedding via local Ollama running nomic-embed-text:v1.5.
+ * Dimension: 768. MUST MATCH guru-pipeline embed_corpus.py — dimension or
+ * tokenizer drift here silently breaks retrieval (cosine distance comparing
+ * vectors from different models is meaningless).
  */
 
-import OpenAI from 'openai';
+const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
+const EMBEDDING_MODEL = 'nomic-embed-text:v1.5'; // MUST MATCH guru-pipeline embed_corpus.py
 
-const client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-  baseURL: 'https://openrouter.ai/api/v1',
-});
+export class EmbedError extends Error {
+  constructor(message: string, readonly cause?: unknown) {
+    super(message);
+    this.name = 'EmbedError';
+  }
+}
 
-const EMBEDDING_MODEL = 'nomic-ai/nomic-embed-text-v1.5';
+interface OllamaEmbedResponse {
+  embeddings: number[][];
+}
 
 export async function embed(text: string): Promise<number[]> {
-  const response = await client.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: text,
-  });
-  return response.data[0].embedding;
+  let response: Response;
+  try {
+    response = await fetch(`${OLLAMA_URL}/api/embed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
+    });
+  } catch (err) {
+    throw new EmbedError(`Ollama unreachable at ${OLLAMA_URL}`, err);
+  }
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new EmbedError(
+      `Ollama /api/embed returned ${response.status}: ${body.slice(0, 200)}`,
+    );
+  }
+
+  let json: OllamaEmbedResponse;
+  try {
+    json = (await response.json()) as OllamaEmbedResponse;
+  } catch (err) {
+    throw new EmbedError('Ollama /api/embed returned non-JSON body', err);
+  }
+
+  const vec = json.embeddings?.[0];
+  if (!Array.isArray(vec) || vec.length === 0) {
+    throw new EmbedError(
+      `Ollama /api/embed returned malformed payload (model ${EMBEDDING_MODEL} not pulled?)`,
+    );
+  }
+  return vec;
 }
