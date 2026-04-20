@@ -1,0 +1,19 @@
+{
+  "id": "8a93967f",
+  "type": "chore",
+  "state": "open",
+  "summary": "A4: .env.example — add commented NEXT_PUBLIC_APP_URL, note prod uses /etc/guru-web.env mode 0600",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.329Z",
+  "updated_at": "2026-04-20T17:29:46.329Z",
+  "files": [
+    {
+      "path": ".env.example"
+    }
+  ],
+  "relationships": {
+    "parent": "abb6fd35"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "6157e231",
+  "type": "feature",
+  "state": "open",
+  "summary": "Phase C: Schema & boot — vendor corpus-schema.sql, HNSW index, boot.ts validation (§5.1, §11 Phase 3)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:05.517Z",
+  "updated_at": "2026-04-20T17:30:15.341Z",
+  "relationships": {
+    "children": [
+      "4a2be462",
+      "ac806656",
+      "77aa7477"
+    ]
+  }
+}

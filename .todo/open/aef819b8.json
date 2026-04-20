@@ -1,13 +1,13 @@
 {
   "id": "aef819b8",
   "type": "chore",
-  "state": "open",
+  "state": "blocked",
   "summary": "Configure all production environment variables in Vercel (DATABASE_URL, keys)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-04-17T13:55:52.880Z",
-  "updated_at": "2026-04-17T13:55:52.880Z",
+  "updated_at": "2026-04-20T17:27:23.003Z",
   "relationships": {
     "parent": "e81bbb19"
   }

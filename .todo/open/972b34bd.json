@@ -1,0 +1,14 @@
+{
+  "id": "972b34bd",
+  "type": "chore",
+  "state": "open",
+  "summary": "G24: remove unused public/vercel.svg and public/next.svg (post-Vercel framing)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:53.508Z",
+  "updated_at": "2026-04-20T17:30:53.508Z",
+  "relationships": {
+    "parent": "e09915ee"
+  }
+}

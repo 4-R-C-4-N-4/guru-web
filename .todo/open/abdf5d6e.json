@@ -1,0 +1,14 @@
+{
+  "id": "abdf5d6e",
+  "type": "chore",
+  "state": "open",
+  "summary": "G23: verify Next.js streaming responses survive Caddy + Cloudflare on staging VPS before launch (no code change, manual exercise — §12 risk register)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:53.467Z",
+  "updated_at": "2026-04-20T17:30:53.467Z",
+  "relationships": {
+    "parent": "e09915ee"
+  }
+}

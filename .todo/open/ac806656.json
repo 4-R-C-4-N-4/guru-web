@@ -1,0 +1,19 @@
+{
+  "id": "ac806656",
+  "type": "chore",
+  "state": "open",
+  "summary": "C10: src/lib/boot.ts — verify corpus schema version + embedding dim on first DB touch, fail fast on mismatch (wired into DB module not layout)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:05.609Z",
+  "updated_at": "2026-04-20T17:30:05.609Z",
+  "files": [
+    {
+      "path": "src/lib/boot.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "6157e231"
+  }
+}

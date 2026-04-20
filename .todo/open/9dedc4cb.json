@@ -1,13 +1,13 @@
 {
   "id": "9dedc4cb",
   "type": "chore",
-  "state": "open",
+  "state": "blocked",
   "summary": "Load full corpus via guru-corpus.sql.gz into production Postgres",
   "source": {
     "type": "human"
   },
   "created_at": "2026-04-17T13:55:52.979Z",
-  "updated_at": "2026-04-17T13:55:52.979Z",
+  "updated_at": "2026-04-20T17:27:25.218Z",
   "relationships": {
     "parent": "e81bbb19"
   }

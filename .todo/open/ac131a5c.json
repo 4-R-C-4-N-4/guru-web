@@ -1,0 +1,17 @@
+{
+  "id": "ac131a5c",
+  "type": "chore",
+  "state": "open",
+  "summary": "E19: schema validation in CI for schema/corpus-schema.sql against pipeline export.py output (stub with TODO until pipeline exists)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:38.039Z",
+  "updated_at": "2026-04-20T17:30:38.070Z",
+  "relationships": {
+    "parent": "85822431",
+    "depends_on": [
+      "4a2be462"
+    ]
+  }
+}

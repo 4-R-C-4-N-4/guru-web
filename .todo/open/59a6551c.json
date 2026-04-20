@@ -1,0 +1,21 @@
+{
+  "id": "59a6551c",
+  "type": "feature",
+  "state": "open",
+  "summary": "Phase D: Self-hosted deploy surface — systemd, Caddy, deploy.sh, vps-bootstrap, backup, runbook (§7.4–7.8)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:27.456Z",
+  "updated_at": "2026-04-20T17:30:27.660Z",
+  "relationships": {
+    "children": [
+      "b923fc87",
+      "1d86f97d",
+      "bbe07228",
+      "91055bd6",
+      "d6ff8557",
+      "8d831555"
+    ]
+  }
+}

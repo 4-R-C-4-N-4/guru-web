@@ -1,0 +1,19 @@
+{
+  "id": "43b27a41",
+  "type": "chore",
+  "state": "open",
+  "summary": "A2: docker-compose.yml — bump pgvector image to pg17, document volume wipe",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.264Z",
+  "updated_at": "2026-04-20T17:29:46.264Z",
+  "files": [
+    {
+      "path": "docker-compose.yml"
+    }
+  ],
+  "relationships": {
+    "parent": "abb6fd35"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "8d831555",
+  "type": "chore",
+  "state": "open",
+  "summary": "D16: deploy/README.md — incident-response playbook from §9.3 (Cloudflare outage DNS flip, VPS rebuild, secret rotation, Ollama restart)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:27.660Z",
+  "updated_at": "2026-04-20T17:30:27.660Z",
+  "relationships": {
+    "parent": "59a6551c"
+  }
+}

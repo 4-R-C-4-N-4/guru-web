@@ -1,0 +1,14 @@
+{
+  "id": "686bd60f",
+  "type": "chore",
+  "state": "open",
+  "summary": "E17: .github/workflows/deploy.yml — lint→type-check→test→build→appleboy/ssh-action runs deploy.sh <sha>; secrets VPS_HOST + DEPLOY_SSH_KEY",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:37.972Z",
+  "updated_at": "2026-04-20T17:30:37.972Z",
+  "relationships": {
+    "parent": "85822431"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "1d86f97d",
+  "type": "chore",
+  "state": "open",
+  "summary": "D12: deploy/Caddyfile — reverse proxy from §7.5 (Authenticated Origin Pulls trust bundle, localhost:3000 upstream)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:27.520Z",
+  "updated_at": "2026-04-20T17:30:27.520Z",
+  "relationships": {
+    "parent": "59a6551c"
+  }
+}

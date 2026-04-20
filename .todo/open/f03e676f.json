@@ -1,0 +1,19 @@
+{
+  "id": "f03e676f",
+  "type": "chore",
+  "state": "open",
+  "summary": "A1: next.config.ts — set output:standalone, poweredByHeader:false, compress:false (§5.2)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.233Z",
+  "updated_at": "2026-04-20T17:29:46.233Z",
+  "files": [
+    {
+      "path": "next.config.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "abb6fd35"
+  }
+}

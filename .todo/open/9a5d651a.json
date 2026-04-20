@@ -1,0 +1,19 @@
+{
+  "id": "9a5d651a",
+  "type": "chore",
+  "state": "open",
+  "summary": "F21: src/lib/quota.ts — confirm increment is atomic, rewrite as single UPDATE…RETURNING in transaction if read-then-write (§8 step 4c, race = free-tier bypass)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:46.324Z",
+  "updated_at": "2026-04-20T17:30:46.324Z",
+  "files": [
+    {
+      "path": "src/lib/quota.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "2ef7cbec"
+  }
+}

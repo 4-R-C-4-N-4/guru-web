@@ -1,13 +1,13 @@
 {
   "id": "5517d9aa",
   "type": "chore",
-  "state": "open",
+  "state": "blocked",
   "summary": "Configure Stripe production keys and set webhook URL to production /api/webhooks/stripe",
   "source": {
     "type": "human"
   },
   "created_at": "2026-04-17T13:55:53.049Z",
-  "updated_at": "2026-04-17T13:55:53.049Z",
+  "updated_at": "2026-04-20T17:27:26.251Z",
   "relationships": {
     "parent": "e81bbb19"
   }

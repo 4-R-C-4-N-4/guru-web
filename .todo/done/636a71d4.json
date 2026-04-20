@@ -1,0 +1,20 @@
+{
+  "id": "636a71d4",
+  "type": "chore",
+  "state": "done",
+  "summary": "E18: .github/workflows/ci.yml — lint+type-check+test on PRs (already shipped via 779f2223 / commit 75f8db4)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:38.003Z",
+  "updated_at": "2026-04-20T17:30:38.107Z",
+  "relationships": {
+    "parent": "85822431"
+  },
+  "resolution": {
+    "commit": "75f8db406cbaa835c9f79279863edbb22fb40bbc",
+    "resolved_at": "2026-04-20T17:30:38.107Z",
+    "resolved_by": "unknown",
+    "note": "Already done via duplicate ticket 779f2223. .github/workflows/ci.yml exists with Node 22, npm ci, lint, type-check, test on push/PR."
+  }
+}

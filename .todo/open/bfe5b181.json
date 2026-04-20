@@ -1,0 +1,14 @@
+{
+  "id": "bfe5b181",
+  "type": "chore",
+  "state": "open",
+  "summary": "F22: deploy/fail2ban-sshd.local — minimal SSH jail config (vps-bootstrap installs fail2ban but no jail shipped, §7.4)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:46.358Z",
+  "updated_at": "2026-04-20T17:30:46.358Z",
+  "relationships": {
+    "parent": "2ef7cbec"
+  }
+}

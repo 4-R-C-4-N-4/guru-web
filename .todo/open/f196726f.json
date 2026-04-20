@@ -1,13 +1,13 @@
 {
   "id": "f196726f",
   "type": "chore",
-  "state": "open",
+  "state": "blocked",
   "summary": "Soft launch",
   "source": {
     "type": "human"
   },
   "created_at": "2026-04-17T13:55:53.114Z",
-  "updated_at": "2026-04-17T13:55:53.114Z",
+  "updated_at": "2026-04-20T17:27:27.605Z",
   "relationships": {
     "parent": "e81bbb19"
   }

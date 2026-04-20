@@ -1,0 +1,19 @@
+{
+  "id": "4a2be462",
+  "type": "chore",
+  "state": "open",
+  "summary": "C8: schema/corpus-schema.sql — vendor from pipeline export.py (placeholder schema/README.md noting source until pipeline exists)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:05.549Z",
+  "updated_at": "2026-04-20T17:30:05.549Z",
+  "files": [
+    {
+      "path": "schema/corpus-schema.sql"
+    }
+  ],
+  "relationships": {
+    "parent": "6157e231"
+  }
+}
