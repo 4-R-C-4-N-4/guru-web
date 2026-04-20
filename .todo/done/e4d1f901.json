@@ -1,0 +1,31 @@
+{
+  "id": "e4d1f901",
+  "type": "chore",
+  "state": "done",
+  "summary": "G25: vendor docs/guru-v2-proposal-revised.md into repo so it carries its own north star (referenced by A5)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:53.552Z",
+  "updated_at": "2026-04-20T23:30:46.858Z",
+  "files": [
+    {
+      "path": "docs/guru-v2-proposal-revised.md"
+    }
+  ],
+  "relationships": {
+    "parent": "e09915ee"
+  },
+  "work": {
+    "branch": "todo/e09915ee",
+    "base_branch": "main",
+    "started_at": "2026-04-20T23:27:46.030Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "f0cfa99e8f40cce899cf2ae5dce40969917a13b3",
+    "resolved_at": "2026-04-20T23:30:46.858Z",
+    "resolved_by": "unknown",
+    "note": "docs/guru-v2-proposal-revised.md vendored (701 lines) in user commit f0cfa99 (\"mving the doc\"). Same commit also checked in docs/guru-web-v2-tasks.md (previously untracked, referenced by all v2-alignment tickets) — net-positive extra beyond G25's strict scope. A5's forward-reference to docs/guru-v2-proposal-revised.md is now resolvable on main."
+  }
+}
