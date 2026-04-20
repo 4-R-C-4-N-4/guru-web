@@ -1,0 +1,25 @@
+{
+  "id": "3ee7fbed",
+  "type": "chore",
+  "state": "done",
+  "summary": "A3: README.md — update dev section for pg17, add Deployment pointer to deploy/",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:29:46.295Z",
+  "updated_at": "2026-04-20T18:32:44.166Z",
+  "files": [
+    {
+      "path": "README.md"
+    }
+  ],
+  "relationships": {
+    "parent": "abb6fd35"
+  },
+  "resolution": {
+    "commit": "cc8f465afe2211d422ca9d3b400b13af164db761",
+    "resolved_at": "2026-04-20T18:32:44.166Z",
+    "resolved_by": "unknown",
+    "note": "Updated dev section pg16→pg17. Added Deployment section pointing at deploy/ (will be created in Phase D)."
+  }
+}
