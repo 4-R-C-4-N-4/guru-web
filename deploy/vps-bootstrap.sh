@@ -318,6 +318,16 @@ EOF
 
     install -d -o deploy -g deploy -m 0755 /srv/guru-web
     install -d -o deploy -g deploy -m 0755 /srv/guru-web/releases
+
+    # Install deploy.sh as a fixed surface at /srv/guru-web/deploy.sh.
+    # CI invokes `./deploy.sh <sha>` from /srv/guru-web/ on each push; this
+    # script doesn't change between deploys (only when bootstrap re-runs).
+    if [[ -f "$REPO_DIR/deploy/deploy.sh" ]]; then
+        install -o deploy -g deploy -m 0755 \
+            "$REPO_DIR/deploy/deploy.sh" /srv/guru-web/deploy.sh
+    else
+        warn "deploy/deploy.sh not present yet (D13) — CI deploys will fail until installed"
+    fi
 }
 
 step_systemd_unit() {
