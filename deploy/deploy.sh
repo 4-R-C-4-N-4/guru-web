@@ -20,7 +20,7 @@ SHA="$1"
 ROOT=/srv/guru-web
 RELEASE="$ROOT/releases/$SHA"
 CURRENT="$ROOT/current"
-REPO_URL=https://github.com/anonlessness/guru-web.git   # public clone, no auth needed
+REPO_URL=https://github.com/4-R-C-4-N-4/guru-web.git   # public clone, no auth needed
 
 log() { printf '\n\033[1;34m==>\033[0m deploy.sh: %s\n' "$*"; }
 
