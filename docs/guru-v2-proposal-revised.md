@@ -275,7 +275,7 @@ Cloudflare's encryption mode is set to **Full (Strict)** and **Authenticated Ori
 ### 7.4 VPS Setup
 
 ```bash
-# On a fresh Ubuntu 24.04 Hetzner CX22
+# On a fresh Debian 13 (trixie) Hetzner CX22
 
 # System updates
 apt update && apt upgrade -y
