@@ -391,7 +391,7 @@ ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=5
 
-# Hardening
+# Hardening — note MemoryDenyWriteExecute is omitted (V8 JIT requires W+X)
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
@@ -401,7 +401,6 @@ ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictNamespaces=true
 LockPersonality=true
-MemoryDenyWriteExecute=true
 
 [Install]
 WantedBy=multi-user.target

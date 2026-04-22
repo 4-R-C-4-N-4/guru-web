@@ -14,6 +14,11 @@ Restart=on-failure
 RestartSec=5
 
 # Hardening
+# NOTE: MemoryDenyWriteExecute=true is intentionally OMITTED. V8's JIT compiler
+# requires writable+executable memory pages (mprotect with PROT_WRITE|PROT_EXEC),
+# which that directive blocks. With it set, Node panics at startup with
+# "Check failed: 12 == errno" inside V8's MemoryAllocator. The other hardening
+# directives below are JIT-safe.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
@@ -23,7 +28,6 @@ ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictNamespaces=true
 LockPersonality=true
-MemoryDenyWriteExecute=true
 
 [Install]
 WantedBy=multi-user.target
