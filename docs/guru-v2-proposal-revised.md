@@ -435,6 +435,10 @@ Complementary full-box protection: Hetzner snapshots, configured weekly via the 
 
 Deploys run over SSH from GitHub Actions. No Vercel git-integration equivalent — the trade is explicit.
 
+**Access pattern: Tailscale, not public SSH.** The VPS's UFW allows port 22 only on the `tailscale0` interface (see §7.4). GitHub Actions joins the tailnet as an ephemeral node for the duration of each run via `tailscale/github-action`, then SSHes to the VPS's tailnet hostname. This keeps the public SSH surface at zero — no need for per-IP ufw rules that would chase GitHub's rotating runner IPs.
+
+The Tailscale auth key lives in GitHub secrets as `TAILSCALE_AUTHKEY`, generated in the Tailscale admin console as **reusable + ephemeral + pre-approved + tagged `tag:ci`** (the tag is required for reusable+ephemeral keys and lets ACLs restrict `tag:ci` → `tag:server` on port 22 only).
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy
@@ -452,16 +456,25 @@ jobs:
       - run: npm ci
       - run: npm run lint && npm run type-check && npm run test
       - run: npm run build
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          tags: tag:ci
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
+          host: guru-web-prod            # tailnet hostname via MagicDNS
           username: deploy
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd /srv/guru-web
             ./deploy.sh ${{ github.sha }}
 ```
+
+Secrets required: `TAILSCALE_AUTHKEY`, `DEPLOY_SSH_KEY`. The auth key's 90-day expiration is the one recurring maintenance cost — rotate on a calendar reminder.
 
 The `deploy.sh` script on the VPS:
 
