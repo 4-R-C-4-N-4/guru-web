@@ -12,14 +12,25 @@
 import OpenAI from 'openai';
 import { SYSTEM_PROMPT } from './prompt';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
-    'X-Title': 'Guru',
-  },
-});
+// Lazy-init: module-level `new OpenAI(...)` runs during Next.js build's
+// page-data collection phase, where env vars may not be injected yet — the
+// SDK constructor throws if OPENROUTER_API_KEY is missing. Constructing on
+// first call keeps build-time safe while keeping runtime behavior identical
+// (one client instance per process).
+let _client: OpenAI | null = null;
+function client(): OpenAI {
+  if (!_client) {
+    _client = new OpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY!,
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+        'X-Title': 'Guru',
+      },
+    });
+  }
+  return _client;
+}
 
 export const MODELS = {
   free: 'deepseek/deepseek-chat',
@@ -33,7 +44,7 @@ export type Tier = keyof typeof MODELS;
 // ---------------------------------------------------------------------------
 
 export async function complete(prompt: string, tier: Tier): Promise<string> {
-  const response = await client.chat.completions.create({
+  const response = await client().chat.completions.create({
     model: MODELS[tier],
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -50,7 +61,7 @@ export async function complete(prompt: string, tier: Tier): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function completeStream(prompt: string, tier: Tier) {
-  return client.chat.completions.create({
+  return client().chat.completions.create({
     model: MODELS[tier],
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
