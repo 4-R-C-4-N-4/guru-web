@@ -1,0 +1,28 @@
+{
+  "id": "59a6551c",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase D: Self-hosted deploy surface — systemd, Caddy, deploy.sh, vps-bootstrap, backup, runbook (§7.4–7.8)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:27.456Z",
+  "updated_at": "2026-04-22T18:30:32.283Z",
+  "relationships": {
+    "children": [
+      "b923fc87",
+      "1d86f97d",
+      "bbe07228",
+      "91055bd6",
+      "d6ff8557",
+      "8d831555",
+      "866db541"
+    ]
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-22T18:30:32.283Z",
+    "resolved_by": "unknown",
+    "note": "All 7 children closed — D11 (systemd unit), D12 (Caddyfile), D13 (deploy.sh + auto-migrate via 866db541), D14 (vps-bootstrap.sh), D15 (backup.sh), D16 (incident runbook). Phase D operational surface complete and verified end-to-end: VPS hardened, TLS terminating with AOP, app deployed via push-to-main + Tailscale + SSH, backups uploaded to B2 nightly, app boot does fail-fast assertions (via Phase C C10)."
+  }
+}

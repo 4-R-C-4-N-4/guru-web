@@ -1,13 +1,13 @@
 {
   "id": "7717ec96",
   "type": "feature",
-  "state": "open",
+  "state": "done",
   "summary": "Phase B: Embedding via local Ollama — switch from OpenRouter to nomic-embed-text:v1.5 (deviates from proposal §4)",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-04-20T17:29:55.995Z",
-  "updated_at": "2026-04-20T18:41:47.930Z",
+  "updated_at": "2026-04-22T18:30:38.963Z",
   "relationships": {
     "children": [
       "af35a47a",
@@ -25,5 +25,11 @@
       "content": "Phase B branch merged with 4/5 children closed (B6, B6a, B6b, B6c). B7 deferred to Phase C — see B7 analysis. Parent stays open until B7 closes during Phase C work.",
       "confidence": "high"
     }
-  ]
+  ],
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-22T18:30:38.963Z",
+    "resolved_by": "unknown",
+    "note": "All children resolved — B6 (Ollama embed), B6a (.env doc), B6b (docker-compose + README), B6c (loopback systemd unit), B7 (boot-time assertions, landed in Phase C with C10). Local pipeline embeddings switched to Ollama nomic-embed-text:v1.5; runtime app now asserts dim=768 at boot."
+  }
 }
