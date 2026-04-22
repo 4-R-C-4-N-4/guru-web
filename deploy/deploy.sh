@@ -53,13 +53,29 @@ if [[ -d "$RELEASE/public" ]]; then
     cp -a "$RELEASE/public" "$RELEASE/.next/standalone/public"
 fi
 
-# 3. Atomic symlink swap. `current` points at the standalone dir so
+# 3. Apply app-schema migrations BEFORE swapping the symlink. If a migration
+#    fails the old release stays live. Each file runs in a single transaction
+#    (-1) so partial application is impossible. Migrations use IF NOT EXISTS
+#    patterns so re-running on an already-migrated DB is a no-op.
+#
+#    Scope: app tables only (users, sessions, queries, user_preferences, quota).
+#    Never touches corpus tables (chunks, traditions, texts, concepts, edges) —
+#    those come from guru-pipeline's pg_restore separately.
+log "apply migrations"
+shopt -s nullglob
+for f in "$RELEASE"/migrations/*.sql; do
+    log "  → $(basename "$f")"
+    sudo -u postgres /usr/bin/psql -d guru -1 -f "$f"
+done
+shopt -u nullglob
+
+# 4. Atomic symlink swap. `current` points at the standalone dir so
 # WorkingDirectory in the unit (/srv/guru-web/current) sees server.js.
 log "symlink swap"
 ln -sfn "$RELEASE/.next/standalone" "$CURRENT.new"
 mv -Tf "$CURRENT.new" "$CURRENT"
 
-# 4. Restart the app (sudoers permits this single command)
+# 5. Restart the app (sudoers permits this single command)
 log "restart guru-web"
 sudo /bin/systemctl restart guru-web
 
@@ -70,7 +86,7 @@ if ! sudo /bin/systemctl is-active --quiet guru-web; then
     exit 1
 fi
 
-# 5. Prune old releases — keep newest 5 by mtime
+# 6. Prune old releases — keep newest 5 by mtime
 log "prune to last 5 releases"
 cd "$ROOT/releases"
 # shellcheck disable=SC2012
