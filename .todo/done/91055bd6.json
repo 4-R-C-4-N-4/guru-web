@@ -1,0 +1,27 @@
+{
+  "id": "91055bd6",
+  "type": "chore",
+  "state": "done",
+  "summary": "D14: deploy/vps-bootstrap.sh — one-time setup from §7.4 as runnable script (includes Ollama install + model pull per B6c)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:27.587Z",
+  "updated_at": "2026-04-22T12:57:46.475Z",
+  "relationships": {
+    "parent": "59a6551c"
+  },
+  "description": "One-time setup from §7.4 as a runnable script. Version-controlled because you want it on incident rebuilds.\n\nBASE OS: Debian 13 (trixie). Original spec said Ubuntu 24.04; updated in commit TBD. Debian-specific notes:\n- postgresql-17-pgvector: prefer the PGDG APT repo on both Debian and Ubuntu; Debian main's copy lags.\n- caddy: needs Caddy's official APT repo (cloudsmith), same dance on both distros.\n- Other packages (ufw, fail2ban, unattended-upgrades, NodeSource node, Ollama installer, useradd --system, /usr/sbin/nologin, dpkg-reconfigure) are identical Debian/Ubuntu — no adjustments.\n\nADDITIONS (per B6c, commit todo:77272cb5):\n- Install Ollama: curl -fsSL https://ollama.com/install.sh | sh\n- Pull embedding model: ollama pull nomic-embed-text:v1.5\n- Disable Ollama's default systemd unit (binds 0.0.0.0:11434), install\n  deploy/ollama.service instead (binds 127.0.0.1:11434), enable + start it.\n- Verify: curl -s http://127.0.0.1:11434/api/tags | grep nomic-embed-text:v1.5",
+  "work": {
+    "branch": "todo/59a6551c",
+    "base_branch": "main",
+    "started_at": "2026-04-22T12:51:51.815Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "714c361",
+    "resolved_at": "2026-04-22T12:57:46.475Z",
+    "resolved_by": "unknown",
+    "note": "deploy/vps-bootstrap.sh written. Debian 13 trixie target per updated spec; Tailscale-only SSH per vps_access_tailscale memory (no HOME_IP rules); Ollama loopback per B6c; PGDG + Caddy APT repos; idempotent with per-step guards. /etc/guru-bootstrap.env holds DOMAIN, TS_AUTHKEY, optional DEPLOY_PUBKEY. Not tested end-to-end — user will run on the prod VPS when ready; feedback_db_safety prevents local run during active pipeline fill."
+  }
+}
