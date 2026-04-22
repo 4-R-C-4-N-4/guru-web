@@ -314,11 +314,20 @@ ufw enable
 dpkg-reconfigure -plow unattended-upgrades
 
 # Cloudflare Origin Cert
-# (Generated in Cloudflare dashboard, pasted into these paths)
+# (origin.pem + origin.key generated in CF dashboard;
+#  authenticated_origin_pull_ca.pem from
+#  https://developers.cloudflare.com/ssl/static/authenticated_origin_pull_ca.pem)
 mkdir -p /etc/ssl/cloudflare
-chmod 700 /etc/ssl/cloudflare
-# Place origin.pem, origin.key, authenticated_origin_pull_ca.pem
-chmod 600 /etc/ssl/cloudflare/*
+chmod 755 /etc/ssl/cloudflare    # caddy user must traverse
+# Place all three files. Then:
+chown root:root  /etc/ssl/cloudflare/origin.pem
+chmod 644        /etc/ssl/cloudflare/origin.pem
+chown root:root  /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem
+chmod 644        /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem
+chown root:caddy /etc/ssl/cloudflare/origin.key  # caddy reads via group
+chmod 640        /etc/ssl/cloudflare/origin.key
+# Also: enable Authenticated Origin Pulls toggle in CF dashboard
+# (SSL/TLS → Origin Server) — without it, Caddy drops the handshake → 520.
 
 # Caddyfile at /etc/caddy/Caddyfile (see §7.5)
 systemctl reload caddy

@@ -21,15 +21,20 @@
 #      node after it joins.
 #
 #   3. Cloudflare zone configured: DNS record proxied (orange), SSL/TLS mode
-#      Full (Strict), Authenticated Origin Pulls enabled.
+#      Full (Strict), Authenticated Origin Pulls toggle ON at the zone level
+#      (SSL/TLS → Origin Server → Authenticated Origin Pulls). Without the
+#      toggle CF won't present a client cert and Caddy will drop the
+#      handshake → 520 at the edge.
 #
-#   4. Cloudflare Origin Certificate generated and the three files placed in
-#      /etc/ssl/cloudflare/ with mode 0600 (dir 0700):
-#        - origin.pem
-#        - origin.key
-#        - authenticated_origin_pull_ca.pem
+#   4. Cloudflare Origin Certificate generated and the three files placed at:
+#        - /etc/ssl/cloudflare/origin.pem                          (CF-issued cert)
+#        - /etc/ssl/cloudflare/origin.key                          (matching private key)
+#        - /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem    (AOP CA bundle, fetch from
+#          https://developers.cloudflare.com/ssl/static/authenticated_origin_pull_ca.pem)
 #
-#      If these are missing the script still completes, but Caddy won't start
+#      The script sets ownership + permissions automatically (dir 755, pem/CA
+#      644 root:root, key 640 root:caddy so the caddy user can read it).
+#      If files are missing the script completes anyway but Caddy won't start
 #      until they're in place.
 #
 # NOT DONE BY THIS SCRIPT:
@@ -150,21 +155,24 @@ step_tailscale() {
 }
 
 step_firewall() {
+    # `ufw allow` is naturally idempotent (existing rules are skipped with a
+    # message). Earlier versions of this script had a "skip if tailscale0 rule
+    # exists" guard that was too coarse — it caused the CF 443 rules to be
+    # silently skipped on boxes where the operator had set up tailnet SSH
+    # manually before running bootstrap. Now: just always apply.
     log "ufw (deny default, SSH via tailnet, 443 from Cloudflare)"
-    if ufw status verbose 2>/dev/null | grep -q 'tailscale0'; then
-        log "ufw already has tailscale0 rule — skipping full firewall setup"
-        return
-    fi
-    ufw default deny incoming
-    ufw default allow outgoing
-    ufw allow in on tailscale0 to any port 22 proto tcp comment 'SSH via tailnet'
+    ufw default deny incoming  >/dev/null
+    ufw default allow outgoing >/dev/null
+    ufw allow in on tailscale0 to any port 22 proto tcp comment 'SSH via tailnet' >/dev/null
     for ip in $(curl -fsSL https://www.cloudflare.com/ips-v4); do
-        ufw allow from "$ip" to any port 443 proto tcp comment 'cloudflare-v4'
+        ufw allow from "$ip" to any port 443 proto tcp comment 'cloudflare-v4' >/dev/null
     done
-    for ip in $(curl -fsSL https://www.cloudflare.com/ips-v6); do
-        ufw allow from "$ip" to any port 443 proto tcp comment 'cloudflare-v6'
+    # IPv6 list may be empty on a v4-only box; harmless if so.
+    for ip in $(curl -fsSL https://www.cloudflare.com/ips-v6 || true); do
+        ufw allow from "$ip" to any port 443 proto tcp comment 'cloudflare-v6' >/dev/null
     done
-    ufw --force enable
+    ufw --force enable >/dev/null
+    ufw reload >/dev/null
 }
 
 step_node() {
@@ -227,7 +235,14 @@ EOF
 
     install -m 0644 "$REPO_DIR/deploy/Caddyfile" /etc/caddy/Caddyfile
 
-    install -d -m 0700 /etc/ssl/cloudflare
+    # Cert dir + perms. Caddy runs as user `caddy`, so it needs to traverse
+    # the directory (755) and read all three files. The key is the only
+    # secret of the three — set group caddy + 640 so the process can read
+    # but other unprivileged users can't.
+    mkdir -p /etc/ssl/cloudflare
+    chmod 0755 /etc/ssl/cloudflare
+    chown root:root /etc/ssl/cloudflare
+
     local missing=0
     for f in origin.pem origin.key authenticated_origin_pull_ca.pem; do
         if [[ ! -f "/etc/ssl/cloudflare/$f" ]]; then
@@ -235,6 +250,19 @@ EOF
             missing=1
         fi
     done
+
+    if [[ -f /etc/ssl/cloudflare/origin.pem ]]; then
+        chown root:root /etc/ssl/cloudflare/origin.pem
+        chmod 0644      /etc/ssl/cloudflare/origin.pem
+    fi
+    if [[ -f /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem ]]; then
+        chown root:root /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem
+        chmod 0644      /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem
+    fi
+    if [[ -f /etc/ssl/cloudflare/origin.key ]]; then
+        chown root:caddy /etc/ssl/cloudflare/origin.key
+        chmod 0640       /etc/ssl/cloudflare/origin.key
+    fi
 
     systemctl daemon-reload
     systemctl enable caddy
