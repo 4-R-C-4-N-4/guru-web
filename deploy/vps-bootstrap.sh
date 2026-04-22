@@ -364,19 +364,7 @@ step_summary() {
     echo "  UFW:"
     ufw status verbose | sed 's/^/    /'
     echo
-    echo "  Next steps:"
-    echo "    1. Place origin cert files in /etc/ssl/cloudflare/ if not already."
-    echo "    2. Create /etc/guru-web.env (mode 0600, owner root) with:"
-    echo "         DATABASE_URL=<see above>"
-    echo "         OPENROUTER_API_KEY=..."
-    echo "         CLERK_SECRET_KEY=..., CLERK_WEBHOOK_SECRET=..., NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=..."
-    echo "         STRIPE_SECRET_KEY=..., STRIPE_WEBHOOK_SECRET=..., STRIPE_PRO_PRICE_ID=..., NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=..."
-    echo "         NEXT_PUBLIC_APP_URL=https://$DOMAIN"
-    echo "         OLLAMA_URL=http://localhost:11434"
-    echo "    3. Load corpus from guru-pipeline:"
-    echo "         gunzip -c guru-corpus.sql.gz | sudo -u postgres pg_restore -d guru"
-    echo "    4. Disable key expiry for this node in Tailscale admin console."
-    echo "    5. Trigger first deploy via GitHub Actions."
+    echo "  See deploy/README.md for post-bootstrap checklist (origin certs, /etc/guru-web.env, corpus load, first deploy)."
 }
 
 # ---------------------------------------------------------------------------
