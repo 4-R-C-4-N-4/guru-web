@@ -16,9 +16,13 @@ jobs:
     # Match the VPS runtime — the build is re-run on the VPS by deploy.sh,
     # but doing it here too is a sanity gate before SSHing.
     steps:
-      - uses: actions/checkout@v4
+      # Third-party actions are pinned to commit SHAs (not floating tags) so a
+      # tag re-point or upstream account compromise can't quietly swap the code
+      # we run. Bump these intentionally — Dependabot or `git ls-remote --tags`
+      # against each repo will surface newer releases.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -40,7 +44,7 @@ jobs:
       # Join the tailnet as an ephemeral node — auto-cleans up after the run.
       # ACL restricts tag:ci to tag:server:tcp:22 only.
       - name: Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade  # v3.3.0
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           tags: tag:ci
@@ -48,7 +52,7 @@ jobs:
       # SSH to the VPS over the tailnet (MagicDNS resolves guru-web-prod)
       # and invoke the on-VPS deploy.sh with this commit's SHA.
       - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: guru-web-prod
           username: deploy
