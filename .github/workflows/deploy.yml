@@ -1,0 +1,56 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# A given SHA only needs to deploy once; if multiple commits land fast,
+# cancel earlier in-flight deploys for the same ref.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Match the VPS runtime — the build is re-run on the VPS by deploy.sh,
+    # but doing it here too is a sanity gate before SSHing.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build (CI gate)
+        run: npm run build
+
+      # Join the tailnet as an ephemeral node — auto-cleans up after the run.
+      # ACL restricts tag:ci to tag:server:tcp:22 only.
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          tags: tag:ci
+
+      # SSH to the VPS over the tailnet (MagicDNS resolves guru-web-prod)
+      # and invoke the on-VPS deploy.sh with this commit's SHA.
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: guru-web-prod
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: /srv/guru-web/deploy.sh ${{ github.sha }}

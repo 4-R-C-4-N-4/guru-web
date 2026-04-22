@@ -1,0 +1,27 @@
+{
+  "id": "686bd60f",
+  "type": "chore",
+  "state": "done",
+  "summary": "E17: .github/workflows/deploy.yml — lint→type-check→test→build→appleboy/ssh-action runs deploy.sh <sha>; secrets VPS_HOST + DEPLOY_SSH_KEY",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:37.972Z",
+  "updated_at": "2026-04-22T16:53:02.684Z",
+  "relationships": {
+    "parent": "85822431"
+  },
+  "description": "GitHub Actions workflow at .github/workflows/deploy.yml. Triggers on push to main. Steps: lint → type-check → test → build (CI build is a gate, not the artifact — VPS rebuilds from SHA via deploy.sh) → SSH to VPS → run /srv/guru-web/deploy.sh <sha>.\n\nACCESS PATTERN (decided 2026-04-22): CI reaches VPS via TAILSCALE, not public SSH. UFW on the VPS allows port 22 only on tailscale0, by design.\n\nImplementation:\n- Use tailscale/github-action@v3 early in the job to join the runner to the tailnet as an ephemeral node.\n- Auth via TAILSCALE_AUTHKEY GitHub secret. Key is generated in Tailscale admin → Settings → Keys as:\n    * reusable: true (CI runs many times)\n    * ephemeral: true (node auto-cleans up after run)\n    * pre-approved: true (no manual admit per run)\n    * tags: tag:ci (required for reusable+ephemeral; also lets ACLs restrict CI→server access)\n    * expiry: 90 days (rotate before; calendar reminder)\n- ACL in Tailscale admin should allow tag:ci → tag:guru-web-prod (or similar) on port 22 only. VPS gets tag:guru-web-prod assigned when it joins.\n- Then standard appleboy/ssh-action@v1 or plain ssh command to connect to guru-web-prod (tailnet hostname resolves via MagicDNS).\n\nSecrets required in GitHub repo settings:\n- TAILSCALE_AUTHKEY — the ephemeral+reusable key above\n- DEPLOY_SSH_KEY — private key for deploy@guru-web-prod (pubkey lives on VPS at /home/deploy/.ssh/authorized_keys, populated by bootstrap from DEPLOY_PUBKEY in /etc/guru-bootstrap.env)\n\nDepends on D13 (bbe07228) being complete — the workflow just invokes deploy.sh.",
+  "work": {
+    "branch": "todo/85822431",
+    "base_branch": "main",
+    "started_at": "2026-04-22T16:52:41.056Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "4a53de5",
+    "resolved_at": "2026-04-22T16:53:02.684Z",
+    "resolved_by": "unknown",
+    "note": "deploy.yml shipped per §7.8 (revised). Tailscale ephemeral node + appleboy/ssh-action invokes /srv/guru-web/deploy.sh <sha>. Requires GH secrets TAILSCALE_AUTHKEY + DEPLOY_SSH_KEY (user is provisioning these alongside ticket close). Concurrency: serialize deploys per ref, no cancel-in-progress (a partial kill is worse than queued).\n\nUntested end-to-end — first push to main is the integration test."
+  }
+}
