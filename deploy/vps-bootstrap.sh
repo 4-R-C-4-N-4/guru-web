@@ -1,0 +1,363 @@
+#!/usr/bin/env bash
+#
+# deploy/vps-bootstrap.sh — one-time VPS setup for guru-web.
+#
+# Target:       Debian 13 (trixie) on Hetzner, kernel 6.12+, ~8GB RAM tier.
+# Source spec:  §7.4 of docs/guru-v2-proposal-revised.md
+# Idempotency:  per-step guards; safe to re-run on incident rebuilds.
+#
+# PREREQUISITES (manual, before running):
+#
+#   1. You can SSH in as root via key auth (Hetzner provisions this at create).
+#
+#   2. /etc/guru-bootstrap.env exists, mode 0600, root:root, containing:
+#
+#        DOMAIN=guru.example.com
+#        TS_AUTHKEY=tskey-auth-xxxxxxxxxxxxxxxxxxxxxx
+#        DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions@guru"   # optional
+#
+#      TS_AUTHKEY: generate in Tailscale admin console as non-reusable,
+#      non-ephemeral, pre-authorized. Remember to disable key expiry for the
+#      node after it joins.
+#
+#   3. Cloudflare zone configured: DNS record proxied (orange), SSL/TLS mode
+#      Full (Strict), Authenticated Origin Pulls enabled.
+#
+#   4. Cloudflare Origin Certificate generated and the three files placed in
+#      /etc/ssl/cloudflare/ with mode 0600 (dir 0700):
+#        - origin.pem
+#        - origin.key
+#        - authenticated_origin_pull_ca.pem
+#
+#      If these are missing the script still completes, but Caddy won't start
+#      until they're in place.
+#
+# NOT DONE BY THIS SCRIPT:
+#   - Loading the corpus (guru-pipeline produces guru-corpus.sql.gz — restore
+#     is a separate manual step once the DB is set up).
+#   - First deploy of the app (handled by deploy/deploy.sh, invoked from CI).
+#   - Creating /etc/guru-web.env (holds runtime secrets — hand-populated).
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Config + preflight
+# ---------------------------------------------------------------------------
+
+CONFIG=/etc/guru-bootstrap.env
+
+if [[ $EUID -ne 0 ]]; then
+    echo "bootstrap: must run as root" >&2
+    exit 1
+fi
+
+if [[ ! -f "$CONFIG" ]]; then
+    cat >&2 <<EOF
+bootstrap: $CONFIG not found. Create it first:
+
+  cat > $CONFIG <<'E'
+  DOMAIN=guru.example.com
+  TS_AUTHKEY=tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxx
+  # DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions@guru"
+  E
+  chmod 600 $CONFIG
+
+EOF
+    exit 1
+fi
+
+# shellcheck source=/dev/null
+source "$CONFIG"
+
+: "${DOMAIN:?DOMAIN required in $CONFIG}"
+: "${TS_AUTHKEY:?TS_AUTHKEY required in $CONFIG}"
+
+REPO_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+
+log()  { printf '\n\033[1;34m==>\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m!! \033[0m %s\n' "$*"; }
+die()  { printf '\033[1;31m!! \033[0m %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Steps
+# ---------------------------------------------------------------------------
+
+step_os_update() {
+    log "apt update + upgrade"
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get -y -o Dpkg::Options::="--force-confold" upgrade
+}
+
+step_base_packages() {
+    log "base packages"
+    apt-get install -y \
+        ufw fail2ban unattended-upgrades \
+        curl git ca-certificates gnupg lsb-release \
+        cron sudo openssl
+}
+
+step_unattended_upgrades() {
+    log "unattended-upgrades"
+    cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+EOF
+}
+
+step_timezone() {
+    log "timezone UTC"
+    timedatectl set-timezone UTC
+}
+
+step_swap() {
+    log "swap (2GB)"
+    if ! grep -q '^/swapfile' /etc/fstab; then
+        if [[ ! -f /swapfile ]]; then
+            fallocate -l 2G /swapfile
+            chmod 600 /swapfile
+            mkswap /swapfile
+            swapon /swapfile
+        fi
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
+}
+
+step_ssh_harden() {
+    log "SSH hardening (drop-in)"
+    cat > /etc/ssh/sshd_config.d/99-guru.conf <<'EOF'
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+EOF
+    sshd -t
+    systemctl reload ssh
+}
+
+step_tailscale() {
+    log "Tailscale"
+    if ! command -v tailscale &>/dev/null; then
+        curl -fsSL https://tailscale.com/install.sh | sh
+    fi
+    if ! tailscale status --json 2>/dev/null | grep -q '"BackendState":"Running"'; then
+        tailscale up --authkey="$TS_AUTHKEY" --hostname=guru-web-prod --ssh=false
+    fi
+    # Wait briefly for tailscale0 to appear before firewall step uses it
+    for _ in 1 2 3 4 5; do
+        ip link show tailscale0 &>/dev/null && break
+        sleep 1
+    done
+}
+
+step_firewall() {
+    log "ufw (deny default, SSH via tailnet, 443 from Cloudflare)"
+    if ufw status verbose 2>/dev/null | grep -q 'tailscale0'; then
+        log "ufw already has tailscale0 rule — skipping full firewall setup"
+        return
+    fi
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow in on tailscale0 to any port 22 proto tcp comment 'SSH via tailnet'
+    for ip in $(curl -fsSL https://www.cloudflare.com/ips-v4); do
+        ufw allow from "$ip" to any port 443 proto tcp comment 'cloudflare-v4'
+    done
+    for ip in $(curl -fsSL https://www.cloudflare.com/ips-v6); do
+        ufw allow from "$ip" to any port 443 proto tcp comment 'cloudflare-v6'
+    done
+    ufw --force enable
+}
+
+step_node() {
+    log "Node.js 20 LTS (NodeSource)"
+    if ! command -v node &>/dev/null || [[ $(node -v | sed 's/v//;s/\..*//') -lt 20 ]]; then
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+    fi
+}
+
+step_postgres() {
+    log "Postgres 17 + pgvector (PGDG APT)"
+    if ! dpkg -l postgresql-17 &>/dev/null 2>&1; then
+        install -d -m 0755 /etc/apt/keyrings
+        curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | gpg --dearmor -o /etc/apt/keyrings/pgdg.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            > /etc/apt/sources.list.d/pgdg.list
+        apt-get update
+        apt-get install -y postgresql-17 postgresql-17-pgvector
+    fi
+    systemctl enable --now postgresql
+
+    local pw_file=/etc/guru-db-password
+    if [[ ! -f "$pw_file" ]]; then
+        openssl rand -base64 32 | tr -d '\n=+/' > "$pw_file"
+        chmod 600 "$pw_file"
+    fi
+    local pw
+    pw="$(cat "$pw_file")"
+
+    sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='guru'" | grep -q 1 \
+        || sudo -u postgres psql -c "CREATE ROLE guru WITH LOGIN PASSWORD '$pw'"
+    sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='guru'" | grep -q 1 \
+        || sudo -u postgres psql -c "CREATE DATABASE guru OWNER guru"
+    sudo -u postgres psql -d guru -c "CREATE EXTENSION IF NOT EXISTS vector"
+
+    # Debian's Postgres defaults: listen on localhost only, scram-sha-256 for
+    # host 127.0.0.1/32 via pg_hba.conf. No config edits needed.
+}
+
+step_caddy() {
+    log "Caddy (cloudsmith APT)"
+    if ! dpkg -l caddy &>/dev/null 2>&1; then
+        apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+            | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+            > /etc/apt/sources.list.d/caddy-stable.list
+        apt-get update
+        apt-get install -y caddy
+    fi
+
+    # Inject DOMAIN into caddy's systemd env (Caddyfile uses {$DOMAIN})
+    install -d -m 0755 /etc/systemd/system/caddy.service.d
+    cat > /etc/systemd/system/caddy.service.d/env.conf <<EOF
+[Service]
+Environment="DOMAIN=$DOMAIN"
+EOF
+
+    install -m 0644 "$REPO_DIR/deploy/Caddyfile" /etc/caddy/Caddyfile
+
+    install -d -m 0700 /etc/ssl/cloudflare
+    local missing=0
+    for f in origin.pem origin.key authenticated_origin_pull_ca.pem; do
+        if [[ ! -f "/etc/ssl/cloudflare/$f" ]]; then
+            warn "/etc/ssl/cloudflare/$f missing — place it before starting Caddy"
+            missing=1
+        fi
+    done
+
+    systemctl daemon-reload
+    systemctl enable caddy
+    if [[ $missing -eq 0 ]]; then
+        systemctl reload caddy 2>/dev/null || systemctl restart caddy
+    else
+        warn "skipping caddy start — origin cert files missing"
+    fi
+}
+
+step_ollama() {
+    log "Ollama (loopback-only, nomic-embed-text:v1.5)"
+    if ! command -v ollama &>/dev/null; then
+        curl -fsSL https://ollama.com/install.sh | sh
+    fi
+    systemctl disable --now ollama 2>/dev/null || true
+    install -m 0644 "$REPO_DIR/deploy/ollama.service" /etc/systemd/system/ollama.service
+    systemctl daemon-reload
+    systemctl enable --now ollama
+
+    sudo -u ollama ollama pull nomic-embed-text:v1.5
+
+    sleep 2
+    if ! curl -fs http://127.0.0.1:11434/api/tags | grep -q 'nomic-embed-text'; then
+        die "Ollama not serving embedding model — check 'systemctl status ollama' and 'journalctl -u ollama -n 50'"
+    fi
+}
+
+step_app_users_and_dirs() {
+    log "guru + deploy users, /srv/guru-web structure"
+
+    if ! id guru &>/dev/null; then
+        useradd --system --no-create-home --shell /usr/sbin/nologin guru
+    fi
+
+    if ! id deploy &>/dev/null; then
+        useradd --system --create-home --home-dir /home/deploy --shell /bin/bash deploy
+    fi
+
+    # Minimal sudo: only what's needed to restart the app from deploy.sh
+    cat > /etc/sudoers.d/deploy <<'EOF'
+deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
+EOF
+    chmod 440 /etc/sudoers.d/deploy
+
+    if [[ -n "${DEPLOY_PUBKEY:-}" ]]; then
+        install -d -o deploy -g deploy -m 0700 /home/deploy/.ssh
+        printf '%s\n' "$DEPLOY_PUBKEY" \
+            | install -o deploy -g deploy -m 0600 /dev/stdin /home/deploy/.ssh/authorized_keys
+    else
+        warn "DEPLOY_PUBKEY not set in $CONFIG — CI will not be able to SSH in as deploy until you add its public key to /home/deploy/.ssh/authorized_keys."
+    fi
+
+    install -d -o deploy -g deploy -m 0755 /srv/guru-web
+    install -d -o deploy -g deploy -m 0755 /srv/guru-web/releases
+}
+
+step_systemd_unit() {
+    log "guru-web systemd unit"
+    install -m 0644 "$REPO_DIR/deploy/guru-web.service" /etc/systemd/system/guru-web.service
+    systemctl daemon-reload
+    systemctl enable guru-web
+    # Don't start — /srv/guru-web/current doesn't exist until first deploy.
+    warn "guru-web.service enabled but NOT started — first CI deploy will start it."
+}
+
+step_backups() {
+    log "backup cron"
+    if [[ -f "$REPO_DIR/deploy/backup.sh" ]]; then
+        install -m 0755 "$REPO_DIR/deploy/backup.sh" /etc/cron.daily/guru-backup
+    else
+        warn "deploy/backup.sh not present yet (D15) — skipping cron install"
+    fi
+}
+
+step_summary() {
+    log "summary"
+    echo
+    echo "  Debian:       $(lsb_release -ds)"
+    echo "  Node:         $(node -v)"
+    echo "  Postgres:     $(sudo -u postgres psql -tAc 'SELECT version()' | head -1 | awk '{print $1, $2}')"
+    echo "  Caddy:        $(caddy version 2>/dev/null | head -1)"
+    echo "  Ollama:       $(ollama --version 2>/dev/null | head -1)"
+    echo "  Tailscale:    $(tailscale --version | head -1) — tailnet IP: $(tailscale ip -4)"
+    echo
+    echo "  DB password:  /etc/guru-db-password (mode 600)"
+    echo "  DATABASE_URL: postgresql://guru:$(cat /etc/guru-db-password)@localhost:5432/guru"
+    echo
+    echo "  UFW:"
+    ufw status verbose | sed 's/^/    /'
+    echo
+    echo "  Next steps:"
+    echo "    1. Place origin cert files in /etc/ssl/cloudflare/ if not already."
+    echo "    2. Create /etc/guru-web.env (mode 0600, owner root) with:"
+    echo "         DATABASE_URL=<see above>"
+    echo "         OPENROUTER_API_KEY=..."
+    echo "         CLERK_SECRET_KEY=..., CLERK_WEBHOOK_SECRET=..., NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=..."
+    echo "         STRIPE_SECRET_KEY=..., STRIPE_WEBHOOK_SECRET=..., STRIPE_PRO_PRICE_ID=..., NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=..."
+    echo "         NEXT_PUBLIC_APP_URL=https://$DOMAIN"
+    echo "         OLLAMA_URL=http://localhost:11434"
+    echo "    3. Load corpus from guru-pipeline:"
+    echo "         gunzip -c guru-corpus.sql.gz | sudo -u postgres pg_restore -d guru"
+    echo "    4. Disable key expiry for this node in Tailscale admin console."
+    echo "    5. Trigger first deploy via GitHub Actions."
+}
+
+# ---------------------------------------------------------------------------
+# Run
+# ---------------------------------------------------------------------------
+
+step_os_update
+step_base_packages
+step_unattended_upgrades
+step_timezone
+step_swap
+step_ssh_harden
+step_tailscale
+step_firewall
+step_node
+step_postgres
+step_caddy
+step_ollama
+step_app_users_and_dirs
+step_systemd_unit
+step_backups
+step_summary
