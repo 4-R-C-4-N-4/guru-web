@@ -1,0 +1,27 @@
+{
+  "id": "866db541",
+  "type": "chore",
+  "state": "done",
+  "summary": "deploy.sh: auto-run app migrations before symlink swap",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-22T18:03:54.587Z",
+  "updated_at": "2026-04-22T18:10:36.916Z",
+  "relationships": {
+    "parent": "59a6551c"
+  },
+  "description": "Add a 'run app migrations' step to deploy/deploy.sh, executed in the FULL release directory ($RELEASE) BEFORE the symlink swap. Caught during first manual deploy 2026-04-22: the Next.js standalone build doesn't include scripts/ or migrations/, so 'npm run migrate' from /srv/guru-web/current (which symlinks to .next/standalone/) fails with ERR_MODULE_NOT_FOUND for scripts/migrate.ts.\n\nTwo implementation options:\n\nA) cd $RELEASE && DATABASE_URL=$(grep ^DATABASE_URL /etc/guru-web.env | cut -d= -f2-) npm run migrate\n   - Uses the existing tsx-based scripts/migrate.ts\n   - Single line in deploy.sh\n   - Reads DATABASE_URL from /etc/guru-web.env (which deploy user can read? check perms — currently 600 root:root, so NO. Either add deploy to group with read access, OR use a different env source.)\n\nB) for f in $RELEASE/migrations/*.sql; do sudo -u postgres psql -d guru -f \"$f\"; done\n   - No DATABASE_URL needed — psql connects locally as postgres superuser\n   - Doesn't depend on tsx/Node tooling\n   - Requires deploy user to have NOPASSWD sudo for psql or use postgres user directly\n\nOption B is simpler and matches how migrations were applied manually. But it skips whatever scripts/migrate.ts adds (transactions, ordering checks, idempotency tracking).\n\nDecision required: how does scripts/migrate.ts differ from raw psql application? If it's just a thin wrapper, B is fine. If it tracks applied migrations in a meta table, A is the right call.\n\nSCOPE: app schema only (users, sessions, queries, user_preferences, quota). Never touches the corpus tables (chunks, traditions, texts, concepts, edges) — those come from guru-pipeline's pg_restore and are out of scope for this script.\n\nDISCIPLINE: this enables every push to apply schema changes. Destructive migrations (DROP, ALTER … TYPE) must be code-reviewed with care. Additive only is the safe default.",
+  "work": {
+    "branch": "todo/59a6551c",
+    "base_branch": "main",
+    "started_at": "2026-04-22T18:09:32.527Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "0eacb81",
+    "resolved_at": "2026-04-22T18:10:36.916Z",
+    "resolved_by": "unknown",
+    "note": "deploy.sh now runs sudo -u postgres psql -d guru -1 -f $RELEASE/migrations/*.sql before the symlink swap. Each migration in a single transaction. Failure stops deploy with old release intact. Bootstrap sudoers updated to grant the narrow psql -d guru -1 -f * entry. Scope: app schema only — corpus tables untouched."
+  }
+}
