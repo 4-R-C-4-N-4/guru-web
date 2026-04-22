@@ -1,0 +1,31 @@
+{
+  "id": "ac806656",
+  "type": "chore",
+  "state": "done",
+  "summary": "C10: src/lib/boot.ts — verify corpus schema version + embedding dim on first DB touch, fail fast on mismatch (wired into DB module not layout)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:05.609Z",
+  "updated_at": "2026-04-22T18:16:39.660Z",
+  "files": [
+    {
+      "path": "src/lib/boot.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "6157e231"
+  },
+  "work": {
+    "branch": "todo/6157e231",
+    "base_branch": "main",
+    "started_at": "2026-04-22T18:15:12.552Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "8e63ba7",
+    "resolved_at": "2026-04-22T18:16:39.660Z",
+    "resolved_by": "unknown",
+    "note": "src/lib/boot.ts written. Fail-fast env presence checks (REQUIRED throws, RECOMMENDED warns) + Ollama reachability check + embedding-dim assertion (768 for nomic-embed-text:v1.5). Wired via src/instrumentation.ts → register() so checks run at server start, not build time. Type-check clean, 62 tests passing."
+  }
+}
