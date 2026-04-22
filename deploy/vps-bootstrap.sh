@@ -302,9 +302,15 @@ step_app_users_and_dirs() {
         useradd --system --create-home --home-dir /home/deploy --shell /bin/bash deploy
     fi
 
-    # Minimal sudo: only what's needed to restart the app from deploy.sh
+    # Minimal sudo for deploy.sh — restart the app + run app-schema migrations.
+    # The psql entry is gated to -d guru (won't open other DBs) and -f (file
+    # input only, no inline -c) so blast radius is "the deploy user can apply
+    # arbitrary SQL files to the guru DB as the postgres superuser." That's
+    # already implied by the deploy user's ability to run npm-built code that
+    # connects to the DB — making it explicit here for migrations.
     cat > /etc/sudoers.d/deploy <<'EOF'
 deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
+deploy ALL=(postgres) NOPASSWD: /usr/bin/psql -d guru -1 -f *
 EOF
     chmod 440 /etc/sudoers.d/deploy
 
@@ -340,11 +346,29 @@ step_systemd_unit() {
 }
 
 step_backups() {
-    log "backup cron"
-    if [[ -f "$REPO_DIR/deploy/backup.sh" ]]; then
-        install -m 0755 "$REPO_DIR/deploy/backup.sh" /etc/cron.daily/guru-backup
-    else
-        warn "deploy/backup.sh not present yet (D15) — skipping cron install"
+    log "Backblaze B2 backup cron"
+    if [[ ! -f "$REPO_DIR/deploy/backup.sh" ]]; then
+        warn "deploy/backup.sh not present yet — skipping cron install"
+        return
+    fi
+
+    # Install b2 CLI via pipx (system package python3-b2sdk doesn't ship the
+    # CLI; pipx is the cleanest way to get the latest 'b2' command available
+    # to root for cron.daily). Idempotent: skips if already installed.
+    apt-get install -y pipx
+    if ! command -v b2 &>/dev/null; then
+        pipx install --global b2
+    fi
+
+    install -m 0755 "$REPO_DIR/deploy/backup.sh" /etc/cron.daily/guru-backup
+
+    if [[ ! -f /etc/backup-b2.env ]]; then
+        warn "/etc/backup-b2.env not present — backups will fail until you create it. Required keys:"
+        warn "  B2_ACCOUNT_ID=..."
+        warn "  B2_APPLICATION_KEY=..."
+        warn "  B2_BUCKET=..."
+        warn "  (chmod 600 /etc/backup-b2.env, chown root:root)"
+        warn "Also: set a B2 bucket lifecycle rule to keep prior versions ~30 days."
     fi
 }
 
