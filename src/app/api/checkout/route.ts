@@ -11,9 +11,16 @@ import { requireUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  typescript: true,
-});
+// Lazy-init: construct on first call. Module-level `new Stripe(...)` runs
+// during Next.js build's page-data collection phase, where env vars may not
+// be injected yet (throws "Neither apiKey nor config.authenticator provided").
+let _stripe: Stripe | null = null;
+function stripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { typescript: true });
+  }
+  return _stripe;
+}
 
 export async function POST() {
   const userOrResponse = await requireUser();
@@ -50,7 +57,7 @@ export async function POST() {
     params.customer_email = user.email;
   }
 
-  const session = await stripe.checkout.sessions.create(params);
+  const session = await stripe().checkout.sessions.create(params);
 
   return Response.json({ url: session.url });
 }

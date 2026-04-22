@@ -18,9 +18,14 @@ import { exec, one } from '@/lib/db';
 export const dynamic  = 'force-dynamic';
 export const runtime  = 'nodejs';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  typescript: true,
-});
+// Lazy-init: see explanation in /api/checkout/route.ts.
+let _stripe: Stripe | null = null;
+function stripe(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { typescript: true });
+  }
+  return _stripe;
+}
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -38,7 +43,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, secret);
+    event = stripe().webhooks.constructEvent(body, sig, secret);
   } catch (err) {
     console.error('[stripe-webhook] signature verification failed:', err);
     return Response.json({ error: 'Invalid signature' }, { status: 400 });
