@@ -1,0 +1,31 @@
+# deploy/Caddyfile
+#
+# Installed by vps-bootstrap.sh to /etc/caddy/Caddyfile.
+# {$DOMAIN} is injected via a systemd drop-in at
+# /etc/systemd/system/caddy.service.d/env.conf — see step_caddy in bootstrap.
+#
+# Origin cert files (origin.pem, origin.key, authenticated_origin_pull_ca.pem)
+# are generated in the Cloudflare dashboard and placed manually at
+# /etc/ssl/cloudflare/ before first start. See §7.3 and deploy/README.md.
+
+{$DOMAIN} {
+    tls /etc/ssl/cloudflare/origin.pem /etc/ssl/cloudflare/origin.key {
+        client_auth {
+            mode require_and_verify
+            trust_pool file /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem
+        }
+    }
+
+    encode gzip zstd
+
+    reverse_proxy localhost:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
