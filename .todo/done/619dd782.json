@@ -1,13 +1,13 @@
 {
   "id": "619dd782",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "B7: src/lib/boot.ts — assert first chunk embedding length=768 and Ollama reachable (GET /api/tags lists nomic-embed-text:v1.5)",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-04-20T17:30:15.378Z",
-  "updated_at": "2026-04-20T18:41:47.898Z",
+  "updated_at": "2026-04-22T18:16:39.692Z",
   "files": [
     {
       "path": "src/lib/boot.ts"
@@ -27,5 +27,11 @@
       "content": "Deferred to Phase C. B7 adds Ollama dim/reachability assertions to src/lib/boot.ts, but boot.ts is created by C10 — the file does not exist yet. When C10 runs (Phase C branch todo/6157e231), implement B7 immediately after on the same branch and close it from there. Re-checking out todo/7717ec96 just to add lines to boot.ts would create branch churn for no benefit.",
       "confidence": "high"
     }
-  ]
+  ],
+  "resolution": {
+    "commit": "8e63ba7",
+    "resolved_at": "2026-04-22T18:16:39.692Z",
+    "resolved_by": "unknown",
+    "note": "B7 satisfied as part of C10 commit (same file). boot.ts asserts Ollama is reachable AND that /api/embed returns 768-dim vectors matching the corpus's expected embedding. Ticket parent was Phase B but work landed on Phase C branch (todo/6157e231) per the original deferral note."
+  }
 }
