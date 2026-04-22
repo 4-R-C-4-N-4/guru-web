@@ -79,9 +79,10 @@ mv -Tf "$CURRENT.new" "$CURRENT"
 log "restart guru-web"
 sudo /bin/systemctl restart guru-web
 
-# Wait briefly + verify
+# Wait briefly + verify (is-active is a read-only query — no sudo needed,
+# and adding it to sudoers just expands the attack surface.)
 sleep 2
-if ! sudo /bin/systemctl is-active --quiet guru-web; then
+if ! /bin/systemctl is-active --quiet guru-web; then
     echo "deploy.sh: guru-web failed to start — check 'journalctl -u guru-web -n 50'" >&2
     exit 1
 fi
