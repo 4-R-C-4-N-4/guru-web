@@ -1,0 +1,27 @@
+{
+  "id": "bbe07228",
+  "type": "chore",
+  "state": "done",
+  "summary": "D13: deploy/deploy.sh — 5-step idempotent script (clone releases/<sha>, npm ci --omit=dev, symlink swap, systemctl restart, prune to last 5)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:27.556Z",
+  "updated_at": "2026-04-22T16:52:12.561Z",
+  "relationships": {
+    "parent": "59a6551c"
+  },
+  "description": "5-step idempotent script per §7.8. Clone to /srv/guru-web/releases/<sha>, run npm ci --omit=dev + npm run build in that dir, swap /srv/guru-web/current symlink, sudo systemctl restart guru-web, prune to last 5 releases.\n\nACCESS PATTERN (decided 2026-04-22): deploy.sh runs on the VPS, invoked over SSH from the GitHub Actions runner. The runner reaches the VPS via Tailscale — not public SSH. UFW allows port 22 only on tailscale0. Script itself doesn't know/care about the access mechanism — just needs to be at /srv/guru-web/deploy.sh, owned by deploy:deploy, executable. E17 is the workflow that wires up the Tailscale + SSH invocation.\n\nShould run as 'deploy' user (home /home/deploy, created by bootstrap). Needs sudo to systemctl restart guru-web — bootstrap already installs /etc/sudoers.d/deploy with NOPASSWD for that one command.",
+  "work": {
+    "branch": "todo/59a6551c",
+    "base_branch": "main",
+    "started_at": "2026-04-22T16:50:10.152Z",
+    "started_by": "anonlessness"
+  },
+  "resolution": {
+    "commit": "b0e328d",
+    "resolved_at": "2026-04-22T16:52:12.561Z",
+    "resolved_by": "unknown",
+    "note": "deploy/deploy.sh written per §7.8: 5-step idempotent (fetch SHA → npm ci + build → symlink swap → systemctl restart + verify → prune to 5). Symlink target is .next/standalone/ so the systemd unit's ExecStart=/usr/bin/node server.js works unchanged. Also updated vps-bootstrap.sh to install deploy.sh to /srv/guru-web/deploy.sh as the fixed CI entry point."
+  }
+}
