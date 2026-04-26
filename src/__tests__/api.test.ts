@@ -186,6 +186,7 @@ describe('POST /api/query', () => {
 
   it('returns 429 when quota exceeded', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' }); // session ownership check
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('prompt');
@@ -193,6 +194,25 @@ describe('POST /api/query', () => {
 
     const res = await queryPOST(req('POST', '/api/query', { query: 'test', sessionId: 's1' }));
     expect(res.status).toBe(429);
+  });
+
+  it('returns 404 when sessionId belongs to another user', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce(null); // ownership SELECT finds no row → not owned
+    mockExec.mockResolvedValue(undefined);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 'foreign_session' }));
+    expect(res.status).toBe(404);
+
+    // Regression: must check user_id, not just session id
+    const [sql, params] = mockOne.mock.calls[0]!;
+    expect(sql).toMatch(/FROM\s+sessions\s+WHERE\s+id\s*=\s*\$1\s+AND\s+user_id\s*=\s*\$2/i);
+    expect(params).toEqual(['foreign_session', 'user_1']);
+
+    // No retrieval, no quota burn, no INSERT
+    expect(mockRetrieve).not.toHaveBeenCalled();
+    expect(mockQuota).not.toHaveBeenCalled();
+    expect(mockExec).not.toHaveBeenCalled();
   });
 
   it('returns 400 for missing query', async () => {
@@ -204,6 +224,7 @@ describe('POST /api/query', () => {
 
   it('streams response when quota allows', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check passes
     mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
@@ -228,6 +249,7 @@ describe('POST /api/query', () => {
 
   it('persists token counts from final usage chunk', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check
     mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
@@ -255,6 +277,7 @@ describe('POST /api/query', () => {
 
   it('writes NULL token counts when the stream truncates before usage', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check
     mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);

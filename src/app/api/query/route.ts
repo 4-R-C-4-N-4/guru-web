@@ -43,6 +43,19 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  // 2b. Ownership check — if the client supplied a sessionId, confirm it
+  // belongs to the authenticated user before we do any work or persist into it.
+  // Returns 404 (not 403) so we don't leak whether a session exists for someone else.
+  if (sessionId) {
+    const owned = await one<{ id: string }>(
+      `SELECT id FROM sessions WHERE id = $1 AND user_id = $2`,
+      [sessionId, user.id]
+    );
+    if (!owned) {
+      return Response.json({ error: 'Session not found' }, { status: 404 });
+    }
+  }
+
   // 3. Retrieve + build prompt (before quota consumption)
   const prefs = await loadPreferences(user.id);
   const chunks = await retrieve(queryText, prefs);
