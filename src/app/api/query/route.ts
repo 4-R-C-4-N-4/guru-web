@@ -61,6 +61,8 @@ export async function POST(req: Request) {
   const stream = await completeStream(prompt, user.tier);
 
   let fullResponse = '';
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
   let streamError: Error | null = null;
 
   const readable = new ReadableStream({
@@ -71,6 +73,10 @@ export async function POST(req: Request) {
           if (text) {
             fullResponse += text;
             controller.enqueue(new TextEncoder().encode(text));
+          }
+          if (chunk.usage) {
+            inputTokens  = chunk.usage.prompt_tokens     ?? null;
+            outputTokens = chunk.usage.completion_tokens ?? null;
           }
         }
       } catch (err) {
@@ -97,8 +103,9 @@ export async function POST(req: Request) {
         await exec(
           `INSERT INTO queries
              (session_id, user_id, query_text, response_text,
-              chunks_used, model_used, tier_used)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              chunks_used, model_used, tier_used,
+              input_tokens, output_tokens)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             sessionId,
             user.id,
@@ -107,6 +114,8 @@ export async function POST(req: Request) {
             JSON.stringify(chunks.map(c => c.id)),
             model,
             user.tier,
+            inputTokens,
+            outputTokens,
           ]
         );
       } catch (err) {

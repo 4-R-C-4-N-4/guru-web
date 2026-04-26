@@ -225,4 +225,54 @@ describe('POST /api/query', () => {
     const text = await res.text();
     expect(text).toBe('Hello world');
   });
+
+  it('persists token counts from final usage chunk', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+
+    async function* fakeStream() {
+      yield { choices: [{ delta: { content: 'Hi' } }] };
+      // Usage chunk shape per OpenAI streaming spec: empty choices[], top-level usage.
+      yield { choices: [], usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 } };
+    }
+    mockStream.mockResolvedValueOnce(fakeStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text(); // drain stream so the persistence path runs
+
+    expect(mockExec).toHaveBeenCalledTimes(1);
+    const [sql, params] = mockExec.mock.calls[0]!;
+    expect(sql).toContain('input_tokens');
+    expect(sql).toContain('output_tokens');
+    expect(params).toHaveLength(9);
+    expect(params![7]).toBe(42); // input_tokens  ← prompt_tokens
+    expect(params![8]).toBe(7);  // output_tokens ← completion_tokens
+  });
+
+  it('writes NULL token counts when the stream truncates before usage', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+
+    async function* truncatedStream() {
+      yield { choices: [{ delta: { content: 'partial' } }] };
+      throw new Error('connection reset');
+    }
+    mockStream.mockResolvedValueOnce(truncatedStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text();
+
+    expect(mockExec).toHaveBeenCalledTimes(1);
+    const [, params] = mockExec.mock.calls[0]!;
+    expect(params![7]).toBeNull(); // input_tokens
+    expect(params![8]).toBeNull(); // output_tokens — distinguishable from a legitimate 0
+  });
 });
