@@ -1,13 +1,13 @@
 {
   "id": "55ae19b0",
   "type": "bug",
-  "state": "open",
+  "state": "done",
   "summary": "Streamed queries persist NULL input_tokens/output_tokens — missing stream_options.include_usage",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-04-26T21:13:09.031Z",
-  "updated_at": "2026-04-26T21:13:41.867Z",
+  "updated_at": "2026-04-26T21:19:23.159Z",
   "files": [
     {
       "path": "src/app/api/query/route.ts",
@@ -30,5 +30,19 @@
     "openrouter"
   ],
   "description": "Streamed responses to /api/query persist with input_tokens/output_tokens = NULL because OpenAI-compatible streaming omits usage by default. Three independent gaps, all verified against current code.\n\nGap 1 — src/lib/model.ts:63-74 (completeStream)\nMissing stream_options: { include_usage: true } on the chat.completions.create call. Without it, the API never emits a usage chunk. Non-streaming complete() at line 46 doesn't need this — non-streamed responses always include usage.\n\nGap 2 — src/app/api/query/route.ts:69-75\nThe for-await loop only reads chunk.choices[0]?.delta?.content. Even if a usage chunk arrived, nothing extracts chunk.usage. The usage chunk's choices[] is empty, so the existing content path naturally skips it.\n\nGap 3 — src/app/api/query/route.ts:97-111\nINSERT INTO queries lists 7 columns; input_tokens / output_tokens are absent. Schema (migrations/002_sessions_queries.sql:22-23) already has them as nullable INTEGER, so no migration needed.\n\nField-name bridge: API returns prompt_tokens / completion_tokens; DB columns are input_tokens / output_tokens. Map at the INSERT site.\n\nEdge cases:\n- Stream truncation: declare counters as `let inputTokens: number | null = null` alongside fullResponse. Only assign inside the loop when chunk.usage is present. NULL on truncation is distinguishable from a legitimate 0-token response.\n- chunk.usage is typed as possibly undefined on ChatCompletionChunk — a plain `if (chunk.usage)` guard is enough, no type assertion.\n- max_tokens is independent of include_usage.\n\nOpenRouter caveat: include_usage is generally honored and forwarded for both configured models (deepseek/deepseek-chat, anthropic/claude-sonnet-4-5), but worth a one-off verification per model since OpenRouter normalizes Anthropic's native usage shape and normalization bugs occasionally surface.\n\nFix size: ~3 small edits, no migration. Root cause understood — go straight to todo-implement when picking this up.",
-  "relationships": {}
+  "relationships": {},
+  "work": {
+    "branch": "todo/55ae19b0",
+    "base_branch": "main",
+    "started_at": "2026-04-26T21:17:49.768Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "6cfee37f42dfbd9cc15d8301fd7141df97bb9357",
+    "resolved_at": "2026-04-26T21:19:23.159Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "persists token counts from final usage chunk",
+    "note": "stream_options.include_usage opt-in + chunk.usage extraction + extended INSERT. Truncation leaves NULL. OpenRouter per-model verification (deepseek, claude-sonnet-4-5) still pending — worth a one-off live check before assuming both gateways forward usage."
+  }
 }
