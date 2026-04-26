@@ -43,6 +43,10 @@ vi.mock('@/lib/model', () => ({
   MODELS: { free: 'deepseek/deepseek-chat', pro: 'anthropic/claude-sonnet-4-5' },
 }));
 
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
@@ -54,6 +58,7 @@ import * as quota   from '@/lib/quota';
 import * as retriever from '@/lib/retriever';
 import * as prompt  from '@/lib/prompt';
 import * as model   from '@/lib/model';
+import * as rl      from '@/lib/rate-limit';
 
 const mockQuery  = db.query      as MockedFunction<typeof db.query>;
 const mockOne    = db.one        as MockedFunction<typeof db.one>;
@@ -65,6 +70,7 @@ const mockQuota  = quota.checkAndIncrement as MockedFunction<typeof quota.checkA
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
 const mockStream = model.completeStream   as MockedFunction<typeof model.completeStream>;
+const mockRateLimit = rl.rateLimit         as MockedFunction<typeof rl.rateLimit>;
 
 const FREE_USER = { id: 'user_1', email: 'a@b.com', tier: 'free' as const, stripe_customer_id: null };
 const DEFAULT_PREFS = { scopeMode: 'all' as const, blockedTraditions: [], blockedTexts: [], whitelistedTraditions: [], whitelistedTexts: [] };
@@ -182,7 +188,24 @@ describe('PUT /api/preferences', () => {
 });
 
 describe('POST /api/query', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: rate-limit allows. Tests that exercise the 429 path override.
+    mockRateLimit.mockResolvedValue({ allowed: true });
+  });
+
+  it('returns 429 with Retry-After when rate-limited', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockRateLimit.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 3 });
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('3');
+    // Must short-circuit before hitting any of the heavier mocks.
+    expect(mockOne).not.toHaveBeenCalled();
+    expect(mockRetrieve).not.toHaveBeenCalled();
+    expect(mockQuota).not.toHaveBeenCalled();
+  });
 
   it('returns 429 when quota exceeded', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);

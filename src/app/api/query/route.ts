@@ -19,6 +19,7 @@ import { buildPrompt } from '@/lib/prompt';
 import { completeStream, MODELS } from '@/lib/model';
 import { checkAndIncrement } from '@/lib/quota';
 import { loadPreferences } from '@/lib/prefs';
+import { rateLimit } from '@/lib/rate-limit';
 import { one, exec } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -28,6 +29,15 @@ export async function POST(req: Request) {
   const userOrResponse = await requireUser();
   if (userOrResponse instanceof Response) return userOrResponse;
   const user = userOrResponse;
+
+  // 1b. Rate limit — 1s per-user min-interval debounce.
+  const rl = await rateLimit(user.id, 'query', 1);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } },
+    );
+  }
 
   // 2. Parse body
   let queryText: string;
