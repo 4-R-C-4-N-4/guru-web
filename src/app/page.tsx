@@ -1,13 +1,22 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import Citation from '@/components/citation';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export default function LandingPage() {
   const mobile = useIsMobile();
+  const { isLoaded, isSignedIn } = useUser();
+  const router = useRouter();
   const traditionKeys = Object.keys(tokens.tradition) as (keyof typeof tokens.tradition)[];
+
+  if (isLoaded && isSignedIn) {
+    router.replace('/chat');
+    return null;
+  }
 
   return (
     <div style={{
