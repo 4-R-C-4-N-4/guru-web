@@ -86,7 +86,7 @@ describe('POST /api/webhooks/stripe', () => {
   it('checkout.session.completed: upgrades user to Pro and stores customer_id', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'checkout.session.completed',
-      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123' } },
+      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123', payment_status: 'paid' } },
     });
     mockExec.mockResolvedValueOnce(undefined);
 
@@ -105,11 +105,23 @@ describe('POST /api/webhooks/stripe', () => {
   it('checkout.session.completed: skips upgrade if user_id missing from metadata', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'checkout.session.completed',
-      data: { object: { metadata: {}, customer: 'cus_123' } },
+      data: { object: { metadata: {}, customer: 'cus_123', payment_status: 'paid' } },
     });
 
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
+    expect(mockExec).not.toHaveBeenCalled();
+  });
+
+  it('checkout.session.completed: ignores session when payment_status is not paid', async () => {
+    mockConstructEvent.mockReturnValueOnce({
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123', payment_status: 'unpaid' } },
+    });
+
+    const res = await stripeWebhookPOST(makeWebhookReq({}));
+    expect(res.status).toBe(200);
+    // No DB write — guard should fire before we touch users.
     expect(mockExec).not.toHaveBeenCalled();
   });
 
