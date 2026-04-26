@@ -29,7 +29,8 @@ export async function requireUser(): Promise<User | Response> {
   }
 
   const user = await one<User>(
-    `SELECT id, email, tier, stripe_customer_id FROM users WHERE id = $1`,
+    `SELECT id, email, tier, stripe_customer_id FROM users
+       WHERE id = $1 AND deleted_at IS NULL`,
     [userId]
   );
 

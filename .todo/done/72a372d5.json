@@ -1,0 +1,33 @@
+{
+  "id": "72a372d5",
+  "type": "chore",
+  "state": "done",
+  "summary": "No rate limiting on /api/query, /api/checkout, /api/webhooks",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-26T21:27:02.937Z",
+  "updated_at": "2026-04-26T21:35:10.297Z",
+  "files": [
+    {
+      "path": "src/app/api/query/route.ts"
+    }
+  ],
+  "tags": [
+    "security",
+    "rate-limit",
+    "abuse"
+  ],
+  "relationships": {
+    "parent": "651ae6f0"
+  },
+  "description": "No IP-based or user-based throttling on /api/query, /api/checkout, or /api/webhooks/*.\n\nImpact: a single user can burn 30 free queries instantly, spam checkout sessions, or replay webhooks. Webhook replay protection is partly the responsibility of Stripe/Clerk signature verification, but no app-side defense exists.\n\nFix options:\n- Redis sliding window (ioredis) — lowest latency, requires new dependency.\n- Postgres token bucket: rate_limits(user_id, window_start, count) with upsert; reuse existing pg pool.\n- Minimum acceptable: per-user 1s debounce on /api/query; per-user 5min cooldown on /api/checkout.\n\nFiles in scope:\n- src/app/api/query/route.ts\n- src/app/api/checkout/route.ts\n- src/app/api/webhooks/clerk/route.ts\n- src/app/api/webhooks/stripe/route.ts\n\nSeverity: MEDIUM — abuse/cost vector, not a direct breach.",
+  "resolution": {
+    "commit": "b9935da370f27cfc2b6786632557f57d3e8233a0",
+    "resolved_at": "2026-04-26T21:35:10.297Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rate-limit.test.ts",
+    "test_function": "denies and surfaces retryAfterSeconds when cooldown is active",
+    "note": "Pg-backed token bucket. /api/query 1s, /api/checkout 5min. Webhooks deferred — Stripe/Clerk signature+replay protection covers them; revisit if abuse appears in logs. Requires migrations/005_rate_limits.sql to be applied in prod before deploy."
+  }
+}

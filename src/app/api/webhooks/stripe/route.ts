@@ -85,6 +85,15 @@ export async function POST(req: Request) {
  * Promote them to Pro tier and store their Stripe customer ID.
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Guard: only treat the checkout as a completed sale if Stripe says it's paid.
+  // checkout.session.completed can fire for unpaid sessions in async-payment flows.
+  if (session.payment_status !== 'paid') {
+    console.log(
+      `[stripe-webhook] checkout.session.completed ignored — payment_status=${session.payment_status}`
+    );
+    return;
+  }
+
   const userId = session.metadata?.user_id;
   if (!userId) {
     console.error('[stripe-webhook] checkout.session.completed missing user_id metadata');

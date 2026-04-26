@@ -29,6 +29,10 @@ vi.mock('next/headers', () => ({
   })),
 }));
 
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn(),
+}));
+
 vi.mock('stripe', () => {
   function Stripe() {
     return {
@@ -45,10 +49,12 @@ vi.mock('stripe', () => {
 
 import * as db from '@/lib/db';
 import * as auth from '@/lib/auth';
+import * as rl from '@/lib/rate-limit';
 
 const mockOne  = db.one  as MockedFunction<typeof db.one>;
 const mockExec = db.exec as MockedFunction<typeof db.exec>;
 const mockAuth = auth.requireUser as MockedFunction<typeof auth.requireUser>;
+const mockRateLimit = rl.rateLimit as MockedFunction<typeof rl.rateLimit>;
 
 const { POST: stripeWebhookPOST } = await import('@/app/api/webhooks/stripe/route');
 const { POST: checkoutPOST } = await import('@/app/api/checkout/route');
@@ -86,7 +92,7 @@ describe('POST /api/webhooks/stripe', () => {
   it('checkout.session.completed: upgrades user to Pro and stores customer_id', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'checkout.session.completed',
-      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123' } },
+      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123', payment_status: 'paid' } },
     });
     mockExec.mockResolvedValueOnce(undefined);
 
@@ -105,11 +111,23 @@ describe('POST /api/webhooks/stripe', () => {
   it('checkout.session.completed: skips upgrade if user_id missing from metadata', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'checkout.session.completed',
-      data: { object: { metadata: {}, customer: 'cus_123' } },
+      data: { object: { metadata: {}, customer: 'cus_123', payment_status: 'paid' } },
     });
 
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
+    expect(mockExec).not.toHaveBeenCalled();
+  });
+
+  it('checkout.session.completed: ignores session when payment_status is not paid', async () => {
+    mockConstructEvent.mockReturnValueOnce({
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123', payment_status: 'unpaid' } },
+    });
+
+    const res = await stripeWebhookPOST(makeWebhookReq({}));
+    expect(res.status).toBe(200);
+    // No DB write — guard should fire before we touch users.
     expect(mockExec).not.toHaveBeenCalled();
   });
 
@@ -205,12 +223,23 @@ describe('POST /api/checkout', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
     process.env.STRIPE_PRO_PRICE_ID = 'price_test_123';
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+    // Default: rate-limit allows. Tests that exercise the 429 path override.
+    mockRateLimit.mockResolvedValue({ allowed: true });
   });
 
   it('returns 401 if not authenticated', async () => {
     mockAuth.mockResolvedValueOnce(Response.json({ error: 'Unauthorized' }, { status: 401 }));
     const res = await checkoutPOST();
     expect(res.status).toBe(401);
+  });
+
+  it('returns 429 with Retry-After when within the per-user cooldown', async () => {
+    mockAuth.mockResolvedValueOnce({ id: 'user_1', email: 'a@b.com', tier: 'free', stripe_customer_id: null });
+    mockRateLimit.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 240 });
+
+    const res = await checkoutPOST();
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('240');
   });
 
   it('returns 400 if user is already Pro', async () => {

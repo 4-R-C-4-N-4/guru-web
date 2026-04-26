@@ -19,6 +19,7 @@ import { buildPrompt } from '@/lib/prompt';
 import { completeStream, MODELS } from '@/lib/model';
 import { checkAndIncrement } from '@/lib/quota';
 import { loadPreferences } from '@/lib/prefs';
+import { rateLimit } from '@/lib/rate-limit';
 import { one, exec } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -28,6 +29,15 @@ export async function POST(req: Request) {
   const userOrResponse = await requireUser();
   if (userOrResponse instanceof Response) return userOrResponse;
   const user = userOrResponse;
+
+  // 1b. Rate limit — 1s per-user min-interval debounce.
+  const rl = await rateLimit(user.id, 'query', 1);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } },
+    );
+  }
 
   // 2. Parse body
   let queryText: string;
@@ -41,6 +51,19 @@ export async function POST(req: Request) {
     sessionId = typeof body.sessionId === 'string' ? body.sessionId : null;
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // 2b. Ownership check — if the client supplied a sessionId, confirm it
+  // belongs to the authenticated user before we do any work or persist into it.
+  // Returns 404 (not 403) so we don't leak whether a session exists for someone else.
+  if (sessionId) {
+    const owned = await one<{ id: string }>(
+      `SELECT id FROM sessions WHERE id = $1 AND user_id = $2`,
+      [sessionId, user.id]
+    );
+    if (!owned) {
+      return Response.json({ error: 'Session not found' }, { status: 404 });
+    }
   }
 
   // 3. Retrieve + build prompt (before quota consumption)

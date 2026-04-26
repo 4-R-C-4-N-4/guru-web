@@ -8,6 +8,7 @@
 
 import Stripe from 'stripe';
 import { requireUser } from '@/lib/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -26,6 +27,15 @@ export async function POST() {
   const userOrResponse = await requireUser();
   if (userOrResponse instanceof Response) return userOrResponse;
   const user = userOrResponse;
+
+  // Rate limit — 5min per-user cooldown to prevent checkout spam.
+  const rl = await rateLimit(user.id, 'checkout', 300);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } },
+    );
+  }
 
   if (user.tier === 'pro') {
     return Response.json({ error: 'Already on Pro plan' }, { status: 400 });
