@@ -1,0 +1,26 @@
+{
+  "id": "abf8d253",
+  "type": "bug",
+  "state": "open",
+  "summary": "Stripe webhook handles checkout.session.completed without verifying payment_status === 'paid'",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-26T21:27:04.287Z",
+  "updated_at": "2026-04-26T21:27:26.695Z",
+  "files": [
+    {
+      "path": "src/app/api/webhooks/stripe/route.ts"
+    }
+  ],
+  "tags": [
+    "security",
+    "stripe",
+    "webhooks",
+    "payments"
+  ],
+  "relationships": {
+    "parent": "651ae6f0"
+  },
+  "description": "src/app/api/webhooks/stripe/route.ts handleCheckoutCompleted() fires on every checkout.session.completed event without checking session.payment_status. Failed or cancelled checkouts could trigger Pro upgrades in edge cases (e.g., async-payment flows, manual refunds).\n\nFix:\n\n  if (session.payment_status !== 'paid') {\n    console.log('[stripe-webhook] checkout completed but not paid');\n    return;\n  }\n\nPlace the guard at the top of handleCheckoutCompleted, before any DB writes or tier transitions.\n\nSeverity: HIGH — financial / authorization (free Pro)."
+}

@@ -1,0 +1,24 @@
+{
+  "id": "651ae6f0",
+  "type": "chore",
+  "state": "open",
+  "summary": "Security audit follow-ups (4 issues)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-26T21:26:54.630Z",
+  "updated_at": "2026-04-26T21:27:04.287Z",
+  "tags": [
+    "security",
+    "audit"
+  ],
+  "description": "Parent ticket bundling four security findings from a manual audit. Each child is independently fixable; close children individually, then close this parent. Findings reported by user; severity descending: auth bypass on deleted users (#1), cross-user session injection (#2), missing rate limiting (#3), Stripe webhook trusts unpaid completions (#4).",
+  "relationships": {
+    "children": [
+      "d6c86b0c",
+      "ec521e21",
+      "72a372d5",
+      "abf8d253"
+    ]
+  }
+}

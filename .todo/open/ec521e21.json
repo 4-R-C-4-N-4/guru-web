@@ -1,0 +1,25 @@
+{
+  "id": "ec521e21",
+  "type": "bug",
+  "state": "open",
+  "summary": "POST /api/query trusts client sessionId without ownership check",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-26T21:27:02.172Z",
+  "updated_at": "2026-04-26T21:27:17.159Z",
+  "files": [
+    {
+      "path": "src/app/api/query/route.ts"
+    }
+  ],
+  "tags": [
+    "security",
+    "authz",
+    "sessions"
+  ],
+  "relationships": {
+    "parent": "651ae6f0"
+  },
+  "description": "POST /api/query accepts a client-supplied `sessionId` and inserts the new query into that session without verifying it belongs to the authenticated user. A user can write queries into another user's session, polluting their history.\n\nFix options (any one):\n- Pre-check: `SELECT 1 FROM sessions WHERE id = $1 AND user_id = $2` before INSERT; 404/403 if absent.\n- Single-statement guard: fold the ownership check into the INSERT via a sub-select or CTE so the row only inserts when the session belongs to the user.\n- Schema-level: tighten queries.session_id FK + add CHECK or trigger that asserts queries.user_id matches sessions.user_id.\n\nSeverity: HIGH — cross-user data integrity."
+}
