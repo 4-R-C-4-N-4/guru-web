@@ -70,5 +70,8 @@ export async function completeStream(prompt: string, tier: Tier) {
     temperature: 0.3,
     max_tokens: 2048,
     stream: true,
+    // OpenAI-compatible streams omit usage by default; opt in so the API emits
+    // a final chunk with prompt_tokens/completion_tokens (empty choices[]).
+    stream_options: { include_usage: true },
   });
 }
