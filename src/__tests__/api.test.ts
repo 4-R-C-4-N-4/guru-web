@@ -287,6 +287,38 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 when query exceeds 4000-char hard cap', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    const oversize = 'a'.repeat(4001);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: oversize, sessionId: 's1' }));
+    const body = await res.json() as { error: string; limit: number; length: number };
+    expect(res.status).toBe(400);
+    expect(body.limit).toBe(4000);
+    expect(body.length).toBe(4001);
+    // Cap fires before any downstream work.
+    expect(mockOne).not.toHaveBeenCalled();
+    expect(mockRetrieve).not.toHaveBeenCalled();
+    expect(mockQuota).not.toHaveBeenCalled();
+    expect(mockStream).not.toHaveBeenCalled();
+  });
+
+  it('accepts query exactly at 4000 chars (boundary)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership
+    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('p');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const atLimit = 'a'.repeat(4000);
+    const res = await queryPOST(req('POST', '/api/query', { query: atLimit, sessionId: 's1' }));
+    expect(res.status).toBe(200);
+  });
+
   it('streams response when quota allows', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check passes
