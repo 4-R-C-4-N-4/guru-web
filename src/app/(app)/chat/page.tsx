@@ -28,6 +28,12 @@ const SAMPLE_QUERIES = [
   'Compare apophatic theology across Christian and Buddhist thought',
 ];
 
+// Mirrors POST /api/query MAX_QUERY_CHARS. Server is the authoritative gate;
+// these only drive the UI counter + send button disabled state.
+const QUERY_MAX_CHARS    = 4000;
+const QUERY_WARN_CHARS   = 3000; // muted counter visible from here
+const QUERY_DANGER_CHARS = 3800; // counter turns red from here
+
 export default function ChatPage() {
   const mobile  = useIsMobile();
   const router  = useRouter();
@@ -50,6 +56,7 @@ export default function ChatPage() {
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;
+    if (input.length > QUERY_MAX_CHARS) return;
 
     const queryText = input.trim();
     setInput('');
@@ -116,6 +123,10 @@ export default function ChatPage() {
   }, [input, loading, sessionId, router]);
 
   const quotaRemaining = quotaLimit - (quotaUsed ?? 0);
+  const overLimit      = input.length > QUERY_MAX_CHARS;
+  const showCounter    = input.length >= QUERY_WARN_CHARS;
+  const counterColor   = input.length >= QUERY_DANGER_CHARS ? '#c25a7a' : tokens.text.muted;
+  const sendDisabled   = !input.trim() || loading || overLimit;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 53px)', background: tokens.bg.deep }}>
@@ -201,19 +212,22 @@ export default function ChatPage() {
               outline: 'none', WebkitAppearance: 'none', minWidth: 0,
             } as React.CSSProperties}
           />
-          <button onClick={handleSend} disabled={!input.trim() || loading} style={{
-            padding: mobile ? '13px 16px' : '12px 20px',
-            background: input.trim() && !loading ? tokens.text.accent : tokens.bg.raised,
-            border: 'none', borderRadius: 3,
-            color: input.trim() && !loading ? tokens.bg.deep : tokens.text.muted,
-            fontFamily: tokens.font.mono, fontSize: 11, cursor: input.trim() && !loading ? 'pointer' : 'default',
-            fontWeight: 600, letterSpacing: 1, flexShrink: 0,
-          }}>QUERY</button>
+          <button onClick={handleSend} disabled={sendDisabled}
+            title={overLimit ? `Query exceeds ${QUERY_MAX_CHARS}-character limit` : undefined}
+            style={{
+              padding: mobile ? '13px 16px' : '12px 20px',
+              background: !sendDisabled ? tokens.text.accent : tokens.bg.raised,
+              border: 'none', borderRadius: 3,
+              color: !sendDisabled ? tokens.bg.deep : tokens.text.muted,
+              fontFamily: tokens.font.mono, fontSize: 11, cursor: !sendDisabled ? 'pointer' : 'default',
+              fontWeight: 600, letterSpacing: 1, flexShrink: 0,
+            }}>QUERY</button>
         </div>
         <div style={{ maxWidth: 680, margin: '5px auto 0', fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, display: 'flex', gap: mobile ? 8 : 16, flexWrap: 'wrap' }}>
           <span>8 traditions</span>
           <span>34 texts</span>
           {quotaUsed !== null && <span>{quotaRemaining}/{quotaLimit} remaining today</span>}
+          {showCounter && <span style={{ color: counterColor, marginLeft: 'auto' }}>{input.length}/{QUERY_MAX_CHARS}</span>}
         </div>
       </div>
     </div>
