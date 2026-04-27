@@ -169,12 +169,12 @@ export default function ChatPage() {
             </div>
 
             {msg.role === 'user' ? (
-              <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 15 : 16, color: tokens.text.primary, lineHeight: 1.6, padding: mobile ? '10px 12px' : '12px 16px', background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`, borderRadius: 4 }}>
+              <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 15 : 16, color: tokens.text.primary, lineHeight: 1.6, padding: mobile ? '10px 12px' : '12px 16px', background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`, borderRadius: 4, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
                 {msg.content}
               </div>
             ) : (
               <div>
-                <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 15, color: tokens.text.primary, lineHeight: 1.7, marginBottom: msg.citations?.length ? 14 : 0, whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 15, color: tokens.text.primary, lineHeight: 1.7, marginBottom: msg.citations?.length ? 14 : 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                   {msg.text}
                 </div>
                 {msg.citations && msg.citations.length > 0 && (
@@ -229,8 +229,8 @@ export default function ChatPage() {
               background: tokens.bg.deep, border: `1px solid ${tokens.border.subtle}`,
               borderRadius: 3, color: tokens.text.primary,
               fontFamily: tokens.font.display, fontSize: 16,
-              outline: 'none', WebkitAppearance: 'none', minWidth: 0,
-              resize: 'none', overflowY: 'auto',
+              outline: 'none', WebkitAppearance: 'none', minWidth: 0, width: '100%',
+              resize: 'none', overflowY: 'auto', overflowWrap: 'anywhere',
               maxHeight: inputMaxHeight, lineHeight: 1.45,
             } as React.CSSProperties}
           />
