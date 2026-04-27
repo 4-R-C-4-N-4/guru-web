@@ -83,6 +83,7 @@ const { GET: sessionsGET, POST: sessionsPOST } = await import('@/app/api/session
 const { GET: sessionGET } = await import('@/app/api/sessions/[id]/route');
 const { GET: prefsGET, PUT: prefsPUT } = await import('@/app/api/preferences/route');
 const { POST: queryPOST } = await import('@/app/api/query/route');
+const { GET: corpusGET } = await import('@/app/api/corpus/route');
 
 function req(method: string, url: string, body?: object) {
   return new Request(`http://localhost${url}`, {
@@ -184,6 +185,47 @@ describe('PUT /api/preferences', () => {
 
     const res = await prefsPUT(req('PUT', '/api/preferences', { scopeMode: 'invalid' }));
     expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/corpus', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 401 if not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce(Response.json({ error: 'Unauthorized' }, { status: 401 }));
+    const res = await corpusGET();
+    expect(res.status).toBe(401);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('aggregates DISTINCT (tradition, text_name) chunk rows into the catalog shape', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockQuery.mockResolvedValueOnce([
+      { tradition: 'Gnosticism', text_name: 'Gospel of Thomas' },
+      { tradition: 'Gnosticism', text_name: 'Gospel of Philip' },
+      { tradition: 'Taoism',     text_name: 'Tao Te Ching' },
+    ]);
+
+    const res = await corpusGET();
+    const body = await res.json() as { traditions: Record<string, { texts: string[] }> };
+    expect(res.status).toBe(200);
+    expect(body.traditions).toEqual({
+      Gnosticism: { texts: ['Gospel of Thomas', 'Gospel of Philip'] },
+      Taoism:     { texts: ['Tao Te Ching'] },
+    });
+
+    const [sql] = mockQuery.mock.calls[0]!;
+    expect(sql).toMatch(/SELECT\s+DISTINCT\s+tradition,\s*text_name\s+FROM\s+chunks/i);
+  });
+
+  it('returns an empty catalog when chunks is empty (no fallback)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockQuery.mockResolvedValueOnce([]);
+
+    const res = await corpusGET();
+    const body = await res.json() as { traditions: Record<string, unknown> };
+    expect(res.status).toBe(200);
+    expect(body.traditions).toEqual({});
   });
 });
 
