@@ -4,50 +4,50 @@ import { useState, useEffect } from 'react';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 
-// Default corpus scope — mirrors the prototype's tradition/text tree
-const DEFAULT_TRADITIONS: Record<string, { active: boolean; texts: Record<string, boolean> }> = {
-  Gnosticism:  { active: true,  texts: { 'Gospel of Thomas': true,  'Gospel of Philip': true, 'Apocryphon of John': true, 'Trimorphic Protennoia': false, 'On the Origin of the World': true } },
-  Kabbalah:    { active: true,  texts: { 'Sefer Yetzirah': true, 'Zohar': true, 'Bahir': true } },
-  Hermeticism: { active: true,  texts: { 'Corpus Hermeticum': true, 'Emerald Tablet': true, 'Asclepius': true } },
-  Neoplatonism:{ active: false, texts: { 'Enneads': false, 'Elements of Theology': false } },
-  Vedanta:     { active: true,  texts: { 'Mandukya Upanishad': true, 'Chandogya Upanishad': true, 'Brihadaranyaka Upanishad': true } },
-  Buddhism:    { active: true,  texts: { 'Heart Sutra': true, 'Diamond Sutra': true, 'Dhammapada': true } },
-  Mysticism:   { active: true,  texts: { 'Eckhart Sermons': true, 'Cloud of Unknowing': true, 'Divine Names': true } },
-  Sufism:      { active: true,  texts: { 'Fusus al-Hikam': true, 'Masnavi': true } },
-  Taoism:      { active: true,  texts: { 'Tao Te Ching': true, 'Chuang Tzu': true } },
-};
+// Catalog comes from /api/corpus (DISTINCT tradition/text from chunks).
+// Empty/error states are rendered as-is — no hardcoded fallback. If this UI
+// is empty, the corpus is not restored and that should be visible.
+type TraditionsState = Record<string, { active: boolean; texts: Record<string, boolean> }>;
 
-type TraditionsState = typeof DEFAULT_TRADITIONS;
+type LoadStatus = 'loading' | 'ready' | 'error';
 
 export default function SettingsPage() {
   const mobile = useIsMobile();
-  const [traditions, setTraditions] = useState<TraditionsState>(DEFAULT_TRADITIONS);
-  const [expanded, setExpanded]     = useState<string | null>(null);
-  const [saving,   setSaving]       = useState(false);
-  const [saved,    setSaved]        = useState(false);
+  const [traditions, setTraditions] = useState<TraditionsState>({});
+  const [status,    setStatus]      = useState<LoadStatus>('loading');
+  const [expanded,  setExpanded]    = useState<string | null>(null);
+  const [saving,    setSaving]      = useState(false);
+  const [saved,     setSaved]       = useState(false);
 
-  // Load preferences on mount
+  // Fetch the corpus catalog + the user's blocked-tradition prefs together,
+  // so we can mark blocked entries inactive in a single setState.
   useEffect(() => {
-    fetch('/api/preferences')
-      .then(r => r.json())
-      .then((prefs: { scopeMode: string; blockedTraditions: string[] }) => {
-        if (prefs.scopeMode === 'blacklist' && prefs.blockedTraditions.length > 0) {
-          setTraditions(prev => {
-            const next = { ...prev };
-            for (const t of prefs.blockedTraditions) {
-              const key = Object.keys(next).find(k => k.toLowerCase() === t);
-              if (key) {
-                next[key] = {
-                  ...next[key], active: false,
-                  texts: Object.fromEntries(Object.keys(next[key].texts).map(tx => [tx, false])),
-                };
-              }
-            }
-            return next;
-          });
+    Promise.all([
+      fetch('/api/corpus').then(r => {
+        if (!r.ok) throw new Error(`corpus ${r.status}`);
+        return r.json() as Promise<{ traditions: Record<string, { texts: string[] }> }>;
+      }),
+      fetch('/api/preferences').then(r => {
+        if (!r.ok) throw new Error(`preferences ${r.status}`);
+        return r.json() as Promise<{ scopeMode: string; blockedTraditions: string[] }>;
+      }),
+    ])
+      .then(([corpus, prefs]) => {
+        const blocked = new Set(
+          prefs.scopeMode === 'blacklist' ? prefs.blockedTraditions : []
+        );
+        const next: TraditionsState = {};
+        for (const [name, { texts }] of Object.entries(corpus.traditions)) {
+          const isBlocked = blocked.has(name.toLowerCase());
+          next[name] = {
+            active: !isBlocked,
+            texts: Object.fromEntries(texts.map(t => [t, !isBlocked])),
+          };
         }
+        setTraditions(next);
+        setStatus('ready');
       })
-      .catch(() => {});
+      .catch(() => setStatus('error'));
   }, []);
 
   const toggleTradition = (name: string) => {
@@ -98,7 +98,9 @@ export default function SettingsPage() {
     <div style={{ maxWidth: 560, margin: '0 auto', padding: mobile ? '16px 14px' : 24 }}>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>Corpus Scope</div>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 20 }}>
-        {activeTexts}/{totalTexts} texts · {activeTrad}/{Object.keys(traditions).length} traditions
+        {status === 'loading' && 'loading…'}
+        {status === 'error'   && <span style={{ color: '#c25a7a' }}>failed to load corpus</span>}
+        {status === 'ready'   && `${activeTexts}/${totalTexts} texts · ${activeTrad}/${Object.keys(traditions).length} traditions`}
       </div>
 
       {Object.entries(traditions).map(([name, data]) => {
@@ -152,7 +154,12 @@ export default function SettingsPage() {
           background: tokens.text.accent, color: tokens.bg.deep, border: 'none', borderRadius: 2,
           cursor: saving ? 'default' : 'pointer', fontWeight: 600,
         }}>{saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}</button>
-        <button onClick={() => setTraditions(DEFAULT_TRADITIONS)} style={{
+        <button onClick={() => setTraditions(prev => Object.fromEntries(
+          Object.entries(prev).map(([name, data]) => [name, {
+            active: true,
+            texts: Object.fromEntries(Object.keys(data.texts).map(t => [t, true])),
+          }]),
+        ))} style={{
           fontFamily: tokens.font.mono, fontSize: 11, padding: mobile ? '12px 20px' : '8px 16px',
           background: 'none', color: tokens.text.muted, border: `1px solid ${tokens.border.subtle}`, borderRadius: 2, cursor: 'pointer',
         }}>Reset to All</button>
