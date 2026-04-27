@@ -1,0 +1,17 @@
+{
+  "id": "84ac8169",
+  "type": "chore",
+  "state": "open",
+  "summary": "Chat input lacks character counter (UX pair to /api/query 4000-char cap)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-27T12:12:51.250Z",
+  "updated_at": "2026-04-27T12:13:06.831Z",
+  "tags": [
+    "ux",
+    "chat",
+    "validation"
+  ],
+  "description": "The chat input component currently has no character counter, so users can't see they're approaching the server-side 4000-char cap (b96dcd5b) until they hit submit and get a 400.\n\nFix: add a small char counter in the chat input. Recommended behavior:\n- Hidden / muted color until ~3000 chars (75%).\n- Visible muted color 3000-3800.\n- Red 3800-4000.\n- The send button is the authoritative gate — disable + tooltip when over 4000, but do not auto-truncate.\n\nFiles (likely): src/app/(app)/chat/* or wherever the chat input lives.\n\nPairs with: b96dcd5b (server cap is the authoritative validation; this ticket is purely UX)."
+}
