@@ -1,0 +1,22 @@
+{
+  "id": "78879103",
+  "type": "chore",
+  "state": "open",
+  "summary": "Chat input: single-line input → auto-grow textarea with max-height scrollbar",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-27T12:38:57.754Z",
+  "updated_at": "2026-04-27T12:39:24.718Z",
+  "files": [
+    {
+      "path": "src/app/(app)/chat/page.tsx"
+    }
+  ],
+  "tags": [
+    "ux",
+    "chat",
+    "mobile"
+  ],
+  "description": "The chat input is currently a single-line `<input>` element. Long queries scroll horizontally inside a one-line field and become unreadable. Most chat apps (Slack, Discord, ChatGPT, WhatsApp web) use a textarea that auto-grows up to a max height, then scrolls. This ticket converts the input.\n\nBehavior:\n- Replace the `<input>` at src/app/(app)/chat/page.tsx with a `<textarea>`.\n- Min-height matches today's single-line height (no visual regression on first paint).\n- Auto-grow on input: a useLayoutEffect that resets height to 'auto' and sets it to min(scrollHeight, maxHeight) on every value change.\n- Max height ≈ 160px desktop / 144px mobile (~6 lines), then `overflow-y: auto` engages a scrollbar.\n- `resize: none` so the user can't drag-resize.\n- Keep existing keyboard behavior: Enter sends, Shift+Enter inserts a newline. (Future ticket may flip this on mobile to match WhatsApp/iMessage conventions; out of scope here.)\n- Ships in the same PR as 84ac8169 (char counter), since both touch the same input.\n\nNo tests — purely visual + DOM behavior; the suite has no React component tests today and adding a JSDOM harness for a visual change is out of scope."
+}
