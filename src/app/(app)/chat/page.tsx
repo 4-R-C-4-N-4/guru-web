@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -44,8 +44,19 @@ export default function ChatPage() {
   const [quotaUsed,   setQuotaUsed]   = useState<number | null>(null);
   const [quotaLimit,  setQuotaLimit]  = useState<number>(30);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef  = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+
+  // Auto-grow the textarea up to a max height (then it scrolls). Reset to
+  // 'auto' first so shrinking works when the user deletes content.
+  const inputMaxHeight = mobile ? 144 : 160;
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, inputMaxHeight)}px`;
+  }, [input, inputMaxHeight]);
 
   useEffect(() => {
     fetch('/api/quota').then(r => r.json()).then((d: { used: number; limit: number }) => {
@@ -198,18 +209,29 @@ export default function ChatPage() {
 
       {/* Input bar */}
       <div style={{ padding: mobile ? '12px 12px max(12px, env(safe-area-inset-bottom))' : '16px 24px', borderTop: `1px solid ${tokens.border.subtle}`, background: tokens.bg.surface }}>
-        <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', gap: 8 }}>
-          <input
+        <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <textarea
+            ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            onKeyDown={e => {
+              // Enter sends; Shift+Enter inserts newline. Matches today's behavior;
+              // mobile users can still get newlines by pasting multi-line text.
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder="Ask across traditions..."
+            rows={1}
             style={{
               flex: 1, padding: mobile ? '13px 12px' : '12px 16px',
               background: tokens.bg.deep, border: `1px solid ${tokens.border.subtle}`,
               borderRadius: 3, color: tokens.text.primary,
               fontFamily: tokens.font.display, fontSize: 16,
               outline: 'none', WebkitAppearance: 'none', minWidth: 0,
+              resize: 'none', overflowY: 'auto',
+              maxHeight: inputMaxHeight, lineHeight: 1.45,
             } as React.CSSProperties}
           />
           <button onClick={handleSend} disabled={sendDisabled}
