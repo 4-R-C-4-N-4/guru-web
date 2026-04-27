@@ -24,6 +24,8 @@ import { one, exec } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
+const MAX_QUERY_CHARS = 4000;
+
 export async function POST(req: Request) {
   // 1. Auth
   const userOrResponse = await requireUser();
@@ -51,6 +53,16 @@ export async function POST(req: Request) {
     sessionId = typeof body.sessionId === 'string' ? body.sessionId : null;
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // Hard cap so a 10MB POST can't reach the embedder + LLM. 4000 chars ~ 1000
+  // tokens — well within every downstream limit; cap is purely an abuse gate.
+  // No truncation: silently rewriting user input changes their intent.
+  if (queryText.length > MAX_QUERY_CHARS) {
+    return Response.json(
+      { error: `query exceeds ${MAX_QUERY_CHARS}-character limit`, limit: MAX_QUERY_CHARS, length: queryText.length },
+      { status: 400 },
+    );
   }
 
   // 2b. Ownership check — if the client supplied a sessionId, confirm it
