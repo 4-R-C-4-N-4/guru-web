@@ -58,6 +58,11 @@ fi
 #    (-1) so partial application is impossible. Migrations use IF NOT EXISTS
 #    patterns so re-running on an already-migrated DB is a no-op.
 #
+#    Connect as the postgres superuser (peer auth) but SET ROLE to `guru`
+#    before the migration body so any newly-created tables/sequences are
+#    owned by the app's runtime role. Without this the runtime connection
+#    (DATABASE_URL=postgresql://guru:...) cannot read its own schema.
+#
 #    Scope: app tables only (users, sessions, queries, user_preferences, quota).
 #    Never touches corpus tables (chunks, traditions, texts, concepts, edges) —
 #    those come from guru-pipeline's pg_restore separately.
@@ -65,7 +70,7 @@ log "apply migrations"
 shopt -s nullglob
 for f in "$RELEASE"/migrations/*.sql; do
     log "  → $(basename "$f")"
-    sudo -u postgres /usr/bin/psql -d guru -1 -f "$f"
+    { echo "SET ROLE guru;"; cat "$f"; } | sudo -u postgres /usr/bin/psql -d guru -1
 done
 shopt -u nullglob
 

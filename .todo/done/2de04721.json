@@ -1,0 +1,33 @@
+{
+  "id": "2de04721",
+  "type": "chore",
+  "state": "done",
+  "summary": "deploy.sh runs migrations as postgres — new tables locked away from runtime guru role",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-27T01:24:29.995Z",
+  "updated_at": "2026-04-27T01:25:20.719Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh",
+      "lines": [
+        56,
+        70
+      ]
+    }
+  ],
+  "tags": [
+    "infra",
+    "db",
+    "deploy",
+    "permissions"
+  ],
+  "description": "deploy/deploy.sh:68 currently runs each migration as the `postgres` superuser:\n\n  sudo -u postgres /usr/bin/psql -d guru -1 -f \"$f\"\n\nSo every CREATE TABLE produces a table owned by `postgres`. The runtime app connects as `guru` (DATABASE_URL) and has no implicit access to postgres-owned tables in PG 17 — exactly the regression that surfaced as `permission denied for table users` (42501) on /api/quota, /api/sessions, /api/query.\n\nProd was unblocked by granting `guru` SELECT/INSERT/UPDATE/DELETE on existing tables and setting ALTER DEFAULT PRIVILEGES so future postgres-created tables auto-grant to guru. That works but is a workaround — the architecturally correct fix is for the migration role to BE the runtime role, so tables are owned by `guru` from creation and future ALTER TABLE migrations need no privilege gymnastics.\n\nFix:\n- Pipe `SET ROLE guru;` into psql before each migration body, still using `sudo -u postgres ... -1` so the whole thing is one transaction. Tables created in that session are owned by guru.\n- Update the comment block above the loop to explain why.\n\nPrerequisites (verify before merging):\n- `guru` must have CREATE on schema public. Database is `CREATE DATABASE guru OWNER guru`, so `pg_database_owner` membership normally grants this in PG 15+, but verify on prod with:\n    sudo -u postgres psql -d guru -c \"SELECT has_schema_privilege('guru','public','CREATE')\"\n  If false: `GRANT CREATE ON SCHEMA public TO guru;` (one-time prod op, not in the migration files since this is a permissions setup concern).\n\nOut-of-band cleanup (one-time, not part of this PR):\n- Existing tables stay owned by `postgres`. They have GRANTs now so SELECT/INSERT etc. work, but only `postgres` can ALTER/DROP them. To make future schema migrations clean, transfer ownership:\n    ALTER TABLE users OWNER TO guru;  (and the other 5 app tables)\n  Defer until needed — pure GRANT works for the current schema.\n\nOut of scope:\n- Corpus tables (chunks, traditions, etc.) are populated by guru-pipeline's pg_restore, separate concern.\n- Webhook signing/replay (already covered by Stripe/Clerk).\n\nNo test (this is a deploy-script change verified by the next prod deploy succeeding and `\\dt` showing `Owner=guru` for the next-created table).",
+  "resolution": {
+    "commit": "6882d8adc136f75821899b5156ff966c2f7e6072",
+    "resolved_at": "2026-04-27T01:25:20.719Z",
+    "resolved_by": "unknown",
+    "note": "deploy.sh now SETs ROLE guru in the same -1 transaction so future migrations create tables owned by the runtime role. Verify guru has CREATE on schema public before merging (one-time GRANT if not). Existing tables still owned by postgres — workaround GRANTs cover them; ownership transfer left as a separate op."
+  }
+}
