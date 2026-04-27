@@ -1,0 +1,27 @@
+{
+  "id": "fe2625fc",
+  "type": "chore",
+  "state": "open",
+  "summary": "Settings page: replace hardcoded DEFAULT_TRADITIONS with DB-driven /api/corpus",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-27T11:57:37.000Z",
+  "updated_at": "2026-04-27T11:57:48.607Z",
+  "files": [
+    {
+      "path": "src/app/(app)/settings/page.tsx",
+      "lines": [
+        8,
+        18
+      ]
+    }
+  ],
+  "tags": [
+    "ux",
+    "settings",
+    "corpus",
+    "api"
+  ],
+  "description": "src/app/(app)/settings/page.tsx:8-18 hardcodes DEFAULT_TRADITIONS — a client-side constant of 9 traditions and ~25 texts. The save endpoint persists which traditions are blocked, but the *catalog* never touches the DB, so:\n- Adding a tradition or text requires a code deploy.\n- The UI can promise traditions the retriever can't actually search (drift).\n\nReplace with a server endpoint that aggregates what's actually in the corpus and switch the page to fetch on mount.\n\nApproach:\n- New route GET /api/corpus, auth-required (requireUser).\n- Query: SELECT DISTINCT tradition, text_name FROM chunks ORDER BY tradition, text_name. Aggregating from chunks (rather than separate traditions/texts tables) means the UI only shows what is actually searchable.\n- Response shape: { traditions: { [name]: { texts: string[] } } }.\n- Settings page: drop DEFAULT_TRADITIONS, fetch /api/corpus in useEffect, render whatever comes back. NO hardcoded fallback — empty/error state is rendered as-is so a missing pg_restore is loud, not silent (per user feedback).\n\nTests:\n- /api/corpus: 401 unauthenticated, returns aggregated shape, empty result is empty (no fallback).\n\nOut of scope:\n- tokens.tradition color map stays hardcoded (orthogonal — UI styling, not corpus data).\n- Showing chunk_count per text (could be useful later; not required now)."
+}
