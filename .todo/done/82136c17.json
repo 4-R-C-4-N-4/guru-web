@@ -1,0 +1,20 @@
+{
+  "id": "82136c17",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add search_path=public,corpus to Pool config in db.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-28T22:13:43.762Z",
+  "updated_at": "2026-04-28T22:44:57.344Z",
+  "relationships": {
+    "parent": "ce7e01c8"
+  },
+  "description": "Add options: '-c search_path=public,corpus' to the pg Pool constructor in src/lib/db.ts. This lets all existing unqualified table names resolve correctly after the corpus moves to the corpus schema.",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-28T22:44:57.344Z",
+    "resolved_by": "unknown"
+  }
+}
