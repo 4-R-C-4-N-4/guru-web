@@ -1,0 +1,20 @@
+{
+  "id": "ce7e01c8",
+  "type": "feature",
+  "state": "open",
+  "summary": "Consume schema-isolated corpus: search_path + boot validation",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-28T22:13:43.727Z",
+  "updated_at": "2026-04-28T22:13:55.409Z",
+  "relationships": {
+    "children": [
+      "82136c17",
+      "e9f3d709",
+      "53242ad2",
+      "6061447b"
+    ]
+  },
+  "description": "Update the Next.js app to consume corpus tables from a dedicated Postgres schema. Add search_path to the Pool config and fail-fast boot validation. This is the consumer side of the cross-repo corpus contract. Depends on guru repo producing schema-isolated exports (todo:7db94cc0)."
+}
