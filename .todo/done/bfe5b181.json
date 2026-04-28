@@ -1,0 +1,20 @@
+{
+  "id": "bfe5b181",
+  "type": "chore",
+  "state": "done",
+  "summary": "F22: deploy/fail2ban-sshd.local — minimal SSH jail config (vps-bootstrap installs fail2ban but no jail shipped, §7.4)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:46.358Z",
+  "updated_at": "2026-04-28T22:05:48.534Z",
+  "relationships": {
+    "parent": "2ef7cbec"
+  },
+  "resolution": {
+    "commit": "fdaf59dfd6c2d9a1e22373de12233e6ad6ad6c2b",
+    "resolved_at": "2026-04-28T22:05:48.534Z",
+    "resolved_by": "unknown",
+    "note": "Obsolete — port 22 is firewalled to the tailscale0 interface only (vps-bootstrap.sh:166). No public SSH auth attempts can reach sshd, so a fail2ban SSH jail has nothing to watch. The fail2ban package is still installed (vps-bootstrap.sh:100) but unused; trimming it is a separate cleanup."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "2ef7cbec",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase F: Security & hardening — auth audit, atomic quota, fail2ban (§9)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:46.257Z",
+  "updated_at": "2026-04-28T22:05:52.294Z",
+  "relationships": {
+    "children": [
+      "04502bcf",
+      "9a5d651a",
+      "bfe5b181"
+    ]
+  },
+  "resolution": {
+    "commit": "fdaf59dfd6c2d9a1e22373de12233e6ad6ad6c2b",
+    "resolved_at": "2026-04-28T22:05:52.294Z",
+    "resolved_by": "unknown",
+    "note": "All 3 Phase F children are resolved: F20 (04502bcf, Clerk auth audit done), F21 (9a5d651a, atomic quota verified), F22 (bfe5b181, obsolete under Tailscale-only SSH). No remaining Phase F work."
+  }
+}

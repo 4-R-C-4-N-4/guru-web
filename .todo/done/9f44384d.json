@@ -1,0 +1,23 @@
+{
+  "id": "9f44384d",
+  "type": "chore",
+  "state": "done",
+  "summary": "Cleanup: close F22 + Phase F parent as obsolete (Tailscale-only SSH makes fail2ban moot)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-28T22:05:39.533Z",
+  "updated_at": "2026-04-28T22:05:55.113Z",
+  "work": {
+    "branch": "todo/9f44384d",
+    "base_branch": "main",
+    "started_at": "2026-04-28T22:05:42.885Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "fdaf59dfd6c2d9a1e22373de12233e6ad6ad6c2b",
+    "resolved_at": "2026-04-28T22:05:55.113Z",
+    "resolved_by": "unknown",
+    "note": "Closed F22 (obsolete: Tailscale-only SSH makes fail2ban SSH jail pointless) and Phase F parent (all 3 children done/obsolete)."
+  }
+}
