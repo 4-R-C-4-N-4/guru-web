@@ -97,7 +97,7 @@ step_os_update() {
 step_base_packages() {
     log "base packages"
     apt-get install -y \
-        ufw fail2ban unattended-upgrades \
+        ufw unattended-upgrades \
         curl git ca-certificates gnupg lsb-release \
         cron sudo openssl
 }
