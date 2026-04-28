@@ -1,0 +1,20 @@
+{
+  "id": "aef819b8",
+  "type": "chore",
+  "state": "done",
+  "summary": "Configure all production environment variables in Vercel (DATABASE_URL, keys)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:52.880Z",
+  "updated_at": "2026-04-28T18:13:04.501Z",
+  "relationships": {
+    "parent": "e81bbb19"
+  },
+  "resolution": {
+    "commit": "06e0d8e6ba5c3302e516bf2dd250f68049ab464a",
+    "resolved_at": "2026-04-28T18:13:04.501Z",
+    "resolved_by": "unknown",
+    "note": "Obsolete — project pivoted off Vercel post-breach. Production env vars now live in /etc/guru-web.env (mode 0600, root:root) on the VPS, loaded by deploy/guru-web.service via EnvironmentFile=. See deploy/README.md for the canonical secret list."
+  }
+}

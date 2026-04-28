@@ -1,0 +1,20 @@
+{
+  "id": "219f10a0",
+  "type": "chore",
+  "state": "done",
+  "summary": "Set up Vercel project, connect GitHub repo, configure auto-deploy on push to main",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:52.842Z",
+  "updated_at": "2026-04-28T18:12:59.750Z",
+  "relationships": {
+    "parent": "e81bbb19"
+  },
+  "resolution": {
+    "commit": "06e0d8e6ba5c3302e516bf2dd250f68049ab464a",
+    "resolved_at": "2026-04-28T18:12:59.750Z",
+    "resolved_by": "unknown",
+    "note": "Obsolete — project pivoted off Vercel post-breach (per docs/guru-web-build-plan.md preamble). Deploy now goes via .github/workflows/deploy.yml (Tailscale + SSH) → deploy/deploy.sh on the Hetzner VPS. No Vercel project to set up."
+  }
+}

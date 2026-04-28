@@ -1,0 +1,25 @@
+{
+  "id": "4a2be462",
+  "type": "chore",
+  "state": "done",
+  "summary": "C8: schema/corpus-schema.sql — vendor from pipeline export.py (placeholder schema/README.md noting source until pipeline exists)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:05.549Z",
+  "updated_at": "2026-04-28T18:12:43.444Z",
+  "files": [
+    {
+      "path": "schema/corpus-schema.sql"
+    }
+  ],
+  "relationships": {
+    "parent": "6157e231"
+  },
+  "resolution": {
+    "commit": "06e0d8e6ba5c3302e516bf2dd250f68049ab464a",
+    "resolved_at": "2026-04-28T18:12:43.444Z",
+    "resolved_by": "unknown",
+    "note": "schema/corpus-schema.sql is vendored from guru/schema/corpus-schema.sql and confirmed byte-identical. Cross-repo schema-drift CI lives in guru/.github/workflows/schema-drift.yml (see ticket ac131a5c)."
+  }
+}
