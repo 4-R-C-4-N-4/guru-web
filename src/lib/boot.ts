@@ -106,6 +106,20 @@ async function checkOllama(): Promise<void> {
   console.log(`[boot] Ollama OK at ${url} (model=${EMBED_MODEL}, dim=${vec.length})`);
 }
 
+export async function checkCorpus(): Promise<void> {
+  const { one } = await import('./db');
+  const row = await one<{ value: string }>(
+    `SELECT value FROM corpus.corpus_metadata WHERE key = 'schema_version'`
+  );
+  if (!row) {
+    throw new BootError('Corpus schema not found. Load a corpus export first.');
+  }
+  if (row.value !== '2') {
+    throw new BootError(`Corpus schema version mismatch: expected 2, got ${row.value}`);
+  }
+  console.log(`[boot] Corpus OK (schema_version=${row.value})`);
+}
+
 let _booted = false;
 
 export async function boot(): Promise<void> {
@@ -114,6 +128,7 @@ export async function boot(): Promise<void> {
 
   checkEnv();
   await checkOllama();
+  await checkCorpus();
 
   console.log('[boot] all checks passed');
 }
