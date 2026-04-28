@@ -1,0 +1,20 @@
+{
+  "id": "972b34bd",
+  "type": "chore",
+  "state": "done",
+  "summary": "G24: remove unused public/vercel.svg and public/next.svg (post-Vercel framing)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:53.508Z",
+  "updated_at": "2026-04-28T22:08:41.201Z",
+  "relationships": {
+    "parent": "e09915ee"
+  },
+  "resolution": {
+    "commit": "594a7c63a5afb89779c556da8ae747f7b28807dc",
+    "resolved_at": "2026-04-28T22:08:41.201Z",
+    "resolved_by": "unknown",
+    "note": "Removed all 5 create-next-app boilerplate SVGs from public/: vercel.svg, next.svg, file.svg, globe.svg, window.svg. Verified zero references in src/, middleware.ts, next.config.ts before deletion. Ticket originally scoped to vercel.svg + next.svg; expanded to include the other 3 boilerplate SVGs (same class of dead asset)."
+  }
+}
