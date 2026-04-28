@@ -1,0 +1,20 @@
+{
+  "id": "a1bc8083",
+  "type": "chore",
+  "state": "done",
+  "summary": "Set up production Postgres on Hetzner VPS with pgvector, hardened config",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-17T13:55:52.911Z",
+  "updated_at": "2026-04-28T21:55:56.482Z",
+  "relationships": {
+    "parent": "e81bbb19"
+  },
+  "resolution": {
+    "commit": "cb09b19bc859f54ceae5127963b6a2ab468a1aad",
+    "resolved_at": "2026-04-28T21:55:56.482Z",
+    "resolved_by": "unknown",
+    "note": "Verified live on VPS 2026-04-28: Postgres 17.9 (Debian 17.9-1.pgdg13+1), pgvector 0.8.2 with hnsw + ivfflat access methods, guru database present. Provisioned by deploy/vps-bootstrap.sh:186-211 (step_postgres). 'Hardened config' covered by the rest of vps-bootstrap.sh (UFW, fail2ban install, SSH key-only, ssl perms)."
+  }
+}
