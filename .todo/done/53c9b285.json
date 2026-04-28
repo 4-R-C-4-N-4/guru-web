@@ -1,0 +1,23 @@
+{
+  "id": "53c9b285",
+  "type": "chore",
+  "state": "done",
+  "summary": "Cleanup: close 5 already-shipped tickets and 2 Vercel-era obsolete tickets identified in audit",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-28T18:12:00.740Z",
+  "updated_at": "2026-04-28T18:13:20.633Z",
+  "work": {
+    "branch": "todo/53c9b285",
+    "base_branch": "main",
+    "started_at": "2026-04-28T18:12:03.518Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "06e0d8e6ba5c3302e516bf2dd250f68049ab464a",
+    "resolved_at": "2026-04-28T18:13:20.633Z",
+    "resolved_by": "unknown",
+    "note": "Audit-driven cleanup: closed 5 already-shipped tickets (84ac8169, 4a2be462/C8, 04502bcf/F20, 9a5d651a/F21, ac131a5c/E19) and 2 Vercel-era obsolete tickets (219f10a0, aef819b8). Also removed stale duplicate of 84ac8169 in .todo/open/ that survived a prior merge — the canonical closed copy in .todo/done/ remains untouched."
+  }
+}
