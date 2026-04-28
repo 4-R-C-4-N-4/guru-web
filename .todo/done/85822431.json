@@ -1,0 +1,24 @@
+{
+  "id": "85822431",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase E: CI/CD — deploy workflow + schema validation (§7.8, §11 Phase 7)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:37.933Z",
+  "updated_at": "2026-04-28T20:27:39.416Z",
+  "relationships": {
+    "children": [
+      "686bd60f",
+      "636a71d4",
+      "ac131a5c"
+    ]
+  },
+  "resolution": {
+    "commit": "cb09b19bc859f54ceae5127963b6a2ab468a1aad",
+    "resolved_at": "2026-04-28T20:27:39.416Z",
+    "resolved_by": "unknown",
+    "note": "All 3 Phase E children are done: E17 (686bd60f, deploy.yml shipped), E18 (636a71d4, ci.yml shipped), E19 (ac131a5c, schema-drift CI lives upstream in guru/.github/workflows/schema-drift.yml). No remaining Phase E work."
+  }
+}
