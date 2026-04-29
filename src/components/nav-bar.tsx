@@ -44,7 +44,12 @@ export default function NavBar() {
   const handleSignOut = async () => {
     setAvatarOpen(false);
     setMenuOpen(false);
-    await signOut(() => router.push('/'));
+    // redirectUrl form: Clerk invalidates the session then triggers a full
+    // window.location redirect at the end. The callback form raced with
+    // session invalidation — router.push fired while the cookie was still
+    // mid-flight and the dropdown just closed without actually signing
+    // out (todo:f4d5b560).
+    await signOut({ redirectUrl: '/' });
   };
 
   // Tier comes from /api/quota, not Clerk's publicMetadata — the Stripe
