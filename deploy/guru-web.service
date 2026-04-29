@@ -8,6 +8,10 @@ Type=simple
 User=guru
 Group=guru
 WorkingDirectory=/srv/guru-web/current
+# Split by trust boundary: NEXT_PUBLIC_* live in the public file (also
+# read by deploy.sh at build time so they get inlined into client JS);
+# secrets stay in the runtime-only file. systemd merges both.
+EnvironmentFile=/etc/guru-web.public.env
 EnvironmentFile=/etc/guru-web.env
 ExecStart=/usr/bin/node server.js
 Restart=on-failure

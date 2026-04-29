@@ -36,8 +36,23 @@ else
 fi
 
 # 2. Install prod deps + build (Next.js standalone output → .next/standalone/)
+#
+# `next build` bakes NEXT_PUBLIC_* into the client bundle. Those vars must
+# be in env at build time — systemd's EnvironmentFile only feeds the
+# runtime process, not this build step. They live in
+# /etc/guru-web.public.env (mode 0644 — values are public anyway, they
+# ship in client JS) so the `deploy` user can read them without needing
+# read access to the secrets file (/etc/guru-web.env, mode 0600 root:guru).
 log "npm ci + build"
 cd "$RELEASE"
+if [[ ! -r /etc/guru-web.public.env ]]; then
+    echo "deploy.sh: /etc/guru-web.public.env not readable — NEXT_PUBLIC_* would compile to empty strings" >&2
+    exit 1
+fi
+set -a
+# shellcheck disable=SC1091
+source /etc/guru-web.public.env
+set +a
 npm ci
 npm run build
 
