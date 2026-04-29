@@ -24,6 +24,15 @@ REPO_URL=https://github.com/4-R-C-4-N-4/guru-web.git   # public clone, no auth n
 
 log() { printf '\n\033[1;34m==>\033[0m deploy.sh: %s\n' "$*"; }
 
+# 0. Self-heal ownership in case a prior run left root-owned files in
+#    releases/ (e.g., emergency `sudo /srv/guru-web/deploy.sh` instead of
+#    `sudo -u deploy …`). chown is idempotent — no-op when ownership is
+#    already correct. The `|| true` lets the deploy proceed even on a VPS
+#    where /etc/sudoers.d/deploy hasn't been patched yet for this rule;
+#    we just lose self-heal until the operator updates sudoers.
+log "self-heal ownership"
+sudo /bin/chown -R deploy:deploy "$ROOT/releases" || true
+
 # 1. Fetch the SHA into releases/<sha> (idempotent)
 log "fetching $SHA"
 if [[ -d "$RELEASE/.git" ]]; then

@@ -310,6 +310,7 @@ step_app_users_and_dirs() {
     # connects to the DB — making it explicit here for migrations.
     cat > /etc/sudoers.d/deploy <<'EOF'
 deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
+deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
 deploy ALL=(postgres) NOPASSWD: /usr/bin/psql -d guru -1 -f *
 EOF
     chmod 440 /etc/sudoers.d/deploy
