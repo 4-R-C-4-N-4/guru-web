@@ -17,7 +17,11 @@ export default function AccountPage() {
   const mobile   = useIsMobile();
   const [quota,  setQuota]  = useState<QuotaData | null>(null);
 
-  const tier = (user?.publicMetadata?.tier as string) ?? 'free';
+  // Tier comes from /api/quota, not Clerk's publicMetadata. The Stripe
+  // webhook writes Postgres users.tier; nothing in this codebase mirrors
+  // that into Clerk metadata, so reading from Clerk would always show
+  // 'free' for upgraded users (todo:c19a7b6b).
+  const tier = quota?.tier ?? 'free';
 
   useEffect(() => {
     fetch('/api/quota')
