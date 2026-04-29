@@ -1,0 +1,23 @@
+{
+  "id": "1d6a6709",
+  "type": "bug",
+  "state": "open",
+  "summary": "walkGraph buildScopeFilter startIndex=1 collides with $1 chunkIds; LIMIT binds to text[]",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T14:09:30.896Z",
+  "updated_at": "2026-04-29T14:09:30.936Z",
+  "files": [
+    {
+      "path": "src/lib/graph.ts"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "graph",
+    "sql",
+    "prod-bug"
+  ],
+  "description": "Live error: 'argument of LIMIT must be type bigint, not type text[]' (Postgres 42804) on POST /api/query.\n\nBug in src/lib/graph.ts walkGraph: buildScopeFilter is called with startIndex=1, but $1 is already used by 'WHERE id = ANY($1::text[])'. Two failure modes:\n\n  - Empty scope prefs: paramIndex stays 1, so 'LIMIT $1' binds to chunkIds (text[]).\n  - Non-empty scope prefs: scope clauses use $1 (collides with chunkIds), and the params array shifts so a text[] (blocked traditions, etc.) lands in the LIMIT slot.\n\nPre-existing since 4f210bc (2026-04-17) but masked previously — likely because extractConcepts returned no concepts on common queries, or queries failed earlier in the pipeline. Surfaced now that the v2 corpus deploy unblocked the rest of the retrieval path.\n\nFix: startIndex should be 2 (because $1 is the chunkIds slot). vectorSearch already does this correctly. Add a regression test that exercises walkGraph with both empty and non-empty scope prefs.\n\nDone when:\n- graph.ts walkGraph passes 2 to buildScopeFilter\n- regression test in src/__tests__/graph.test.ts covers empty + non-empty scope prefs and asserts the SQL params land in the right slots\n- POST /api/query no longer 500s in prod"
+}
