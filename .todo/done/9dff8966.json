@@ -1,0 +1,30 @@
+{
+  "id": "9dff8966",
+  "type": "bug",
+  "state": "done",
+  "summary": "stream controller double-close in /api/query crashes start() and skips persistence",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T14:24:05.088Z",
+  "updated_at": "2026-04-29T14:27:12.348Z",
+  "files": [
+    {
+      "path": "src/app/api/query/route.ts"
+    }
+  ],
+  "tags": [
+    "streaming",
+    "prod-bug",
+    "api"
+  ],
+  "description": "Live error: 'TypeError: Invalid state: Controller is already closed' (ERR_INVALID_STATE) thrown from inside ReadableStream.start() in src/app/api/query/route.ts.\n\nThe start() function wraps the LLM stream loop with:\n\n  try { for await ... controller.enqueue(...) }\n  catch (err) { streamError = err; console.error(...) }\n  finally { controller.close() }\n\nTwo paths reach 'Controller is already closed':\n\n  (a) Client disconnects mid-stream → Web Streams machinery closes the controller externally → next controller.enqueue() throws → outer catch logs 'stream error' → finally calls controller.close() → throws 'already closed' again, this time outside the try/catch.\n\n  (b) LLM stream errors mid-iteration → controller enters errored state → finally's close() throws because closing an errored controller is invalid.\n\nThe throw out of start() rejects the start promise, the stream errors out, and crucially the persistence block (which lives AFTER finally inside start()) never runs — the partial response and token counts are lost.\n\nFix: wrap controller.close() in a guard so it is idempotent and cannot throw out of start(). Also guard controller.enqueue() so a mid-stream client disconnect breaks the loop cleanly instead of being logged as a stream error.\n\nDone when:\n- src/app/api/query/route.ts has a safeClose helper that swallows already-closed/errored TypeErrors\n- enqueue is similarly guarded; on failure the loop breaks (treats it as client-gone)\n- a unit test in src/__tests__/api.test.ts (or a new file) constructs a ReadableStream where the controller is closed externally before the start fn finishes, and asserts the persistence path still runs",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-29T14:27:12.348Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "POST /api/query > persists partial response when client cancels mid-stream",
+    "note": "safeClose() guard around controller.close(); try/catch around controller.enqueue() so client disconnect breaks the loop instead of crashing start(). Persistence path now runs in all close states."
+  }
+}
