@@ -15,11 +15,11 @@ vi.mock('@/lib/db', () => ({
 import { one } from '@/lib/db';
 const oneMock = one as ReturnType<typeof vi.fn>;
 
-import { checkCorpus, BootError } from '@/lib/boot';
+import { checkCorpus, BootError, EXPECTED_SCHEMA_VERSION } from '@/lib/boot';
 
 describe('checkCorpus', () => {
   beforeEach(() => {
-    oneMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('throws BootError when corpus metadata is missing', async () => {
@@ -30,14 +30,14 @@ describe('checkCorpus', () => {
   });
 
   it('throws BootError when corpus schema version is wrong', async () => {
-    oneMock.mockResolvedValue({ value: '1' });
+    oneMock.mockResolvedValue({ value: '999' });
 
     await expect(checkCorpus()).rejects.toBeInstanceOf(BootError);
     await expect(checkCorpus()).rejects.toThrow(/schema version mismatch/);
   });
 
-  it('passes when corpus schema version is 2', async () => {
-    oneMock.mockResolvedValue({ value: '2' });
+  it('passes when corpus schema version matches EXPECTED_SCHEMA_VERSION', async () => {
+    oneMock.mockResolvedValue({ value: EXPECTED_SCHEMA_VERSION });
 
     await expect(checkCorpus()).resolves.toBeUndefined();
   });

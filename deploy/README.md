@@ -201,8 +201,8 @@ Origin certs are 15-year by default — rotation is rare. If you do rotate:
 
 The corpus (traditions, texts, concepts, chunks, edges) lives in a dedicated
 Postgres `corpus` schema. This isolates it from app tables (users, sessions,
-queries, etc.) in the `public` schema. The web app's Pool config uses
-`search_path = public, corpus` so unqualified table names resolve correctly.
+queries, etc.) in the `public` schema. The web app's Pool config sets
+`search_path=public,corpus` so unqualified table names resolve correctly.
 
 ### How corpus updates work
 
