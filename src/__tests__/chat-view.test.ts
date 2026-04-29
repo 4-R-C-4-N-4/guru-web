@@ -53,6 +53,36 @@ describe('recordsToMessages', () => {
   });
 });
 
+describe('chat-view markdown rendering', () => {
+  // Source-level guards. Locks in that assistant messages render through
+  // react-markdown with remark-gfm and that user messages stay plain
+  // text (the user typed those literally; we don't want their **stars**
+  // turning into <strong>). Catches a future refactor that drops the
+  // markdown wrapper.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('imports react-markdown + remark-gfm', () => {
+    expect(SRC).toMatch(/import\s+ReactMarkdown.*from\s+['"]react-markdown['"]/);
+    expect(SRC).toMatch(/import\s+remarkGfm\s+from\s+['"]remark-gfm['"]/);
+  });
+
+  it('wraps the assistant text in <ReactMarkdown> with remarkGfm', () => {
+    // The assistant render path uses ReactMarkdown; remarkGfm is passed
+    // in remarkPlugins so tables/strikethrough/task lists/autolinks work.
+    expect(SRC).toMatch(/<ReactMarkdown[^>]*remarkPlugins=\{\[remarkGfm\]\}/);
+    expect(SRC).toMatch(/\{msg\.text\s*\?\?\s*['"]{2}\}\s*<\/ReactMarkdown>/);
+  });
+
+  it('user messages render as plain text (not through markdown)', () => {
+    // The user branch should still render {msg.content} directly.
+    expect(SRC).toMatch(/\{msg\.content\}/);
+  });
+});
+
 describe('chat-view URL-update contract', () => {
   // Source-level guards. The chat UI is React + DOM-heavy; we don't have
   // a DOM test harness configured. These string checks are blunt but
