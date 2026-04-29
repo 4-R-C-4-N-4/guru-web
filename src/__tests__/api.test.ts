@@ -395,4 +395,45 @@ describe('POST /api/query', () => {
     expect(params![7]).toBeNull(); // input_tokens
     expect(params![8]).toBeNull(); // output_tokens — distinguishable from a legitimate 0
   });
+
+  it('persists partial response when client cancels mid-stream (todo:9dff8966)', async () => {
+    // Regression: the controller transitions to a closed/errored state when
+    // the consumer cancels, so the next controller.enqueue() throws
+    // "Invalid state: Controller is already closed". Without the safeClose
+    // guard, finally's controller.close() also throws and the persistence
+    // block at the end of start() never runs — losing the partial response.
+
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+
+    // Slow stream so we can cancel between chunks and the loop body
+    // re-enters enqueue against a now-closed controller.
+    async function* slowStream() {
+      for (let i = 0; i < 5; i++) {
+        yield { choices: [{ delta: { content: `c${i} ` } }] };
+        await new Promise(r => setTimeout(r, 5));
+      }
+    }
+    mockStream.mockResolvedValueOnce(slowStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+
+    // Read first chunk, then cancel — simulates client disconnect.
+    const reader = res.body!.getReader();
+    await reader.read();
+    await reader.cancel();
+
+    // Give start() time to finish the catch+finally+persist sequence.
+    await new Promise(r => setTimeout(r, 100));
+
+    // Persistence MUST still run — the partial response is the user's record.
+    expect(mockExec).toHaveBeenCalledTimes(1);
+    const [, params] = mockExec.mock.calls[0]!;
+    expect(typeof params![3]).toBe('string'); // response_text — partial is fine
+  });
 });

@@ -102,12 +102,28 @@ export async function POST(req: Request) {
 
   const readable = new ReadableStream({
     async start(controller) {
+      // Idempotent close: the controller can already be closed/errored if
+      // the client disconnects mid-stream or the upstream LLM stream errors.
+      // A throw here would skip the persistence block below.
+      let closed = false;
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        try { controller.close(); } catch { /* already closed/errored */ }
+      };
+
       try {
         for await (const chunk of stream) {
           const text = chunk.choices[0]?.delta?.content ?? '';
           if (text) {
             fullResponse += text;
-            controller.enqueue(new TextEncoder().encode(text));
+            try {
+              controller.enqueue(new TextEncoder().encode(text));
+            } catch {
+              // Client disconnected; stop iterating. Partial response is
+              // still in fullResponse and gets persisted below.
+              break;
+            }
           }
           if (chunk.usage) {
             inputTokens  = chunk.usage.prompt_tokens     ?? null;
@@ -118,7 +134,7 @@ export async function POST(req: Request) {
         streamError = err instanceof Error ? err : new Error(String(err));
         console.error('[api/query] stream error:', streamError);
       } finally {
-        controller.close();
+        safeClose();
       }
 
       // 6. Persist after stream closes — save partial response on error
