@@ -1,0 +1,31 @@
+{
+  "id": "c19a7b6b",
+  "type": "bug",
+  "state": "done",
+  "summary": "account page + nav-bar read tier from Clerk metadata; never updated by Stripe webhook → Pro users see 'Free'",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T18:36:58.807Z",
+  "updated_at": "2026-04-29T18:38:25.420Z",
+  "files": [
+    {
+      "path": "src/app/(app)/account/page.tsx"
+    }
+  ],
+  "tags": [
+    "stripe",
+    "billing",
+    "frontend",
+    "tier"
+  ],
+  "description": "Live: user upgraded via Stripe (webhook delivered, Postgres users.tier='pro', /api/quota returns limit=500), but the account page still shows 'Current Free' and the nav-bar still treats them as free.\n\nTwo sources of truth, not synced:\n  - Postgres users.tier  ← Stripe webhook (handleCheckoutCompleted) writes here.\n                          requireUser() / /api/quota / /api/query all read from here.\n  - Clerk user.publicMetadata.tier  ← never written by anything in the codebase.\n                          src/app/(app)/account/page.tsx:20 and src/components/nav-bar.tsx:23 read from here.\n\nServer-side gating (quota limit, model selection) works correctly. UI display is wrong.\n\nFix: collapse to one source of truth — Postgres, via /api/quota which already returns { used, limit, tier }. The account page already fetches /api/quota; just use the tier field. nav-bar needs the same fetch.\n\nDone when:\n- account/page.tsx reads tier from /api/quota response, not user.publicMetadata\n- nav-bar.tsx does the same\n- both treat 'pro' as the upgraded state\n- regression test asserts the file does not read user.publicMetadata.tier",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-29T18:38:25.420Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/tier-source-of-truth.test.ts",
+    "test_function": "tier source of truth",
+    "note": "Both account/page.tsx and nav-bar.tsx now read tier from /api/quota response. /api/quota already returns the Postgres-backed tier; the Clerk publicMetadata read is gone."
+  }
+}

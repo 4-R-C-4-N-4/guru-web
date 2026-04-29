@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
@@ -19,9 +19,20 @@ export default function NavBar() {
   const router   = useRouter();
   const mobile   = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tier,     setTier]     = useState<string>('free');
 
-  const tier      = (user?.publicMetadata?.tier as string) ?? 'free';
-  const initials  = [user?.firstName, user?.lastName].filter(Boolean).map(n => n![0]).join('') || '?';
+  // Tier comes from /api/quota, not Clerk's publicMetadata — the Stripe
+  // webhook updates Postgres users.tier and nothing mirrors that into
+  // Clerk (todo:c19a7b6b). Reading from publicMetadata always showed
+  // 'free' for upgraded users.
+  useEffect(() => {
+    fetch('/api/quota')
+      .then(r => r.json())
+      .then((d: { tier?: string }) => { if (d.tier) setTier(d.tier); })
+      .catch(() => {});
+  }, []);
+
+  const initials = [user?.firstName, user?.lastName].filter(Boolean).map(n => n![0]).join('') || '?';
 
   return (
     <nav style={{
