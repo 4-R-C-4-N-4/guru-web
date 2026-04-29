@@ -1,0 +1,22 @@
+{
+  "id": "0bc47bac",
+  "type": "chore",
+  "state": "open",
+  "summary": "nav-bar avatar is not interactive — should at least support sign-out",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T18:45:33.038Z",
+  "updated_at": "2026-04-29T18:45:33.068Z",
+  "files": [
+    {
+      "path": "src/components/nav-bar.tsx"
+    }
+  ],
+  "tags": [
+    "frontend",
+    "auth",
+    "ux"
+  ],
+  "description": "Currently the user-initials circle in the desktop nav-bar is a static div with no click handler. Users have no in-app way to sign out — they have to click 'Manage in Clerk' on the account page (which goes to Clerk's hosted dashboard).\n\nPlan: turn the avatar into a button that opens a small dropdown with two items:\n  - Account → router.push('/account')\n  - Sign out → call signOut() from @clerk/nextjs, then redirect to /\n\nDone when:\n- Avatar (desktop) is clickable; opens a dropdown with Account + Sign out\n- Sign out calls Clerk signOut() and redirects to /\n- Click-outside / Escape closes the dropdown\n- Mobile flow is unchanged (still uses hamburger; hamburger menu can also gain a Sign out item to match)\n- Test asserts the dropdown wires the signOut call"
+}
