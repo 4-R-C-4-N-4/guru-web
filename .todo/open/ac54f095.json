@@ -1,0 +1,22 @@
+{
+  "id": "ac54f095",
+  "type": "chore",
+  "state": "open",
+  "summary": "deploy.sh: self-heal ownership before prune; tolerate root-owned releases left by emergency manual sudo runs",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T21:53:45.997Z",
+  "updated_at": "2026-04-29T21:53:46.037Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "ops",
+    "sudoers"
+  ],
+  "description": "Old release dirs in /srv/guru-web/releases/ accumulated root-owned files from earlier emergency 'sudo /srv/guru-web/deploy.sh' runs (before we standardised on 'sudo -u deploy'). The CI prune step ('xargs -r -I{} rm -rf -- {}') silently fails on those, so old releases pile up forever and the disk fills.\n\nFix:\n- deploy.sh runs 'sudo chown -R deploy:deploy /srv/guru-web/releases' at the top (idempotent, '|| true' so the deploy proceeds even if sudoers isn't updated yet on the VPS).\n- vps-bootstrap.sh adds the corresponding NOPASSWD sudoers line.\n- deploy/README.md adds an operator note about updating /etc/sudoers.d/deploy on existing VPSes (one-time hand patch — bootstrap already ran).\n\nDone when:\n- Self-heal line present in deploy.sh, before the prune.\n- vps-bootstrap.sh's sudoers heredoc includes the chown rule.\n- README documents the one-time sudoers patch operators must apply on existing VPSes.\n- Test asserts deploy.sh contains the self-heal command (source-level)."
+}
