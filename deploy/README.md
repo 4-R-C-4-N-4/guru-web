@@ -299,3 +299,18 @@ fail-fast behaviour in `src/lib/boot.ts`.
 - **Next.js standalone build excludes `scripts/` and `migrations/`.** That's why `deploy.sh` runs migrations from `$RELEASE/migrations/` (the full clone) instead of from the symlinked `current` (the standalone subset).
 - **Cloudflare DNS records: never gray-cloud them**, even briefly. Once your origin IP is in passive DNS databases, it's there forever and the "only allow CF IPs on 443" model has a hole.
 - **Tailscale node key expires every ~180 days by default.** Disable expiry on the VPS node in the admin console after bootstrap, or it'll silently fall off the tailnet.
+- **Never run `deploy.sh` as plain `sudo`** — git refuses operations on the deploy-owned repos with "dubious ownership", and any files created under that run end up root-owned, which the next prune can't remove. Always `sudo -u deploy /srv/guru-web/deploy.sh <sha>`. The script now self-heals via `sudo chown -R deploy:deploy /srv/guru-web/releases` at the top, so existing root-owned damage gets fixed on the next deploy — but only if `/etc/sudoers.d/deploy` includes the new chown rule (added by `vps-bootstrap.sh`; existing VPSes need the one-time hand-patch below).
+
+### One-time sudoers patch (existing VPSes)
+
+`vps-bootstrap.sh` only runs once. On already-bootstrapped VPSes, add the new sudoers line by hand:
+
+```bash
+ssh root@guru-web-prod
+visudo -f /etc/sudoers.d/deploy
+# Add the line:
+#   deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
+# Save. visudo validates syntax before installing.
+```
+
+Without this patch, the self-heal step in `deploy.sh` silently no-ops (`|| true`) and old root-owned releases keep accumulating.
