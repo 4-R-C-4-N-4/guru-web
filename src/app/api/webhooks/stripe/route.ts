@@ -9,10 +9,17 @@
  *   customer.subscription.updated → status changes (canceled, past_due, active)
  *
  * Signature verification via stripe.webhooks.constructEvent.
+ *
+ * Tier source of truth is Postgres users.tier. After every update we
+ * mirror the new value into Clerk's user.publicMetadata.tier as a cache
+ * — Clerk-session-driven UI can read tier from the JWT without an
+ * extra /api/quota fetch. Clerk failures are logged and swallowed so
+ * the webhook still 200s and Postgres remains canonical.
  */
 
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import { clerkClient } from '@clerk/nextjs/server';
 import { exec, one } from '@/lib/db';
 
 export const dynamic  = 'force-dynamic';
@@ -77,6 +84,21 @@ export async function POST(req: Request) {
 }
 
 // ---------------------------------------------------------------------------
+// Clerk metadata mirror — cache of users.tier for SSR / session-token reads
+// ---------------------------------------------------------------------------
+
+async function mirrorTierToClerk(userId: string, tier: 'free' | 'pro'): Promise<void> {
+  try {
+    const clerk = await clerkClient();
+    await clerk.users.updateUserMetadata(userId, { publicMetadata: { tier } });
+  } catch (err) {
+    // Postgres is canonical; a Clerk mirror failure must not 500 the
+    // webhook (Stripe would retry indefinitely). Log and continue.
+    console.error(`[stripe-webhook] clerk mirror failed for ${userId}:`, err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Event handlers
 // ---------------------------------------------------------------------------
 
@@ -111,6 +133,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     [userId, customerId ?? null]
   );
 
+  await mirrorTierToClerk(userId, 'pro');
+
   console.log(`[stripe-webhook] user ${userId} upgraded to Pro`);
 }
 
@@ -125,12 +149,18 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   if (!customerId) return;
 
-  await exec(
+  // RETURNING id so we can mirror the change into Clerk metadata.
+  const updated = await one<{ id: string }>(
     `UPDATE users
      SET tier = 'free', updated_at = now()
-     WHERE stripe_customer_id = $1`,
+     WHERE stripe_customer_id = $1
+     RETURNING id`,
     [customerId]
   );
+
+  if (updated) {
+    await mirrorTierToClerk(updated.id, 'free');
+  }
 
   console.log(`[stripe-webhook] customer ${customerId} downgraded to Free`);
 }
@@ -162,6 +192,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       `UPDATE users SET tier = 'pro', updated_at = now() WHERE id = $1`,
       [user.id]
     );
+    await mirrorTierToClerk(user.id, 'pro');
   } else if (
     ['canceled', 'past_due', 'unpaid'].includes(subscription.status) &&
     user.tier !== 'free'
@@ -170,5 +201,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       `UPDATE users SET tier = 'free', updated_at = now() WHERE id = $1`,
       [user.id]
     );
+    await mirrorTierToClerk(user.id, 'free');
   }
 }

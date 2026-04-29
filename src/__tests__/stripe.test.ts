@@ -33,6 +33,13 @@ vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn(),
 }));
 
+const mockUpdateUserMetadata = vi.fn();
+vi.mock('@clerk/nextjs/server', () => ({
+  clerkClient: vi.fn(async () => ({
+    users: { updateUserMetadata: mockUpdateUserMetadata },
+  })),
+}));
+
 vi.mock('stripe', () => {
   function Stripe() {
     return {
@@ -106,6 +113,10 @@ describe('POST /api/webhooks/stripe', () => {
     expect(sql).toContain("tier = 'pro'");
     expect(sql).toContain('stripe_customer_id');
     expect(params).toEqual(['user_1', 'cus_123']);
+
+    // Mirror into Clerk publicMetadata (todo:aee10dd6)
+    expect(mockUpdateUserMetadata).toHaveBeenCalledOnce();
+    expect(mockUpdateUserMetadata).toHaveBeenCalledWith('user_1', { publicMetadata: { tier: 'pro' } });
   });
 
   it('checkout.session.completed: skips upgrade if user_id missing from metadata', async () => {
@@ -131,21 +142,38 @@ describe('POST /api/webhooks/stripe', () => {
     expect(mockExec).not.toHaveBeenCalled();
   });
 
-  it('customer.subscription.deleted: downgrades user to Free', async () => {
+  it('customer.subscription.deleted: downgrades user to Free and mirrors to Clerk', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'customer.subscription.deleted',
       data: { object: { customer: 'cus_123' } },
     });
-    mockExec.mockResolvedValueOnce(undefined);
+    // Handler uses one() with RETURNING id so it can mirror into Clerk.
+    mockOne.mockResolvedValueOnce({ id: 'user_1' });
 
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
-    const [sql, params] = mockExec.mock.calls[0];
+    const [sql, params] = mockOne.mock.calls[0];
     expect(sql).toContain("tier = 'free'");
+    expect(sql).toContain('RETURNING id');
     expect(params).toEqual(['cus_123']);
+
+    expect(mockUpdateUserMetadata).toHaveBeenCalledOnce();
+    expect(mockUpdateUserMetadata).toHaveBeenCalledWith('user_1', { publicMetadata: { tier: 'free' } });
   });
 
-  it('customer.subscription.updated (canceled): downgrades pro user', async () => {
+  it('customer.subscription.deleted: no Clerk mirror if no user matched the customer id', async () => {
+    mockConstructEvent.mockReturnValueOnce({
+      type: 'customer.subscription.deleted',
+      data: { object: { customer: 'cus_unknown' } },
+    });
+    mockOne.mockResolvedValueOnce(null);
+
+    const res = await stripeWebhookPOST(makeWebhookReq({}));
+    expect(res.status).toBe(200);
+    expect(mockUpdateUserMetadata).not.toHaveBeenCalled();
+  });
+
+  it('customer.subscription.updated (canceled): downgrades pro user + Clerk mirror', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'customer.subscription.updated',
       data: { object: { customer: 'cus_123', status: 'canceled' } },
@@ -158,9 +186,10 @@ describe('POST /api/webhooks/stripe', () => {
     const [sql, params] = mockExec.mock.calls[0];
     expect(sql).toContain("tier = 'free'");
     expect(params).toEqual(['user_1']);
+    expect(mockUpdateUserMetadata).toHaveBeenCalledWith('user_1', { publicMetadata: { tier: 'free' } });
   });
 
-  it('customer.subscription.updated (active): upgrades free user', async () => {
+  it('customer.subscription.updated (active): upgrades free user + Clerk mirror', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'customer.subscription.updated',
       data: { object: { customer: 'cus_123', status: 'active' } },
@@ -173,9 +202,10 @@ describe('POST /api/webhooks/stripe', () => {
     const [sql, params] = mockExec.mock.calls[0];
     expect(sql).toContain("tier = 'pro'");
     expect(params).toEqual(['user_1']);
+    expect(mockUpdateUserMetadata).toHaveBeenCalledWith('user_1', { publicMetadata: { tier: 'pro' } });
   });
 
-  it('customer.subscription.updated (active for already-pro user): no-op', async () => {
+  it('customer.subscription.updated (active for already-pro user): no-op, no Clerk mirror', async () => {
     mockConstructEvent.mockReturnValueOnce({
       type: 'customer.subscription.updated',
       data: { object: { customer: 'cus_123', status: 'active' } },
@@ -185,6 +215,7 @@ describe('POST /api/webhooks/stripe', () => {
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
     expect(mockExec).not.toHaveBeenCalled();
+    expect(mockUpdateUserMetadata).not.toHaveBeenCalled();
   });
 
   it('customer.subscription.updated (past_due): downgrades user', async () => {
@@ -210,6 +241,20 @@ describe('POST /api/webhooks/stripe', () => {
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
     expect(mockExec).not.toHaveBeenCalled();
+    expect(mockUpdateUserMetadata).not.toHaveBeenCalled();
+  });
+
+  it('clerk mirror failure does not 500 the webhook (Postgres remains canonical)', async () => {
+    mockConstructEvent.mockReturnValueOnce({
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { user_id: 'user_1' }, customer: 'cus_123', payment_status: 'paid' } },
+    });
+    mockExec.mockResolvedValueOnce(undefined);
+    mockUpdateUserMetadata.mockRejectedValueOnce(new Error('clerk down'));
+
+    const res = await stripeWebhookPOST(makeWebhookReq({}));
+    expect(res.status).toBe(200);   // still 200 — would 500 force Stripe to retry forever
+    expect(mockExec).toHaveBeenCalledOnce();   // Postgres update still ran
   });
 });
 
