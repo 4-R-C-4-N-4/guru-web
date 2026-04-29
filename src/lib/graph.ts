@@ -72,8 +72,8 @@ export async function walkGraph(
   const chunkIds = expressEdges.map(e => e.source);
   const tierMap = new Map(expressEdges.map(e => [e.source, e.tier]));
 
-  // Build scope filter
-  const { where, params, paramIndex } = buildScopeFilter(prefs, 1);
+  // $1 is taken by the chunkIds ANY clause below, so scope filter starts at $2.
+  const { where, params, paramIndex } = buildScopeFilter(prefs, 2);
 
   const rows = await query<RetrievedChunk>(
     `SELECT id, text_id, tradition, text_name, section, translator, body, token_count
