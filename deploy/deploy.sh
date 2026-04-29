@@ -8,6 +8,12 @@
 #
 # Behaviour: idempotent, atomic-ish (symlink swap), keeps last 5 releases
 # for rollback.
+#
+# Self-updating: after fetching the new release, this script compares
+# itself to $RELEASE/deploy/deploy.sh and re-execs with the repo version
+# if they differ.  That means changes to deploy.sh in the repo take
+# effect on the *first* deploy after the change — no need to re-run
+# vps-bootstrap.sh just to push a deploy-script update.
 
 set -euo pipefail
 
@@ -42,6 +48,22 @@ else
     git clone --depth=1 --no-single-branch "$REPO_URL" "$RELEASE"
     git -C "$RELEASE" fetch --depth=1 origin "$SHA"
     git -C "$RELEASE" checkout --quiet "$SHA"
+fi
+
+# 1a. Self-update.  vps-bootstrap.sh installs deploy.sh once and never
+# refreshes it, so changes to deploy/deploy.sh in the repo wouldn't reach
+# the VPS without this — every CI deploy would keep running the
+# bootstrap-era script.  After fetching the new release, compare its
+# deploy.sh against $0; if they differ, copy it over and re-exec so this
+# run uses the new logic.  The re-exec lands here again, finds the files
+# identical, and proceeds — no infinite loop.
+SELF="$(readlink -f "$0")"
+NEW_SCRIPT="$RELEASE/deploy/deploy.sh"
+if [[ -f "$NEW_SCRIPT" ]] && ! cmp -s "$SELF" "$NEW_SCRIPT"; then
+    log "deploy.sh changed in repo — refreshing $SELF and re-execing"
+    cp "$NEW_SCRIPT" "$SELF"
+    chmod +x "$SELF"
+    exec "$SELF" "$@"
 fi
 
 # 2. Install prod deps + build (Next.js standalone output → .next/standalone/)
