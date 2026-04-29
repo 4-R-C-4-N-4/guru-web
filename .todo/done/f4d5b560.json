@@ -1,0 +1,31 @@
+{
+  "id": "f4d5b560",
+  "type": "bug",
+  "state": "done",
+  "summary": "sign-out callback form races with session invalidation; switch to redirectUrl option",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T20:30:11.149Z",
+  "updated_at": "2026-04-29T20:30:57.354Z",
+  "files": [
+    {
+      "path": "src/components/nav-bar.tsx"
+    }
+  ],
+  "tags": [
+    "auth",
+    "clerk",
+    "frontend",
+    "prod-bug"
+  ],
+  "description": "Live: clicking the Sign out menuitem closes the dropdown (handleSignOut sets avatarOpen=false for instant feedback) but does not actually sign the user out. signOut(callback) → callback calls router.push('/') is racing with Clerk's async session-invalidation work; either the callback never fires or the router push happens while the cookie/session is still mid-flight.\n\nClerk's preferred modern pattern is signOut({ redirectUrl }) — Clerk does the invalidation, then triggers a full window.location redirect at the end. Bypasses the race entirely.\n\nDone when:\n- handleSignOut calls signOut({ redirectUrl: '/' }) instead of signOut(callback)\n- existing source-level test still passes (signOut() is still called)\n- live: clicking Sign out actually signs out and lands on /",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-29T20:30:57.354Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/nav-bar.test.ts",
+    "test_function": "nav-bar avatar dropdown",
+    "note": "Switched from signOut(callback) to signOut({ redirectUrl: '/' }) — Clerk does invalidation then full-page redirect, no race."
+  }
+}
