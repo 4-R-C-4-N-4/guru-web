@@ -44,6 +44,28 @@ describe('deploy.sh self-heal', () => {
   });
 });
 
+describe('deploy.sh self-update', () => {
+  it('compares $SELF against the in-repo copy and re-execs on diff', () => {
+    expect(SRC).toMatch(/cmp\s+-s\s+["']?\$SELF["']?\s+["']?\$NEW_SCRIPT["']?/);
+    expect(SRC).toMatch(/exec\s+["']?\$SELF["']?\s+["']?\$@["']?/);
+  });
+
+  it('runs after git fetch (so $RELEASE has the new version) and before npm ci', () => {
+    const fetchIdx = SRC.indexOf('git -C "$RELEASE" fetch');
+    const selfUpdateIdx = SRC.search(/cmp\s+-s\s+["']?\$SELF["']?/);
+    const npmCiIdx = SRC.indexOf('npm ci');
+    expect(fetchIdx).toBeGreaterThan(-1);
+    expect(selfUpdateIdx).toBeGreaterThan(-1);
+    expect(npmCiIdx).toBeGreaterThan(-1);
+    expect(fetchIdx).toBeLessThan(selfUpdateIdx);
+    expect(selfUpdateIdx).toBeLessThan(npmCiIdx);
+  });
+
+  it('canonicalizes $0 via readlink -f so symlink invocations still resolve', () => {
+    expect(SRC).toMatch(/readlink\s+-f\s+["']?\$0["']?/);
+  });
+});
+
 describe('vps-bootstrap.sh sudoers stanza', () => {
   const BOOTSTRAP = readFileSync(
     resolve(__dirname, '../../deploy/vps-bootstrap.sh'),

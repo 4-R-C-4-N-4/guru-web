@@ -314,3 +314,19 @@ visudo -f /etc/sudoers.d/deploy
 ```
 
 Without this patch, the self-heal step in `deploy.sh` silently no-ops (`|| true`) and old root-owned releases keep accumulating.
+
+### Self-updating deploy.sh
+
+`/srv/guru-web/deploy.sh` self-updates from the repo on every run. After `git fetch/checkout`, the script compares itself to `$RELEASE/deploy/deploy.sh` and re-execs the new version if they differ. Changes to `deploy/deploy.sh` in the repo take effect on the **first** CI deploy after merge — no need to re-run `vps-bootstrap.sh` or hand-copy the script.
+
+**One-time exception**: if the on-disk script is from before the self-update mechanism existed, the first deploy after merging it won't pick it up — the *old* script is what's running and it doesn't know to refresh itself. You need to copy the new version into place by hand once:
+
+```bash
+ssh guru-web-prod 'sudo -u deploy bash -c "
+  SHA=\$(ls -1t /srv/guru-web/releases | head -1)
+  cp /srv/guru-web/releases/\$SHA/deploy/deploy.sh /srv/guru-web/deploy.sh
+  chmod +x /srv/guru-web/deploy.sh
+"'
+```
+
+After that, future updates flow automatically.
