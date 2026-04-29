@@ -13,7 +13,8 @@ Operational playbook for the production VPS. Read this before paging anyone; mos
 | Domain | `guru-ai.org`, proxied through Cloudflare |
 | App systemd unit | `guru-web.service` (runs as `guru` user) |
 | App working dir | `/srv/guru-web/current` → symlink → `/srv/guru-web/releases/<sha>/.next/standalone/` |
-| App env | `/etc/guru-web.env` (mode 600, root:root) |
+| App env (secrets, runtime-only) | `/etc/guru-web.env` (mode 600, root:guru) |
+| App env (`NEXT_PUBLIC_*`, build + runtime) | `/etc/guru-web.public.env` (mode 644, root:root) |
 | Bootstrap config | `/etc/guru-bootstrap.env` (mode 600, root:root) |
 | Backup config | `/etc/backup-b2.env` (mode 600, root:root) |
 | DB password | `/etc/guru-db-password` (mode 600, root:root) |
@@ -22,6 +23,44 @@ Operational playbook for the production VPS. Read this before paging anyone; mos
 | Embeddings | Ollama on `127.0.0.1:11434`, model `nomic-embed-text:v1.5` |
 
 SSH access is **tailnet only** — UFW closes public 22. Get on Tailscale, then `ssh root@guru-web-prod`. Break-glass: Hetzner web console.
+
+---
+
+## Env file split
+
+The app's environment lives in two files, separated by trust boundary:
+
+| File | Mode | Owner | Contents | Read by |
+|---|---|---|---|---|
+| `/etc/guru-web.env` | `600` | `root:guru` | secrets only | runtime (`guru` user) |
+| `/etc/guru-web.public.env` | `644` | `root:root` | `NEXT_PUBLIC_*` only | build (`deploy` user) **and** runtime |
+
+**Why split.** `next build` inlines `NEXT_PUBLIC_*` into the client JS that ships to every browser — those values are public the moment they ship, regardless of file permissions. `deploy.sh` runs as the `deploy` user, which has no read access to the secrets file (and shouldn't). The public file lets the build inline the publishable keys without expanding `deploy`'s read scope to your `STRIPE_SECRET_KEY` etc.
+
+**What goes where:**
+
+```
+# /etc/guru-web.public.env   (mode 644)
+NEXT_PUBLIC_APP_URL=https://guru-ai.org
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+```
+# /etc/guru-web.env          (mode 600 root:guru)
+DATABASE_URL=postgresql://guru:...@localhost:5432/guru
+OPENROUTER_API_KEY=sk-or-v1-...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRO_PRICE_ID=price_...
+# OLLAMA_URL defaults to http://localhost:11434 — set only to override
+```
+
+systemd merges both via two `EnvironmentFile=` lines in `guru-web.service`. `deploy.sh` sources only the public file before `npm run build`.
+
+If you ever see the app boot cleanly but Clerk/Stripe silently broken in the browser, that's the public file missing or unreadable when the build ran — see the troubleshooting note in the 502 incident section.
 
 ---
 
@@ -45,7 +84,8 @@ Decision tree based on what you see:
 
 Common crash causes (paste the relevant fix):
 
-- **`Failed to load environment files`** → `/etc/guru-web.env` missing or unreadable. Check `ls -la /etc/guru-web.env`. Should be `600 root:root`.
+- **`Failed to load environment files`** → one of the env files is missing or unreadable. Check `ls -la /etc/guru-web.env /etc/guru-web.public.env`. Should be `600 root:guru` and `644 root:root` respectively.
+- **App boots but sign-in/checkout silently broken (empty `publishableKey` in HTML)** → `/etc/guru-web.public.env` was missing or unreadable when `deploy.sh` ran `npm run build`. `NEXT_PUBLIC_*` are baked in at build time, so a runtime fix can't help; you must rebuild. Verify with `curl -s https://guru-ai.org/ | grep -oE 'publishableKey":"[^"]*"'` — empty string means the bundle is broken. Re-run `deploy.sh <last-good-sha>` after fixing the file.
 - **`Check failed: 12 == errno` (V8 panic)** → systemd unit has `MemoryDenyWriteExecute=true`. V8 JIT needs writable+executable memory. Edit `/etc/systemd/system/guru-web.service`, remove that line, `systemctl daemon-reload && systemctl restart guru-web`. (Source unit in repo is correct — only an issue if the unit on disk is from before the fix.)
 - **Database connection refused** → Postgres down. `systemctl status postgresql`. Restart with `systemctl restart postgresql`.
 - **`relation "users" does not exist`** → migrations weren't applied. `for f in /srv/guru-web/releases/*/migrations/*.sql; do sudo -u postgres psql -d guru -f "$f"; done`
@@ -134,7 +174,9 @@ If the box is unrecoverable (corrupted disk, compromised, etc.):
 5. Place CF origin cert files in `/etc/ssl/cloudflare/` (perms set automatically by bootstrap).
 6. Run `bash /root/guru-web/deploy/vps-bootstrap.sh`.
 7. Update Cloudflare DNS to point at the new VPS public IP.
-8. Create `/etc/guru-web.env` (mode 600) with runtime secrets — easiest path: scp from a known-good source.
+8. Create the two env files — easiest path: scp from a known-good source. See "Env file split" below for which keys go where.
+   - `/etc/guru-web.env`        — secrets only — `chown root:guru && chmod 600`
+   - `/etc/guru-web.public.env` — `NEXT_PUBLIC_*` only — `chown root:root && chmod 644`
 9. Create `/etc/backup-b2.env` (mode 600) with B2 creds.
 10. Restore corpus from latest pipeline output: `gunzip -c guru-corpus.sql.gz | sudo -u postgres pg_restore -d guru` (or restore from B2 backup if pipeline output is unavailable — see below).
 11. Push any commit to `main` to trigger first deploy.
@@ -184,7 +226,8 @@ sudo systemctl restart guru-web
 
 ### Stripe / Clerk / OpenRouter keys
 - Generate new keys in each provider's dashboard.
-- Update `/etc/guru-web.env`.
+- **Secret keys** (`*_SECRET_KEY`, `*_WEBHOOK_SECRET`, `OPENROUTER_API_KEY`, `STRIPE_PRO_PRICE_ID`) → update `/etc/guru-web.env`. `systemctl restart guru-web` is enough.
+- **Publishable keys** (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) → update `/etc/guru-web.public.env`, then **trigger a redeploy** (push any no-op commit to `main`, or re-run `deploy.sh <sha>`). A restart alone won't help — these are baked into the client bundle at build time.
 - `systemctl restart guru-web`.
 - For Stripe + Clerk webhooks: also update the webhook endpoint's signing secret in the dashboard if you regenerated it; copy back to `/etc/guru-web.env`.
 

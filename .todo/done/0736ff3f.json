@@ -1,0 +1,30 @@
+{
+  "id": "0736ff3f",
+  "type": "chore",
+  "state": "done",
+  "summary": "split build-time NEXT_PUBLIC_* into /etc/guru-web.public.env so npm run build can inline them",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T15:27:34.947Z",
+  "updated_at": "2026-04-29T15:29:22.822Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "build",
+    "env",
+    "clerk",
+    "stripe"
+  ],
+  "description": "Live symptom: app boots cleanly (no journalctl errors), homepage returns 200, but the rendered HTML has empty NEXT_PUBLIC_* values:\n\n  publishableKey:\"\"\n  signInUrl:\"\"\n  domain:\"\"\n\n(both Clerk and Stripe publishable keys, plus NEXT_PUBLIC_APP_URL). Clerk's client SDK silently fails to initialize → users can't sign in → 'app not working'.\n\nCause: Next.js bakes NEXT_PUBLIC_* into the client bundle at 'next build' time. systemd's EnvironmentFile=/etc/guru-web.env feeds the runtime process only — not the build step. deploy.sh runs 'npm ci && npm run build' as user 'deploy' with no env loaded, so all NEXT_PUBLIC_* compile to empty strings. Boot check passes because the runtime DOES see the vars, but the bundle was already shipped empty.\n\nFix: split the env file by trust boundary.\n\n  /etc/guru-web.public.env  — NEXT_PUBLIC_* only — mode 0644 (already public — they ship in client JS)\n  /etc/guru-web.env         — secrets only — mode 0600 root:guru (unchanged)\n\n  systemd unit gets two EnvironmentFile= lines (merged at runtime).\n  deploy.sh sources only the public file before 'npm run build'.\n\nDone when:\n- deploy/deploy.sh sources /etc/guru-web.public.env before 'npm run build'; fails fast if file missing/unreadable\n- deploy/guru-web.service has both EnvironmentFile= lines\n- deploy/README.md documents the split, perms, and which keys live in which file\n- after redeploy: 'curl -s https://guru-ai.org/ | grep -oE \"publishableKey\\\":\\\"[^\\\"]*\\\"\"' shows real pk_test_...",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-29T15:29:22.822Z",
+    "resolved_by": "unknown",
+    "note": "deploy.sh sources /etc/guru-web.public.env before npm run build (fails fast if unreadable). systemd unit takes both EnvironmentFile= lines. README documents perms + which keys live where + redeploy-required gotcha for publishable key rotation. Verification: 'curl -s https://guru-ai.org/ | grep -oE \"publishableKey\\\":\\\"[^\\\"]*\\\"\"' should return a real pk_test_... after redeploy."
+  }
+}
