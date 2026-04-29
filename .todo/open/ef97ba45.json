@@ -1,0 +1,22 @@
+{
+  "id": "ef97ba45",
+  "type": "chore",
+  "state": "open",
+  "summary": "deploy.sh: self-update from $RELEASE after git checkout, so repo changes to deploy.sh actually take effect",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T23:30:08.746Z",
+  "updated_at": "2026-04-29T23:30:08.780Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "ops",
+    "self-update"
+  ],
+  "description": "vps-bootstrap.sh install -o deploy -g deploy /srv/guru-web/deploy.sh runs once at bootstrap. Subsequent changes to deploy/deploy.sh in the repo never reach the VPS — every CI deploy SSHes in and runs the bootstrap-era script. Today's symptom: PR #17's NEXT_PUBLIC_* env-source step and PR #23's self-heal chown both shipped to repo but never executed on the VPS, so the bundle still has empty publishableKey several deploys after the supposed fix.\n\nFix: after git fetch/checkout, compare $RELEASE/deploy/deploy.sh to the running script ($0). If they differ, cp it into place and exec the new one with the same SHA arg. The new script's first action is the same self-update check, which will now find the files identical and proceed normally — no infinite loop.\n\nDone when:\n- deploy.sh self-updates after git fetch/checkout, before npm ci.\n- Self-update is idempotent (no-op when files match) and short-circuits via exec.\n- Source-level test asserts the self-update block is present in deploy.sh and runs after fetch/before npm ci.\n- README documents the self-update so operators don't reach for vps-bootstrap.sh again to push deploy.sh changes.\n\nOperator unblock for the current incident: cp /srv/guru-web/releases/<latest>/deploy/deploy.sh /srv/guru-web/deploy.sh once by hand. After that, this PR's self-update keeps it current automatically."
+}
