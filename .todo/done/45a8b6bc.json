@@ -1,0 +1,31 @@
+{
+  "id": "45a8b6bc",
+  "type": "chore",
+  "state": "done",
+  "summary": "implement chat session resume — chat/[sessionId] should hydrate from GET /api/sessions/[id] and render the chat UI",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-29T16:21:36.271Z",
+  "updated_at": "2026-04-29T16:24:39.776Z",
+  "files": [
+    {
+      "path": "src/app/(app)/chat/[sessionId]/page.tsx"
+    }
+  ],
+  "tags": [
+    "frontend",
+    "chat",
+    "routing",
+    "session-resume"
+  ],
+  "description": "Live: after first message, chat/page.tsx calls router.replace('/chat/<id>'), which mounts the [sessionId] route — currently a stub returning 'Session ... — resume coming soon'. The streaming fetch keeps running in the unmounted component's closure, so the response is persisted server-side but never rendered. Visiting /chat/<id> directly (refresh, share, or click from /history) hits the same stub.\n\nDone when:\n1. Shared chat UI lifted into src/components/chat-view.tsx (current chat/page.tsx logic + JSX). Accepts optional initialSessionId and initialMessages props.\n2. chat/page.tsx renders <ChatView /> with no initial state.\n3. chat/[sessionId]/page.tsx fetches GET /api/sessions/[id], renders <ChatView initialSessionId initialMessages />. Loading/not-found/error states handled.\n4. First-message URL update uses window.history.replaceState (NOT router.replace) so the component does not unmount mid-stream.\n5. Tests: unit test for the [sessionId] page hydration path and a regression test that asserts mid-stream URL update doesn't lose the response.\n6. /history click → /chat/<id> → renders the resumed chat (no more 'coming soon' stub).",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-29T16:24:39.776Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/chat-view.test.ts",
+    "test_function": "chat-view URL-update contract",
+    "note": "Lift chat UI into shared ChatView component; [sessionId] page hydrates from GET /api/sessions/[id]; first-message URL update uses history.replaceState (not router.replace) so component doesn't unmount mid-stream. Resume v1 is transcript-only — citation rehydration deferred."
+  }
+}
