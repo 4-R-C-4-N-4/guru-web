@@ -1,0 +1,20 @@
+{
+  "id": "e9f3d709",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add corpus metadata validation to boot.ts (fail-fast on missing schema)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-28T22:13:43.793Z",
+  "updated_at": "2026-04-28T22:44:57.382Z",
+  "relationships": {
+    "parent": "ce7e01c8"
+  },
+  "description": "Add checkCorpus() to boot.ts: query corpus.corpus_metadata for schema_version, expect '2'. If the schema or table is missing, throw BootError with a clear message. Call after checkOllama().",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-28T22:44:57.382Z",
+    "resolved_by": "unknown"
+  }
+}

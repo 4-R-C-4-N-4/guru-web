@@ -42,6 +42,10 @@ const RECOMMENDED_ENV = [
 const EMBED_MODEL = 'nomic-embed-text:v1.5';
 const EXPECTED_EMBED_DIM = 768;
 
+// MUST match SCHEMA_VERSION in scripts/export.py (guru repo). Bump in
+// the same deploy as schema/corpus-schema.sql changes.
+export const EXPECTED_SCHEMA_VERSION = '2';
+
 export class BootError extends Error {
   constructor(message: string) {
     super(`[boot] ${message}`);
@@ -106,6 +110,25 @@ async function checkOllama(): Promise<void> {
   console.log(`[boot] Ollama OK at ${url} (model=${EMBED_MODEL}, dim=${vec.length})`);
 }
 
+export async function checkCorpus(): Promise<void> {
+  const { one } = await import('./db');
+  // Fully qualified `corpus.corpus_metadata` (not relying on search_path)
+  // so a missing schema fails with a clear "schema not found" error
+  // even if the Pool's search_path option is misconfigured.
+  const row = await one<{ value: string }>(
+    `SELECT value FROM corpus.corpus_metadata WHERE key = 'schema_version'`
+  );
+  if (!row) {
+    throw new BootError('Corpus schema not found. Load a corpus export first.');
+  }
+  if (row.value !== EXPECTED_SCHEMA_VERSION) {
+    throw new BootError(
+      `Corpus schema version mismatch: expected ${EXPECTED_SCHEMA_VERSION}, got ${row.value}`
+    );
+  }
+  console.log(`[boot] Corpus OK (schema_version=${row.value})`);
+}
+
 let _booted = false;
 
 export async function boot(): Promise<void> {
@@ -114,6 +137,7 @@ export async function boot(): Promise<void> {
 
   checkEnv();
   await checkOllama();
+  await checkCorpus();
 
   console.log('[boot] all checks passed');
 }

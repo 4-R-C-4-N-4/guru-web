@@ -197,6 +197,56 @@ Origin certs are 15-year by default — rotation is rare. If you do rotate:
 
 ---
 
+## Routine: Deploy new corpus
+
+The corpus (traditions, texts, concepts, chunks, edges) lives in a dedicated
+Postgres `corpus` schema. This isolates it from app tables (users, sessions,
+queries, etc.) in the `public` schema. The web app's Pool config sets
+`search_path=public,corpus` so unqualified table names resolve correctly.
+
+### How corpus updates work
+
+The guru pipeline (Python repo) produces `export/guru-corpus.sql.gz` — a
+self-contained, atomic SQL artifact. When loaded, it:
+
+1. Creates a `corpus_new` staging schema
+2. Runs CREATE TABLE + COPY FROM STDIN (fast, no per-row INSERT overhead)
+3. Builds HNSW + btree indexes
+4. Validates schema_version and chunk count inline
+5. Swaps `corpus_new` → `corpus` via `ALTER SCHEMA … RENAME` (~10ms)
+
+If any step fails, the entire transaction rolls back. The live `corpus`
+schema and all `public.*` tables are untouched.
+
+### Loading a new corpus on the VPS
+
+On your laptop:
+
+```bash
+cd ~/Work/guru
+python scripts/export.py          # produces export/guru-corpus.sql.gz
+scp export/guru-corpus.sql.gz guru-web-prod:/tmp/
+```
+
+On the VPS:
+
+```bash
+gunzip -c /tmp/guru-corpus.sql.gz | \
+  sudo -u postgres psql -d guru -v ON_ERROR_STOP=1
+rm -f /tmp/guru-corpus.sql.gz
+```
+
+The app will pick up the new tables on the next query (Postgres resolves
+schema names at parse time, not connection time). No restart needed.
+
+### First-time corpus load (fresh VPS)
+
+If `corpus` does not exist yet, the artifact creates it automatically.
+The app will fail to boot until a corpus is loaded — this is intentional
+fail-fast behaviour in `src/lib/boot.ts`.
+
+---
+
 ## Lessons learned (gotchas to remember)
 
 - **`MemoryDenyWriteExecute=true` breaks V8.** Don't add it back to the systemd unit. The other hardening directives are JIT-safe.

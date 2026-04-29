@@ -1,0 +1,20 @@
+{
+  "id": "6061447b",
+  "type": "chore",
+  "state": "done",
+  "summary": "Verify app fails boot when corpus schema is missing",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-28T22:13:43.858Z",
+  "updated_at": "2026-04-28T22:44:57.472Z",
+  "relationships": {
+    "parent": "ce7e01c8"
+  },
+  "description": "Write a test that verifies boot.ts throws BootError when corpus.corpus_metadata is absent. Ensure the app refuses to start in a broken state.",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-28T22:44:57.472Z",
+    "resolved_by": "unknown"
+  }
+}
