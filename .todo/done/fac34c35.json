@@ -1,0 +1,31 @@
+{
+  "id": "fac34c35",
+  "type": "chore",
+  "state": "done",
+  "summary": "tighten quotas (10 free, 30 pro) + bump max_tokens to fit full response with citations",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-30T01:09:34.163Z",
+  "updated_at": "2026-04-30T01:11:14.454Z",
+  "files": [
+    {
+      "path": "src/lib/quota.ts"
+    }
+  ],
+  "tags": [
+    "billing",
+    "quota",
+    "model",
+    "cost"
+  ],
+  "description": "Two cost-related issues from operator review:\n\n1. Quotas are too generous to ever be profitable. At Claude Sonnet 4.5 pricing (~$3 in / $15 out per Mtok) and ~2.5K avg tokens/query, 500 pro queries/day = ~$29/month worst case per pro user vs $12 revenue. 30 free queries/day at deepseek pricing isn't catastrophic but invites abuse.\n\n   Drop to free: 10 / pro: 30. Keeps free as a 'try it' tier and bounds pro worst-case to ~$2/day.\n\n   Two LIMITS definitions today (src/app/api/quota/route.ts:11 and src/lib/quota.ts:10) — drift risk. Consolidate to one canonical location and import.\n\n2. Responses are truncating mid-output, sometimes inside the MANDATORY CITATIONS block. completeStream uses max_tokens: 2048; the prompt's structured response format (analysis + citations) routinely needs more. The truncation at /chat/e4f9d4f7-46fe-455a-b97e-c49fcf2a0713 cut off mid-citation:\n\n     [GNOSTICISM | Gospel of Philip | Section 1l | TIER: verified\n     ^^ never closed\n\n   Bump to max_tokens: 8192. Model output tokens are billed only when used, so this doesn't increase typical cost — just removes the artificial cap that's eating citations.\n\nDone when:\n- src/lib/quota.ts LIMITS = { free: 10, pro: 30 }\n- src/app/api/quota/route.ts imports LIMITS from src/lib/quota (no second copy)\n- src/lib/model.ts uses a named MAX_OUTPUT_TOKENS = 8192 const for both complete() and completeStream()\n- quota tests updated for new limits\n- Tests + tsc + build clean",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-30T01:11:14.454Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/quota.test.ts",
+    "test_function": "LIMITS",
+    "note": "LIMITS = { free: 10, pro: 30 } in src/lib/quota.ts (single source of truth, imported by /api/quota). MAX_OUTPUT_TOKENS = 8192 in src/lib/model.ts."
+  }
+}
