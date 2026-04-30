@@ -337,3 +337,40 @@ ssh guru-web-prod 'sudo -u deploy bash -c "
 ```
 
 After that, future updates flow automatically.
+
+### One-time app-table ownership reset (existing VPSes)
+
+`vps-bootstrap.sh` now (via todo:56e5b545) ALTERs any non-guru-owned table in `public` to `guru` — defensive against stale paths (an emergency `sudo -u postgres psql -f migration.sql` without `SET ROLE guru` leaves the table owned by postgres, and the next migration's `CREATE INDEX` fails with "must be owner of relation X").
+
+Existing VPSes that pre-date this step need a one-shot:
+
+```bash
+ssh root@guru-web-prod
+sudo -u postgres psql -d guru -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN
+        SELECT schemaname, tablename
+        FROM pg_tables
+        WHERE schemaname = 'public' AND tableowner <> 'guru'
+    LOOP
+        EXECUTE format('ALTER TABLE %I.%I OWNER TO guru', r.schemaname, r.tablename);
+        RAISE NOTICE 'reset owner of %.% to guru', r.schemaname, r.tablename;
+    END LOOP;
+END $$;
+SQL
+```
+
+Idempotent — already-owned-by-`guru` tables are skipped. Verify after:
+
+```bash
+sudo -u postgres psql -d guru -c "
+  SELECT tablename, tableowner
+  FROM pg_tables
+  WHERE schemaname='public'
+  ORDER BY tablename;
+"
+# Every row should show tableowner = guru. Any showing 'postgres' means
+# the DO block didn't catch it — check for typos in the SQL above.
+```

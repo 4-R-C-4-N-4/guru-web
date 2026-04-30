@@ -210,6 +210,36 @@ step_postgres() {
         || sudo -u postgres psql -c "CREATE DATABASE guru OWNER guru"
     sudo -u postgres psql -d guru -c "CREATE EXTENSION IF NOT EXISTS vector"
 
+    # Defensive ownership reset (todo:56e5b545).  Migrations now run as
+    # `guru` (the DB owner), but earlier deploys ran them as `postgres`
+    # with SET ROLE — and stale paths (manual `sudo -u postgres psql -f`
+    # for emergency fixes) can leave individual app tables owned by
+    # `postgres`.  When the next migration tries CREATE INDEX on such a
+    # table, Postgres rejects with "must be owner of relation X" before
+    # the IF NOT EXISTS check fires, the -1 transaction rolls back, and
+    # (without ON_ERROR_STOP=1) the deploy moves on with no schema
+    # change applied.
+    #
+    # This DO block ALTERs any non-guru-owned table in public → guru.
+    # Idempotent — already-owned-by-guru rows are skipped by the
+    # WHERE clause, so re-running the bootstrap is a no-op.  Targets
+    # public only; never touches corpus.* (those are owned by postgres
+    # via the export pipeline and don't need to change).
+    sudo -u postgres psql -d guru -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN
+        SELECT schemaname, tablename
+        FROM pg_tables
+        WHERE schemaname = 'public' AND tableowner <> 'guru'
+    LOOP
+        EXECUTE format('ALTER TABLE %I.%I OWNER TO guru', r.schemaname, r.tablename);
+        RAISE NOTICE 'reset owner of %.% to guru', r.schemaname, r.tablename;
+    END LOOP;
+END $$;
+SQL
+
     # Debian's Postgres defaults: listen on localhost only, scram-sha-256 for
     # host 127.0.0.1/32 via pg_hba.conf. No config edits needed.
 }
