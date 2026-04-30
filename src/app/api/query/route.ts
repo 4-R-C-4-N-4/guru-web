@@ -5,19 +5,24 @@
  *
  * Flow:
  *   1. Auth check (requireUser)
- *   2. Quota check + atomic increment (checkAndIncrement)
- *   3. Load user preferences
- *   4. Hybrid retrieval (retrieve)
- *   5. Build prompt (buildPrompt)
- *   6. Stream LLM response back to client
- *   7. Persist full response + metadata after stream closes
+ *   1b. Rate limit (1s per-user min interval)
+ *   2. Parse + validate body
+ *   2b. Session ownership check
+ *   3. Retrieve + build prompt
+ *   4. Estimate cost (worst-case: input + MAX_OUTPUT_TOKENS) and reserve
+ *      budget atomically across both axes (todo:7c8fdae7).  Reject 429
+ *      with reason when over query or USD limit.
+ *   5. Stream LLM response back to client.
+ *   6. Compute actual cost from usage chunk; reconcile with finalize.
+ *   7. Persist query row with cost_usd + cached_input_tokens.
  */
 
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
-import { buildPrompt } from '@/lib/prompt';
-import { completeStream, MODELS } from '@/lib/model';
-import { checkAndIncrement } from '@/lib/quota';
+import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
+import { completeStream, MODELS, MAX_OUTPUT_TOKENS } from '@/lib/model';
+import { reserveBudget, finalizeBudget } from '@/lib/spend';
+import { computeCost } from '@/lib/cost';
 import { loadPreferences } from '@/lib/prefs';
 import { rateLimit } from '@/lib/rate-limit';
 import { one, exec } from '@/lib/db';
@@ -78,17 +83,42 @@ export async function POST(req: Request) {
     }
   }
 
-  // 3. Retrieve + build prompt (before quota consumption)
+  // 3. Retrieve + build prompt (before budget reservation — failed retrieval
+  // shouldn't consume quota)
   const prefs = await loadPreferences(user.id);
   const chunks = await retrieve(queryText, prefs);
   const prompt = buildPrompt(queryText, chunks, prefs, user.tier);
 
-  // 4. Quota check (after retrieval succeeds — failed queries shouldn't consume quota)
-  const quota = await checkAndIncrement(user.id, user.tier);
-  if (!quota.allowed) {
+  // 4. Estimate cost + reserve budget atomically.
+  // Estimate is intentionally a worst-case ceiling: assumed input tokens
+  // from prompt+system char count, output capped at MAX_OUTPUT_TOKENS.
+  // finalizeBudget reconciles to the actual cost from the usage chunk.
+  const modelId = MODELS[user.tier];
+  const estimatedInputTokens = Math.ceil((SYSTEM_PROMPT.length + prompt.length) / 4);
+  const { cost_usd: estimatedCostUsd } = await computeCost({
+    modelId,
+    inputTokens: estimatedInputTokens,
+    outputTokens: MAX_OUTPUT_TOKENS,
+  });
+
+  const reserve = await reserveBudget({
+    userId: user.id,
+    tier: user.tier,
+    estimatedCostUsd,
+  });
+  if (!reserve.allowed) {
     return Response.json(
-      { error: 'Daily query limit reached', used: quota.used, limit: quota.limit },
-      { status: 429 }
+      {
+        error: reserve.reason === 'usd'
+          ? 'Daily spend limit reached'
+          : 'Daily query limit reached',
+        reason: reserve.reason,
+        queries_used: reserve.queries_used,
+        query_limit:  reserve.query_limit,
+        usd_used:     reserve.usd_used,
+        usd_limit:    reserve.usd_limit,
+      },
+      { status: 429 },
     );
   }
 
@@ -98,6 +128,7 @@ export async function POST(req: Request) {
   let fullResponse = '';
   let inputTokens: number | null = null;
   let outputTokens: number | null = null;
+  let cachedInputTokens = 0;
   let streamError: Error | null = null;
 
   const readable = new ReadableStream({
@@ -128,6 +159,18 @@ export async function POST(req: Request) {
           if (chunk.usage) {
             inputTokens  = chunk.usage.prompt_tokens     ?? null;
             outputTokens = chunk.usage.completion_tokens ?? null;
+            // Cached-token field name varies by provider through OpenRouter:
+            //   OpenAI:    prompt_tokens_details.cached_tokens
+            //   Anthropic: cache_read_input_tokens (sometimes top-level)
+            // Cast loosely so we read whichever the provider supplied.
+            const u = chunk.usage as {
+              prompt_tokens_details?: { cached_tokens?: number };
+              cache_read_input_tokens?: number;
+            };
+            cachedInputTokens =
+              u.prompt_tokens_details?.cached_tokens ??
+              u.cache_read_input_tokens ??
+              0;
           }
         }
       } catch (err) {
@@ -137,8 +180,31 @@ export async function POST(req: Request) {
         safeClose();
       }
 
-      // 6. Persist after stream closes — save partial response on error
-      const model = MODELS[user.tier];
+      // 6. Compute actual cost + reconcile budget.
+      // If usage chunk never arrived (truncation / upstream abort), leave
+      // the estimate locked in usd_used and persist cost_usd as NULL —
+      // honest about not knowing.
+      let costUsd: number | null = null;
+      if (inputTokens !== null && outputTokens !== null) {
+        try {
+          const { cost_usd } = await computeCost({
+            modelId,
+            inputTokens,
+            outputTokens,
+            cachedInputTokens,
+          });
+          costUsd = cost_usd;
+          await finalizeBudget({
+            userId: user.id,
+            estimatedCostUsd,
+            actualCostUsd: cost_usd,
+          });
+        } catch (err) {
+          console.error('[api/query] cost reconciliation failed:', err);
+        }
+      }
+
+      // 7. Persist after stream closes — save partial response on error.
       try {
         if (!sessionId) {
           // Auto-create a session if none provided
@@ -155,18 +221,20 @@ export async function POST(req: Request) {
           `INSERT INTO queries
              (session_id, user_id, query_text, response_text,
               chunks_used, model_used, tier_used,
-              input_tokens, output_tokens)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              input_tokens, output_tokens, cached_input_tokens, cost_usd)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             sessionId,
             user.id,
             queryText,
             fullResponse,
             JSON.stringify(chunks.map(c => c.id)),
-            model,
+            modelId,
             user.tier,
             inputTokens,
             outputTokens,
+            cachedInputTokens,
+            costUsd,
           ]
         );
       } catch (err) {
@@ -180,8 +248,10 @@ export async function POST(req: Request) {
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'X-Quota-Used':  String(quota.used),
-      'X-Quota-Limit': String(quota.limit),
+      'X-Quota-Used':  String(reserve.queries_used),
+      'X-Quota-Limit': String(reserve.query_limit ?? 'unlimited'),
+      'X-Spend-Used':  String(reserve.usd_used),
+      'X-Spend-Limit': String(reserve.usd_limit ?? 'unlimited'),
       ...(streamError ? { 'X-Stream-Error': 'truncated' } : {}),
     },
   });
