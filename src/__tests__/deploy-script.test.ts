@@ -77,4 +77,27 @@ describe('vps-bootstrap.sh sudoers stanza', () => {
       /deploy\s+ALL=\(root\)\s+NOPASSWD:\s*\/bin\/chown\s+-R\s+deploy\\?:deploy\s+\/srv\/guru-web\/releases/,
     );
   });
+
+  it('runs migrations as guru, not postgres (todo:d5b272a3)', () => {
+    // Sudoers: target user must be (guru), not (postgres). The form must
+    // match the stdin-pipe shape deploy.sh actually uses (no `-f *`).
+    expect(BOOTSTRAP).toMatch(
+      /deploy\s+ALL=\(guru\)\s+NOPASSWD:\s*\/usr\/bin\/psql\s+-d\s+guru\s+-1\s*$/m,
+    );
+    expect(BOOTSTRAP).not.toMatch(/deploy\s+ALL=\(postgres\)\s+NOPASSWD/);
+  });
+});
+
+describe('deploy.sh migration runner', () => {
+  it('runs migrations as guru via sudo -u guru, not as postgres superuser', () => {
+    expect(SRC).toMatch(/sudo\s+-u\s+guru\s+\/usr\/bin\/psql\s+-d\s+guru\s+-1/);
+    expect(SRC).not.toMatch(/sudo\s+-u\s+postgres\s+\/usr\/bin\/psql/);
+  });
+
+  it('drops the SET ROLE guru prefix (no longer needed when running as guru)', () => {
+    // Old form: { echo "SET ROLE guru;"; cat $f; } | sudo -u postgres psql
+    // New form: sudo -u guru psql -d guru -1 < $f
+    // Match the bash command form, not stray comments referring to it.
+    expect(SRC).not.toMatch(/echo\s+["']SET\s+ROLE\s+guru/);
+  });
 });

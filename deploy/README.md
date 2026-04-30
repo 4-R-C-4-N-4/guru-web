@@ -303,17 +303,24 @@ fail-fast behaviour in `src/lib/boot.ts`.
 
 ### One-time sudoers patch (existing VPSes)
 
-`vps-bootstrap.sh` only runs once. On already-bootstrapped VPSes, add the new sudoers line by hand:
+`vps-bootstrap.sh` only runs once. On already-bootstrapped VPSes, the sudoers file needs hand-patching to match the current state of the script. Final form:
+
+```
+deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
+deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
+deploy ALL=(guru)  NOPASSWD: /usr/bin/psql -d guru -1
+```
 
 ```bash
 ssh root@guru-web-prod
 visudo -f /etc/sudoers.d/deploy
-# Add the line:
-#   deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
-# Save. visudo validates syntax before installing.
+# Edit to match the three lines above. visudo validates syntax before saving.
 ```
 
-Without this patch, the self-heal step in `deploy.sh` silently no-ops (`|| true`) and old root-owned releases keep accumulating.
+Two things to know:
+
+- The chown line is what enables the self-heal step in `deploy.sh`. Without it, the chown silently no-ops (`|| true`) and old root-owned releases accumulate.
+- The psql line target is `guru`, not `postgres`. Migrations run as the `guru` DB owner now (peer auth via the `guru` OS user that the systemd unit also uses), so the migration runner has no access to corpus tables — only what the runtime app already has. Old form was `(postgres) NOPASSWD: /usr/bin/psql -d guru -1 -f *` which gave full superuser DDL on every schema.
 
 ### Self-updating deploy.sh
 

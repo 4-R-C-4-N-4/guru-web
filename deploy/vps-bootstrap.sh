@@ -302,16 +302,19 @@ step_app_users_and_dirs() {
         useradd --system --create-home --home-dir /home/deploy --shell /bin/bash deploy
     fi
 
-    # Minimal sudo for deploy.sh — restart the app + run app-schema migrations.
-    # The psql entry is gated to -d guru (won't open other DBs) and -f (file
-    # input only, no inline -c) so blast radius is "the deploy user can apply
-    # arbitrary SQL files to the guru DB as the postgres superuser." That's
-    # already implied by the deploy user's ability to run npm-built code that
-    # connects to the DB — making it explicit here for migrations.
+    # Minimal sudo for deploy.sh:
+    #   - restart guru-web after a release symlink swap
+    #   - chown -R the releases tree so an emergency `sudo deploy.sh` run
+    #     (root-owned files) self-heals on the next deploy
+    #   - apply app-schema migrations as the `guru` postgres role (the DB
+    #     owner via peer auth on the guru OS user). Migrations no longer
+    #     run as the postgres superuser; blast radius is limited to what
+    #     guru already has access to at runtime — app tables in the guru
+    #     DB only, never corpus.* (todo:d5b272a3).
     cat > /etc/sudoers.d/deploy <<'EOF'
 deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
 deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
-deploy ALL=(postgres) NOPASSWD: /usr/bin/psql -d guru -1 -f *
+deploy ALL=(guru) NOPASSWD: /usr/bin/psql -d guru -1
 EOF
     chmod 440 /etc/sudoers.d/deploy
 
