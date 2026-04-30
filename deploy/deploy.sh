@@ -121,7 +121,11 @@ log "apply migrations"
 shopt -s nullglob
 for f in "$RELEASE"/migrations/*.sql; do
     log "  → $(basename "$f")"
-    sudo -u guru /usr/bin/psql -d guru -1 < "$f"
+    # -v ON_ERROR_STOP=1 makes psql exit non-zero on the first SQL error.
+    # Without it psql exits 0 even when the transaction (-1) rolled back —
+    # set -e doesn't catch silent migration failures, and you find out
+    # weeks later that an index never got created (todo:df25768e).
+    sudo -u guru /usr/bin/psql -d guru -1 -v ON_ERROR_STOP=1 < "$f"
 done
 shopt -u nullglob
 

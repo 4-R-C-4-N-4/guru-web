@@ -308,7 +308,7 @@ fail-fast behaviour in `src/lib/boot.ts`.
 ```
 deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
 deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
-deploy ALL=(guru)  NOPASSWD: /usr/bin/psql -d guru -1
+deploy ALL=(guru)  NOPASSWD: /usr/bin/psql -d guru -1 -v ON_ERROR_STOP=1
 ```
 
 ```bash
@@ -317,10 +317,11 @@ visudo -f /etc/sudoers.d/deploy
 # Edit to match the three lines above. visudo validates syntax before saving.
 ```
 
-Two things to know:
+Three things to know:
 
 - The chown line is what enables the self-heal step in `deploy.sh`. Without it, the chown silently no-ops (`|| true`) and old root-owned releases accumulate.
 - The psql line target is `guru`, not `postgres`. Migrations run as the `guru` DB owner now (peer auth via the `guru` OS user that the systemd unit also uses), so the migration runner has no access to corpus tables — only what the runtime app already has. Old form was `(postgres) NOPASSWD: /usr/bin/psql -d guru -1 -f *` which gave full superuser DDL on every schema.
+- The trailing `-v ON_ERROR_STOP=1` makes psql exit non-zero on the first SQL error. Without it psql exits 0 even when a transaction (`-1`) rolled back, and `set -e` in `deploy.sh` doesn't catch silent migration failures (you only find out weeks later that an index never got created). Sudo arg matching is exact — the sudoers entry must include this flag verbatim or sudo will fall through to "password required".
 
 ### Self-updating deploy.sh
 

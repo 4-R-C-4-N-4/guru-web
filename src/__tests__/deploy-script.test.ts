@@ -79,10 +79,9 @@ describe('vps-bootstrap.sh sudoers stanza', () => {
   });
 
   it('runs migrations as guru, not postgres (todo:d5b272a3)', () => {
-    // Sudoers: target user must be (guru), not (postgres). The form must
-    // match the stdin-pipe shape deploy.sh actually uses (no `-f *`).
+    // Sudoers: target user must be (guru), not (postgres).
     expect(BOOTSTRAP).toMatch(
-      /deploy\s+ALL=\(guru\)\s+NOPASSWD:\s*\/usr\/bin\/psql\s+-d\s+guru\s+-1\s*$/m,
+      /deploy\s+ALL=\(guru\)\s+NOPASSWD:\s*\/usr\/bin\/psql\s+-d\s+guru\s+-1/,
     );
     expect(BOOTSTRAP).not.toMatch(/deploy\s+ALL=\(postgres\)\s+NOPASSWD/);
   });
@@ -93,6 +92,15 @@ describe('vps-bootstrap.sh sudoers stanza', () => {
     // postgres-owned (refreshed by the export pipeline).
     expect(BOOTSTRAP).toMatch(/schemaname\s*=\s*'public'\s+AND\s+tableowner\s*<>\s*'guru'/);
     expect(BOOTSTRAP).toMatch(/ALTER TABLE %I\.%I OWNER TO guru/);
+  });
+
+  it('sudoers psql line includes -v ON_ERROR_STOP=1 (todo:df25768e)', () => {
+    // Sudo arg matching is exact — the sudoers entry must include the
+    // exact arg form deploy.sh uses, or sudo falls through to "password
+    // required".
+    expect(BOOTSTRAP).toMatch(
+      /deploy\s+ALL=\(guru\)\s+NOPASSWD:\s*\/usr\/bin\/psql\s+-d\s+guru\s+-1\s+-v\s+ON_ERROR_STOP=1/,
+    );
   });
 });
 
@@ -107,5 +115,14 @@ describe('deploy.sh migration runner', () => {
     // New form: sudo -u guru psql -d guru -1 < $f
     // Match the bash command form, not stray comments referring to it.
     expect(SRC).not.toMatch(/echo\s+["']SET\s+ROLE\s+guru/);
+  });
+
+  it('passes -v ON_ERROR_STOP=1 so SQL errors halt the deploy (todo:df25768e)', () => {
+    // Without ON_ERROR_STOP=1, psql exits 0 even when the transaction
+    // (-1) rolled back — set -e in deploy.sh doesn't catch the failure
+    // and migrations silently no-op.
+    expect(SRC).toMatch(
+      /sudo\s+-u\s+guru\s+\/usr\/bin\/psql\s+-d\s+guru\s+-1\s+-v\s+ON_ERROR_STOP=1/,
+    );
   });
 });
