@@ -45,7 +45,7 @@ export type Tier = keyof typeof MODELS;
 // only when actually used, so this is purely a "don't truncate" guard,
 // not a typical-cost increase.  Both deepseek-chat and Claude Sonnet 4.5
 // support at least 8192 output tokens.
-const MAX_OUTPUT_TOKENS = 8192;
+export const MAX_OUTPUT_TOKENS = 8192;
 
 // ---------------------------------------------------------------------------
 // Non-streaming completion (for internal/testing use)

@@ -1,0 +1,31 @@
+{
+  "id": "938740cb",
+  "type": "chore",
+  "state": "done",
+  "summary": "schema migration: cost_usd + cached_input_tokens on queries; create model_pricing + user_budgets",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-30T12:20:09.997Z",
+  "updated_at": "2026-04-30T12:35:29.574Z",
+  "files": [
+    {
+      "path": "migrations/006_cost_and_budgets.sql"
+    }
+  ],
+  "tags": [
+    "schema",
+    "migration",
+    "billing"
+  ],
+  "relationships": {
+    "parent": "0d91fca3"
+  },
+  "description": "Migration 006_cost_and_budgets.sql — additive only.\n\nALTER TABLE queries ADD COLUMN cost_usd NUMERIC(10, 6);\nALTER TABLE queries ADD COLUMN cached_input_tokens INTEGER NOT NULL DEFAULT 0;\n\nCREATE TABLE IF NOT EXISTS model_pricing (\n    model_id                    TEXT NOT NULL,\n    input_price_per_mtok        NUMERIC(10, 4) NOT NULL,\n    output_price_per_mtok       NUMERIC(10, 4) NOT NULL,\n    cached_input_price_per_mtok NUMERIC(10, 4),\n    effective_from              TIMESTAMPTZ NOT NULL,\n    effective_to                TIMESTAMPTZ,\n    PRIMARY KEY (model_id, effective_from)\n);\nCREATE INDEX IF NOT EXISTS idx_model_pricing_lookup\n    ON model_pricing (model_id, effective_from DESC);\n\nCREATE TABLE IF NOT EXISTS user_budgets (\n    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    period       TEXT NOT NULL CHECK (period IN ('daily', 'monthly')),\n    query_limit  INTEGER,\n    usd_limit    NUMERIC(10, 4),\n    queries_used INTEGER NOT NULL DEFAULT 0,\n    usd_used     NUMERIC(10, 6) NOT NULL DEFAULT 0,\n    reset_at     TIMESTAMPTZ NOT NULL,\n    PRIMARY KEY (user_id, period)\n);\n\n-- Backfill user_budgets from today's quota_usage rows.  reset_at = next UTC midnight.\nINSERT INTO user_budgets (user_id, period, query_limit, queries_used, reset_at)\nSELECT user_id, 'daily', 10, queries_used,\n       (date + interval '1 day')::timestamptz\nFROM quota_usage\nWHERE date = CURRENT_DATE\nON CONFLICT (user_id, period) DO NOTHING;\n\nquota_usage stays in place — code will switch over in child 4, drop in a later cleanup PR.\n\nDone when:\n- migration runs cleanly under deploy.sh's psql -1 -v ON_ERROR_STOP=1\n- queries has the two new nullable/default columns\n- both new tables exist with the correct constraints\n- existing user rows in quota_usage are reflected in user_budgets",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-30T12:35:29.574Z",
+    "resolved_by": "unknown",
+    "note": "Migration 006 adds cost_usd + cached_input_tokens to queries, creates model_pricing and user_budgets, backfills user_budgets from today's quota_usage rows with tier-aware limits."
+  }
+}

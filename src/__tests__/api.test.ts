@@ -26,8 +26,19 @@ vi.mock('@/lib/prefs', () => ({
   savePreferences: vi.fn(),
 }));
 
-vi.mock('@/lib/quota', () => ({
-  checkAndIncrement: vi.fn(),
+vi.mock('@/lib/spend', () => ({
+  reserveBudget:  vi.fn(),
+  finalizeBudget: vi.fn(),
+  getBudget:      vi.fn(),
+  TIER_LIMITS: {
+    free: { query_limit: 10, usd_limit: null },
+    pro:  { query_limit: 30, usd_limit: null },
+  },
+}));
+
+vi.mock('@/lib/cost', () => ({
+  computeCost: vi.fn(),
+  getPricing:  vi.fn(),
 }));
 
 vi.mock('@/lib/retriever', () => ({
@@ -36,11 +47,13 @@ vi.mock('@/lib/retriever', () => ({
 
 vi.mock('@/lib/prompt', () => ({
   buildPrompt: vi.fn(),
+  SYSTEM_PROMPT: 'mock system prompt',
 }));
 
 vi.mock('@/lib/model', () => ({
   completeStream: vi.fn(),
   MODELS: { free: 'deepseek/deepseek-chat', pro: 'anthropic/claude-sonnet-4-5' },
+  MAX_OUTPUT_TOKENS: 8192,
 }));
 
 vi.mock('@/lib/rate-limit', () => ({
@@ -54,7 +67,8 @@ vi.mock('@/lib/rate-limit', () => ({
 import * as db      from '@/lib/db';
 import * as auth    from '@/lib/auth';
 import * as prefs   from '@/lib/prefs';
-import * as quota   from '@/lib/quota';
+import * as spend   from '@/lib/spend';
+import * as cost    from '@/lib/cost';
 import * as retriever from '@/lib/retriever';
 import * as prompt  from '@/lib/prompt';
 import * as model   from '@/lib/model';
@@ -66,11 +80,36 @@ const mockExec   = db.exec       as MockedFunction<typeof db.exec>;
 const mockAuth   = auth.requireUser       as MockedFunction<typeof auth.requireUser>;
 const mockPrefs  = prefs.loadPreferences  as MockedFunction<typeof prefs.loadPreferences>;
 const mockSavePrefs = prefs.savePreferences as MockedFunction<typeof prefs.savePreferences>;
-const mockQuota  = quota.checkAndIncrement as MockedFunction<typeof quota.checkAndIncrement>;
+const mockReserveBudget  = spend.reserveBudget  as MockedFunction<typeof spend.reserveBudget>;
+const mockFinalizeBudget = spend.finalizeBudget as MockedFunction<typeof spend.finalizeBudget>;
+const mockGetBudget      = spend.getBudget      as MockedFunction<typeof spend.getBudget>;
+const mockComputeCost    = cost.computeCost     as MockedFunction<typeof cost.computeCost>;
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
 const mockStream = model.completeStream   as MockedFunction<typeof model.completeStream>;
 const mockRateLimit = rl.rateLimit         as MockedFunction<typeof rl.rateLimit>;
+
+// Default cost mock: every computeCost call returns a tiny estimate so
+// reserveBudget never gets a meaningful USD ask in tests that don't
+// explicitly care.  Tests that DO care override per-call.
+const DEFAULT_COST = {
+  cost_usd: 0.001,
+  pricing: {
+    model_id: 'deepseek/deepseek-chat',
+    input_price_per_mtok: 0.14,
+    output_price_per_mtok: 0.28,
+    cached_input_price_per_mtok: null,
+    effective_from: new Date('2026-04-30T00:00:00Z'),
+    effective_to:   null,
+  },
+};
+const ALLOWED_RESERVE = {
+  allowed: true as const,
+  queries_used: 1,
+  usd_used:     0.001,
+  query_limit:  10,
+  usd_limit:    null,
+};
 
 const FREE_USER = { id: 'user_1', email: 'a@b.com', tier: 'free' as const, stripe_customer_id: null };
 const DEFAULT_PREFS = { scopeMode: 'all' as const, blockedTraditions: [], blockedTexts: [], whitelistedTraditions: [], whitelistedTexts: [] };
@@ -298,19 +337,47 @@ describe('POST /api/query', () => {
     // Must short-circuit before hitting any of the heavier mocks.
     expect(mockOne).not.toHaveBeenCalled();
     expect(mockRetrieve).not.toHaveBeenCalled();
-    expect(mockQuota).not.toHaveBeenCalled();
+    expect(mockReserveBudget).not.toHaveBeenCalled();
   });
 
-  it('returns 429 when quota exceeded', async () => {
+  it('returns 429 with reason=queries when query limit exceeded', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockOne.mockResolvedValueOnce({ id: 's1' }); // session ownership check
+    mockOne.mockResolvedValueOnce({ id: 's1' });
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('prompt');
-    mockQuota.mockResolvedValueOnce({ allowed: false, used: 31, limit: 30 });
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0,
+      query_limit: 10, usd_limit: null,
+    });
 
     const res = await queryPOST(req('POST', '/api/query', { query: 'test', sessionId: 's1' }));
     expect(res.status).toBe(429);
+    const body = await res.json() as { error: string; reason: string };
+    expect(body.reason).toBe('queries');
+    expect(body.error).toMatch(/Daily query limit/);
+  });
+
+  it('returns 429 with reason=usd when spend cap would overrun', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'usd',
+      queries_used: 5, usd_used: 0.49,
+      query_limit: 30, usd_limit: 0.50,
+    });
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'test', sessionId: 's1' }));
+    expect(res.status).toBe(429);
+    const body = await res.json() as { reason: string; error: string };
+    expect(body.reason).toBe('usd');
+    expect(body.error).toMatch(/Daily spend limit/);
   });
 
   it('returns 404 when sessionId belongs to another user', async () => {
@@ -328,7 +395,7 @@ describe('POST /api/query', () => {
 
     // No retrieval, no quota burn, no INSERT
     expect(mockRetrieve).not.toHaveBeenCalled();
-    expect(mockQuota).not.toHaveBeenCalled();
+    expect(mockReserveBudget).not.toHaveBeenCalled();
     expect(mockExec).not.toHaveBeenCalled();
   });
 
@@ -351,14 +418,15 @@ describe('POST /api/query', () => {
     // Cap fires before any downstream work.
     expect(mockOne).not.toHaveBeenCalled();
     expect(mockRetrieve).not.toHaveBeenCalled();
-    expect(mockQuota).not.toHaveBeenCalled();
+    expect(mockReserveBudget).not.toHaveBeenCalled();
     expect(mockStream).not.toHaveBeenCalled();
   });
 
   it('accepts query exactly at 4000 chars (boundary)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership
-    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('p');
@@ -371,16 +439,16 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(200);
   });
 
-  it('streams response when quota allows', async () => {
+  it('streams response when budget allows', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check passes
-    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('assembled prompt');
     mockExec.mockResolvedValue(undefined);
 
-    // Simulate an async iterable stream
     async function* fakeStream() {
       yield { choices: [{ delta: { content: 'Hello ' } }] };
       yield { choices: [{ delta: { content: 'world' } }] };
@@ -390,16 +458,25 @@ describe('POST /api/query', () => {
     const res = await queryPOST(req('POST', '/api/query', { query: 'What is gnosis?', sessionId: 's1' }));
     expect(res.status).toBe(200);
     expect(res.headers.get('X-Quota-Used')).toBe('1');
+    expect(res.headers.get('X-Quota-Limit')).toBe('10');
+    expect(res.headers.get('X-Spend-Used')).toBe('0.001');
+    expect(res.headers.get('X-Spend-Limit')).toBe('unlimited');
 
-    // Read the streamed body
     const text = await res.text();
     expect(text).toBe('Hello world');
   });
 
-  it('persists token counts from final usage chunk', async () => {
+  it('persists token counts + cost_usd from final usage chunk', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check
-    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    // computeCost is called twice: pre-flight estimate, post-stream actual.
+    // Pre-flight uses worst-case tokens (8K output); post-flight uses real
+    // (42 prompt / 7 completion).  Distinct return values let us assert the
+    // POST-stream cost lands in queries.cost_usd, not the estimate.
+    mockComputeCost
+      .mockResolvedValueOnce({ ...DEFAULT_COST, cost_usd: 0.05 }) // estimate
+      .mockResolvedValueOnce({ ...DEFAULT_COST, cost_usd: 0.0042 }); // actual
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('assembled prompt');
@@ -407,27 +484,69 @@ describe('POST /api/query', () => {
 
     async function* fakeStream() {
       yield { choices: [{ delta: { content: 'Hi' } }] };
-      // Usage chunk shape per OpenAI streaming spec: empty choices[], top-level usage.
+      // Usage chunk: OpenAI shape — empty choices[], top-level usage.
       yield { choices: [], usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 } };
     }
     mockStream.mockResolvedValueOnce(fakeStream() as never);
 
     const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
-    await res.text(); // drain stream so the persistence path runs
+    await res.text();
 
     expect(mockExec).toHaveBeenCalledTimes(1);
     const [sql, params] = mockExec.mock.calls[0]!;
     expect(sql).toContain('input_tokens');
     expect(sql).toContain('output_tokens');
-    expect(params).toHaveLength(9);
-    expect(params![7]).toBe(42); // input_tokens  ← prompt_tokens
-    expect(params![8]).toBe(7);  // output_tokens ← completion_tokens
+    expect(sql).toContain('cached_input_tokens');
+    expect(sql).toContain('cost_usd');
+    expect(params).toHaveLength(11);
+    expect(params![7]).toBe(42);   // input_tokens
+    expect(params![8]).toBe(7);    // output_tokens
+    expect(params![9]).toBe(0);    // cached_input_tokens — usage chunk omitted it, default 0
+    expect(params![10]).toBe(0.0042); // cost_usd from POST-stream computeCost
+
+    // finalizeBudget reconciles with the actual cost (0.0042) vs estimate (0.05)
+    expect(mockFinalizeBudget).toHaveBeenCalledOnce();
+    expect(mockFinalizeBudget).toHaveBeenCalledWith({
+      userId: 'user_1',
+      estimatedCostUsd: 0.05,
+      actualCostUsd: 0.0042,
+    });
   });
 
-  it('writes NULL token counts when the stream truncates before usage', async () => {
+  it('reads cached_tokens from prompt_tokens_details when present (OpenAI shape)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockOne.mockResolvedValueOnce({ id: 's1' }); // ownership check
-    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('p');
+    mockExec.mockResolvedValue(undefined);
+
+    async function* withCache() {
+      yield { choices: [{ delta: { content: 'x' } }] };
+      yield {
+        choices: [],
+        usage: {
+          prompt_tokens: 100, completion_tokens: 20, total_tokens: 120,
+          prompt_tokens_details: { cached_tokens: 80 },
+        },
+      };
+    }
+    mockStream.mockResolvedValueOnce(withCache() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text();
+
+    const [, params] = mockExec.mock.calls[0]!;
+    expect(params![9]).toBe(80); // cached_input_tokens read from prompt_tokens_details
+  });
+
+  it('writes NULL token counts + NULL cost_usd when stream truncates before usage', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('assembled prompt');
@@ -444,8 +563,12 @@ describe('POST /api/query', () => {
 
     expect(mockExec).toHaveBeenCalledTimes(1);
     const [, params] = mockExec.mock.calls[0]!;
-    expect(params![7]).toBeNull(); // input_tokens
-    expect(params![8]).toBeNull(); // output_tokens — distinguishable from a legitimate 0
+    expect(params![7]).toBeNull();  // input_tokens — usage chunk never arrived
+    expect(params![8]).toBeNull();  // output_tokens
+    expect(params![10]).toBeNull(); // cost_usd — estimate stays in usd_used; persisted cost is honest about not knowing
+
+    // No finalize when we don't have actual usage — estimate remains in usd_used.
+    expect(mockFinalizeBudget).not.toHaveBeenCalled();
   });
 
   it('persists partial response when client cancels mid-stream (todo:9dff8966)', async () => {
@@ -457,7 +580,8 @@ describe('POST /api/query', () => {
 
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockOne.mockResolvedValueOnce({ id: 's1' });
-    mockQuota.mockResolvedValueOnce({ allowed: true, used: 1, limit: 30 });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockRetrieve.mockResolvedValueOnce([]);
     mockBuild.mockReturnValueOnce('assembled prompt');
