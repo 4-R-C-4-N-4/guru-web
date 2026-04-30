@@ -1,0 +1,30 @@
+{
+  "id": "56e5b545",
+  "type": "chore",
+  "state": "done",
+  "summary": "vps-bootstrap.sh: ALTER TABLE OWNER TO guru for app tables (defensive ownership reset)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-30T01:37:41.713Z",
+  "updated_at": "2026-04-30T01:52:54.000Z",
+  "files": [
+    {
+      "path": "deploy/vps-bootstrap.sh"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "postgres",
+    "ownership"
+  ],
+  "description": "Tables in the live guru DB are split-owned: some by 'guru' (the DB owner role), some by 'postgres' (probably from earlier migrations that ran as sudo -u postgres without SET ROLE guru). Symptom on PR #27's deploy: 'must be owner of table users' / 'must be owner of table sessions' on every CREATE INDEX, transaction rolls back, migrations effectively no-op.\n\nTwo-part fix:\n\n1. One-shot reset on the live VPS (operator):\n     sudo -u postgres psql -d guru -c \"REASSIGN OWNED BY postgres TO guru\"\n   (or table-by-table ALTER TABLE OWNER TO guru for surgical control).\n\n2. Defensive ownership reset baked into vps-bootstrap.sh's step_postgres\n   (or a new step_app_db_ownership step) so a fresh setup never ends up\n   in this state. Idempotent — already-owned-by-guru is a no-op.\n\nDone when:\n- vps-bootstrap.sh runs REASSIGN OWNED BY postgres TO guru (or equivalent) after creating the guru role / DB\n- Step is idempotent\n- deploy/README.md documents the one-time fix for existing VPSes\n- Optional: deploy.sh smoke-checks ownership before migrations and warns if drift is detected",
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-30T01:52:54.000Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/deploy-script.test.ts",
+    "test_function": "vps-bootstrap.sh sudoers stanza",
+    "note": "step_postgres now ALTERs any non-guru-owned table in public to guru (idempotent DO block). Existing VPSes need a one-shot of the same SQL — documented in README."
+  }
+}
