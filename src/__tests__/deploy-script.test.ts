@@ -86,6 +86,14 @@ describe('vps-bootstrap.sh sudoers stanza', () => {
     );
     expect(BOOTSTRAP).not.toMatch(/deploy\s+ALL=\(postgres\)\s+NOPASSWD/);
   });
+
+  it('resets app-table ownership to guru in step_postgres (todo:56e5b545)', () => {
+    // The DO block scans pg_tables for non-guru-owned tables in public
+    // and ALTERs them. Idempotent. Targets public only — corpus.* stays
+    // postgres-owned (refreshed by the export pipeline).
+    expect(BOOTSTRAP).toMatch(/schemaname\s*=\s*'public'\s+AND\s+tableowner\s*<>\s*'guru'/);
+    expect(BOOTSTRAP).toMatch(/ALTER TABLE %I\.%I OWNER TO guru/);
+  });
 });
 
 describe('deploy.sh migration runner', () => {
