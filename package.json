@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "migrate": "tsx scripts/migrate.ts",
     "seed-dev": "tsx scripts/seed-dev.ts",
+    "sync-pricing": "tsx scripts/sync-pricing.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
