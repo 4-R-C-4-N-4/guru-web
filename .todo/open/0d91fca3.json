@@ -1,0 +1,29 @@
+{
+  "id": "0d91fca3",
+  "type": "chore",
+  "state": "open",
+  "summary": "feat: cost tracking + dual-axis (queries + USD) budget enforcement",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-30T12:20:09.930Z",
+  "updated_at": "2026-04-30T12:20:10.178Z",
+  "tags": [
+    "billing",
+    "cost",
+    "budget",
+    "schema",
+    "forward-compat"
+  ],
+  "description": "Forward-compatible cost tracking spec, additive-only — no renames or aliases.\n\n## Schema additions (additive only)\n\nALTER TABLE queries ADD:\n  - cost_usd            NUMERIC(10, 6)    NULL    -- NULL on historical rows pre-tracking; backfilled in child 6\n  - cached_input_tokens INTEGER NOT NULL  DEFAULT 0  -- DeepSeek doesn't cache; default covers absence\n\nNOT adding 'max_tokens' as a column — keep the cap in code (src/lib/model.ts MAX_OUTPUT_TOKENS) so tweaking doesn't need a migration.\n\nNOT renaming 'model_used' to 'model_id' — keep additive.\n\n## New tables\n\nCREATE TABLE model_pricing (\n    model_id                    TEXT NOT NULL,\n    input_price_per_mtok        NUMERIC(10, 4) NOT NULL,\n    output_price_per_mtok       NUMERIC(10, 4) NOT NULL,\n    cached_input_price_per_mtok NUMERIC(10, 4),       -- null when model doesn't cache\n    effective_from              TIMESTAMPTZ NOT NULL,\n    effective_to                TIMESTAMPTZ,           -- null = currently active\n    PRIMARY KEY (model_id, effective_from)\n);\n\nCREATE TABLE user_budgets (\n    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    period       TEXT NOT NULL CHECK (period IN ('daily', 'monthly')),\n    query_limit  INTEGER,                              -- nullable: unenforced on this axis\n    usd_limit    NUMERIC(10, 4),\n    queries_used INTEGER NOT NULL DEFAULT 0,\n    usd_used     NUMERIC(10, 6) NOT NULL DEFAULT 0,\n    reset_at     TIMESTAMPTZ NOT NULL,\n    PRIMARY KEY (user_id, period)\n);\n\nquota_usage stays for now (will be deprecated once user_budgets is the source of truth in code; drop in a separate cleanup PR).\n\n## Pricing source\n\nOpenRouter https://openrouter.ai/api/v1/models — public, no auth. Per-model pricing:\n  pricing.prompt              = per input token (USD)\n  pricing.completion          = per output token\n  pricing.input_cache_read    = per cached input token (when supported)\nA small sync script populates model_pricing on demand; manual operator run on price changes (cron later if it matters).\n\n## Enforcement: pre-flight reserve, post-flight finalize\n\nPicked 'reservation' over 'check-only' to close the multi-tab race window:\n  reserveBudget(userId, tier, estimatedCostUsd) → atomically increments both axes; rejects on overrun\n  finalizeBudget(userId, estimatedCostUsd, actualCostUsd) → adjusts usd_used by (actual - estimated)\n\nestimated_cost = (input_tokens) * input_price + MAX_OUTPUT_TOKENS * output_price (worst case).\n\nEither limit nullable means unenforced on that axis. Free tier today: query_limit=10, usd_limit=null. Pro today: query_limit=30, usd_limit=null. Future: pro could move to query_limit=null, usd_limit=$0.50/day.\n\n## Backfill\n\nLive OpenRouter usage so far: 9 requests, ~$0.167 total (Sonnet 2 / DeepSeek 7).  Backfill script computes cost_usd for existing rows from current pricing.\n\n## Children (in implementation order)\n\n  1. schema migration (006_cost_and_budgets.sql)\n  2. scripts/sync-pricing.ts + initial seed of model_pricing\n  3. src/lib/cost.ts — pricing lookup + cost computation\n  4. src/lib/budget.ts — reserve/finalize (replaces checkAndIncrement semantics)\n  5. wire into /api/query (persist cost) + /api/quota (return both axes)\n  6. scripts/backfill-cost.ts — fill cost_usd on the existing 9 rows\n\n## Forward-compat (when model selection ships)\n\n  - Expose model choice in /api/query payload — model_used already per-row\n  - UI swaps queries display → dollar burn — /api/quota already returns both\n  - Add per-tier budget configs — user_budgets already supports nullable axes\n  - No schema, enforcement, or logging change required",
+  "relationships": {
+    "children": [
+      "938740cb",
+      "8832ce67",
+      "92ebb9fd",
+      "e8e441a8",
+      "7c8fdae7",
+      "720e15fa"
+    ]
+  }
+}
