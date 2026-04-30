@@ -344,7 +344,7 @@ step_app_users_and_dirs() {
     cat > /etc/sudoers.d/deploy <<'EOF'
 deploy ALL=(root) NOPASSWD: /bin/systemctl restart guru-web, /bin/systemctl status guru-web
 deploy ALL=(root) NOPASSWD: /bin/chown -R deploy\:deploy /srv/guru-web/releases
-deploy ALL=(guru) NOPASSWD: /usr/bin/psql -d guru -1
+deploy ALL=(guru) NOPASSWD: /usr/bin/psql -d guru -1 -v ON_ERROR_STOP=1
 EOF
     chmod 440 /etc/sudoers.d/deploy
 
