@@ -44,12 +44,25 @@ describe('recordsToMessages', () => {
     expect(out[3]!.text).toBe('A2');
   });
 
-  it('does not populate citations or meta (v1 — transcript only)', () => {
+  it('omits citations when the API returned none (back-compat for old sessions)', () => {
     const out = recordsToMessages([
       { query_text: 'Q', response_text: 'A' },
     ]);
     expect(out[1]!.citations).toBeUndefined();
     expect(out[1]!.meta).toBeUndefined();
+  });
+
+  it('passes citations through to the assistant message (todo:89af833a)', () => {
+    const citations = [
+      { tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' as const },
+    ];
+    const out = recordsToMessages([
+      { query_text: 'Q', response_text: 'A', citations },
+    ]);
+    expect(out[1]!.role).toBe('assistant');
+    expect(out[1]!.citations).toEqual(citations);
+    // User messages never get citations (the user typed the question).
+    expect(out[0]!.citations).toBeUndefined();
   });
 });
 

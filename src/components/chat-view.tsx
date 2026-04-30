@@ -277,19 +277,24 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
  * the in-memory Message[] format the chat UI renders. Each record becomes
  * two messages: the user's query and the assistant's response.
  *
- * Citations are not rehydrated — the persistence layer stores chunk IDs
- * but not the full citation payload. v1 of resume shows the transcript
- * only; rebuilding citations would require joining against corpus.chunks
- * for each historical message.
+ * Citations come pre-joined from the API (todo:89af833a) — /api/sessions/[id]
+ * does a single batched lookup against corpus.chunks for the whole session.
+ * Tier defaults to 'verified' on the API side because chunks_used persists
+ * chunk IDs only, not the tier the chunk had at retrieval time.
  */
 export function recordsToMessages(records: ReadonlyArray<{
   query_text: string;
   response_text: string;
+  citations?: CitationData[];
 }>): Message[] {
   const out: Message[] = [];
   for (const r of records) {
     out.push({ role: 'user', content: r.query_text });
-    out.push({ role: 'assistant', text: r.response_text });
+    out.push({
+      role: 'assistant',
+      text: r.response_text,
+      citations: r.citations,
+    });
   }
   return out;
 }

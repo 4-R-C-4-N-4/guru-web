@@ -149,6 +149,58 @@ describe('GET /api/sessions/[id]', () => {
     const res = await sessionGET(req('GET', '/api/sessions/nope'), { params: Promise.resolve({ id: 'nope' }) });
     expect(res.status).toBe(404);
   });
+
+  it('rehydrates citations from corpus.chunks for messages chunks_used (todo:89af833a)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1', title: 'T', created_at: '', updated_at: '' });
+    // 1st mockQuery call: messages with chunks_used. 2nd: corpus.chunks JOIN.
+    mockQuery
+      .mockResolvedValueOnce([
+        { id: 'q1', query_text: 'Q1', response_text: 'A1', chunks_used: ['c.a.001', 'c.b.005'], model_used: 'm', created_at: '' },
+        { id: 'q2', query_text: 'Q2', response_text: 'A2', chunks_used: ['c.a.001'],            model_used: 'm', created_at: '' },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'c.a.001', tradition: 'gnosticism',  text_name: 'Gospel of Philip', section: '78' },
+        { id: 'c.b.005', tradition: 'neoplatonism', text_name: 'Enneads',          section: 'V.1' },
+      ]);
+
+    const res = await sessionGET(req('GET', '/api/sessions/s1'), { params: Promise.resolve({ id: 's1' }) });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { messages: Array<{ chunks_used: string[]; citations: Array<{ tradition: string; text: string; section: string; tier: string }> }> };
+
+    // Single batched JOIN — chunks lookup ran exactly once across both messages.
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const chunksLookupCall = mockQuery.mock.calls[1]!;
+    expect(chunksLookupCall[0]).toContain('FROM corpus.chunks');
+    expect(chunksLookupCall[0]).toContain('id = ANY($1::text[])');
+    // Unique chunk IDs only (c.a.001 appears in two messages, sent once).
+    expect(chunksLookupCall[1]).toEqual([expect.arrayContaining(['c.a.001', 'c.b.005'])]);
+    expect((chunksLookupCall[1] as [string[]])[0]).toHaveLength(2);
+
+    // Citations attached per message in chunks_used order.
+    expect(body.messages[0]!.citations).toEqual([
+      { tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78',  tier: 'verified' },
+      { tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1', tier: 'verified' },
+    ]);
+    expect(body.messages[1]!.citations).toEqual([
+      { tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
+    ]);
+  });
+
+  it('skips the corpus.chunks lookup entirely when no messages cite anything', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1', title: 'T', created_at: '', updated_at: '' });
+    mockQuery.mockResolvedValueOnce([
+      { id: 'q1', query_text: 'Q', response_text: 'A', chunks_used: [], model_used: 'm', created_at: '' },
+    ]);
+
+    const res = await sessionGET(req('GET', '/api/sessions/s1'), { params: Promise.resolve({ id: 's1' }) });
+    expect(res.status).toBe(200);
+    // Only the queries SELECT — no chunks JOIN since there's nothing to look up.
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const body = await res.json() as { messages: Array<{ citations: unknown[] }> };
+    expect(body.messages[0]!.citations).toEqual([]);
+  });
 });
 
 describe('GET /api/preferences', () => {
