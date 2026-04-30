@@ -7,7 +7,15 @@
 
 import { one } from './db';
 
-const LIMITS = { free: 30, pro: 500 } as const;
+// Daily query caps per tier. Sized for cost coverage:
+//   free  — 10 queries on deepseek/deepseek-chat (~free in absolute terms);
+//           any more invites abuse with no upgrade path.
+//   pro   — 30 queries on Claude Sonnet 4.5 (~$0.05 worst-case per query
+//           at typical input/output sizes); caps worst-case at ~$1.50/day
+//           per pro user vs $12/mo revenue.
+//
+// Single source of truth — imported by /api/quota for the display value.
+export const LIMITS = { free: 10, pro: 30 } as const;
 
 export async function checkAndIncrement(
   userId: string,

@@ -7,8 +7,7 @@
 
 import { requireUser } from '@/lib/auth';
 import { one } from '@/lib/db';
-
-const LIMITS = { free: 30, pro: 500 } as const;
+import { LIMITS } from '@/lib/quota';
 
 export async function GET() {
   const userOrResponse = await requireUser();
