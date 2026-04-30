@@ -1,13 +1,13 @@
 {
   "id": "0d91fca3",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "feat: cost tracking + dual-axis (queries + USD) budget enforcement",
   "source": {
     "type": "human"
   },
   "created_at": "2026-04-30T12:20:09.930Z",
-  "updated_at": "2026-04-30T12:20:10.178Z",
+  "updated_at": "2026-04-30T12:51:24.712Z",
   "tags": [
     "billing",
     "cost",
@@ -25,5 +25,11 @@
       "7c8fdae7",
       "720e15fa"
     ]
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-04-30T12:51:24.712Z",
+    "resolved_by": "unknown",
+    "note": "Schema (006), pricing sync (sync-pricing.ts), cost compute (lib/cost.ts), spend tracking (lib/spend.ts), API wire-in (/api/query, /api/quota), backfill (backfill-cost.ts). Forward-compat for model selection lands without further schema changes."
   }
 }
