@@ -1,0 +1,23 @@
+{
+  "id": "df25768e",
+  "type": "chore",
+  "state": "open",
+  "summary": "deploy.sh: pass -v ON_ERROR_STOP=1 to psql so silent migration errors halt the deploy",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-04-30T01:37:41.681Z",
+  "updated_at": "2026-04-30T01:38:26.884Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "ops",
+    "safety",
+    "postgres"
+  ],
+  "description": "deploy.sh's migration loop runs psql with -1 (single transaction) but no ON_ERROR_STOP. SQL errors abort the transaction and emit ERROR lines, but psql still exits 0 — so deploy.sh's set -e doesn't catch the failure and the deploy continues. The just-shipped PR #27 surfaced this when CREATE INDEX statements hit 'must be owner' errors and the deploy moved on as if migrations had applied (they hadn't).\n\nFix: add -v ON_ERROR_STOP=1 to the psql invocation. One-line change:\n\n  -  sudo -u guru /usr/bin/psql -d guru -1 < \"$f\"\n  +  sudo -u guru /usr/bin/psql -d guru -1 -v ON_ERROR_STOP=1 < \"$f\"\n\nSudoers stanza must extend to permit the new arg form:\n\n  -  deploy ALL=(guru) NOPASSWD: /usr/bin/psql -d guru -1\n  +  deploy ALL=(guru) NOPASSWD: /usr/bin/psql -d guru -1 -v ON_ERROR_STOP=1\n\nExisting VPSes need the one-time visudo edit.\n\nDone when:\n- deploy.sh psql call includes -v ON_ERROR_STOP=1\n- vps-bootstrap.sh sudoers stanza updated\n- README documents the one-time hand-patch on existing VPSes\n- Test asserts the flag is present in deploy.sh and the sudoers stanza"
+}
