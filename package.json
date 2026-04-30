@@ -11,6 +11,7 @@
     "migrate": "tsx scripts/migrate.ts",
     "seed-dev": "tsx scripts/seed-dev.ts",
     "sync-pricing": "tsx scripts/sync-pricing.ts",
+    "backfill-cost": "tsx scripts/backfill-cost.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
