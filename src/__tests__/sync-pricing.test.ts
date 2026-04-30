@@ -9,7 +9,14 @@ import { describe, it, expect } from 'vitest';
 import { extractPricing, pricingMatches } from '../../scripts/sync-pricing';
 
 describe('extractPricing', () => {
-  const ALLOWLIST = ['deepseek/deepseek-chat', 'anthropic/claude-sonnet-4-5'] as const;
+  // OpenRouter's /api/v1/models lists Sonnet under 'anthropic/claude-sonnet-4.5'
+  // (dotted), but our internal id is 'anthropic/claude-sonnet-4-5' (hyphenated).
+  // The function maps openrouterId → srcId so model_pricing.model_id matches
+  // queries.model_used.
+  const MODELS = [
+    { srcId: 'deepseek/deepseek-chat',      openrouterId: 'deepseek/deepseek-chat' },
+    { srcId: 'anthropic/claude-sonnet-4-5', openrouterId: 'anthropic/claude-sonnet-4.5' },
+  ] as const;
 
   it('converts per-token prices to per-Mtok USD', () => {
     const out = extractPricing({
@@ -17,7 +24,7 @@ describe('extractPricing', () => {
         id: 'deepseek/deepseek-chat',
         pricing: { prompt: '0.00000014', completion: '0.00000028' },
       }],
-    }, ALLOWLIST);
+    }, MODELS);
     expect(out['deepseek/deepseek-chat']).toEqual({
       input_per_mtok: 0.14,
       output_per_mtok: 0.28,
@@ -25,22 +32,24 @@ describe('extractPricing', () => {
     });
   });
 
-  it('reads input_cache_read when present (Anthropic)', () => {
+  it('maps openrouter dotted id to our hyphenated srcId for Sonnet (todo:dbeee9a6)', () => {
     const out = extractPricing({
       data: [{
-        id: 'anthropic/claude-sonnet-4-5',
+        id: 'anthropic/claude-sonnet-4.5',  // OpenRouter's canonical
         pricing: {
           prompt: '0.000003',
           completion: '0.000015',
           input_cache_read: '0.0000003',
         },
       }],
-    }, ALLOWLIST);
+    }, MODELS);
+    // Stored under our hyphenated id, NOT the dotted one.
     expect(out['anthropic/claude-sonnet-4-5']).toEqual({
       input_per_mtok: 3.0,
       output_per_mtok: 15.0,
       cached_input_per_mtok: 0.30,
     });
+    expect(out['anthropic/claude-sonnet-4.5']).toBeUndefined();
   });
 
   it('skips models not in the allowlist', () => {
@@ -49,7 +58,7 @@ describe('extractPricing', () => {
         { id: 'openai/gpt-4', pricing: { prompt: '0.00003', completion: '0.00006' } },
         { id: 'deepseek/deepseek-chat', pricing: { prompt: '0.00000014', completion: '0.00000028' } },
       ],
-    }, ALLOWLIST);
+    }, MODELS);
     expect(Object.keys(out)).toEqual(['deepseek/deepseek-chat']);
   });
 
@@ -58,7 +67,7 @@ describe('extractPricing', () => {
       data: [
         { id: 'deepseek/deepseek-chat', pricing: {} },
       ],
-    }, ALLOWLIST);
+    }, MODELS);
     expect(out).toEqual({});
   });
 });

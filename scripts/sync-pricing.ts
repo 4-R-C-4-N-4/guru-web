@@ -19,10 +19,23 @@ import { Pool, type PoolClient } from 'pg';
 // ── Allowlist ────────────────────────────────────────────────────────
 // Only sync the models we actually route to (per src/lib/model.ts).
 // Adding a new tier? Update both files in the same PR.
-const KNOWN_MODELS = [
-  'deepseek/deepseek-chat',
-  'anthropic/claude-sonnet-4-5',
+//
+// `srcId`        — what we use everywhere internally (queries.model_used,
+//                  model_pricing.model_id, src/lib/model.ts MODELS).
+// `openrouterId` — what OpenRouter's /api/v1/models endpoint advertises.
+//
+// They diverge for Sonnet: OpenRouter's listing uses the dotted form
+// 'anthropic/claude-sonnet-4.5' while we (and the completion API,
+// which accepts both) use the hyphenated 'anthropic/claude-sonnet-4-5'.
+// extractPricing looks up by openrouterId and stores under srcId so
+// model_pricing.model_id always matches queries.model_used.  todo:dbeee9a6.
+export const MODELS_TO_SYNC: ReadonlyArray<{ srcId: string; openrouterId: string }> = [
+  { srcId: 'deepseek/deepseek-chat',        openrouterId: 'deepseek/deepseek-chat' },
+  { srcId: 'anthropic/claude-sonnet-4-5',   openrouterId: 'anthropic/claude-sonnet-4.5' },
 ] as const;
+
+// Backwards-compat for places that just want the list of internal ids.
+const KNOWN_MODELS = MODELS_TO_SYNC.map(m => m.srcId);
 
 export interface ModelPrice {
   input_per_mtok: number;
@@ -61,16 +74,20 @@ interface OpenRouterModel {
  * Extract per-Mtok USD pricing for our allowlist from OpenRouter's
  * response. OpenRouter returns per-token decimal strings; multiply by
  * 1e6 to get per-Mtok.
+ *
+ * Lookup is keyed by openrouterId; the result is stored under srcId
+ * so model_pricing.model_id matches queries.model_used.
  */
 export function extractPricing(
   response: { data: OpenRouterModel[] },
-  allowlist: ReadonlyArray<string>,
+  models: ReadonlyArray<{ srcId: string; openrouterId: string }>,
 ): Record<string, ModelPrice> {
+  const byOpenRouterId = new Map(response.data.map(m => [m.id, m]));
   const out: Record<string, ModelPrice> = {};
-  for (const m of response.data) {
-    if (!allowlist.includes(m.id)) continue;
-    if (!m.pricing?.prompt || !m.pricing?.completion) continue;
-    out[m.id] = {
+  for (const { srcId, openrouterId } of models) {
+    const m = byOpenRouterId.get(openrouterId);
+    if (!m || !m.pricing?.prompt || !m.pricing?.completion) continue;
+    out[srcId] = {
       input_per_mtok:        parseFloat(m.pricing.prompt) * 1e6,
       output_per_mtok:       parseFloat(m.pricing.completion) * 1e6,
       cached_input_per_mtok: m.pricing.input_cache_read
@@ -105,7 +122,7 @@ async function fetchPricingFromOpenRouter(): Promise<Record<string, ModelPrice> 
       return null;
     }
     const json = (await res.json()) as { data: OpenRouterModel[] };
-    return extractPricing(json, KNOWN_MODELS);
+    return extractPricing(json, MODELS_TO_SYNC);
   } catch (err) {
     console.warn('[sync-pricing] OpenRouter fetch failed:', err instanceof Error ? err.message : err);
     return null;

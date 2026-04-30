@@ -74,12 +74,19 @@ async function main() {
 
   for (const r of rows) {
     try {
+      // Use current pricing rather than `at: r.created_at`.  Pricing
+      // rows are seeded via sync-pricing with effective_from=now(),
+      // which is later than these historical rows; passing
+      // `r.created_at` would land us before the first price row's
+      // effective_from window and computeCost would throw.  Provider
+      // prices for our two models have been stable in the days these
+      // rows are dated, so current pricing IS what was charged.
+      // todo:dbeee9a6.
       const { cost_usd } = await computeCost({
         modelId: r.model_used,
         inputTokens: r.input_tokens,
         outputTokens: r.output_tokens,
         cachedInputTokens: 0,
-        at: r.created_at,
       });
       await pool.query(
         `UPDATE queries SET cost_usd = $1 WHERE id = $2`,
