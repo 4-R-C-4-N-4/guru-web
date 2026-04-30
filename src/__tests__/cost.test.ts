@@ -27,7 +27,7 @@ const DEEPSEEK = {
 };
 
 const SONNET = {
-  model_id: 'anthropic/claude-sonnet-4-5',
+  model_id: 'anthropic/claude-sonnet-4.5',
   input_price_per_mtok:        '3.0',
   output_price_per_mtok:       '15.0',
   cached_input_price_per_mtok: '0.30',
@@ -57,7 +57,7 @@ describe('getPricing', () => {
 
   it('coerces string price columns to numbers', async () => {
     mockOne.mockResolvedValueOnce(SONNET);
-    const result = await getPricing('anthropic/claude-sonnet-4-5');
+    const result = await getPricing('anthropic/claude-sonnet-4.5');
     expect(result).toMatchObject({
       input_price_per_mtok: 3.0,
       output_price_per_mtok: 15.0,
@@ -90,7 +90,7 @@ describe('computeCost', () => {
   it('Sonnet query, no cache hits', async () => {
     mockOne.mockResolvedValueOnce(SONNET);
     const { cost_usd } = await computeCost({
-      modelId: 'anthropic/claude-sonnet-4-5',
+      modelId: 'anthropic/claude-sonnet-4.5',
       inputTokens: 10_000,
       outputTokens: 1_000,
     });
@@ -101,7 +101,7 @@ describe('computeCost', () => {
   it('Sonnet query with cache hit applies cached rate to cached portion', async () => {
     mockOne.mockResolvedValueOnce(SONNET);
     const { cost_usd } = await computeCost({
-      modelId: 'anthropic/claude-sonnet-4-5',
+      modelId: 'anthropic/claude-sonnet-4.5',
       inputTokens: 10_000,
       outputTokens: 1_000,
       cachedInputTokens: 8_000,
@@ -139,7 +139,7 @@ describe('computeCost', () => {
   it('throws when cachedInputTokens exceeds inputTokens (malformed provider response)', async () => {
     mockOne.mockResolvedValueOnce(SONNET);
     await expect(computeCost({
-      modelId: 'anthropic/claude-sonnet-4-5',
+      modelId: 'anthropic/claude-sonnet-4.5',
       inputTokens: 100,
       outputTokens: 0,
       cachedInputTokens: 200,

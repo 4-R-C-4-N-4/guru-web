@@ -1,7 +1,7 @@
 /**
  * src/__tests__/sync-pricing.test.ts
  *
- * Unit tests for the pure helpers in scripts/sync-pricing.ts (todo:8832ce67).
+ * Unit tests for the pure helpers in scripts/sync-pricing.ts.
  * DB and network are not exercised — those are tested manually against a
  * real OpenRouter response when the operator runs the script.
  */
@@ -9,14 +9,10 @@ import { describe, it, expect } from 'vitest';
 import { extractPricing, pricingMatches } from '../../scripts/sync-pricing';
 
 describe('extractPricing', () => {
-  // OpenRouter's /api/v1/models lists Sonnet under 'anthropic/claude-sonnet-4.5'
-  // (dotted), but our internal id is 'anthropic/claude-sonnet-4-5' (hyphenated).
-  // The function maps openrouterId → srcId so model_pricing.model_id matches
-  // queries.model_used.
-  const MODELS = [
-    { srcId: 'deepseek/deepseek-chat',      openrouterId: 'deepseek/deepseek-chat' },
-    { srcId: 'anthropic/claude-sonnet-4-5', openrouterId: 'anthropic/claude-sonnet-4.5' },
-  ] as const;
+  // Provider-prefix allowlist (todo:fbd30eff). Models with ids
+  // starting with one of these provider names get pricing extracted;
+  // anything else is skipped.
+  const PROVIDERS = ['anthropic', 'openai', 'deepseek'] as const;
 
   it('converts per-token prices to per-Mtok USD', () => {
     const out = extractPricing({
@@ -24,7 +20,7 @@ describe('extractPricing', () => {
         id: 'deepseek/deepseek-chat',
         pricing: { prompt: '0.00000014', completion: '0.00000028' },
       }],
-    }, MODELS);
+    }, PROVIDERS);
     expect(out['deepseek/deepseek-chat']).toEqual({
       input_per_mtok: 0.14,
       output_per_mtok: 0.28,
@@ -32,34 +28,63 @@ describe('extractPricing', () => {
     });
   });
 
-  it('maps openrouter dotted id to our hyphenated srcId for Sonnet (todo:dbeee9a6)', () => {
+  it('reads input_cache_read when present (Anthropic)', () => {
     const out = extractPricing({
       data: [{
-        id: 'anthropic/claude-sonnet-4.5',  // OpenRouter's canonical
+        id: 'anthropic/claude-sonnet-4.5',
         pricing: {
           prompt: '0.000003',
           completion: '0.000015',
           input_cache_read: '0.0000003',
         },
       }],
-    }, MODELS);
-    // Stored under our hyphenated id, NOT the dotted one.
-    expect(out['anthropic/claude-sonnet-4-5']).toEqual({
+    }, PROVIDERS);
+    expect(out['anthropic/claude-sonnet-4.5']).toEqual({
       input_per_mtok: 3.0,
       output_per_mtok: 15.0,
       cached_input_per_mtok: 0.30,
     });
-    expect(out['anthropic/claude-sonnet-4.5']).toBeUndefined();
   });
 
-  it('skips models not in the allowlist', () => {
+  it('keeps OpenRouter ids verbatim — no aliasing (todo:fbd30eff)', () => {
+    // The whole point of this PR: model_pricing.model_id must match
+    // exactly what OpenRouter advertises and what queries.model_used
+    // stores.  No hyphen↔dot mapping anywhere.
+    const out = extractPricing({
+      data: [{
+        id: 'anthropic/claude-sonnet-4.5',
+        pricing: { prompt: '0.000003', completion: '0.000015' },
+      }],
+    }, PROVIDERS);
+    expect(Object.keys(out)).toEqual(['anthropic/claude-sonnet-4.5']);
+    expect(out['anthropic/claude-sonnet-4-5']).toBeUndefined();
+  });
+
+  it('extracts every model from allowed providers (pre-load)', () => {
     const out = extractPricing({
       data: [
-        { id: 'openai/gpt-4', pricing: { prompt: '0.00003', completion: '0.00006' } },
-        { id: 'deepseek/deepseek-chat', pricing: { prompt: '0.00000014', completion: '0.00000028' } },
+        { id: 'anthropic/claude-sonnet-4.5', pricing: { prompt: '0.000003',  completion: '0.000015'  } },
+        { id: 'anthropic/claude-opus-4.5',   pricing: { prompt: '0.000015',  completion: '0.000075'  } },
+        { id: 'openai/gpt-4o',               pricing: { prompt: '0.0000025', completion: '0.00001'   } },
+        { id: 'deepseek/deepseek-chat',      pricing: { prompt: '0.00000014', completion: '0.00000028' } },
       ],
-    }, MODELS);
-    expect(Object.keys(out)).toEqual(['deepseek/deepseek-chat']);
+    }, PROVIDERS);
+    expect(Object.keys(out).sort()).toEqual([
+      'anthropic/claude-opus-4.5',
+      'anthropic/claude-sonnet-4.5',
+      'deepseek/deepseek-chat',
+      'openai/gpt-4o',
+    ]);
+  });
+
+  it('skips models from providers not in the allowlist', () => {
+    const out = extractPricing({
+      data: [
+        { id: 'nvidia/nemotron-3', pricing: { prompt: '0.0000001', completion: '0.0000002' } },
+        { id: 'qwen/qwen3-coder',  pricing: { prompt: '0.0000001', completion: '0.0000002' } },
+      ],
+    }, PROVIDERS);
+    expect(out).toEqual({});
   });
 
   it('skips entries without prompt or completion fields', () => {
@@ -67,7 +92,7 @@ describe('extractPricing', () => {
       data: [
         { id: 'deepseek/deepseek-chat', pricing: {} },
       ],
-    }, MODELS);
+    }, PROVIDERS);
     expect(out).toEqual({});
   });
 });

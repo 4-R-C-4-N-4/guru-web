@@ -32,9 +32,11 @@ function client(): OpenAI {
   return _client;
 }
 
+// Canonical OpenRouter model ids (matches what /api/v1/models advertises).
+// queries.model_used + model_pricing.model_id agree on this form.
 export const MODELS = {
   free: 'deepseek/deepseek-chat',
-  pro:  'anthropic/claude-sonnet-4-5',
+  pro:  'anthropic/claude-sonnet-4.5',
 } as const;
 
 export type Tier = keyof typeof MODELS;

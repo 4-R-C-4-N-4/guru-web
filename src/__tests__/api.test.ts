@@ -52,7 +52,7 @@ vi.mock('@/lib/prompt', () => ({
 
 vi.mock('@/lib/model', () => ({
   completeStream: vi.fn(),
-  MODELS: { free: 'deepseek/deepseek-chat', pro: 'anthropic/claude-sonnet-4-5' },
+  MODELS: { free: 'deepseek/deepseek-chat', pro: 'anthropic/claude-sonnet-4.5' },
   MAX_OUTPUT_TOKENS: 8192,
 }));
 
