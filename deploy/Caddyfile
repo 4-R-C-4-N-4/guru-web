@@ -25,7 +25,7 @@
     # shape matches "this path doesn't exist" rather than Caddy's bare
     # 404. See BRD-admin-ui §0.1.
     @admin path /admin /admin/* /api/admin /api/admin/*
-    rewrite @admin /_admin-404
+    rewrite @admin /admin-404
 
     encode gzip zstd
 

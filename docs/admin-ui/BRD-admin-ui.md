@@ -54,8 +54,8 @@ with different routing rules:
     }
 
     @admin path /admin /admin/* /api/admin /api/admin/*
-    rewrite @admin /_admin-404
-    # /_admin-404 is a tiny route in Next that returns the standard
+    rewrite @admin /admin-404
+    # /admin-404 is a tiny route in Next that returns the standard
     # 404 page, so the public response is shape-identical to "this
     # path doesn't exist" rather than Caddy's bare-bones 404.
 
@@ -621,7 +621,7 @@ unless noted.
 Everything subsequent assumes this is in place and tested.
 
 - New tailnet listener in `/etc/caddy/Caddyfile` (manual install
-  per §0.1). Public listener gains the `@admin → /_admin-404`
+  per §0.1). Public listener gains the `@admin → /admin-404`
   rewrite.
 - Tailscale cert renewal: timer + script per §0.3.
 - `src/lib/admin.ts` with `requireAdmin()` returning 404 on miss.

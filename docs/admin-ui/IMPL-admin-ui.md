@@ -46,7 +46,7 @@ infrastructure; no app code yet.
 
 - `deploy/Caddyfile` — add the second site block bound to the
   tailnet hostname. Public listener gains the `@admin` matcher
-  rewriting to `/_admin-404`.
+  rewriting to `/admin-404`.
 - `deploy/tailnet-cert-renew.sh` (new) — `set -euo pipefail`,
   runs `tailscale cert --cert-file ... --key-file ... <host>`,
   reloads Caddy on success only.
@@ -118,7 +118,7 @@ group so the matcher has something to match on. Closes data BRD
   (comma-separated). Returns `User | Response` where the failure
   Response is `404`, never `401` / `403`.
 - `src/middleware.ts` — gate `/admin/*` and `/api/admin/*`. For
-  non-admins, return the same `/_admin-404` rewrite the public
+  non-admins, return the same `/admin-404` rewrite the public
   Caddy uses; admin sessions older than 1 hour (token `iat` claim)
   bounce to `/sign-in?redirect_url=...`.
 - `src/app/(admin)/admin/page.tsx` (new) — single line: `<main>ADMIN</main>`.
@@ -126,7 +126,9 @@ group so the matcher has something to match on. Closes data BRD
   overview page in ticket 4.
 - `src/app/(admin)/layout.tsx` (new) — minimal; `<AdminLayout>`
   fleshes out in ticket 4.
-- `src/app/_admin-404/page.tsx` (new) — re-renders the standard
+- `src/app/admin-404/page.tsx` (new — note: spec originally said
+  `/_admin-404` but Next App Router treats _-prefixed folders as
+  private, so the underscore was dropped) — re-renders the standard
   Next 404 page so the response shape matches the app's normal
   404. Used by both the Caddy public listener (rewrite from §0.1)
   and the middleware (consistent shape across both gates).
@@ -160,7 +162,7 @@ describe('requireAdmin', () => {
 });
 
 describe('admin middleware', () => {
-  it('rewrites non-admin /admin/* requests to /_admin-404', ...);
+  it('rewrites non-admin /admin/* requests to /admin-404', ...);
   it('lets admin /admin/* requests through', ...);
   it('forces re-auth when session iat > 1h old on admin path', ...);
   it('does not affect non-admin paths', ...);
