@@ -69,11 +69,11 @@ with different routing rules:
     }
 }
 
-# Tailnet-only — admin surface. Cert via Tailscale.
+# Tailnet-only — admin surface. Cert provisioned out-of-band by
+# `tailscale cert` (see below); read from disk like any other TLS pair.
 guru-web-prod.tailb5626e.ts.net {
-    tls {
-        get_certificate tailscale
-    }
+    tls /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.crt \
+        /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.key
 
     reverse_proxy localhost:3000
 
@@ -84,11 +84,38 @@ guru-web-prod.tailb5626e.ts.net {
 }
 ```
 
-The `get_certificate tailscale` directive uses Caddy's Tailscale cert
-provisioner. Requires `tailscale cert` to be authorized on the host
-(one-time `sudo tailscale cert guru-web-prod.tailb5626e.ts.net` to
-verify, plus the appropriate ACL grant if MagicDNS HTTPS is gated in
-the tailnet config).
+**Cert provisioning is deliberately out-of-band.** Caddy reads files;
+a separate small script run on a systemd timer keeps those files
+fresh. Concretely:
+
+- `/etc/ssl/tailnet/` (mode 0750, owned `root:caddy`).
+- `tailscale cert --cert-file /etc/ssl/tailnet/<host>.crt --key-file /etc/ssl/tailnet/<host>.key <host>`
+  on a daily timer; reload Caddy on success.
+- Failure mode is "stale cert on disk if the timer's been failing for
+  weeks unnoticed" — much narrower than "Caddy can't get a cert at
+  request time because tailscaled is restarting." The timer's status
+  shows up in `systemctl list-timers` and journal noise on failure.
+
+This is preferred over the in-process `get_certificate tailscale`
+directive because:
+
+- That directive depends on the `caddy-tailscale` plugin, which is
+  not in the stock Debian/Cloudsmith Caddy build. Pulling it in
+  means a custom build (`xcaddy`) and a maintained third-party
+  module — extra moving parts for a one-listener feature.
+- Requiring `tailscaled` to be up at TLS-handshake time couples a
+  request-path dependency to a daemon that occasionally restarts.
+  File-based decouples them entirely.
+
+**Caddyfile changes are applied manually**, not automated. The
+operator edits `/etc/caddy/Caddyfile` on the VPS, runs
+`caddy validate --config /etc/caddy/Caddyfile`, then
+`systemctl reload caddy`. Automating Caddyfile rewrites in
+`deploy.sh` widens the deploy user's blast radius — every commit
+gains the ability to alter the network ingress shape, which is the
+opposite of what we want for a config that should change rarely and
+under deliberate review. The runbook (§2.2) carries the exact
+sequence.
 
 The public listener already enforces Cloudflare authenticated origin
 pulls (mTLS to the `authenticated_origin_pull_ca`). Combined with the
@@ -114,13 +141,30 @@ admin — to defend against a routing bug. Rejected:
 
 ### 0.3 Operational risk — Tailscale cert renewal
 
-`get_certificate tailscale` requires `tailscaled` up and authorized at
-renewal time. If the daemon falls over and the cert expires before the
-operator notices, the admin UI becomes inaccessible — exactly when it
-would be most useful. Mitigations: keep `tailscaled` under systemd with
-restart-on-failure (the existing pattern on this host), and add a
-"renew tailscale cert" step to the runbook (§3.4) so the recovery
-procedure is one command, not a research project under stress.
+With the file-based approach (§0.1), the failure mode is "the renewal
+timer has been silently failing for long enough that the on-disk cert
+has expired." Tailscale-issued certs are 90 days. Plenty of headroom,
+but the warning signals must be visible, not buried.
+
+Mitigations:
+
+- Daily `systemd` timer running the renewal script. Existing pattern
+  on this host (cron.daily for `guru-backup`, etc.).
+- Renewal script `set -e` on every command and reloads Caddy only
+  on success. A failure leaves the previous cert in place — the UI
+  keeps working until the existing cert expires.
+- `journalctl -u guru-tailscale-cert.service` and `systemctl
+  list-timers` are the diagnostic surfaces. Add to the runbook
+  (§2.2) as the place to look first when admin UI returns a TLS
+  error.
+- Recovery is one command: `sudo /usr/local/bin/tailscale-cert-renew`
+  (the same script the timer fires) regenerates the cert and
+  reloads Caddy. Documented in the runbook.
+
+Out of scope for this BRD: building a separate alerting path for
+expired-cert detection. The 90-day window plus a daily timer plus
+operator habit of opening the admin UI weekly is sufficient — if a
+month of failed renewals goes unnoticed, that's a different problem.
 
 ### 0.4 Devices on the tailnet
 
@@ -428,17 +472,31 @@ device or user is added.
 
 ### 2.2 Operator runbook
 
-A `docs/admin-runbook.md` accompanying this work, listing:
+A `docs/admin-runbook.md` accompanying this work, scoped to the
+admin UI itself. In scope:
 
-- How to add or remove an admin (env var, redeploy).
-- How to reach the admin UI (tailnet hostname, what to do if Tailscale
-  is down).
-- The set of common `psql` snippets for the mutations the UI deliberately
-  doesn't expose: tier flip, quota reset, session/query soft-delete (if
-  the columns exist), kill-switch flip if one is ever added. Each snippet
-  with the matching reverse, so a mistake is undoable in one paste.
-- Current Tailscale ACL state and where it's managed.
-- The cert-renewal recovery procedure for §0.3.
+- How to add or remove an admin (edit `ADMIN_USER_IDS` in
+  `/etc/guru-web.env`, restart `guru-web`).
+- How to reach the admin UI (tailnet hostname, the Tailscale-down
+  fallback path = `ssh` + `psql` per §0.5).
+- Caddy admin-listener install procedure: edit `/etc/caddy/Caddyfile`,
+  `caddy validate`, `systemctl reload caddy`. Rollback by reverting
+  the Caddyfile and reloading.
+- Tailscale cert renewal: where the renewal script lives, where the
+  timer's status is visible, the one-command manual renewal path
+  for §0.3.
+- Current Tailscale ACL state and where it's managed (tailnet
+  admin console).
+
+**Deferred to a separate runbook BRD: psql snippets for
+mutations the UI doesn't expose** (tier flip, quota reset,
+soft-delete, kill-switch). Adding them now risks turning the admin
+runbook into "the place where you find dangerous one-liners," which
+is the opposite of what a runbook should be — every snippet
+deserves its own pre/post checklist, reverse operation, and example
+output. That's a doc in its own right (`docs/operator-mutations.md`
+or similar) with its own review pass. Leaving the field empty is
+better than leaving it half-filled.
 
 ---
 
