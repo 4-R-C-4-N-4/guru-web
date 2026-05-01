@@ -290,6 +290,104 @@ fail-fast behaviour in `src/lib/boot.ts`.
 
 ---
 
+## Tailnet admin listener
+
+The `/admin` and `/api/admin/*` surface is reachable **only** via the
+VPS's Tailscale hostname (`guru-web-prod.tailb5626e.ts.net`). The public
+Cloudflare-fronted hostname rewrites `/admin*` to a Next-rendered 404
+page. Spec: `docs/admin-ui/BRD-admin-ui.md` §0.1, §0.3.
+
+This is a one-time hand-patch. `vps-bootstrap.sh` does not install it
+because bootstrap is one-shot and admin install is deliberate.
+
+### Prereqs
+
+- Tailscale running on the VPS (already true post-bootstrap).
+- VPS node's MagicDNS hostname is `guru-web-prod`. Verify with
+  `tailscale status | head -1` — the first column is the hostname.
+- The Caddy `caddy` group exists (created by the Caddy package).
+
+### Install
+
+On the VPS, as root:
+
+```bash
+# 1. Copy the renewal script and units out of the latest release.
+SHA=$(ls -1t /srv/guru-web/releases | head -1)
+install -m 0755 /srv/guru-web/releases/$SHA/deploy/tailnet-cert-renew.sh \
+                /usr/local/bin/tailnet-cert-renew
+install -m 0644 /srv/guru-web/releases/$SHA/deploy/tailnet-cert-renew.service \
+                /etc/systemd/system/tailnet-cert-renew.service
+install -m 0644 /srv/guru-web/releases/$SHA/deploy/tailnet-cert-renew.timer \
+                /etc/systemd/system/tailnet-cert-renew.timer
+
+# 2. First cert issuance — also creates /etc/ssl/tailnet/ with the
+#    right ownership/perms.
+/usr/local/bin/tailnet-cert-renew
+
+# 3. Wire up the Caddyfile. Diff against the repo to be sure both
+#    site blocks (public + tailnet) are present and the @admin
+#    rewrite is on the public block.
+diff /etc/caddy/Caddyfile /srv/guru-web/releases/$SHA/deploy/Caddyfile
+$EDITOR /etc/caddy/Caddyfile     # bring it into line with the repo
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
+
+# 4. Enable the daily renewal timer.
+systemctl daemon-reload
+systemctl enable --now tailnet-cert-renew.timer
+systemctl list-timers tailnet-cert-renew.timer    # confirm active
+```
+
+### Validation
+
+From a public client (laptop on cellular, etc.):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://guru-ai.org/admin/
+# → 404   (response shape is the Next 404 page, not Caddy's bare one)
+```
+
+From a tailnet device:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://guru-web-prod.tailb5626e.ts.net/
+# → 200   (or 404 if /admin doesn't exist yet — normal pre-auth-gate)
+```
+
+### Recovery — admin UI returns TLS error
+
+Likely cause: cert renewal has been silently failing and the on-disk
+cert expired.
+
+```bash
+# Look at what the timer's been doing.
+systemctl list-timers tailnet-cert-renew.timer
+journalctl -u tailnet-cert-renew.service --no-pager -n 50
+
+# Re-run by hand. Same script the timer fires.
+/usr/local/bin/tailnet-cert-renew
+
+# Verify the on-disk cert is fresh.
+openssl x509 -in /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.crt \
+  -noout -dates
+```
+
+If `tailscale cert` itself fails: check `tailscale status` — the node
+must be online and tagged appropriately for cert issuance. The
+Tailscale admin console's HTTPS feature must be enabled for the
+tailnet (it is, but verify if reinstalling on a new tailnet).
+
+### Recovery — Tailscale down, can't reach admin UI
+
+This is by design. There is no env-flag fallback to expose the admin
+surface publicly. For genuine emergencies (kill-switch-style mutation),
+SSH to the VPS and run `psql` directly. Same path you'd use for any
+mutation outside this UI.
+
+---
+
 ## Lessons learned (gotchas to remember)
 
 - **`MemoryDenyWriteExecute=true` breaks V8.** Don't add it back to the systemd unit. The other hardening directives are JIT-safe.

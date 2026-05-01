@@ -7,6 +7,10 @@
 # Origin cert files (origin.pem, origin.key, authenticated_origin_pull_ca.pem)
 # are generated in the Cloudflare dashboard and placed manually at
 # /etc/ssl/cloudflare/ before first start. See §7.3 and deploy/README.md.
+#
+# Tailnet cert files (guru-web-prod.<tailnet>.ts.net.{crt,key}) are
+# regenerated daily by tailnet-cert-renew.timer (see deploy/README.md
+# "Tailnet admin listener"). Caddy reads them like any other TLS pair.
 
 {$DOMAIN} {
     tls /etc/ssl/cloudflare/origin.pem /etc/ssl/cloudflare/origin.key {
@@ -15,6 +19,13 @@
             trust_pool file /etc/ssl/cloudflare/authenticated_origin_pull_ca.pem
         }
     }
+
+    # Public listener never serves the admin surface. Rewrite to a tiny
+    # Next route that re-renders the standard 404 page so the response
+    # shape matches "this path doesn't exist" rather than Caddy's bare
+    # 404. See BRD-admin-ui §0.1.
+    @admin path /admin /admin/* /api/admin /api/admin/*
+    rewrite @admin /_admin-404
 
     encode gzip zstd
 
@@ -27,5 +38,23 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+
+# Tailnet-only — admin surface. Reachable only from devices on the
+# operator's tailnet (MagicDNS resolves *.ts.net inside the tailnet
+# only). Cert files are kept fresh out-of-band by the
+# tailnet-cert-renew.timer systemd unit.
+guru-web-prod.tailb5626e.ts.net {
+    tls /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.crt /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.key
+
+    reverse_proxy localhost:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    header {
+        X-Robots-Tag "noindex, nofollow"
+        Referrer-Policy "no-referrer"
     }
 }
