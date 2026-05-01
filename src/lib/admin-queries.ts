@@ -514,6 +514,212 @@ export async function listUserSessions(userId: string): Promise<UserSessionRow[]
   }));
 }
 
+// ── Session + Query deep dives ───────────────────────────────────────
+
+export interface SessionQueryRow {
+  id: string;
+  query_text: string;
+  response_text: string;
+  chunks_used: unknown;            // JSONB; structure depends on retriever
+  model_used: string;
+  tier_used: 'free' | 'pro';
+  input_tokens: number  | null;
+  output_tokens: number | null;
+  cached_input_tokens: number;
+  cost_usd: number | null;
+  created_at: string;
+  pricing_input_per_mtok:        number | null;
+  pricing_output_per_mtok:       number | null;
+  pricing_cached_input_per_mtok: number | null;
+  pricing_effective_from:        string | null;
+}
+
+export interface SessionDeepDive {
+  session: {
+    id: string;
+    title: string | null;
+    user_id: string;
+    user_email: string;
+    created_at: string;
+    updated_at: string;
+  };
+  totals: {
+    query_count: number;
+    spend: number;
+    input_tokens: number;
+    output_tokens: number;
+    cached_input_tokens: number;
+  };
+  queries: SessionQueryRow[];
+}
+
+/**
+ * Pull a session, its owner's email, all per-query rows, and for each
+ * query the model_pricing row that was active at the query's
+ * created_at. The model_pricing JOIN uses a LATERAL subquery so each
+ * row picks its own effective price.
+ */
+export async function getSessionDeepDive(sessionId: string): Promise<SessionDeepDive | null> {
+  const session = await one<{
+    id: string;
+    title: string | null;
+    user_id: string;
+    user_email: string;
+    created_at: string;
+    updated_at: string;
+  }>(
+    `SELECT s.id, s.title, s.user_id, u.email AS user_email, s.created_at, s.updated_at
+       FROM sessions s
+       JOIN users    u ON u.id = s.user_id
+       WHERE s.id = $1`,
+    [sessionId],
+  );
+  if (!session) return null;
+
+  const queries = await query<SessionQueryRow & {
+    input_tokens: string | number | null;
+    output_tokens: string | number | null;
+    cached_input_tokens: string | number;
+    cost_usd: string | number | null;
+    pricing_input_per_mtok: string | number | null;
+    pricing_output_per_mtok: string | number | null;
+    pricing_cached_input_per_mtok: string | number | null;
+  }>(
+    `SELECT q.id, q.query_text, q.response_text, q.chunks_used,
+            q.model_used, q.tier_used,
+            q.input_tokens, q.output_tokens, q.cached_input_tokens,
+            q.cost_usd, q.created_at,
+            mp.input_price_per_mtok        AS pricing_input_per_mtok,
+            mp.output_price_per_mtok       AS pricing_output_per_mtok,
+            mp.cached_input_price_per_mtok AS pricing_cached_input_per_mtok,
+            mp.effective_from              AS pricing_effective_from
+       FROM queries q
+       LEFT JOIN LATERAL (
+         SELECT input_price_per_mtok, output_price_per_mtok,
+                cached_input_price_per_mtok, effective_from
+           FROM model_pricing
+           WHERE model_id = q.model_used
+             AND effective_from <= q.created_at
+             AND (effective_to IS NULL OR effective_to > q.created_at)
+           ORDER BY effective_from DESC LIMIT 1
+       ) mp ON true
+       WHERE q.session_id = $1
+       ORDER BY q.created_at ASC`,
+    [sessionId],
+  );
+
+  const normalised: SessionQueryRow[] = queries.map((q) => ({
+    id: q.id,
+    query_text: q.query_text,
+    response_text: q.response_text,
+    chunks_used: q.chunks_used,
+    model_used: q.model_used,
+    tier_used: q.tier_used,
+    input_tokens:  q.input_tokens  === null ? null : Number(q.input_tokens),
+    output_tokens: q.output_tokens === null ? null : Number(q.output_tokens),
+    cached_input_tokens: Number(q.cached_input_tokens),
+    cost_usd: q.cost_usd === null ? null : Number(q.cost_usd),
+    created_at: q.created_at,
+    pricing_input_per_mtok:        q.pricing_input_per_mtok  === null ? null : Number(q.pricing_input_per_mtok),
+    pricing_output_per_mtok:       q.pricing_output_per_mtok === null ? null : Number(q.pricing_output_per_mtok),
+    pricing_cached_input_per_mtok: q.pricing_cached_input_per_mtok === null ? null : Number(q.pricing_cached_input_per_mtok),
+    pricing_effective_from:        q.pricing_effective_from,
+  }));
+
+  const totals = normalised.reduce(
+    (acc, q) => ({
+      query_count: acc.query_count + 1,
+      spend:               acc.spend + (q.cost_usd ?? 0),
+      input_tokens:        acc.input_tokens  + (q.input_tokens  ?? 0),
+      output_tokens:       acc.output_tokens + (q.output_tokens ?? 0),
+      cached_input_tokens: acc.cached_input_tokens + q.cached_input_tokens,
+    }),
+    { query_count: 0, spend: 0, input_tokens: 0, output_tokens: 0, cached_input_tokens: 0 },
+  );
+
+  return { session, totals, queries: normalised };
+}
+
+export interface QueryDeepDive {
+  query: SessionQueryRow & {
+    session_id: string;
+    user_id: string;
+    user_email: string;
+  };
+  /** The DB row exactly, JSON-serialised. Used by the "raw JSON" toggle. */
+  raw: Record<string, unknown>;
+}
+
+export async function getQueryDeepDive(queryId: string): Promise<QueryDeepDive | null> {
+  const row = await one<Record<string, unknown> & {
+    id: string;
+    session_id: string;
+    user_id: string;
+    user_email: string;
+    query_text: string;
+    response_text: string;
+    chunks_used: unknown;
+    model_used: string;
+    tier_used: 'free' | 'pro';
+    input_tokens: string | number | null;
+    output_tokens: string | number | null;
+    cached_input_tokens: string | number;
+    cost_usd: string | number | null;
+    created_at: string;
+    pricing_input_per_mtok: string | number | null;
+    pricing_output_per_mtok: string | number | null;
+    pricing_cached_input_per_mtok: string | number | null;
+    pricing_effective_from: string | null;
+  }>(
+    `SELECT q.id, q.session_id, q.user_id, u.email AS user_email,
+            q.query_text, q.response_text, q.chunks_used,
+            q.model_used, q.tier_used,
+            q.input_tokens, q.output_tokens, q.cached_input_tokens,
+            q.cost_usd, q.created_at,
+            mp.input_price_per_mtok        AS pricing_input_per_mtok,
+            mp.output_price_per_mtok       AS pricing_output_per_mtok,
+            mp.cached_input_price_per_mtok AS pricing_cached_input_per_mtok,
+            mp.effective_from              AS pricing_effective_from
+       FROM queries q
+       JOIN users    u ON u.id = q.user_id
+       LEFT JOIN LATERAL (
+         SELECT input_price_per_mtok, output_price_per_mtok,
+                cached_input_price_per_mtok, effective_from
+           FROM model_pricing
+           WHERE model_id = q.model_used
+             AND effective_from <= q.created_at
+             AND (effective_to IS NULL OR effective_to > q.created_at)
+           ORDER BY effective_from DESC LIMIT 1
+       ) mp ON true
+       WHERE q.id = $1`,
+    [queryId],
+  );
+  if (!row) return null;
+
+  const query: QueryDeepDive['query'] = {
+    id: row.id,
+    session_id: row.session_id,
+    user_id: row.user_id,
+    user_email: row.user_email,
+    query_text: row.query_text,
+    response_text: row.response_text,
+    chunks_used: row.chunks_used,
+    model_used: row.model_used,
+    tier_used: row.tier_used,
+    input_tokens:  row.input_tokens  === null ? null : Number(row.input_tokens),
+    output_tokens: row.output_tokens === null ? null : Number(row.output_tokens),
+    cached_input_tokens: Number(row.cached_input_tokens),
+    cost_usd: row.cost_usd === null ? null : Number(row.cost_usd),
+    created_at: row.created_at,
+    pricing_input_per_mtok:        row.pricing_input_per_mtok  === null ? null : Number(row.pricing_input_per_mtok),
+    pricing_output_per_mtok:       row.pricing_output_per_mtok === null ? null : Number(row.pricing_output_per_mtok),
+    pricing_cached_input_per_mtok: row.pricing_cached_input_per_mtok === null ? null : Number(row.pricing_cached_input_per_mtok),
+    pricing_effective_from:        row.pricing_effective_from,
+  };
+
+  return { query, raw: row };
+}
+
 /** Top sessions by spend this week, with owning user email. */
 export async function fetchTopSessions(limit = 10): Promise<TopSessionRow[]> {
   const rows = await query<{
