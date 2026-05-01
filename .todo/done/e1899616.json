@@ -1,13 +1,13 @@
 {
   "id": "e1899616",
   "type": "chore",
-  "state": "active",
+  "state": "done",
   "summary": "feat: admin observability layer (read-only, tailnet-only)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-01T17:20:31.587Z",
-  "updated_at": "2026-05-01T19:46:32.193Z",
+  "updated_at": "2026-05-01T20:54:56.380Z",
   "files": [
     {
       "path": "docs/admin-ui/IMPL-admin-ui.md"
@@ -35,5 +35,11 @@
     "base_branch": "main",
     "started_at": "2026-05-01T19:46:32.193Z",
     "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "2c8a930c8994d30f8047082eb9646cc8282b7de4",
+    "resolved_at": "2026-05-01T20:54:56.380Z",
+    "resolved_by": "unknown",
+    "note": "All 7 subtasks complete. Read-only admin observability layer ships:\n\n- Tailnet ingress (Caddy listener split + cert renewal timer)\n- Auth gate (requireAdmin + middleware + admin route group + /admin-404)\n- Migration 008 admin indexes\n- Overview dashboard (stat tiles + sparklines + top-10s)\n- Users list + deep dive (DataTable + FilterPills + BudgetBar + CSV)\n- Session + Query deep dives (ExpandableQuery + per-query model_pricing)\n- Operational hygiene (full admin runbook in deploy/README.md)\n\nPost-merge operator actions: copy Caddyfile + units to VPS, install\ntimer, set ADMIN_USER_IDS in /etc/guru-web.env, restart guru-web.\nSequence in the new 'Admin UI runbook' section."
   }
 }
