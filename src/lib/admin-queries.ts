@@ -246,6 +246,274 @@ export async function fetchTopUsers(limit = 10): Promise<TopUserRow[]> {
   }));
 }
 
+// ── Users list + deep dive ───────────────────────────────────────────
+
+export interface UserListFilters {
+  tier?: 'free' | 'pro' | 'all';
+  /** ISO date string. Users with created_at >= this. */
+  createdAfter?: string | null;
+  /** Has queried in the last N days. 0 = "today" (since UTC midnight), -1 = "never". */
+  queriedWithinDays?: number | null;
+  search?: string | null;
+}
+
+export interface UserListSort {
+  by: 'email' | 'created_at' | 'last_query_at' | 'queries_7d' | 'spend_7d';
+  dir: 'asc' | 'desc';
+}
+
+export interface UserListRow {
+  id: string;
+  email: string;
+  tier: 'free' | 'pro';
+  stripe_customer_id: string | null;
+  created_at: string;
+  last_query_at: string | null;
+  queries_7d: number;
+  spend_7d: number;
+}
+
+const SORT_COLUMNS: Record<UserListSort['by'], string> = {
+  email:         'u.email',
+  created_at:    'u.created_at',
+  last_query_at: 'last_query_at',
+  queries_7d:    'queries_7d',
+  spend_7d:      'spend_7d',
+};
+
+/**
+ * Build the WHERE / ORDER BY clauses for the user-list query. Returns
+ * the SQL fragments and the param array. Exported so the JSON list
+ * route, the count, and the streaming CSV route share identical shape.
+ */
+export function buildUserListSql(
+  filters: UserListFilters,
+  sort: UserListSort,
+): { joinSql: string; whereSql: string; orderSql: string; params: unknown[] } {
+  const params: unknown[] = [];
+  const where: string[] = ['u.deleted_at IS NULL'];
+
+  if (filters.tier && filters.tier !== 'all') {
+    params.push(filters.tier);
+    where.push(`u.tier = $${params.length}`);
+  }
+  if (filters.createdAfter) {
+    params.push(filters.createdAfter);
+    where.push(`u.created_at >= $${params.length}::timestamptz`);
+  }
+  if (typeof filters.queriedWithinDays === 'number' && filters.queriedWithinDays >= 0) {
+    params.push(filters.queriedWithinDays);
+    where.push(`last_query_at >= now() - ($${params.length}::int || ' days')::interval`);
+  } else if (filters.queriedWithinDays === -1) {
+    where.push(`last_query_at IS NULL`);
+  }
+  if (filters.search) {
+    params.push(`%${filters.search}%`);
+    where.push(`u.email ILIKE $${params.length}`);
+  }
+
+  const joinSql = `
+    LEFT JOIN LATERAL (
+      SELECT
+        MAX(q.created_at)                                                                    AS last_query_at,
+        COUNT(CASE WHEN q.created_at >= now() - interval '7 days' THEN 1 END)                AS queries_7d,
+        COALESCE(SUM(CASE WHEN q.created_at >= now() - interval '7 days' THEN q.cost_usd END), 0) AS spend_7d
+      FROM queries q
+      WHERE q.user_id = u.id
+    ) qstats ON true
+  `;
+  const whereSql = `WHERE ${where.join(' AND ')}`;
+  const orderSql = `ORDER BY ${SORT_COLUMNS[sort.by]} ${sort.dir.toUpperCase()} NULLS LAST`;
+
+  return { joinSql, whereSql, orderSql, params };
+}
+
+/** Total matching count (for pagination footer). */
+export async function countUsers(filters: UserListFilters): Promise<number> {
+  const { joinSql, whereSql, params } = buildUserListSql(filters, { by: 'email', dir: 'asc' });
+  const row = await one<{ n: string | number }>(
+    `SELECT COUNT(*)::int AS n FROM users u ${joinSql} ${whereSql}`,
+    params,
+  );
+  return Number(row?.n ?? 0);
+}
+
+/** Paginated list. */
+export async function listUsers(
+  filters: UserListFilters,
+  sort: UserListSort,
+  page: number,
+  pageSize: number,
+): Promise<UserListRow[]> {
+  const { joinSql, whereSql, orderSql, params } = buildUserListSql(filters, sort);
+  const offset = page * pageSize;
+  params.push(pageSize, offset);
+
+  const rows = await query<{
+    id: string; email: string; tier: 'free' | 'pro';
+    stripe_customer_id: string | null;
+    created_at: string;
+    last_query_at: string | null;
+    queries_7d: string | number;
+    spend_7d:   string | number;
+  }>(
+    `SELECT u.id, u.email, u.tier, u.stripe_customer_id, u.created_at,
+            qstats.last_query_at, qstats.queries_7d, qstats.spend_7d
+       FROM users u
+       ${joinSql}
+       ${whereSql}
+       ${orderSql}
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params,
+  );
+
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    tier: r.tier,
+    stripe_customer_id: r.stripe_customer_id,
+    created_at: r.created_at,
+    last_query_at: r.last_query_at,
+    queries_7d: Number(r.queries_7d),
+    spend_7d:   Number(r.spend_7d),
+  }));
+}
+
+// ── User deep dive ───────────────────────────────────────────────────
+
+export interface UserBudget {
+  period:      'daily' | 'monthly';
+  query_limit: number | null;
+  queries_used: number;
+  usd_limit:    number | null;
+  usd_used:     number;
+}
+
+export interface UserPreferencesSnapshot {
+  scope_mode: string;
+  blocked_traditions: string[];
+  blocked_texts: string[];
+  whitelisted_traditions: string[];
+  whitelisted_texts: string[];
+  updated_at: string;
+}
+
+export interface UserDeepDive {
+  user: {
+    id: string;
+    email: string;
+    tier: 'free' | 'pro';
+    stripe_customer_id: string | null;
+    created_at: string;
+  };
+  lifetime: {
+    queries: number;
+    spend:   number;
+    input_tokens:  number;
+    output_tokens: number;
+  };
+  budgets: UserBudget[];
+  preferences: UserPreferencesSnapshot | null;
+  rate_limits: { scope: string; last_at: string }[];
+}
+
+export async function getUserDeepDive(userId: string): Promise<UserDeepDive | null> {
+  const user = await one<UserDeepDive['user']>(
+    `SELECT id, email, tier, stripe_customer_id, created_at
+       FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [userId],
+  );
+  if (!user) return null;
+
+  const lifetime = await one<{
+    queries: string | number;
+    spend:   string | number;
+    input_tokens: string | number;
+    output_tokens: string | number;
+  }>(
+    `SELECT COUNT(*)                                AS queries,
+            COALESCE(SUM(cost_usd), 0)              AS spend,
+            COALESCE(SUM(input_tokens), 0)          AS input_tokens,
+            COALESCE(SUM(output_tokens), 0)         AS output_tokens
+       FROM queries WHERE user_id = $1`,
+    [userId],
+  );
+
+  const budgets = await query<UserBudget & { usd_limit: string | number | null; usd_used: string | number }>(
+    `SELECT period, query_limit, queries_used, usd_limit, usd_used
+       FROM user_budgets WHERE user_id = $1`,
+    [userId],
+  );
+
+  const preferences = await one<UserPreferencesSnapshot>(
+    `SELECT scope_mode, blocked_traditions, blocked_texts,
+            whitelisted_traditions, whitelisted_texts, updated_at
+       FROM user_preferences WHERE user_id = $1`,
+    [userId],
+  );
+
+  const rateLimits = await query<{ scope: string; last_at: string }>(
+    `SELECT scope, last_at FROM rate_limits
+       WHERE user_id = $1 AND last_at > now() - interval '24 hours'
+       ORDER BY last_at DESC`,
+    [userId],
+  );
+
+  return {
+    user,
+    lifetime: {
+      queries:       Number(lifetime?.queries ?? 0),
+      spend:         Number(lifetime?.spend   ?? 0),
+      input_tokens:  Number(lifetime?.input_tokens  ?? 0),
+      output_tokens: Number(lifetime?.output_tokens ?? 0),
+    },
+    budgets: budgets.map((b) => ({
+      period:       b.period,
+      query_limit:  b.query_limit,
+      queries_used: Number(b.queries_used),
+      usd_limit:    b.usd_limit === null ? null : Number(b.usd_limit),
+      usd_used:     Number(b.usd_used),
+    })),
+    preferences,
+    rate_limits: rateLimits,
+  };
+}
+
+export interface UserSessionRow {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  query_count: number;
+  spend: number;
+}
+
+export async function listUserSessions(userId: string): Promise<UserSessionRow[]> {
+  const rows = await query<{
+    id: string; title: string | null;
+    created_at: string; updated_at: string;
+    query_count: string | number;
+    spend: string | number;
+  }>(
+    `SELECT s.id, s.title, s.created_at, s.updated_at,
+            COUNT(q.id)                       AS query_count,
+            COALESCE(SUM(q.cost_usd), 0)      AS spend
+       FROM sessions s
+       LEFT JOIN queries q ON q.session_id = s.id
+       WHERE s.user_id = $1
+       GROUP BY s.id
+       ORDER BY s.updated_at DESC`,
+    [userId],
+  );
+
+  return rows.map((r) => ({
+    id: r.id, title: r.title,
+    created_at: r.created_at, updated_at: r.updated_at,
+    query_count: Number(r.query_count),
+    spend:       Number(r.spend),
+  }));
+}
+
 /** Top sessions by spend this week, with owning user email. */
 export async function fetchTopSessions(limit = 10): Promise<TopSessionRow[]> {
   const rows = await query<{
