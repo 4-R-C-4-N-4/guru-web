@@ -117,11 +117,13 @@ function SearchInput({
   onChange: (v: string) => void;
 }) {
   void param;
+  // `initial` is only consulted on mount. We deliberately don't sync
+  // prop → state when `initial` changes from outside (lint:
+  // react-hooks/set-state-in-effect, but also a real footgun — the
+  // user's typed value would clobber on every URL update, including
+  // the URL update we ourselves triggered after debounce). Trade-off
+  // accepted: back/forward navigation does not refill the input.
   const [val, setVal] = useState(initial);
-
-  useEffect(() => {
-    setVal(initial);
-  }, [initial]);
 
   useEffect(() => {
     const t = setTimeout(() => {

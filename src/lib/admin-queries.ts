@@ -406,6 +406,9 @@ export interface UserDeepDive {
     stripe_customer_id: string | null;
     created_at: string;
   };
+  /** Account age in whole days, computed server-side at fetch time
+   *  so the page render stays pure (no Date.now() during render). */
+  account_age_days: number;
   lifetime: {
     queries: number;
     spend:   number;
@@ -461,6 +464,7 @@ export async function getUserDeepDive(userId: string): Promise<UserDeepDive | nu
 
   return {
     user,
+    account_age_days: Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86_400_000),
     lifetime: {
       queries:       Number(lifetime?.queries ?? 0),
       spend:         Number(lifetime?.spend   ?? 0),

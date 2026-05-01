@@ -33,9 +33,7 @@ export default async function UserDeepDive({
   if (!deep) notFound();
 
   const u = deep.user;
-  const accountAgeDays = Math.floor(
-    (Date.now() - new Date(u.created_at).getTime()) / 86_400_000,
-  );
+  const accountAgeDays = deep.account_age_days;
   const daily = deep.budgets.find((b) => b.period === 'daily');
 
   const sessionColumns: Column<SessionRow>[] = [

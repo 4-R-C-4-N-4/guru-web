@@ -112,6 +112,7 @@ describe('GET /api/admin/users/[id]', () => {
     mockRequireAdmin.mockResolvedValueOnce(ADMIN);
     mockGetUser.mockResolvedValueOnce({
       user: { id: 'u1', email: 'a@b.c', tier: 'pro', stripe_customer_id: 'cus_x', created_at: '2026-01-01' },
+      account_age_days: 120,
       lifetime: { queries: 5, spend: 0.1, input_tokens: 100, output_tokens: 200 },
       budgets: [{ period: 'daily', query_limit: 30, queries_used: 3, usd_limit: null, usd_used: 0.05 }],
       preferences: null,
