@@ -1,13 +1,13 @@
 {
   "id": "e1899616",
   "type": "chore",
-  "state": "open",
+  "state": "active",
   "summary": "feat: admin observability layer (read-only, tailnet-only)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-01T17:20:31.587Z",
-  "updated_at": "2026-05-01T17:21:53.454Z",
+  "updated_at": "2026-05-01T19:46:32.193Z",
   "files": [
     {
       "path": "docs/admin-ui/IMPL-admin-ui.md"
@@ -29,5 +29,11 @@
       "02ec37cf"
     ]
   },
-  "description": "Umbrella for the admin UI feature.  Implementation plan: docs/admin-ui/IMPL-admin-ui.md.  Spec: docs/admin-ui/BRD-admin-ui.md (data) and docs/admin-ui/BRD-admin-ui-design.md (design).\n\nHard ordering rule: 03c0d49e (Caddy) and 6cedb4d0 (auth gate) land before any data-rendering child.  Skipping ahead means the placeholder admin page is briefly internet-reachable.\n\nCloses when all seven children close."
+  "description": "Umbrella for the admin UI feature.  Implementation plan: docs/admin-ui/IMPL-admin-ui.md.  Spec: docs/admin-ui/BRD-admin-ui.md (data) and docs/admin-ui/BRD-admin-ui-design.md (design).\n\nHard ordering rule: 03c0d49e (Caddy) and 6cedb4d0 (auth gate) land before any data-rendering child.  Skipping ahead means the placeholder admin page is briefly internet-reachable.\n\nCloses when all seven children close.",
+  "work": {
+    "branch": "todo/e1899616",
+    "base_branch": "main",
+    "started_at": "2026-05-01T19:46:32.193Z",
+    "started_by": "4-R-C-4-N-4"
+  }
 }
