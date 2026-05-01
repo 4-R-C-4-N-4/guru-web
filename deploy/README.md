@@ -388,6 +388,146 @@ mutation outside this UI.
 
 ---
 
+## Admin UI runbook
+
+The admin UI is the read-only observability surface at
+`https://guru-web-prod.tailb5626e.ts.net/admin` (overview, users,
+sessions, queries). Spec: `docs/admin-ui/BRD-admin-ui.md`.
+
+This section covers the operator actions that aren't covered above
+(tailnet ingress) or below (lessons-learned). Quick links:
+
+- Bring the listener up: see "Tailnet admin listener" above.
+- Add or remove an admin: below.
+- Reach the admin UI from a device: below.
+- Audit who can see the admin UI: below.
+- Smoke-check after a deploy: below.
+
+### Add or remove an admin
+
+Admin identity is an env var, not a DB column or Clerk metadata.
+Spec: BRD-admin-ui §1.1.
+
+```bash
+ssh root@guru-web-prod
+$EDITOR /etc/guru-web.env
+# Find the line:
+#   ADMIN_USER_IDS=user_xxx,user_yyy
+# Add or remove a Clerk user ID. Order doesn't matter; whitespace is
+# tolerated. Empty value (or unset) → admin surface is closed.
+
+systemctl restart guru-web
+```
+
+To find a Clerk user ID, the easiest path is the Clerk dashboard
+(Users → click user → ID copy button) or `psql`:
+
+```bash
+sudo -u guru psql -d guru -c "SELECT id, email FROM users WHERE email = 'op@example.com';"
+```
+
+The deploy is the audit trail for this: there's no add-admin button,
+and rotating an admin requires a deploy on purpose. The forcing
+function is the point — adding the second admin should make you stop
+and ask "do I actually want a second admin."
+
+### Reach the admin UI
+
+From any device on your tailnet (laptop, phone with the Tailscale app
+connected):
+
+```
+https://guru-web-prod.tailb5626e.ts.net/admin
+```
+
+If the device isn't on the tailnet, it can't resolve the hostname.
+That's correct behaviour. Connect Tailscale and retry.
+
+If Tailscale itself is down, there is **no** admin UI access by
+design. The fallback for genuine emergencies (kill-switch, manual
+mutation) is `ssh root@guru-web-prod` + `psql -U guru -d guru`. Same
+path used for any mutation outside this UI; see also
+"Recovery — Tailscale down, can't reach admin UI" above.
+
+Session ceiling: admin sessions older than 1 hour bounce to
+`/sign-in`. After re-auth you're returned to whatever admin URL you
+came from. This is enforced by `src/middleware.ts` against the
+session token's `iat` claim. Spec: BRD-admin-ui §1.13.
+
+### Tailscale ACL state — audit who can see admin
+
+The tailnet listener trusts MagicDNS resolution: any device on this
+tailnet can reach `guru-web-prod.tailb5626e.ts.net:443`. There's no
+in-app fence beyond `ADMIN_USER_IDS`, so device sprawl on the tailnet
+matters. Audit periodically.
+
+```
+Tailscale admin console → Machines tab.
+```
+
+Things to look for:
+- Devices you don't recognise. Each device that can resolve the
+  tailnet hostname can attempt the TLS handshake and reach Caddy.
+  They still need a session in `ADMIN_USER_IDS` to get past Next,
+  but the layered model means device hygiene matters.
+- Expired or about-to-expire node keys. The VPS itself should have
+  expiry disabled (see "Lessons learned"); other devices should
+  rotate normally.
+- Stale auth keys (Settings → Keys). Revoke any unused ones.
+
+If a device should not be able to reach the admin listener:
+
+- Remove the device from the tailnet (Machines tab → ⋯ → Delete).
+- Or refine the Tailscale ACL to deny that device's tag from
+  reaching the VPS on port 443. The default policy is "everyone on
+  the tailnet can reach everyone"; tightening to "only `tag:admin`
+  devices reach the VPS:443" is a one-line ACL change in the
+  admin console.
+
+### Post-deploy smoke checks
+
+Run after every deploy that touched the admin surface. Spec:
+BRD-admin-ui §1.17.
+
+```bash
+# 1. Public listener rejects /admin with a Next-shape 404 (not bare Caddy).
+curl -sS -o /dev/null -w "%{http_code}\n" https://guru-ai.org/admin/
+# → 404
+curl -sS -o /dev/null -w "%{http_code}\n" https://guru-ai.org/api/admin/overview
+# → 404
+
+# 2. Tailnet listener serves the admin surface.
+#    From a tailnet device:
+curl -sS -o /dev/null -w "%{http_code}\n" \
+  https://guru-web-prod.tailb5626e.ts.net/admin
+# → 200 if you're an admin and your session is fresh; 404 otherwise.
+
+# 3. /api/admin/overview round-trip (browser cookie or session token in headers).
+#    Open /admin in the browser and check the network tab — every
+#    /api/admin/* request should be 200 to admins, 404 to non-admins.
+```
+
+Failure modes mapped to fixes:
+
+| Symptom                                              | Likely cause                              | Fix                                                            |
+|------------------------------------------------------|-------------------------------------------|-----------------------------------------------------------------|
+| Public `/admin/` returns 200 instead of 404          | `@admin` matcher missing from Caddyfile   | Compare to repo Caddyfile, restore, `caddy validate && reload`  |
+| Tailnet hostname returns TLS error                   | Cert expired / renewal failing            | "Recovery — admin UI returns TLS error" above                   |
+| Admin UI returns 404 even for an admin               | `ADMIN_USER_IDS` unset or wrong           | Edit `/etc/guru-web.env`, `systemctl restart guru-web`          |
+| Session-age redirect after <1h                       | Server clock drift                        | `timedatectl status`; fix NTP                                   |
+
+### Cross-references
+
+- Tailnet cert renewal: "Tailnet admin listener" above (§0.3 of
+  BRD-admin-ui).
+- Migration 008 indexes: applied automatically by `deploy.sh` on the
+  next deploy after merge. Re-running is the test (`IF NOT EXISTS`).
+- Soft-delete of users / quota resets / tier flips / corpus content
+  removal: deliberately not in the admin UI. See the deferred
+  `BRD-operator-mutations.md` for psql snippets when those land.
+
+---
+
 ## Lessons learned (gotchas to remember)
 
 - **`MemoryDenyWriteExecute=true` breaks V8.** Don't add it back to the systemd unit. The other hardening directives are JIT-safe.
