@@ -169,10 +169,15 @@ The most-used component. Native `<table>`. Features:
 - Pagination footer when total exceeds page size, also URL-driven.
 - Empty state row when no data.
 - Sticky header within the content pane.
+- "Download CSV" link in the table footer when the surface has a
+  paired CSV endpoint (data BRD §1.18). Same URL filters apply,
+  so the CSV reflects whatever the operator currently sees.
 
 What it deliberately doesn't do: row selection, bulk actions,
-column resize, column reorder, virtualization. Adding any of those
-is a v2 conversation.
+column resize, column reorder, virtualization. The CSV export
+covers the "I want the full dataset" need that virtualization
+would otherwise serve, without the engineering of a virtualized
+table that also supports column sort + filter.
 
 ### 3.4 `<TabularSparkline>`
 
@@ -436,35 +441,3 @@ The one accommodation: tables with many columns get a
 right-edge gradient hinting at horizontal scroll, and the most
 critical column (usually the leftmost identifier) is sticky on
 horizontal scroll.
-
----
-
-## 8. Open questions
-
-1. **Trend arrow direction sense.** On the "Top users by spend
-   this week" table, does an upward arrow next to a user's spend
-   number mean "their spend went up" (alarming) or "their usage
-   grew" (good)? They're the same fact with opposite valences.
-   Default: upward = "spend up", with a subtle red tint for
-   pro-tier increases >50% week-over-week, since that's the
-   actual operational signal. Argument the other way:
-   value-neutral arrows are simpler and the operator can apply
-   judgment.
-
-2. **Sessions/Queries "search by ID" rail item.** Listed in §2.3
-   as a search box rather than a list. Is this actually the right
-   mental model, or should those rail items be removed entirely
-   and the operator be expected to navigate via user deep dive →
-   session row click? Default: keep the search boxes. They cost
-   little and serve the "I have a query ID from a Slack thread"
-   flow that the user deep dive doesn't.
-
-3. **Stat tile row order.** The principle in §4.1 ("most
-   operationally urgent first") leaves room for taste. A reasonable
-   order: MTD spend, MTD spend projection, users at risk, active
-   rate-limit holds, queries today, queries this week, pro/free
-   ratio, total users. Worth fixing in this doc, or worth leaving
-   as an implementation-time decision once the data is real?
-   Default: leave it open — the right order will be obvious within
-   a week of using the UI, and the cost of getting it wrong on day
-   one is zero.

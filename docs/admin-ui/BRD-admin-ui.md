@@ -54,7 +54,10 @@ with different routing rules:
     }
 
     @admin path /admin /admin/* /api/admin /api/admin/*
-    respond @admin 404
+    rewrite @admin /_admin-404
+    # /_admin-404 is a tiny route in Next that returns the standard
+    # 404 page, so the public response is shape-identical to "this
+    # path doesn't exist" rather than Caddy's bare-bones 404.
 
     encode gzip zstd
     reverse_proxy localhost:3000 {
@@ -266,10 +269,15 @@ Stat tiles (top row, current values):
 - Pro / free split (count + % of active).
 - Queries today / this week / this month.
 - Spend today / this week / this month, separated by tier.
-- MTD spend with month projection (linear extrapolation from current
-  run rate). The projection is the early-warning signal — tells you on
-  day 12 that the month is on track to be 1.4× last month, well before
-  the bill.
+- MTD spend with month projection. Projection formula:
+  `(MTD spend / days_elapsed_in_month) × days_in_month`. Simple
+  linear extrapolation; the operator's pattern-match on it after
+  a week reveals its limitations more clearly than any documented
+  caveat (week-1 numbers swing wildly, late-month converges). More
+  sophisticated forecasts — trailing-7d, exponential weighting,
+  per-tier — are deferred. The projection is the early-warning
+  signal: tells you on day 12 that the month is on track to be
+  1.4× last month, well before the bill.
 - Active rate-limit holds (count of rows in `rate_limits` with
   `last_at > now() - 5min`).
 - Users at >80% of any budget axis (`queries_used / query_limit` or
@@ -413,14 +421,31 @@ are read-only — see §1.13.
 
 ### 1.13 Admin session lifetime
 
-Clerk session timeout for admin routes is shortened relative to user
-sessions. Implementation: re-prompt for sign-in if the Clerk session is
-older than 1 hour when accessing `/admin/*`. (Clerk supports this via
-session token expiry checks at middleware level.)
+Clerk doesn't have per-route session expiry — sessions are global,
+configured in the Clerk dashboard with a single inactivity timeout
+(currently the default ~7 days). What we want is a *shorter*
+ceiling specifically for admin routes, layered on top of the
+global session.
 
-Reduced urgency given Phase 0 — a stale session cookie can only be used
-by a device on the tailnet — but the PII posture in §1.12 makes this
-worth keeping.
+Implementation: middleware on `/admin/*` and `/api/admin/*` reads
+the active session token's `iat` (issued-at) claim. If the token
+is older than 1 hour, the middleware bounces to `/sign-in` with a
+return-to URL pointing at the requested admin path. Clerk reissues
+a fresh token on completion, the timer resets, the request
+proceeds.
+
+This means:
+
+- The 1-hour ceiling applies *only* to admin routes. The user side
+  of the app keeps Clerk's longer global session.
+- A long-lived Clerk session is fine; the operator just re-auths
+  hourly when actively using admin.
+- "Reauth" is a Clerk modal in the same tab — no app reload, no
+  state loss in adjacent tabs.
+
+Reduced urgency given Phase 0 (a stale session cookie can only be
+used from a device on the tailnet) but the PII posture in §1.12
+makes the layer worth keeping.
 
 ### 1.14 No client-side analytics
 
@@ -435,8 +460,18 @@ shape of the admin UI or capture data shown on it.
 - Any mutation. No tier flips, no budget resets, no session/query
   deletion, no user impersonation. The CLI is the right tool for those.
 - Real-time updates / websockets / SSE.
-- Export to CSV.
 - Multi-admin tracking.
+- **Soft-delete columns on `sessions` / `queries`.** Adding
+  `deleted_at` without also landing `WHERE deleted_at IS NULL`
+  filtering across every read in `retriever.ts`,
+  `/api/sessions/[id]`, and `chat-view` is a foot-gun: the
+  operator UPDATEs `deleted_at`, the app keeps showing the row.
+  Either both land together in a future BRD or content removal
+  stays a hard `DELETE` with backups as the safety net. This BRD
+  picks the latter.
+
+CSV export is **in scope** (§1.18) — it's the substitute for
+virtualization on large datasets, not a separate "nice to have."
 
 ### 1.16 Charts — deferred to follow-on BRD
 
@@ -451,7 +486,83 @@ chart click — is out of scope and belongs in a follow-on BRD
 The charts BRD will pick a chart library (Recharts is the leading
 candidate), enumerate the chart inventory question-by-question, and
 specify drill-down behaviour. None of that work blocks the data
-visibility this BRD delivers.
+visibility this BRD delivers. Note also that this UI complements
+OpenRouter's own usage charts rather than replacing them — the
+operator already has spend-over-time visualisation there; what's
+missing is the per-user / per-session attribution this BRD adds.
+
+### 1.17 Tests
+
+Access control is the load-bearing thing on this UI; everything
+else is a render of read-only data. Tests fall in two buckets:
+
+**Unit tests (vitest, every PR via CI).** In `src/__tests__/`:
+
+- `requireAdmin()` returns 404 (not 401, not 403) when:
+  - the request is unauthenticated,
+  - the authenticated user's id is not in `ADMIN_USER_IDS`,
+  - `ADMIN_USER_IDS` is unset.
+- The middleware matcher returns 404 for non-admin requests on
+  `/admin/*` and `/api/admin/*` before reaching any handler. Mock
+  Clerk's auth state to drive the cases.
+- `requireAdmin()` returns the `User` record when the id is in
+  the allowlist, populated from the database the same way
+  `requireUser()` does.
+
+These run in the same CI job as everything else. Same harness
+(mocked db / auth) as the existing `api.test.ts`.
+
+**Smoke tests (manual, post-deploy).** The Caddy split is the
+only thing unit tests can't cover, because spinning up Caddy +
+Next.js in CI is more harness than the rest of the repo justifies.
+Documented in the runbook (§2.2):
+
+- `curl -s -o /dev/null -w "%{http_code}\n" https://guru-ai.org/admin/`
+  → 404 (public listener rejects via the @admin matcher).
+- `curl -sk https://guru-web-prod.tailb5626e.ts.net/admin/` from a
+  tailnet-connected device → either 200 (signed in as admin) or a
+  Clerk sign-in redirect (signed-out admin) — never 404.
+- Negative case from a non-admin tailnet device: 404.
+
+The smoke checks live in the runbook as a three-line copy-paste, not
+as scripts; run after any Caddyfile change and after any deploy that
+touches `middleware.ts` or `src/lib/admin.ts`. If they grow beyond
+~10 lines, that's the signal to invest in a real integration harness.
+
+### 1.18 CSV export
+
+Lists at admin scope (Users, per-user Sessions, per-session
+Queries) ship with a "Download CSV" link beside the table. CSV is
+the answer to "I want the full dataset for analysis" — the same
+operator need that would otherwise drive table virtualization,
+served more directly.
+
+Endpoints, same path as the corresponding JSON view + `.csv`:
+
+- `GET /api/admin/users.csv?<same filters as the UI>`
+- `GET /api/admin/users/[id]/sessions.csv`
+- `GET /api/admin/sessions/[id]/queries.csv`
+
+Implementation: Postgres cursor (or equivalent streaming pattern)
+yields rows in batches; a `Content-Type: text/csv` Response wraps
+the stream. The DB never loads the full result into memory; the
+Node process never buffers more than one batch. Filters and sorts
+are read from the same URL params as the UI (see design BRD §1.3),
+so the CSV download reflects whatever the operator is currently
+looking at.
+
+Why this instead of virtualization:
+
+- Virtualizing a `<DataTable>` that supports column sort and
+  filter is engineering work for a UI used hours per week.
+- "Pull the full dataset" is the actual operator need behind
+  virtualization (analyzing in spreadsheets, grepping for
+  patterns). CSV serves it directly with no UI complexity.
+- The browser table stays at 50 rows/page — fast for browsing,
+  CSV for bulk.
+
+Same access control as the JSON endpoints (`requireAdmin()`); no
+row-cap on the CSV (the operator already has full read access).
 
 ---
 
@@ -500,31 +611,67 @@ better than leaving it half-filled.
 
 ---
 
-## Open questions for review
+## 3. Implementation phases
 
-1. **Backfilled cost accuracy in admin views.** The `cost_usd` backfill
-   (scripts/backfill-cost.ts) prices historical rows at *current* rates,
-   not the rate that was in effect at query time — pre-backfill traffic
-   was logged before `model_pricing` had history to look up. The admin
-   UI cannot distinguish backfilled rows from natively-priced rows.
-   Worth surfacing? Default: yes, lightly — show a tooltip on any
-   pre-backfill date saying "costs estimated at backfill-time rates."
-   Argument for ignoring: the discrepancy is small and the calendar
-   moves on. Argument for surfacing: future-you debugging a "why did
-   spend on March 4 jump" mystery will be confused by the artefact.
+Order matters: each phase gates the next. Each is a single PR
+unless noted.
 
-2. **Read access logging.** Even with no mutations, the admin UI reads
-   user query content (PII, see §1.12). Worth logging which deep-dive
-   pages were accessed, by which device, and when? Default: no — the
-   tailnet IP attribution is captured in Caddy access logs already, and
-   adding a dedicated DB table for "I looked at this user's session" is
-   a lot of bookkeeping for a single-operator setup. If the operator
-   ever stops being a single person, revisit.
+### 3.1 Caddy split + middleware gate (the security floor)
 
-3. **Soft-delete column even without UI control.** Adding `deleted_at`
-   to `sessions` and `queries` now (defaulting NULL, no admin write
-   path) would make the eventual `psql` snippet for content removal
-   non-destructive. Worth it as a one-line migration even though no
-   code path uses the column? Default: yes — cheap insurance,
-   removes the foot-gun of `DELETE FROM queries` being the only option
-   when the operator does need to take something down.
+Everything subsequent assumes this is in place and tested.
+
+- New tailnet listener in `/etc/caddy/Caddyfile` (manual install
+  per §0.1). Public listener gains the `@admin → /_admin-404`
+  rewrite.
+- Tailscale cert renewal: timer + script per §0.3.
+- `src/lib/admin.ts` with `requireAdmin()` returning 404 on miss.
+- Middleware on `/admin/*` and `/api/admin/*` returns 404 for
+  non-admins.
+- Empty admin route group at `src/app/(admin)/admin/page.tsx` —
+  just renders "ADMIN" — exists so the matcher has something to
+  match on.
+- Tests per §1.17 (unit + smoke).
+- Runbook entries: add/remove admin, Caddy install, cert renewal.
+
+After 3.1: ingress is verified-secure. Subsequent PRs add data
+visibility behind that gate.
+
+### 3.2 Overview dashboard (§1.5)
+
+- `GET /api/admin/overview` JSON endpoint (counts + sparkline
+  series).
+- `/admin` page composing stat tiles + tabular sparklines + the
+  two "Top this week" tables.
+- `<AdminLayout>`, `<StatTile>`, `<TabularSparkline>` per design
+  BRD §3.
+
+### 3.3 Users list + deep dive (§1.6, §1.7)
+
+- `GET /api/admin/users` + `GET /api/admin/users/[id]`.
+- `<DataTable>`, `<FilterPills>`, `<BudgetBar>` per design BRD §3.
+- Paired CSV endpoint (§1.18).
+
+### 3.4 Session + query deep dives (§1.8, §1.9)
+
+- `GET /api/admin/sessions/[id]` + `GET /api/admin/queries/[id]`.
+- `<ExpandableQuery>` per design BRD §3.7.
+- Paired CSV endpoint for session queries.
+
+### 3.5 Indexes (§1.11)
+
+- Migration 008 with the `idx_queries_user_created`,
+  `idx_queries_created`, `idx_sessions_updated` indexes.
+- Optional: ship earlier (alongside 3.1 or 3.2) if any phase
+  measurably slows. At current scale (<10K queries) these are
+  no-ops; deferring keeps each preceding migration scoped to its
+  own concern.
+
+### 3.6 Operational hygiene (§2)
+
+- Runbook fleshed out (everything left over from 3.1).
+- Tailscale ACL audit + documented current state.
+
+### Charts (deferred — separate BRD)
+
+Per §1.16. Picks a chart library, builds the chart inventory,
+specifies drill-downs. Doesn't block any of 3.1–3.6.
