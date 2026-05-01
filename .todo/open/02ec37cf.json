@@ -1,0 +1,28 @@
+{
+  "id": "02ec37cf",
+  "type": "chore",
+  "state": "open",
+  "summary": "operational hygiene: runbook completion + Tailscale ACL audit doc",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-01T17:20:31.827Z",
+  "updated_at": "2026-05-01T17:21:53.901Z",
+  "files": [
+    {
+      "path": "deploy/README.md"
+    }
+  ],
+  "tags": [
+    "admin",
+    "runbook",
+    "ops"
+  ],
+  "relationships": {
+    "parent": "e1899616",
+    "depends_on": [
+      "08288d08"
+    ]
+  },
+  "description": "Finishes deploy/README.md's admin-runbook section.  The earlier infra tickets (03c0d49e, 6cedb4d0) added their own runbook entries; this fills the gaps and makes the runbook self-contained.\n\nIn scope (BRD §2.2):\n  - Add or remove an admin (edit ADMIN_USER_IDS, restart guru-web).\n  - Reach the admin UI (tailnet hostname; Tailscale-down fallback = ssh + psql).\n  - Caddy admin-listener install procedure (cross-ref to 03c0d49e's section).\n  - Tailscale cert renewal: where the script lives, where the timer's status is, the one-command manual renewal (cross-ref to 03c0d49e).\n  - Tailscale ACL state + how to audit it from the tailnet admin console.\n  - Cross-references to the post-deploy smoke checks from BRD §1.17.\n\nOut of scope (deferred to a separate BRD-operator-mutations.md):\n  - psql snippets for tier flip, quota reset, soft-delete, kill-switch.\n\nDone when:\n  - A new operator (or future-you, six months later) can take the runbook cold and stand up a fresh admin without reading the BRDs.\n  - Every operator-action mentioned across 03c0d49e–08288d08 has a corresponding runbook entry.\n\nTests: none (docs)."
+}

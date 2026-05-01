@@ -1,0 +1,29 @@
+{
+  "id": "6cedb4d0",
+  "type": "chore",
+  "state": "open",
+  "summary": "auth gate: requireAdmin + middleware + empty admin route group + tests",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-01T17:20:31.658Z",
+  "updated_at": "2026-05-01T17:21:53.745Z",
+  "files": [
+    {
+      "path": "src/lib/admin.ts"
+    }
+  ],
+  "tags": [
+    "admin",
+    "security",
+    "auth",
+    "middleware"
+  ],
+  "relationships": {
+    "parent": "e1899616",
+    "depends_on": [
+      "03c0d49e"
+    ]
+  },
+  "description": "src/lib/admin.ts exports requireAdmin() — same shape as requireUser() but checks ADMIN_USER_IDS env var.  Always 404 on miss (never 401/403).  middleware.ts gates /admin/* and /api/admin/*: non-admins rewrite to /_admin-404 before any handler runs; admin sessions older than 1h (token iat claim) bounce to /sign-in.  See BRD-admin-ui.md §1.1, §1.2, §1.13.\n\nFiles:\n  - src/lib/admin.ts  (new)\n  - src/middleware.ts  (edit)\n  - src/app/(admin)/admin/page.tsx  (new — placeholder 'ADMIN' until 454b376f)\n  - src/app/(admin)/layout.tsx  (new — minimal; 454b376f fleshes out)\n  - src/app/_admin-404/page.tsx  (new — re-renders standard Next 404)\n  - .env.example  (document ADMIN_USER_IDS)\n  - src/__tests__/admin.test.ts  (new)\n\nDone when:\n  - requireAdmin() returns 404 Response when: unauthenticated / not in allowlist / env unset.\n  - requireAdmin() returns User record when in allowlist (populated like requireUser).\n  - Middleware 404s non-admins on /admin/* + /api/admin/* before reaching any handler (handler-side spy verifies).\n  - Admin reaching /admin sees placeholder; non-admin sees Next 404 indistinguishable from a bogus path.\n  - Admin session > 1h forces re-auth on next admin request.\n  - npm run build + tsc --noEmit clean.\n\nTests (BRD §1.17):\n  - requireAdmin → 404 on each failure mode (3 cases).\n  - requireAdmin returns User when allowed.\n  - Middleware behaviour for /admin/* admin/non-admin/iat-too-old.\n  - Middleware does not affect non-admin paths.\n\nOperator action post-merge: set ADMIN_USER_IDS in /etc/guru-web.env, restart guru-web."
+}
