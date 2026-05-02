@@ -1,0 +1,22 @@
+# deploy/sync-pricing.timer
+#
+# Daily timer firing sync-pricing.service. Persistent=true means a
+# missed run (host offline at the scheduled time) catches up on
+# next boot.
+#
+# Installed at /etc/systemd/system/sync-pricing.timer; enable with
+# `systemctl enable --now sync-pricing.timer`.
+# See deploy/README.md "Pricing sync".
+
+[Unit]
+Description=Daily resync of model_pricing from OpenRouter
+Documentation=https://github.com/your-org/guru-web/blob/main/deploy/README.md
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=15m
+Persistent=true
+Unit=sync-pricing.service
+
+[Install]
+WantedBy=timers.target

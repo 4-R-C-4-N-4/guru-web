@@ -53,7 +53,7 @@ export interface ModelPrice {
 //
 // Keep these in sync with provider docs; small drift is fine, the next
 // successful network sync will correct it.
-const FALLBACK_PRICING: Record<string, ModelPrice> = {
+export const FALLBACK_PRICING: Record<string, ModelPrice> = {
   // Picker defaults — every CURATED_MODELS entry in src/lib/model.ts
   // gets a row here so a fresh-VPS sync during an OpenRouter outage
   // still seeds rows for everything the live path can pick.
