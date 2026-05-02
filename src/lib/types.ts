@@ -34,6 +34,13 @@ export interface UserPreferences {
   blockedTexts: string[];
   whitelistedTraditions: string[];
   whitelistedTexts: string[];
+  /**
+   * Curated-picker slug (deepseek | xai | anthropic | openai) or null
+   * to mean "use the tier default." Only consulted for pro tier; free
+   * is always pinned. Validated against CURATED_MODELS at write time
+   * via /api/preferences. Spec: BRD-model-selection.md §5.1, §6.1.
+   */
+  preferredModel: string | null;
 }
 
 export interface User {

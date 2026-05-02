@@ -20,7 +20,13 @@
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
 import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
-import { completeStream, MODELS, MAX_OUTPUT_TOKENS } from '@/lib/model';
+import {
+  completeStream,
+  MAX_OUTPUT_TOKENS,
+  DEFAULT_CURATED_SLUG,
+  isCuratedSlug,
+  resolveCuratedModel,
+} from '@/lib/model';
 import { reserveBudget, finalizeBudget } from '@/lib/spend';
 import { computeCost } from '@/lib/cost';
 import { loadPreferences } from '@/lib/prefs';
@@ -93,7 +99,16 @@ export async function POST(req: Request) {
   // Estimate is intentionally a worst-case ceiling: assumed input tokens
   // from prompt+system char count, output capped at MAX_OUTPUT_TOKENS.
   // finalizeBudget reconciles to the actual cost from the usage chunk.
-  const modelId = MODELS[user.tier];
+  //
+  // Model resolution: pro consults user_preferences.preferred_model
+  // (a CURATED_MODELS slug); free is always pinned to the default.
+  // A pro user with no preference saved, or a stale slug from before
+  // a rename, falls back to DEFAULT_CURATED_SLUG. Spec:
+  // BRD-model-selection.md §7.2.
+  const slug = user.tier === 'pro' && isCuratedSlug(prefs.preferredModel)
+    ? prefs.preferredModel
+    : DEFAULT_CURATED_SLUG;
+  const modelId = resolveCuratedModel(slug);
   const estimatedInputTokens = Math.ceil((SYSTEM_PROMPT.length + prompt.length) / 4);
   const { cost_usd: estimatedCostUsd } = await computeCost({
     modelId,
@@ -122,8 +137,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // 5. Stream
-  const stream = await completeStream(prompt, user.tier);
+  // 5. Stream — completeStream takes the resolved model id (BRD §7.2).
+  const stream = await completeStream(prompt, modelId);
 
   let fullResponse = '';
   let inputTokens: number | null = null;

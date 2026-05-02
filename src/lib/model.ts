@@ -112,9 +112,15 @@ export const MAX_OUTPUT_TOKENS = 8192;
 // Non-streaming completion (for internal/testing use)
 // ---------------------------------------------------------------------------
 
-export async function complete(prompt: string, tier: Tier): Promise<string> {
+/**
+ * Non-streaming completion. Takes a resolved OpenRouter id directly
+ * (post-model-selection BRD §7.2 — caller resolves slug → id, then
+ * calls this). Pass MODELS[tier] for legacy tier-pinned callers, or
+ * resolveCuratedModel(slug) for the picker path.
+ */
+export async function complete(prompt: string, modelId: string): Promise<string> {
   const response = await client().chat.completions.create({
-    model: MODELS[tier],
+    model: modelId,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user',   content: prompt },
@@ -129,9 +135,9 @@ export async function complete(prompt: string, tier: Tier): Promise<string> {
 // Streaming completion (used by POST /api/query)
 // ---------------------------------------------------------------------------
 
-export async function completeStream(prompt: string, tier: Tier) {
+export async function completeStream(prompt: string, modelId: string) {
   return client().chat.completions.create({
-    model: MODELS[tier],
+    model: modelId,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user',   content: prompt },

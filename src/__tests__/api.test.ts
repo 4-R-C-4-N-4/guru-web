@@ -50,11 +50,16 @@ vi.mock('@/lib/prompt', () => ({
   SYSTEM_PROMPT: 'mock system prompt',
 }));
 
-vi.mock('@/lib/model', () => ({
-  completeStream: vi.fn(),
-  MODELS: { free: 'deepseek/deepseek-chat', pro: 'anthropic/claude-sonnet-4.5' },
-  MAX_OUTPUT_TOKENS: 8192,
-}));
+vi.mock('@/lib/model', async () => {
+  // Use real CURATED_MODELS / resolveCuratedModel so the route's
+  // slug-resolution logic exercises the production map. Only the
+  // network-touching `completeStream` is stubbed.
+  const actual = await vi.importActual<typeof import('@/lib/model')>('@/lib/model');
+  return {
+    ...actual,
+    completeStream: vi.fn(),
+  };
+});
 
 vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn(),
@@ -112,7 +117,13 @@ const ALLOWED_RESERVE = {
 };
 
 const FREE_USER = { id: 'user_1', email: 'a@b.com', tier: 'free' as const, stripe_customer_id: null };
-const DEFAULT_PREFS = { scopeMode: 'all' as const, blockedTraditions: [], blockedTexts: [], whitelistedTraditions: [], whitelistedTexts: [] };
+const DEFAULT_PREFS = {
+  scopeMode: 'all' as const,
+  blockedTraditions: [], blockedTexts: [],
+  whitelistedTraditions: [], whitelistedTexts: [],
+  preferredModel: null,
+};
+const PRO_USER  = { id: 'user_2', email: 'p@b.com', tier: 'pro'  as const, stripe_customer_id: 'cus_x' };
 
 // ---------------------------------------------------------------------------
 // /api/sessions
@@ -611,5 +622,69 @@ describe('POST /api/query', () => {
     expect(mockExec).toHaveBeenCalledTimes(1);
     const [, params] = mockExec.mock.calls[0]!;
     expect(typeof params![3]).toBe('string'); // response_text — partial is fine
+  });
+});
+
+// ── Curated model slug resolution (todo:ae3e5de8) ──────────────────────
+// Separate describe block with its own beforeEach so we get a clean
+// mock queue (vi.resetAllMocks vs the parent block's clearAllMocks —
+// resetAllMocks also wipes queued mockResolvedValueOnce values that
+// can leak from earlier tests).
+//
+// Asserts the BRD §7.2 contract: pro consults preferred_model from
+// user_preferences; free is always pinned to the default regardless
+// of saved value. The resolved OpenRouter id is what's passed to
+// completeStream and stored in queries.model_used.
+
+describe('POST /api/query — curated slug resolution', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRateLimit.mockResolvedValue({ allowed: true });
+  });
+
+  async function runQueryWithPrefs(user: typeof FREE_USER | typeof PRO_USER, preferredModel: string | null) {
+    mockAuth.mockResolvedValueOnce(user);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredModel });
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('p');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text();
+    return res;
+  }
+
+  it('pro user with preferredModel=anthropic resolves to sonnet-4.6', async () => {
+    await runQueryWithPrefs(PRO_USER, 'anthropic');
+    const [streamPrompt, modelId] = mockStream.mock.calls[0]!;
+    expect(streamPrompt).toBe('p');
+    expect(modelId).toBe('anthropic/claude-sonnet-4.6');
+    const [, persistParams] = mockExec.mock.calls[0]!;
+    expect(persistParams![5]).toBe('anthropic/claude-sonnet-4.6');
+  });
+
+  it('pro user with preferredModel=null falls through to deepseek default', async () => {
+    await runQueryWithPrefs(PRO_USER, null);
+    const [, modelId] = mockStream.mock.calls[0]!;
+    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    const [, persistParams] = mockExec.mock.calls[0]!;
+    expect(persistParams![5]).toBe('deepseek/deepseek-v4-pro');
+  });
+
+  it('free user with any preferredModel value still resolves to default', async () => {
+    await runQueryWithPrefs(FREE_USER, 'anthropic');
+    const [, modelId] = mockStream.mock.calls[0]!;
+    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+  });
+
+  it('pro user with stale/unknown slug (post-rename) falls through to default', async () => {
+    await runQueryWithPrefs(PRO_USER, 'old-removed-slug');
+    const [, modelId] = mockStream.mock.calls[0]!;
+    expect(modelId).toBe('deepseek/deepseek-v4-pro');
   });
 });
