@@ -15,7 +15,7 @@
  * fetch.
  */
 
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
@@ -127,6 +127,11 @@ export interface ChatViewProps {
   initialMessages?: Message[];
 }
 
+// LocalStorage key for the model-picker default-switch announcement
+// banner. Versioned so future banners can ship without un-dismissing
+// this one (BRD-model-selection §9 / IMPL §7).
+const MODEL_PICKER_BANNER_KEY = 'guru.banner.modelpicker.v1';
+
 export default function ChatView({ initialSessionId, initialMessages }: ChatViewProps = {}) {
   const mobile  = useIsMobile();
   const [messages,    setMessages]    = useState<Message[]>(initialMessages ?? []);
@@ -135,6 +140,13 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   const [sessionId,   setSessionId]   = useState<string | null>(initialSessionId ?? null);
   const [quotaUsed,   setQuotaUsed]   = useState<number | null>(null);
   const [quotaLimit,  setQuotaLimit]  = useState<number>(30);
+  const [tier,        setTier]        = useState<'free' | 'pro' | null>(null);
+  // Banner dismissal lives in component state for the active session.
+  // Persistence to localStorage happens in dismissPickerBanner so the
+  // dismissed state survives reloads. The visible/hidden derivation is
+  // a pure compute (useMemo below) — keeps us out of the
+  // react-hooks/set-state-in-effect rule.
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
 
@@ -151,10 +163,38 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   }, [input, inputMaxHeight]);
 
   useEffect(() => {
-    fetch('/api/quota').then(r => r.json()).then((d: { used: number; limit: number }) => {
+    fetch('/api/quota').then(r => r.json()).then((d: { used: number; limit: number; tier?: 'free' | 'pro' }) => {
       setQuotaUsed(d.used);
       setQuotaLimit(d.limit);
+      if (d.tier) setTier(d.tier);
     }).catch(() => {});
+  }, []);
+
+  // Show the picker banner only when the user is pro AND localStorage
+  // hasn't been marked dismissed AND the current session hasn't just
+  // dismissed it. Free users never see it. New post-launch signups
+  // may briefly see it before dismissing — accepted UX cost vs. the
+  // complexity of gating on users.created_at < banner_release_date.
+  //
+  // localStorage is read during render via useMemo (key on tier so we
+  // re-evaluate when tier resolves) — keeps us out of the
+  // react-hooks/set-state-in-effect rule that would fire on a
+  // useEffect+setState pattern.
+  const showPickerBanner = useMemo(() => {
+    if (tier !== 'pro') return false;
+    if (bannerDismissed) return false;
+    try {
+      return localStorage.getItem(MODEL_PICKER_BANNER_KEY) !== '1';
+    } catch {
+      // localStorage blocked (private mode etc.) — show the banner;
+      // dismiss in this session works via setBannerDismissed.
+      return true;
+    }
+  }, [tier, bannerDismissed]);
+
+  const dismissPickerBanner = useCallback(() => {
+    setBannerDismissed(true);
+    try { localStorage.setItem(MODEL_PICKER_BANNER_KEY, '1'); } catch { /* ignore */ }
   }, []);
 
   const handleSend = useCallback(async () => {
@@ -233,6 +273,56 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 53px)', background: tokens.bg.deep }}>
+      {/* One-time announcement banner — pro users only, dismissible.
+          BRD-model-selection §9 step 4. Drops after the model-picker
+          rollout settles (track on the parent ticket and remove the
+          banner block once telemetry shows >95% of pro users have
+          dismissed). */}
+      {showPickerBanner && (
+        <div
+          role="status"
+          data-testid="model-picker-banner"
+          style={{
+            background: tokens.bg.surface,
+            borderBottom: `1px solid ${tokens.border.subtle}`,
+            padding: mobile ? '10px 14px' : '10px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            fontFamily: tokens.font.mono,
+            fontSize: 11,
+            color: tokens.text.secondary,
+          }}
+        >
+          <span style={{ color: tokens.text.accent }}>NEW</span>
+          <span style={{ flex: 1 }}>
+            Pro now lets you pick your AI model. Default switched to
+            DeepSeek for cost reasons —{' '}
+            <a href="/settings" style={{ color: tokens.text.link, textDecoration: 'underline' }}>
+              change it in Settings
+            </a>{' '}
+            if you&rsquo;d rather use Anthropic, OpenAI, or X.AI.
+          </span>
+          <button
+            type="button"
+            onClick={dismissPickerBanner}
+            aria-label="Dismiss banner"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: tokens.text.muted,
+              cursor: 'pointer',
+              fontFamily: tokens.font.mono,
+              fontSize: 14,
+              padding: '0 4px',
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: mobile ? '16px 0' : '24px 0', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {messages.length === 0 && (

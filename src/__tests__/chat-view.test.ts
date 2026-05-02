@@ -141,6 +141,53 @@ describe('chat-view markdown rendering', () => {
   });
 });
 
+describe('chat-view model-picker announcement banner (todo:f238dc42)', () => {
+  // Same source-level approach as the markdown describe above.
+  // Locks in:
+  //   - localStorage key is versioned (so a future banner doesn't
+  //     un-dismiss this one),
+  //   - banner only shows when tier === 'pro',
+  //   - dismiss writes the key,
+  //   - reads tier from /api/quota.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('declares a versioned localStorage key', () => {
+    expect(SRC).toMatch(/MODEL_PICKER_BANNER_KEY\s*=\s*['"]guru\.banner\.modelpicker\.v1['"]/);
+  });
+
+  it('gates banner show on tier === "pro"', () => {
+    // useMemo derives showPickerBanner; first short-circuits when
+    // tier isn't 'pro'.
+    expect(SRC).toMatch(/if \(tier !== ['"]pro['"]\) return false/);
+  });
+
+  it('dismiss writes the key to localStorage', () => {
+    expect(SRC).toMatch(/localStorage\.setItem\(MODEL_PICKER_BANNER_KEY, ['"]1['"]\)/);
+  });
+
+  it('reads localStorage and treats "1" as dismissed', () => {
+    expect(SRC).toMatch(/localStorage\.getItem\(MODEL_PICKER_BANNER_KEY\) !== ['"]1['"]/);
+  });
+
+  it('reads tier from /api/quota response', () => {
+    // The quota effect should now consume tier in addition to used/limit.
+    expect(SRC).toMatch(/tier\??:\s*['"]free['"]\s*\|\s*['"]pro['"]/);
+    expect(SRC).toMatch(/setTier/);
+  });
+
+  it('renders banner block with data-testid + dismiss button', () => {
+    expect(SRC).toMatch(/data-testid=['"]model-picker-banner['"]/);
+    expect(SRC).toMatch(/aria-label=['"]Dismiss banner['"]/);
+    // Banner copy carries the "DeepSeek" and "Settings" link.
+    expect(SRC).toMatch(/Default switched to/);
+    expect(SRC).toMatch(/href=['"]\/settings['"]/);
+  });
+});
+
 describe('chat-view URL-update contract', () => {
   // Source-level guards. The chat UI is React + DOM-heavy; we don't have
   // a DOM test harness configured. These string checks are blunt but
