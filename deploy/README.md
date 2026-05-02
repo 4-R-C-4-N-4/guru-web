@@ -306,6 +306,32 @@ because bootstrap is one-shot and admin install is deliberate.
 - VPS node's MagicDNS hostname is `guru-web-prod`. Verify with
   `tailscale status | head -1` — the first column is the hostname.
 - The Caddy `caddy` group exists (created by the Caddy package).
+- **MagicDNS is enabled tailnet-wide.** Tailscale admin → DNS →
+  scroll down → MagicDNS section → Enable. If the toggle is greyed
+  out, set a global nameserver first (e.g. `1.1.1.1`) and the
+  toggle becomes active. `tailscale cert` will succeed without this
+  (cert issuance goes via the control plane, not DNS), but no
+  device will be able to *resolve* the tailnet hostname until
+  MagicDNS is on. Verify after toggling:
+
+  ```bash
+  tailscale dns status   # bottom should say "MagicDNS: enabled tailnet-wide"
+  ```
+
+- **Tailnet suffix matches the Caddyfile.** The repo hardcodes
+  `tailb5626e.ts.net` as the suffix. If you're deploying onto a
+  different tailnet, find your suffix and substitute it in three
+  places before running the install steps:
+
+  ```bash
+  tailscale dns status | grep MagicDNSSuffix   # or check `tailscale status --json | jq '.MagicDNSSuffix'`
+  ```
+
+  Then `sed` it across the files: `deploy/Caddyfile`,
+  `deploy/tailnet-cert-renew.sh`, and any reference in this
+  runbook. (Future follow-up: read the suffix from
+  `tailscale status --json` at install time so this doesn't
+  require a code edit.)
 
 ### Install
 
@@ -354,6 +380,68 @@ From a tailnet device:
 curl -s -o /dev/null -w "%{http_code}\n" \
   https://guru-web-prod.tailb5626e.ts.net/
 # → 200   (or 404 if /admin doesn't exist yet — normal pre-auth-gate)
+```
+
+If the tailnet curl returns `000` (no connection at all), it's
+almost always one of three things — see "Device-side DNS" below.
+
+### Device-side DNS
+
+The tailnet hostname only resolves on devices that route DNS
+queries to Tailscale's resolver at `100.100.100.100`. This works
+out of the box on most platforms but can quietly fail on Linux.
+Diagnostic ladder:
+
+```bash
+# 1. Tailscale connected?
+tailscale status | head -3
+
+# 2. MagicDNS resolver reachable?  (queries 100.100.100.100 directly)
+nslookup guru-web-prod.tailb5626e.ts.net 100.100.100.100
+#  → Address: 100.x.y.z   means Tailscale knows the name
+#  → NXDOMAIN              means MagicDNS isn't enabled — see Prereqs
+
+# 3. System resolver actually using Tailscale's resolver?
+getent hosts guru-web-prod.tailb5626e.ts.net
+#  → returns IP   working
+#  → empty        system resolver doesn't include 100.100.100.100
+```
+
+If step 2 works but step 3 doesn't, the OS is the problem. Two
+common cases:
+
+- **Linux without `systemd-resolved`** (Arch with no resolved
+  service, minimal containers). Tailscale's standard integration
+  hooks systemd-resolved; without it, glibc's resolver doesn't see
+  Tailscale's nameserver.
+
+  Fix — pick one:
+
+  ```bash
+  # Preferred: enable systemd-resolved + symlink resolv.conf.
+  sudo systemctl enable --now systemd-resolved
+  sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+  sudo systemctl restart tailscaled
+
+  # Hack: just prepend Tailscale's resolver to /etc/resolv.conf.
+  #   nameserver 100.100.100.100
+  # Reverts the next time something rewrites resolv.conf.
+
+  # One-shot for a single device, no DNS work needed:
+  echo '100.x.y.z guru-web-prod.tailb5626e.ts.net' | sudo tee -a /etc/hosts
+  # Use the IP from step 2.  Survives reboots.  Doesn't pick up
+  # Tailscale IP changes — fine for a stable VPS.
+  ```
+
+- **macOS / iOS / Android with the Tailscale app paused.** The OS
+  resolver routes via Tailscale only while the app is connected.
+  Reconnect and retry.
+
+The negative resolve gets cached, so after fixing the resolver:
+
+```bash
+sudo resolvectl flush-caches   # systemd-resolved
+# or just open a new terminal / browser private window
 ```
 
 ### Recovery — admin UI returns TLS error
