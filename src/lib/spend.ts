@@ -16,8 +16,9 @@
  * Limits are tier-driven and rewritten on every reserveBudget call, so
  * a tier upgrade/downgrade takes effect on the next request without
  * any extra plumbing.  Either axis being null means unenforced — today
- * free=10/null and pro=30/null; future pro will be null/$0.50 once the
- * model-selection UI ships.
+ * free=10/null and pro=100/$0.17 (model-selection BRD §6.2; the $0.17
+ * daily cap = $5/30, matching the BRD's $5/month framing under daily
+ * reset semantics — see analysis on todo:9a0dedf3).
  *
  * Period reset is lazy (no cron): when reserveBudget reads a row whose
  * reset_at <= now(), it zeros both counters and bumps reset_at to the
@@ -45,8 +46,13 @@ export interface ReserveResult extends BudgetState {
 }
 
 export const TIER_LIMITS: Record<Tier, { query_limit: number | null; usd_limit: number | null }> = {
-  free: { query_limit: 10, usd_limit: null },
-  pro:  { query_limit: 30, usd_limit: null },
+  free: { query_limit: 10,  usd_limit: null },
+  // Pro caps: query_limit is a soft secondary gate against runaway
+  // loops; usd_limit is the primary economic gate — at $0.17/day it
+  // forces self-regulation across the curated picker (DeepSeek user
+  // never hits cap; Sonnet user gets ~3-4/day before cap binds). See
+  // BRD-model-selection.md §3.2.
+  pro:  { query_limit: 100, usd_limit: 0.17 },
 } as const;
 
 const PERIOD = 'daily' as const;

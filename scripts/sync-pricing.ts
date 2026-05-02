@@ -54,6 +54,35 @@ export interface ModelPrice {
 // Keep these in sync with provider docs; small drift is fine, the next
 // successful network sync will correct it.
 const FALLBACK_PRICING: Record<string, ModelPrice> = {
+  // Picker defaults — every CURATED_MODELS entry in src/lib/model.ts
+  // gets a row here so a fresh-VPS sync during an OpenRouter outage
+  // still seeds rows for everything the live path can pick.
+  // BRD-model-selection.md §6.4. Bump alongside CURATED_MODELS.
+  'deepseek/deepseek-v4-pro': {
+    input_per_mtok: 0.435,
+    output_per_mtok: 0.870,
+    cached_input_per_mtok: 0.0036,
+  },
+  'x-ai/grok-4.3': {
+    input_per_mtok: 1.25,
+    output_per_mtok: 2.50,
+    cached_input_per_mtok: 0.20,
+  },
+  'anthropic/claude-sonnet-4.6': {
+    input_per_mtok: 3.0,
+    output_per_mtok: 15.0,
+    cached_input_per_mtok: 0.30,
+  },
+  'openai/gpt-5.4': {
+    input_per_mtok: 2.50,
+    output_per_mtok: 15.00,
+    cached_input_per_mtok: 0.25,
+  },
+
+  // One-release safety net: deepseek-chat and sonnet-4.5 stay so any
+  // queries already in flight against the previous tier defaults
+  // still cost-out correctly when the network sync hasn't run yet.
+  // Drop on the next bump after launch.
   'deepseek/deepseek-chat': {
     input_per_mtok: 0.14,
     output_per_mtok: 0.28,

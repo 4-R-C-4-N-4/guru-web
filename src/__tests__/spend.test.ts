@@ -141,12 +141,49 @@ describe('getBudget', () => {
 });
 
 describe('TIER_LIMITS', () => {
-  // Lock the live values — accidental drift fails CI loudly.
-  it('free tier: 10 queries, no USD cap (today)', () => {
+  // Lock the live values — accidental drift fails CI loudly. See
+  // BRD-model-selection.md §6.2 for the $0.17/day rationale.
+  it('free tier: 10 queries, no USD cap', () => {
     expect(TIER_LIMITS.free).toEqual({ query_limit: 10, usd_limit: null });
   });
 
-  it('pro tier: 30 queries, no USD cap (today)', () => {
-    expect(TIER_LIMITS.pro).toEqual({ query_limit: 30, usd_limit: null });
+  it('pro tier: 100 queries (soft) + $0.17/day USD cap (primary)', () => {
+    expect(TIER_LIMITS.pro).toEqual({ query_limit: 100, usd_limit: 0.17 });
+  });
+});
+
+describe('reserveBudget — pro dual-axis (model-selection BRD §3.2)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('rejects pro for usd reason at $0.17 cap even when queries_used is well below 100', async () => {
+    // Sonnet costs ~$0.045/query, so day 4 takes a pro user from
+    // ~$0.135 used to ~$0.18 — over the $0.17/day cap with only
+    // 4 queries against a 100/day soft limit.
+    mockExec.mockResolvedValueOnce(undefined);
+    mockOne.mockResolvedValueOnce(null); // increment WHERE excluded → null
+    mockOne.mockResolvedValueOnce({
+      queries_used: 3, usd_used: '0.135',
+      query_limit: 100, usd_limit: '0.17',
+    });
+
+    const result = await reserveBudget({ userId: 'u1', tier: 'pro', estimatedCostUsd: 0.045 });
+    expect(result).toMatchObject({
+      allowed: false,
+      reason: 'usd',
+      queries_used: 3,
+      usd_used: 0.135,
+      usd_limit: 0.17,
+    });
+  });
+
+  it('allows pro under both axes (DeepSeek at $0.005/query, day 1)', async () => {
+    mockExec.mockResolvedValueOnce(undefined);
+    mockOne.mockResolvedValueOnce({
+      queries_used: 1, usd_used: '0.005',
+      query_limit: 100, usd_limit: '0.17',
+    });
+
+    const result = await reserveBudget({ userId: 'u1', tier: 'pro', estimatedCostUsd: 0.005 });
+    expect(result).toMatchObject({ allowed: true, query_limit: 100, usd_limit: 0.17 });
   });
 });
