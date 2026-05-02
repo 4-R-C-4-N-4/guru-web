@@ -1,13 +1,13 @@
 {
   "id": "6e4e89c5",
   "type": "feature",
-  "state": "open",
+  "state": "active",
   "summary": "feat: model selection picker + USD budget cap",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:22:59.701Z",
-  "updated_at": "2026-05-02T16:23:29.732Z",
+  "updated_at": "2026-05-02T18:18:55.039Z",
   "description": "Umbrella for the model-selection feature. Implementation plan:\ndocs/model-selection/IMPL-model-selection.md. Spec:\ndocs/model-selection/BRD-model-selection.md.\n\nShips BRD §12 phases 1–2:\n  Phase 1 (C1–C4): server-side default switch + USD cap + sync\n  timer + CI guard. Addresses the cost concern on its own; no UI.\n  Phase 2 (C5–C7): pro picker UI + chat attribution + announcement\n  banner.\n  Phase 3 (C8): post-launch telemetry review.\n\nHard rules:\n  - C1 (schema + tier limits) and C2 (CURATED_MODELS map) land\n    before C3 (route integration).\n  - C4 (sync timer + CI guard) ships with C1–C3 — without it, the\n    first slug bump after launch can take down /api/query (BRD\n    §5.4: computeCost throws on missing pricing).\n  - C5 (picker UI) before C7 (banner links to /settings).\n\nCloses when all eight children close.",
   "tags": [
     "pricing",
@@ -26,5 +26,11 @@
       "f238dc42",
       "057792c7"
     ]
+  },
+  "work": {
+    "branch": "todo/6e4e89c5",
+    "base_branch": "main",
+    "started_at": "2026-05-02T18:18:55.039Z",
+    "started_by": "4-R-C-4-N-4"
   }
 }
