@@ -1,0 +1,24 @@
+{
+  "id": "497ff5ce",
+  "type": "chore",
+  "state": "open",
+  "summary": "C6: chat response attribution line (model + tokens + cost)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.664Z",
+  "updated_at": "2026-05-02T16:25:27.215Z",
+  "relationships": {
+    "parent": "6e4e89c5",
+    "depends_on": [
+      "ae3e5de8"
+    ]
+  },
+  "description": "Per-response attribution line in the chat view (BRD §7.4). Sourced\nfrom queries.model_used (resolved ID), queries.{input,output}_tokens,\nqueries.cost_usd — all already populated.\n\nFormat below each AI response:\n    claude-sonnet-4.6 · 4.2k tokens · \\$0.018\n\nFiles:\n  - src/components/chat-view.tsx — append a small <div> after each\n    AI message rendering the three values. ~15 lines.\n    tokens.text.muted colour, smaller than body, no border.\n  - src/lib/types.ts — extend message type if cost/tokens aren't\n    already plumbed.\n  - src/app/api/sessions/[id]/route.ts — verify GET response\n    includes cost/tokens columns; extend SELECT if not.\n  - src/__tests__/chat-view.test.ts (extend) — assert attribution\n    line renders with resolved model id + formatted cost.\n\nDone when:\n  - Every AI response shows '<model_used> · <tokens> · \\$<cost>'\n    below body.\n  - Model id matches queries.model_used for that query.\n  - Streaming responses get the line populated after\n    finalizeBudget writes the row (chat view re-fetch should\n    surface this on first render after stream completes).\n  - npm run lint clean.\n\nTests:\n  - Component: render with fixture message, assert text content.\n  - Smoke: query, verify line; switch picker, query, verify new\n    responses show new id while old responses still show old id.\n\nOperator action post-merge: none.\n\nDepends on: C3 (queries.model_used populated from resolved ID).",
+  "tags": [
+    "ui",
+    "chat",
+    "models",
+    "attribution"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "057792c7",
+  "type": "chore",
+  "state": "open",
+  "summary": "C8: post-launch telemetry review (model picker + cap)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.732Z",
+  "updated_at": "2026-05-02T16:25:27.461Z",
+  "relationships": {
+    "parent": "6e4e89c5",
+    "depends_on": [
+      "9a0dedf3",
+      "cfea2239",
+      "ae3e5de8",
+      "27e49cb9",
+      "f764d5dc",
+      "497ff5ce",
+      "f238dc42"
+    ]
+  },
+  "description": "Post-launch operator chore. BRD §12 phase 3. After one week in\nproduction, read the data and decide whether the curated list,\nthe cap, or both need adjustment.\n\nNo code change. Closing produces a short notes file (or comment\non the parent ticket) capturing what we learned.\n\nDone when a short note covers:\n  - Distribution of preferred_model across pro users (admin UI\n    users-list filtering or one-shot SQL).\n  - Distribution of cost_usd per pro user against the \\$5 cap —\n    histogram of monthly spend.\n  - Number of users hitting usd_limit before query_limit (the\n    'cap is binding' cohort).\n  - Number of users hitting query_limit first (signals cap is too\n    loose for actual usage).\n  - sync-pricing timer journal — drift events caught vs no-op\n    runs.\n  - Recommendations: keep / bump cap / change curated list /\n    change default. Each backed by a data point above.\n\nTests: none (review).\n\nOperator action: SSH to VPS, run the SQL queries, write up the\nnotes. Estimated ~30 min of analysis a week post-launch.\n\nDepends on: C1–C7 in production for ≥7 days.",
+  "tags": [
+    "telemetry",
+    "review",
+    "post-launch"
+  ]
+}

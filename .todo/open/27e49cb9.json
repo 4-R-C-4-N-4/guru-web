@@ -1,0 +1,25 @@
+{
+  "id": "27e49cb9",
+  "type": "chore",
+  "state": "open",
+  "summary": "C4: sync-pricing systemd timer + CI guard test + runbook",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.599Z",
+  "updated_at": "2026-05-02T16:25:27.124Z",
+  "relationships": {
+    "parent": "6e4e89c5",
+    "depends_on": [
+      "9a0dedf3",
+      "cfea2239"
+    ]
+  },
+  "description": "Three-layer pricing-sync safety net from BRD §8 — drift catcher,\nCI guard, runbook. Without this, the first slug bump after launch\ncan take down /api/query (BRD §5.4: computeCost throws on missing\nmodel_pricing row).\n\nFiles:\n  - deploy/sync-pricing.service (new) — oneshot, User=guru,\n    EnvironmentFile=/etc/guru-web.env, ExecStart=/usr/bin/npx tsx\n    /srv/guru-web/current/scripts/sync-pricing.ts.\n  - deploy/sync-pricing.timer (new) — OnCalendar=daily,\n    RandomizedDelaySec=15m, Persistent=true.\n  - deploy/README.md — new 'Pricing sync' section: install steps\n    (mirroring tailnet-cert-renew install), validation\n    (systemctl list-timers), recovery (manual npm run sync-pricing),\n    failure surface (journalctl -u sync-pricing).\n  - src/__tests__/curated-models.integration.test.ts (new) — for\n    each entry in CURATED_MODELS, assert getPricing(modelId,\n    new Date()) returns non-null. Skipped locally; runs in CI\n    against seeded test DB.\n  - CI workflow change — ensure test DB has fresh\n    'npm run sync-pricing' run before integration test.\n\nDone when:\n  - systemd-analyze verify on the new units passes locally.\n  - On VPS, systemctl list-timers shows sync-pricing.timer active.\n  - A scheduled run logs '[sync-pricing] done: seeded=N updated=M\n    unchanged=K' to journalctl -u sync-pricing.\n  - CI fails when CURATED_MODELS gains a value without a\n    corresponding model_pricing row.\n  - deploy/README.md 'Pricing sync' section is complete enough\n    for a fresh operator to install cold.\n\nTests: CI integration test IS the test. systemd units validated\nvia systemd-analyze locally + systemctl on VPS. No unit-test\nsurface for the sync script itself (already covered by\nsrc/__tests__/sync-pricing.test.ts from todo:fbd30eff).\n\nOperator action post-merge: one-time hand-patch on VPS,\nmirroring the tailnet-cert-renew install:\n  ssh root@guru-web-prod\n  SHA=$(ls -1t /srv/guru-web/releases | head -1)\n  install -m 0644 /srv/guru-web/releases/$SHA/deploy/sync-pricing.service /etc/systemd/system/\n  install -m 0644 /srv/guru-web/releases/$SHA/deploy/sync-pricing.timer   /etc/systemd/system/\n  systemctl daemon-reload\n  systemctl enable --now sync-pricing.timer\n\nDepends on: C1 (TIER_LIMITS for cap math; FALLBACK_PRICING for\nfresh-DB CI), C2 (CURATED_MODELS for the guard test).",
+  "tags": [
+    "pricing",
+    "ops",
+    "ci",
+    "runbook"
+  ]
+}
