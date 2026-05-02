@@ -1,0 +1,35 @@
+{
+  "id": "454b376f",
+  "type": "chore",
+  "state": "done",
+  "summary": "overview dashboard: /admin + /api/admin/overview + StatTile + TabularSparkline + AdminLayout",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-01T17:20:31.730Z",
+  "updated_at": "2026-05-01T20:38:45.918Z",
+  "files": [
+    {
+      "path": "src/app/(admin)/admin/page.tsx"
+    }
+  ],
+  "tags": [
+    "admin",
+    "observability",
+    "ui"
+  ],
+  "relationships": {
+    "parent": "e1899616",
+    "depends_on": [
+      "6cedb4d0"
+    ]
+  },
+  "description": "/admin renders BRD §1.5: stat tiles, two tabular sparklines (queries/day + spend/day, last 30 days, stacked by tier), top-10 users by spend, top-10 sessions by spend.  Replaces the placeholder from 6cedb4d0.\n\nMTD spend projection formula: (MTD spend / days_elapsed_in_month) × days_in_month.  Simple linear; defer fancier forecasts.  See BRD §1.5.\n\nFiles:\n  - src/app/(admin)/admin/page.tsx  (replace placeholder)\n  - src/app/(admin)/layout.tsx  (full <AdminLayout>: amber bar, left rail, content pane — design BRD §3.1)\n  - src/app/api/admin/overview/route.ts  (new, JSON)\n  - src/components/admin/StatTile.tsx  (new — design BRD §3.2)\n  - src/components/admin/TabularSparkline.tsx  (new — design BRD §3.4)\n  - src/lib/admin-queries.ts  (new — shared SQL helpers)\n  - src/__tests__/admin-overview.test.ts  (new)\n\nDone when:\n  - All stat tiles render with real numbers.\n  - Both sparkline blocks render side-by-side, last 30 days.\n  - Both top-10 tables render with row-click navigation links (404 until 5/6 land, fine for now).\n  - 'users at >80% of any budget axis' tile correctly handles usd_limit IS NULL (treats only queries axis when usd unenforced).\n  - /api/admin/overview 404s non-admins.\n  - Page loads <1s on seeded fixture, <2s on prod's current ~10-row dataset.\n\nTests:\n  - Endpoint contract: mock db, assert response shape.\n  - requireAdmin failure → 404.\n  - Smoke (manual): visit /admin from a tailnet device, eyeball every tile against parallel psql.",
+  "resolution": {
+    "commit": "d0dbb6cd593627eff56fe20ab1102b34df7367b5",
+    "resolved_at": "2026-05-01T20:38:45.918Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/admin-overview.test.ts",
+    "note": "Overview server component renders stat tiles + dual-tier sparklines + top-10 tables. /api/admin/overview returns the same payload for future client refresh. requireAdmin gates both layout and route. 5 new tests pass; full suite + tsc + build clean. Top-10 tables use inline tables here; ticket 5 swaps in <DataTable>."
+  }
+}

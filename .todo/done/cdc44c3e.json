@@ -1,0 +1,37 @@
+{
+  "id": "cdc44c3e",
+  "type": "chore",
+  "state": "done",
+  "summary": "users list + deep dive: DataTable + FilterPills + BudgetBar + CSV export",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-01T17:20:31.764Z",
+  "updated_at": "2026-05-01T20:47:04.832Z",
+  "files": [
+    {
+      "path": "src/app/(admin)/admin/users/page.tsx"
+    }
+  ],
+  "tags": [
+    "admin",
+    "users",
+    "observability",
+    "ui",
+    "csv"
+  ],
+  "relationships": {
+    "parent": "e1899616",
+    "depends_on": [
+      "454b376f"
+    ]
+  },
+  "description": "Users list (/admin/users) + deep dive (/admin/users/[id]) per BRD §1.6, §1.7, design §4.2, §4.3.  Includes CSV export per BRD §1.18 for both the list and per-user sessions.\n\nFiles:\n  - src/app/(admin)/admin/users/page.tsx  (new — list)\n  - src/app/(admin)/admin/users/[id]/page.tsx  (new — deep dive)\n  - src/app/api/admin/users/route.ts  (new — JSON list)\n  - src/app/api/admin/users/[id]/route.ts  (new — single-user JSON)\n  - src/app/api/admin/users.csv/route.ts  (new — streaming CSV, same filters as JSON)\n  - src/app/api/admin/users/[id]/sessions.csv/route.ts  (new — streaming CSV)\n  - src/components/admin/DataTable.tsx  (new — design §3.3)\n  - src/components/admin/FilterPills.tsx  (new — design §3.6)\n  - src/components/admin/BudgetBar.tsx  (new — design §3.5)\n  - src/components/admin/csv.ts  (new — small streaming writer, used by every .csv route)\n  - src/__tests__/admin-users.test.ts, admin-csv.test.ts\n\nDone when:\n  - List view: filters (tier/created within/has queried/search) drive URL params; sort headers update URL; pagination 50/page; Download CSV link in footer respects filter state.\n  - Deep dive: header strip with stat tiles + dual-axis budget bars; sessions list with row-click; preferences snapshot; recent rate-limit hits.\n  - <BudgetBar> renders correctly when usd_limit IS NULL ('no cap' tag, no bar).\n  - CSV export streams (verified by reading response with a slow client — no full body in Node memory).\n\nTests:\n  - Filter + sort URL state round-trips.\n  - Empty-state row renders when no matches.\n  - CSV endpoint emits headers + ≥1 row chunk separately (Response.body.getReader() calls).\n  - All endpoints 404 to non-admins (BRD §1.17 commitment).",
+  "resolution": {
+    "commit": "4b19f158a356f5d947e6adc16c70685451cecf30",
+    "resolved_at": "2026-05-01T20:47:04.832Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/admin-users.test.ts",
+    "note": "List view: tier/created/queried/search filter pills + URL-driven sort + 50/page + CSV download all in URL state. Deep dive: lifetime stat tiles + dual-axis BudgetBars (queries + USD, both null-handled) + sessions DataTable + preferences snapshot + 24h rate-limit hits. CSV streams via ReadableStream + paginated SELECT loop (no row materialisation across whole result set). All endpoints requireAdmin→404. 13 new tests; full suite + tsc + build clean."
+  }
+}

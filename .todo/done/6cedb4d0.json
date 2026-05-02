@@ -1,0 +1,45 @@
+{
+  "id": "6cedb4d0",
+  "type": "chore",
+  "state": "done",
+  "summary": "auth gate: requireAdmin + middleware + empty admin route group + tests",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-01T17:20:31.658Z",
+  "updated_at": "2026-05-01T20:30:58.244Z",
+  "files": [
+    {
+      "path": "src/lib/admin.ts"
+    }
+  ],
+  "tags": [
+    "admin",
+    "security",
+    "auth",
+    "middleware"
+  ],
+  "relationships": {
+    "parent": "e1899616",
+    "depends_on": [
+      "03c0d49e"
+    ]
+  },
+  "description": "src/lib/admin.ts exports requireAdmin() — same shape as requireUser() but checks ADMIN_USER_IDS env var.  Always 404 on miss (never 401/403).  middleware.ts gates /admin/* and /api/admin/*: non-admins rewrite to /_admin-404 before any handler runs; admin sessions older than 1h (token iat claim) bounce to /sign-in.  See BRD-admin-ui.md §1.1, §1.2, §1.13.\n\nFiles:\n  - src/lib/admin.ts  (new)\n  - src/middleware.ts  (edit)\n  - src/app/(admin)/admin/page.tsx  (new — placeholder 'ADMIN' until 454b376f)\n  - src/app/(admin)/layout.tsx  (new — minimal; 454b376f fleshes out)\n  - src/app/_admin-404/page.tsx  (new — re-renders standard Next 404)\n  - .env.example  (document ADMIN_USER_IDS)\n  - src/__tests__/admin.test.ts  (new)\n\nDone when:\n  - requireAdmin() returns 404 Response when: unauthenticated / not in allowlist / env unset.\n  - requireAdmin() returns User record when in allowlist (populated like requireUser).\n  - Middleware 404s non-admins on /admin/* + /api/admin/* before reaching any handler (handler-side spy verifies).\n  - Admin reaching /admin sees placeholder; non-admin sees Next 404 indistinguishable from a bogus path.\n  - Admin session > 1h forces re-auth on next admin request.\n  - npm run build + tsc --noEmit clean.\n\nTests (BRD §1.17):\n  - requireAdmin → 404 on each failure mode (3 cases).\n  - requireAdmin returns User when allowed.\n  - Middleware behaviour for /admin/* admin/non-admin/iat-too-old.\n  - Middleware does not affect non-admin paths.\n\nOperator action post-merge: set ADMIN_USER_IDS in /etc/guru-web.env, restart guru-web.",
+  "analysis": [
+    {
+      "timestamp": "2026-05-01T20:29:32.954Z",
+      "author": "4-R-C-4-N-4",
+      "type": "conclusion",
+      "content": "BRD/IMPL spec says rewrite target is /_admin-404. In Next.js App Router, top-level folders prefixed with _ are private/non-routable, so src/app/_admin-404 would never serve. Renamed the path to /admin-404 (no underscore) and updated Caddyfile + middleware to match. Functionally equivalent — purely a Next-convention-vs-spec mismatch.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "e17bb66d4b883c6b3c4724486aec25cd01e77c20",
+    "resolved_at": "2026-05-01T20:30:58.244Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/admin.test.ts",
+    "note": "requireAdmin returns 404 on all non-admin paths. Middleware gates /admin and /api/admin only — non-admins get a /admin-404 rewrite, admin sessions older than 1h get a /sign-in redirect. Non-admin paths untouched. 12 tests pass; tsc + build clean. Renamed BRD's /_admin-404 to /admin-404 (Next disallows _-prefixed top-level folders); analysis note records the deviation."
+  }
+}

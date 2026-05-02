@@ -1,0 +1,23 @@
+# deploy/tailnet-cert-renew.service
+#
+# Oneshot unit that regenerates the Tailscale TLS pair for the admin
+# listener and reloads Caddy. Fired by tailnet-cert-renew.timer; can
+# also be invoked manually via `systemctl start tailnet-cert-renew`
+# (e.g., after fixing a previously-failing renewal).
+#
+# Installed at /etc/systemd/system/tailnet-cert-renew.service.
+# See deploy/README.md "Tailnet admin listener".
+
+[Unit]
+Description=Renew Tailscale-issued TLS cert for the tailnet admin listener
+Documentation=https://github.com/your-org/guru-web/blob/main/deploy/README.md
+After=tailscaled.service network-online.target
+Wants=network-online.target
+Requires=tailscaled.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/tailnet-cert-renew
+# Don't restart on failure — failure means "previous cert stays in
+# place," which is the desired behaviour. The timer will retry on the
+# next scheduled run; an operator can also re-run by hand.

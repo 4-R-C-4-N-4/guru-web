@@ -1,0 +1,33 @@
+{
+  "id": "03c0d49e",
+  "type": "chore",
+  "state": "done",
+  "summary": "tailnet ingress: Caddy listener split + Tailscale cert renewal timer",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-01T17:20:31.622Z",
+  "updated_at": "2026-05-01T19:50:27.385Z",
+  "files": [
+    {
+      "path": "deploy/Caddyfile"
+    }
+  ],
+  "tags": [
+    "admin",
+    "security",
+    "caddy",
+    "tailscale",
+    "infra"
+  ],
+  "relationships": {
+    "parent": "e1899616"
+  },
+  "description": "deploy/Caddyfile gains a tailnet listener bound to guru-web-prod.<tailnet>.ts.net.  Public listener gains @admin matcher rewriting to /_admin-404 (so the rejection page shape matches a normal Next 404).  Tailscale cert renewal happens out-of-band via a daily systemd timer running 'tailscale cert' to disk; Caddy reads files like any other TLS pair.  See BRD-admin-ui.md §0.1 + §0.3.\n\nFiles:\n  - deploy/Caddyfile  (edit)\n  - deploy/tailnet-cert-renew.sh  (new)\n  - deploy/tailnet-cert-renew.service  (new, oneshot)\n  - deploy/tailnet-cert-renew.timer  (new, daily)\n  - deploy/README.md  (new 'Tailnet admin listener' install + recovery procedures)\n\ndeploy/vps-bootstrap.sh stays untouched — bootstrap is one-shot, admin install is a deliberate hand-patch.\n\nDone when:\n  - 'caddy validate' passes locally and on VPS.\n  - curl https://guru-ai.org/admin/ → Next-style 404 (not bare Caddy 404).\n  - curl https://guru-web-prod.<tailnet>.ts.net/admin/ from a tailnet device reaches Next.js (will 404 the empty admin route until 6cedb4d0 lands).\n  - systemctl list-timers shows tailnet-cert-renew.timer active.\n  - Manual /usr/local/bin/tailnet-cert-renew regenerates files + reloads Caddy.\n\nTests: manual smoke (curl + systemctl) — documented in deploy/README.md.  No unit-test surface; see IMPL §1.\n\nOperator action post-merge: copy Caddyfile + units onto the VPS, validate, reload caddy, install timer.  Sequence in deploy/README.md.",
+  "resolution": {
+    "commit": "7e518a5ce91c8fa48b0901f230aa93894e3ef252",
+    "resolved_at": "2026-05-01T19:50:27.385Z",
+    "resolved_by": "unknown",
+    "note": "Caddyfile listener split + tailnet-cert-renew script/service/timer + runbook section. Caddy validate is operator-side; bash -n + systemd-analyze on the new units pass locally (service warns the binary isn't installed at /usr/local/bin yet, expected — happens during VPS install per README)."
+  }
+}

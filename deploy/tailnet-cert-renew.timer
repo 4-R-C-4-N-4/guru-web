@@ -1,0 +1,23 @@
+# deploy/tailnet-cert-renew.timer
+#
+# Daily timer that fires tailnet-cert-renew.service. Tailscale-issued
+# certs are 90 days; daily renewal gives ~89 days of headroom against
+# any single failed run. Persistent=true means a missed run (host
+# offline at the scheduled time) catches up on next boot.
+#
+# Installed at /etc/systemd/system/tailnet-cert-renew.timer; enable
+# with `systemctl enable --now tailnet-cert-renew.timer`.
+# See deploy/README.md "Tailnet admin listener".
+
+[Unit]
+Description=Daily renewal of the tailnet admin listener TLS cert
+Documentation=https://github.com/your-org/guru-web/blob/main/deploy/README.md
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=15m
+Persistent=true
+Unit=tailnet-cert-renew.service
+
+[Install]
+WantedBy=timers.target
