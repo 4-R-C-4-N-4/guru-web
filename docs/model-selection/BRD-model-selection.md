@@ -30,8 +30,10 @@ deliberately curated.
    Daily $0.20 cap → $5/30d budget. Math in §3. The dual-axis
    enforcement code in `src/lib/spend.ts` already handles this; only
    `TIER_LIMITS` changes.
-4. **Stable slug indirection** ("frontier-X") lets us bump versions
-   without touching user data. §5.
+4. **Stable provider-name slug** (`anthropic`, `openai`, `xai`,
+   `deepseek`) lets us bump versions without touching user data,
+   while keeping the picker honest — the user always sees the
+   actual model ID alongside the slug. §5.
 
 The architecture for both moves already exists. This is mostly
 config + UI + a small server-side resolver.
@@ -142,23 +144,25 @@ $5; bump if churn data says it's too tight.
 
 Single model, no picker.
 
-| Slug | OpenRouter ID | Why |
+| Slug | Resolves to (today) | Why |
 |---|---|---|
-| `frontier-deepseek` | `deepseek/deepseek-v4-pro` | Best floor on quality+price. Replaces `deepseek-chat`. |
+| `deepseek` | `deepseek/deepseek-v4-pro` | Best floor on quality+price. Replaces `deepseek-chat`. |
 
 Free user lifetime cost ceiling: 10 queries/day × 30 days × $0.0052
 = **$1.56/mo** (no USD cap needed; query cap dominates).
 
 ### 4.2 Pro tier
 
-Four-option picker. Stable slugs map to current OpenRouter IDs:
+Four-option picker. Slugs are the **provider name**; the resolved
+OpenRouter ID is shown alongside the slug in the picker so the user
+always knows the actual model.
 
-| Slug | OpenRouter ID | Provider | Vibe |
-|---|---|---|---|
-| `frontier-deepseek` *(default)* | `deepseek/deepseek-v4-pro` | DeepSeek | Cheap, fast, surprisingly capable on this corpus. |
-| `frontier-xai` | `x-ai/grok-4.3` | X.AI | Mid-cost, current-events fluency, conversational. |
-| `frontier-anthropic` | `anthropic/claude-sonnet-4.6` | Anthropic | Best on long-context reasoning over esoteric texts. |
-| `frontier-openai` | `openai/gpt-5.4` | OpenAI | Premium-quality, slightly cheaper than Sonnet. |
+| Slug | Resolves to (today) | Vibe |
+|---|---|---|
+| `deepseek` *(default)* | `deepseek/deepseek-v4-pro` | Cheap, fast, surprisingly capable on this corpus. |
+| `xai` | `x-ai/grok-4.3` | Mid-cost, current-events fluency, conversational. |
+| `anthropic` | `anthropic/claude-sonnet-4.6` | Best on long-context reasoning over esoteric texts. |
+| `openai` | `openai/gpt-5.4` | Premium-quality, slightly cheaper than Sonnet. |
 
 Why GPT-5.4 not 5.5: 5.5 is $5/$30/Mtok, ~80% more expensive than
 5.4 for marginal quality gain at this workload. We can revisit when
@@ -187,17 +191,19 @@ versions ship — without "Anthropic finally released Sonnet 5" being
 a five-step manual re-pick for every pro user. OpenRouter doesn't
 have a `:latest` alias to delegate this to; every ID is pinned.
 
-### 5.1 Slug indirection (chosen)
+### 5.1 Provider-name slug + model surface (chosen)
 
-User picks a slug. The slug → ID map lives in code:
+User picks a slug — `anthropic`, `openai`, `xai`, or `deepseek`.
+Slugs are stable; the OpenRouter ID they resolve to is bumped by
+the operator on new releases. Map lives in code:
 
 ```ts
 // src/lib/model.ts (additive)
 export const CURATED_MODELS = {
-  'frontier-deepseek':  'deepseek/deepseek-v4-pro',
-  'frontier-xai':       'x-ai/grok-4.3',
-  'frontier-anthropic': 'anthropic/claude-sonnet-4.6',
-  'frontier-openai':    'openai/gpt-5.4',
+  deepseek:  'deepseek/deepseek-v4-pro',
+  xai:       'x-ai/grok-4.3',
+  anthropic: 'anthropic/claude-sonnet-4.6',
+  openai:    'openai/gpt-5.4',
 } as const;
 export type CuratedSlug = keyof typeof CURATED_MODELS;
 ```
@@ -209,13 +215,35 @@ resolved ID (already true today). When we bump a slug → ID mapping:
 1. PR edits the map.
 2. `npm run sync-pricing` populates `model_pricing` for the new ID
    if it's not there yet.
-3. Deploy. Existing pro users with `frontier-anthropic` saved get
-   the new ID on their next query without any user action.
+3. Deploy. Existing pro users with `anthropic` saved get the new
+   ID on their next query without any user action.
 4. The historical record in `queries` and `model_pricing` stays
    correct — old queries reference old IDs at old prices.
 
+The slug is operator-facing config. The user always sees the
+**resolved model ID** in two places:
+
+1. **Picker option label.** Each row in the settings picker reads
+   like `Anthropic — claude-sonnet-4.6` (provider title-cased,
+   model from `CURATED_MODELS[slug]`). When we bump Anthropic to
+   Sonnet 5, the label updates automatically — no copy migration.
+2. **Per-response attribution line.** Below every AI response in
+   the chat view, a small mono-font line: `claude-sonnet-4.6 ·
+   1.4k tokens · $0.021`. Sourced from `queries.model_used`,
+   `queries.{input,output}_tokens`, and `queries.cost_usd`. The
+   first field is the resolved ID, so the user can see exactly
+   which model produced this answer — useful for diagnostics
+   ("Sonnet wrote this one but DeepSeek wrote that one") and for
+   comparing answers across the picker.
+
+The combination is what makes the indirection honest: a stable
+slug for "I prefer this provider" + a real model name in every
+place the user could care about it. The slug is not user-facing
+copy ("Anthropic"), it's a config primitive.
+
 Stripe-style: subscriptions sit on stable products; we change what
-the product points at on our side.
+the product points at on our side, and we tell the user exactly
+what they got.
 
 ### 5.2 Why not store OpenRouter IDs directly
 
@@ -227,6 +255,10 @@ problems:
   operator. Silent rollouts become impossible.
 - Stale preference rows accumulate across deprecated IDs that
   OpenRouter eventually retires; we'd need a migration each time.
+- The picker label and the chat attribution line stop disagreeing —
+  with slug indirection, both surfaces read from the same resolved
+  ID, so a user who picks "Anthropic — claude-sonnet-4.6" today
+  sees "claude-sonnet-5" on responses post-bump without confusion.
 
 The slug indirection costs one short map and one resolver call. The
 audit trail (resolved ID in `queries.model_used`) is preserved.
@@ -234,7 +266,7 @@ audit trail (resolved ID in `queries.model_used`) is preserved.
 ### 5.3 When to bump
 
 Operator action. Triggers:
-- Anthropic releases Sonnet 5 → bump `frontier-anthropic`.
+- Anthropic releases Sonnet 5 → bump the `anthropic` entry in `CURATED_MODELS`.
 - Provider deprecates an ID we point at → forced bump (OpenRouter
   emails about this; also visible in the admin UI overview when
   spend on that model goes to zero unexpectedly).
@@ -270,7 +302,7 @@ ALTER TABLE user_preferences
 
 Nullable. Null means "use the tier default" (resolved at request
 time from `MODELS[tier]` for legacy semantics, or
-`CURATED_MODELS['frontier-deepseek']` after this BRD lands). Storing
+`CURATED_MODELS['deepseek']` after this BRD lands). Storing
 the slug, not the resolved ID.
 
 Validation: server-side check on write that the value is a key of
@@ -324,7 +356,7 @@ Pseudocode:
 const tier = user.tier;
 const slug = tier === 'pro' && prefs.preferred_model
            ? prefs.preferred_model
-           : 'frontier-deepseek';                     // tier default
+           : 'deepseek';                              // tier default
 const modelId = CURATED_MODELS[slug];
 
 // reserveBudget against $0.20/day & $5/30d cap (computed estimate
@@ -338,30 +370,55 @@ const response = await complete(prompt, modelId);
 
 ### 7.3 Settings UI
 
-`/settings` gains a "Model" section, **pro-only**. Native HTML
-`<select>` styled with tokens. Four options listed by the slug's
-human label + a tiny price hint:
+`/settings` gains a "Model" section, **pro-only**. Four radio
+options. Each row reads as `<provider> — <resolved model id>`,
+with a price hint and short vibe description:
 
 ```
 Model:
-  [○] DeepSeek      cheap, fast            ~$0.005/query
-  [○] X.AI Grok     mid-cost, fluent       ~$0.015/query
-  [●] Anthropic     premium reasoning      ~$0.045/query
-  [○] OpenAI        premium                ~$0.040/query
+  [○] DeepSeek  — deepseek-v4-pro     cheap, fast            ~$0.005/query
+  [○] X.AI      — grok-4.3            mid-cost, fluent       ~$0.015/query
+  [●] Anthropic — claude-sonnet-4.6   premium reasoning      ~$0.045/query
+  [○] OpenAI    — gpt-5.4             premium                ~$0.040/query
 ```
 
-The price hints are static strings sourced from this BRD's table at
-PR time; they're approximate guidance, not real-time. Real-time
-"you've used $X.XX of $5.00 this period" lives below the picker
-using existing `/api/quota` data (already returns dual-axis).
+The model-id portion is rendered from `CURATED_MODELS[slug]` at
+render time — when the operator bumps Anthropic to Sonnet 5, this
+row updates with no copy change. The price hints are static
+strings sourced from this BRD's table at PR time; they're
+approximate guidance, not real-time. Real-time "you've used $X.XX
+of $5.00 this period" lives below the picker using existing
+`/api/quota` data (already returns dual-axis).
 
 Free users see the section disabled with a "Pro only" tag and a
 link to upgrade.
 
+### 7.4 Chat response attribution
+
+Each AI response in the chat view gets a small mono-font line
+below the rendered text:
+
+```
+gpt-5.4 · 4.2k tokens · $0.018
+```
+
+Sourced from `queries.model_used` (resolved ID), the token columns,
+and `cost_usd`. This is the user-facing "what model produced this"
+surface. It also makes pricing legible per response — useful both
+for the user's own budgeting and for picker comparisons (run the
+same query through two different picker choices and compare both
+the answer and the cost line).
+
+`tokens.text.muted` colour, smaller than body, no border or
+background. Doesn't compete visually with the response itself.
+Existing `<ChatView>` already has the data plumbed in — this is
+~15 lines.
+
 ### 7.4 Admin UI
 
 No changes needed beyond what already shipped. The user deep dive's
-preferences snapshot will display `preferred_model: frontier-…`; the
+preferences snapshot will display `preferred_model: anthropic` (or
+whichever provider slug); the
 session/query deep dives already show the resolved `model_used` per
 query and the `model_pricing` row used. The dual-axis BudgetBar
 already renders the now-non-null `usd_limit` correctly (BRD §1.7
@@ -399,7 +456,7 @@ Single-migration, single-PR, zero-downtime:
    atomic UPSERT rewrites `usd_limit` per user. No backfill needed.
 3. Free users transition from `deepseek-chat` to `deepseek-v4-pro`
    silently; cost difference is rounding error.
-4. Pro users on Sonnet 4.5 transition to **`frontier-deepseek`** as
+4. Pro users on Sonnet 4.5 transition to **`deepseek`** as
    the new default, **even if they were happy on Sonnet**. The
    settings UI ships in the same PR; an in-app one-time banner on
    `/chat` for pro users links to settings: "Pro now lets you pick
@@ -430,7 +487,7 @@ Without it the silent default switch surprises users mid-session.
 - `src/__tests__/model.test.ts` (new) — `CURATED_MODELS` slugs are
   exhaustive; resolver returns correct ID; unknown slug throws.
 - `src/__tests__/api.test.ts` (extend) — `/api/query` with
-  `preferred_model = 'frontier-anthropic'` calls `complete()` with
+  `preferred_model = 'anthropic'` calls `complete()` with
   `anthropic/claude-sonnet-4.6`; `null` falls through to default.
 - `src/__tests__/spend.test.ts` (extend) — `reserveBudget` denies
   when `usd_used + estimate > usd_limit` even when `queries_used <
@@ -441,7 +498,7 @@ Without it the silent default switch surprises users mid-session.
 Smoke check post-deploy:
 ```bash
 # Each curated slug round-trips a real OpenRouter call
-for slug in frontier-{deepseek,xai,anthropic,openai}; do
+for slug in deepseek xai anthropic openai; do
   curl -X POST $TEST_URL/api/query \
     -H "Cookie: $PRO_USER_SESSION" \
     -d '{"query":"hi","preferred_model":"'$slug'"}' \
