@@ -279,14 +279,23 @@ the new row in `model_pricing`, open PR, merge. No data migration.
 
 ### 5.4 What if a slug points at a now-missing ID
 
-Defense in depth: the `complete()` call resolves the slug at query
-time. If the resolved ID isn't in `model_pricing`, the cost
-calculation falls back to zero (existing behaviour) and the query
-still completes — OpenRouter has a stable ID even if our pricing
-sync is stale. Admin UI's overview surfaces "queries with NULL
-cost_usd" as a soft alarm. **Won't ship a stricter check** because
-"refuse to serve user query because of internal accounting state"
-is the wrong prioritisation.
+`computeCost` (`src/lib/cost.ts:97`) **throws** if no
+`model_pricing` row covers the model at the query's timestamp.
+`/api/query` 500s — the user sees a hard error.
+
+This is the existing behaviour and it's the right default for our
+scale: failing fast surfaces the operator's missed step (forgetting
+to sync after a slug bump) immediately, against one user request,
+not weeks later when reconciling against the OpenRouter bill. The
+alternative (silent null-cost rows + a soft admin alarm) is the
+right move post-scale; for now the daily timer in §8 + the PR-time
+sync step keep the missing-row case out of the live path.
+
+Mitigation that **does** ship: §8 codifies the slug-bump workflow
+as `edit map → sync → PR`, with a CI check that errors if any
+value in `CURATED_MODELS` doesn't have a pricing row at HEAD time.
+That's enough to make "I forgot to sync" a CI failure, not a
+production failure.
 
 ---
 
@@ -335,6 +344,18 @@ binds first; no logic changes (`src/lib/spend.ts:101`).
 `anthropic`, `openai`, `x-ai`, `deepseek` — the four providers in
 the picker. Operator runs `npm run sync-pricing` once before merge;
 the new IDs land in `model_pricing` automatically.
+
+### 6.4 FALLBACK_PRICING needs a refresh in this PR
+
+`scripts/sync-pricing.ts` carries a small `FALLBACK_PRICING` map
+used when OpenRouter is unreachable during a sync. Today it covers
+only `deepseek/deepseek-chat` and `anthropic/claude-sonnet-4.5` —
+the two currently-routed models. Update at the same time as the
+`CURATED_MODELS` map so a fresh-VPS sync during an OpenRouter
+outage still seeds rows for every picker model. Five entries
+total: the four picker IDs + `deepseek/deepseek-chat` (kept for
+one release as a safety net for any in-flight queries that
+haven't been re-routed yet).
 
 ---
 
@@ -426,23 +447,107 @@ prophesied this).
 
 ---
 
-## 8 Operator workflow on a model release
+## 8 Pricing sync — periodic, on-bump, and CI
 
-Captures the full bump cycle so future-you isn't reverse-engineering
-this from the code:
+The slug-indirection design rests on `model_pricing` being current
+for any ID `CURATED_MODELS` resolves to. Three layers:
+
+### 8.1 Daily systemd timer (drift catcher)
+
+`scripts/sync-pricing.ts` is operator-run today. Promote it to a
+daily timer on the VPS, mirroring the `tailnet-cert-renew.timer`
+pattern from the admin observability layer:
+
+- `deploy/sync-pricing.service` — oneshot. `Type=oneshot`,
+  `User=guru` (so `DATABASE_URL` is in the right env), `ExecStart=
+  /usr/bin/npx tsx /srv/guru-web/current/scripts/sync-pricing.ts`
+  with `EnvironmentFile=/etc/guru-web.env`.
+- `deploy/sync-pricing.timer` — `OnCalendar=daily`,
+  `RandomizedDelaySec=15m`, `Persistent=true`.
+- `deploy/README.md` "Pricing sync" section — install steps mirror
+  the cert-renewal install: copy units, `systemctl daemon-reload`,
+  `systemctl enable --now sync-pricing.timer`.
+
+Why daily: the script is idempotent (no-op when prices match), and
+provider price changes happen on the order of weeks-to-months. A
+nightly run catches drift within 24h, which is fine — even at 30
+queries/day across all pro users, a 24h price-drift window is
+single-digit-dollars of accounting variance.
+
+Failure mode: timer silently failing for weeks while OpenRouter
+ships price changes. Same posture as the cert renewal:
+`journalctl -u sync-pricing` and `systemctl list-timers` are the
+diagnostic surfaces; document in the runbook.
+
+### 8.2 PR-time sync (slug-bump workflow)
+
+When the operator bumps `CURATED_MODELS` (or adds a new entry),
+the daily timer would catch up within 24h — but the BRD §5.4 throw
+behaviour means the first user query after deploy throws if the
+new ID isn't seeded yet. So the bump procedure includes an
+explicit pre-merge sync:
 
 1. Confirm the new ID exists on OpenRouter
-   (`curl -sS https://openrouter.ai/api/v1/models | jq '.data[].id' | grep <pattern>`).
+   (`curl -sS https://openrouter.ai/api/v1/models | jq -r '.data[].id' | grep <pattern>`).
 2. Eyeball pricing: is it within the cap budget assumption? If a
-   provider drops a 2× more expensive flagship, may need to keep the
-   old ID pinned and skip a generation.
+   provider drops a 2× more expensive flagship, may need to keep
+   the old ID pinned and skip a generation.
 3. Edit `CURATED_MODELS` in `src/lib/model.ts`.
-4. `npm run sync-pricing` to seed the new row.
-5. Update the BRD §3 pricing table (this section bit-rots; freshen
-   it on every bump).
-6. PR; merge after CI green.
-7. Spot-check the next user query in the admin UI — `model_used`
+4. Run `npm run sync-pricing` against **production DATABASE_URL**
+   (or run via SSH on the VPS) to seed the new row before merge.
+5. Update `FALLBACK_PRICING` in the same file with the new ID.
+6. Update the BRD §3 pricing table (this section bit-rots;
+   freshen it on every bump).
+7. PR; merge after CI green.
+8. Spot-check the next user query in the admin UI — `model_used`
    should be the new ID with a fresh `pricing_effective_from`.
+
+### 8.3 CI guard against forgetting the sync
+
+The throw-on-missing behaviour is a foot-gun in the slug-bump
+workflow if the operator skips step 4. Add a CI test that fails
+when any value in `CURATED_MODELS` lacks a row in `model_pricing`
+at HEAD time:
+
+```ts
+// src/__tests__/curated-models.integration.test.ts
+// Skipped locally; runs only when DATABASE_URL points at a seeded
+// DB (CI's test DB is seeded by the migration runner).
+import { CURATED_MODELS } from '@/lib/model';
+import { getPricing } from '@/lib/cost';
+
+for (const [slug, modelId] of Object.entries(CURATED_MODELS)) {
+  it(`${slug} → ${modelId} has a current model_pricing row`, async () => {
+    const row = await getPricing(modelId, new Date());
+    expect(row).not.toBeNull();
+  });
+}
+```
+
+This makes "I forgot to sync" a red CI run, not a production 500.
+The test obviously requires CI to run sync-pricing or have a
+seeded fixture DB; the integration-test seed step is a one-line
+addition to the existing CI workflow.
+
+### 8.4 Why not lazy-sync on missing-row in /api/query
+
+Considered. `/api/query` could detect a missing row, run sync
+inline, retry. Rejected:
+
+- Hot-path complexity for a cold-path problem. Daily timer +
+  PR-time sync covers 99.9% of cases.
+- Sync makes a network call to OpenRouter and writes to the DB;
+  lazy-sync inside a request blocks that request on a 1–10s
+  external dependency.
+- Concurrent requests for the same missing model would all run
+  sync simultaneously without coordination — race condition on
+  the append-new-row + bump-old-effective_to transaction.
+- The throw is a useful operator signal; silently healing it
+  hides the root-cause bug ("I shipped a slug bump without
+  syncing").
+
+Revisit only if telemetry shows missing-row throws happening
+post-launch despite the CI guard.
 
 ---
 
@@ -510,22 +615,33 @@ done
 
 ## 12 Implementation phases
 
-1. **Schema + server-side defaults** — migration 009, `TIER_LIMITS`
-   change, `CURATED_MODELS` map, `/api/query` resolver. Free users
+1. **Schema + server-side defaults + sync timer + CI guard** —
+   migration 009, `TIER_LIMITS` change, `CURATED_MODELS` map,
+   `/api/query` resolver, `FALLBACK_PRICING` refresh,
+   `sync-pricing.{service,timer}` units + runbook section, CI
+   integration test that every slug has a pricing row. Free users
    silently move to `deepseek-v4-pro`. Pro users silently move to
    the same default. No UI changes yet.
-2. **Settings UI** — pro picker, preference write, in-app banner
-   for the default-switch announcement.
+2. **Settings UI + chat attribution** — pro picker (showing
+   resolved model id per row, §7.3), per-response attribution line
+   (§7.4), preference write, in-app banner for the default-switch
+   announcement.
 3. **Telemetry pass** — after one week, look at:
    - which slugs pro users actually pick (admin UI users list +
      deep dives surface `preferred_model`),
    - distribution of `cost_usd` per pro user against the $5 cap,
    - any users hitting cap before query cap (signals whether USD or
-     query is the binding constraint in practice).
+     query is the binding constraint in practice),
+   - sync-pricing timer journal — drift events caught vs
+     no-op runs.
 4. **Reactive bumps** — adjust the curated list, the cap, or both
-   based on §12.3 data. Each is a one-line PR.
+   based on §12.3 data. Each is a one-line PR (plus the §8.2
+   sync workflow).
 
 Phase 1 is shippable on its own and is the minimum that addresses
-the original cost concern. Phase 2 is the UX that justifies pro
-pricing being model-flexible. Phase 3+ is how we keep the picker
-honest over time.
+the original cost concern. The sync timer and CI guard are bundled
+into phase 1 deliberately — they're the safety net for the
+throw-on-missing-pricing behaviour, and shipping the picker
+without them invites the first slug-bump to take down /api/query.
+Phase 2 is the UX that justifies pro pricing being model-flexible.
+Phase 3+ is how we keep the picker honest over time.
