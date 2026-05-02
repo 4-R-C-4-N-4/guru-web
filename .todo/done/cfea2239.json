@@ -1,13 +1,13 @@
 {
   "id": "cfea2239",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "C2: CURATED_MODELS map + slug resolver in lib/model.ts",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:23:29.537Z",
-  "updated_at": "2026-05-02T16:24:06.425Z",
+  "updated_at": "2026-05-02T18:23:55.458Z",
   "relationships": {
     "parent": "6e4e89c5"
   },
@@ -16,5 +16,12 @@
     "models",
     "pricing",
     "slug-indirection"
-  ]
+  ],
+  "resolution": {
+    "commit": "3b0507881a5101ecb7c8bfd52d586a68d4491c87",
+    "resolved_at": "2026-05-02T18:23:55.458Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/model.test.ts",
+    "note": "CURATED_MODELS const + CuratedSlug type + DEFAULT_CURATED_SLUG + resolveCuratedModel() + isCuratedSlug() type guard. 9 tests pass; tsc clean. Existing MODELS const retained for backwards compat during phase 1."
+  }
 }
