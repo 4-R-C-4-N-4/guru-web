@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { CURATED_MODELS, type CuratedSlug } from '@/lib/model';
 
 // Catalog comes from /api/corpus (DISTINCT tradition/text from chunks).
 // Empty/error states are rendered as-is — no hardcoded fallback. If this UI
@@ -11,6 +12,16 @@ type TraditionsState = Record<string, { active: boolean; texts: Record<string, b
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
+// Picker copy. The model id portion comes from CURATED_MODELS at
+// render time — when the operator bumps a slug, the row updates
+// with no copy change. Spec: BRD-model-selection.md §7.3.
+const PICKER_OPTIONS: { slug: CuratedSlug; label: string; vibe: string; pricePerQuery: string }[] = [
+  { slug: 'deepseek',  label: 'DeepSeek',  vibe: 'cheap, fast',         pricePerQuery: '~$0.005' },
+  { slug: 'xai',       label: 'X.AI',      vibe: 'mid-cost, fluent',    pricePerQuery: '~$0.015' },
+  { slug: 'anthropic', label: 'Anthropic', vibe: 'premium reasoning',   pricePerQuery: '~$0.045' },
+  { slug: 'openai',    label: 'OpenAI',    vibe: 'premium',             pricePerQuery: '~$0.040' },
+];
+
 export default function SettingsPage() {
   const mobile = useIsMobile();
   const [traditions, setTraditions] = useState<TraditionsState>({});
@@ -18,9 +29,13 @@ export default function SettingsPage() {
   const [expanded,  setExpanded]    = useState<string | null>(null);
   const [saving,    setSaving]      = useState(false);
   const [saved,     setSaved]       = useState(false);
+  const [tier,      setTier]        = useState<'free' | 'pro' | null>(null);
+  const [preferredModel, setPreferredModel] = useState<CuratedSlug | null>(null);
+  const [modelSaving, setModelSaving] = useState(false);
 
   // Fetch the corpus catalog + the user's blocked-tradition prefs together,
-  // so we can mark blocked entries inactive in a single setState.
+  // so we can mark blocked entries inactive in a single setState. Also pull
+  // tier + preferred_model so the Model section renders in the same paint.
   useEffect(() => {
     Promise.all([
       fetch('/api/corpus').then(r => {
@@ -29,10 +44,14 @@ export default function SettingsPage() {
       }),
       fetch('/api/preferences').then(r => {
         if (!r.ok) throw new Error(`preferences ${r.status}`);
-        return r.json() as Promise<{ scopeMode: string; blockedTraditions: string[] }>;
+        return r.json() as Promise<{ scopeMode: string; blockedTraditions: string[]; preferredModel: string | null }>;
+      }),
+      fetch('/api/quota').then(r => {
+        if (!r.ok) throw new Error(`quota ${r.status}`);
+        return r.json() as Promise<{ tier: 'free' | 'pro' }>;
       }),
     ])
-      .then(([corpus, prefs]) => {
+      .then(([corpus, prefs, quota]) => {
         const blocked = new Set(
           prefs.scopeMode === 'blacklist' ? prefs.blockedTraditions : []
         );
@@ -45,10 +64,32 @@ export default function SettingsPage() {
           };
         }
         setTraditions(next);
+        setTier(quota.tier);
+        setPreferredModel(
+          prefs.preferredModel && prefs.preferredModel in CURATED_MODELS
+            ? (prefs.preferredModel as CuratedSlug)
+            : null,
+        );
         setStatus('ready');
       })
       .catch(() => setStatus('error'));
   }, []);
+
+  const handleModelChange = async (slug: CuratedSlug) => {
+    if (slug === preferredModel) return;
+    setModelSaving(true);
+    setPreferredModel(slug);  // optimistic
+    const res = await fetch('/api/preferences', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ preferredModel: slug }),
+    }).catch(() => null);
+    setModelSaving(false);
+    if (!res || !res.ok) {
+      // Roll back on failure — surface state to the user.
+      setPreferredModel(preferredModel);
+    }
+  };
 
   const toggleTradition = (name: string) => {
     setTraditions(prev => {
@@ -94,8 +135,70 @@ export default function SettingsPage() {
   const activeTexts = Object.values(traditions).flatMap(t => t.active ? Object.values(t.texts).filter(Boolean) : []).length;
   const activeTrad  = Object.values(traditions).filter(t => t.active).length;
 
+  // Resolved-id fallback for display when no preference saved.
+  const activeSlug: CuratedSlug = preferredModel ?? 'deepseek';
+
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: mobile ? '16px 14px' : 24 }}>
+      {/* Model section — pro picker, free disabled. */}
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>
+        Model
+        {tier === 'free' && (
+          <span style={{ marginLeft: 8, color: tokens.text.accent, fontSize: 9 }}>PRO ONLY</span>
+        )}
+      </div>
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 12 }}>
+        {tier === 'free'
+          ? <>Default: {CURATED_MODELS.deepseek}. <a href="/account" style={{ color: tokens.text.link }}>Upgrade to pick</a>.</>
+          : modelSaving ? 'saving…' : `current: ${CURATED_MODELS[activeSlug]}`}
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        {PICKER_OPTIONS.map((opt) => {
+          const isActive = preferredModel === opt.slug || (preferredModel === null && opt.slug === 'deepseek');
+          const disabled = tier !== 'pro';
+          return (
+            <label
+              key={opt.slug}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: mobile ? '12px 12px' : '10px 14px',
+                background: tokens.bg.surface,
+                border: `1px solid ${isActive ? tokens.text.accent + '55' : tokens.border.subtle}`,
+                borderRadius: 4,
+                marginBottom: 5,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+              }}
+            >
+              <input
+                type="radio"
+                name="preferredModel"
+                value={opt.slug}
+                checked={isActive}
+                disabled={disabled}
+                onChange={() => handleModelChange(opt.slug)}
+                style={{ accentColor: tokens.text.accent }}
+              />
+              <span style={{ fontFamily: tokens.font.display, fontSize: mobile ? 16 : 15, color: tokens.text.primary, minWidth: 90 }}>
+                {opt.label}
+              </span>
+              <span style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted, flex: 1 }}>
+                {CURATED_MODELS[opt.slug]}
+              </span>
+              <span style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.secondary, marginRight: 6 }}>
+                {opt.vibe}
+              </span>
+              <span style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, whiteSpace: 'nowrap' }}>
+                {opt.pricePerQuery}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
       <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>Corpus Scope</div>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 20 }}>
         {status === 'loading' && 'loading…'}

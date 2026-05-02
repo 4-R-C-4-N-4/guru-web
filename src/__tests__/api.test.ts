@@ -290,6 +290,59 @@ describe('PUT /api/preferences', () => {
   });
 });
 
+// ── preferredModel validation (todo:f764d5dc / C5 picker) ────────────
+// Separate describe block with vi.resetAllMocks so queued mock returns
+// from earlier tests (e.g., the 'rejects invalid scopeMode' test which
+// queues but never consumes mockPrefs) don't bleed into these.
+describe('PUT /api/preferences — preferredModel', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('accepts a valid preferredModel slug and persists it', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: 'anthropic' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredModel).toBe('anthropic');
+    const [, savedPrefs] = mockSavePrefs.mock.calls[0]!;
+    expect(savedPrefs.preferredModel).toBe('anthropic');
+  });
+
+  it('accepts null preferredModel (clears the preference)', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredModel: 'anthropic' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: null }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredModel).toBeNull();
+  });
+
+  it('keeps existing preferredModel when field absent from body', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredModel: 'xai' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { scopeMode: 'all' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(body.preferredModel).toBe('xai');
+  });
+
+  it('rejects invalid preferredModel slug with 400', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: 'frontier-bogus' }));
+    expect(res.status).toBe(400);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+});
+
 describe('GET /api/corpus', () => {
   beforeEach(() => vi.clearAllMocks());
 
