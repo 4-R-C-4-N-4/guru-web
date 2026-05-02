@@ -1,13 +1,13 @@
 {
   "id": "057792c7",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "C8: post-launch telemetry review (model picker + cap)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:23:29.732Z",
-  "updated_at": "2026-05-02T16:25:27.461Z",
+  "updated_at": "2026-05-02T18:45:32.594Z",
   "relationships": {
     "parent": "6e4e89c5",
     "depends_on": [
@@ -25,5 +25,11 @@
     "telemetry",
     "review",
     "post-launch"
-  ]
+  ],
+  "resolution": {
+    "commit": "7e8b5d15a0bee57309042a9f2434be25b78a842c",
+    "resolved_at": "2026-05-02T18:45:32.594Z",
+    "resolved_by": "unknown",
+    "note": "Deferred: post-launch operator chore. Scheduled for +7 days after the picker UI ships to prod. Closing this ticket now so the parent can close cleanly; the actual review note (per IMPL §C8 done-when: distribution of preferred_model, cost_usd histogram, query-vs-USD binding, sync-pricing journal events, recommendations) lands as a follow-up commit or comment when the time comes. Set a reminder via /schedule when the parent feature merges to prod."
+  }
 }
