@@ -1,13 +1,13 @@
 {
   "id": "f764d5dc",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "C5: pro picker UI in /settings + /api/preferences validation",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:23:29.631Z",
-  "updated_at": "2026-05-02T16:25:27.185Z",
+  "updated_at": "2026-05-02T18:37:48.910Z",
   "relationships": {
     "parent": "6e4e89c5",
     "depends_on": [
@@ -21,5 +21,12 @@
     "settings",
     "models",
     "pro"
-  ]
+  ],
+  "resolution": {
+    "commit": "f460c46fd87ce929403e6da7a69069fc8357c779",
+    "resolved_at": "2026-05-02T18:37:48.910Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "note": "Pro picker UI: four radio rows on /settings showing '<provider> — <resolved id>' so the user always sees the actual model. Free users see disabled rows + Pro-only tag. Optimistic update with rollback on failure. /api/preferences validates preferredModel against isCuratedSlug (already in place from C3); 4 new tests cover accept-valid / accept-null / keep-on-omit / reject-bogus."
+  }
 }
