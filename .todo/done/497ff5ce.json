@@ -1,13 +1,13 @@
 {
   "id": "497ff5ce",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "C6: chat response attribution line (model + tokens + cost)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:23:29.664Z",
-  "updated_at": "2026-05-02T16:25:27.215Z",
+  "updated_at": "2026-05-02T18:41:11.577Z",
   "relationships": {
     "parent": "6e4e89c5",
     "depends_on": [
@@ -20,5 +20,12 @@
     "chat",
     "models",
     "attribution"
-  ]
+  ],
+  "resolution": {
+    "commit": "294f59f8a1e78534522eebdaab6f399c7732dec3",
+    "resolved_at": "2026-05-02T18:41:11.577Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/chat-view.test.ts",
+    "note": "Per-response attribution line in chat-view: '<model_used> · <Nk tokens> · $<cost>'. Sourced from queries columns surfaced through /api/sessions/[id]. Conditional field spread in recordsToMessages keeps legacy-row tests structurally identical. 3 new tests cover populated/legacy/truncated cases."
+  }
 }
