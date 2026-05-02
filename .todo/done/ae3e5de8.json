@@ -1,13 +1,13 @@
 {
   "id": "ae3e5de8",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "C3: /api/query slug resolution + prefs.ts + types.ts",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:23:29.567Z",
-  "updated_at": "2026-05-02T16:25:27.062Z",
+  "updated_at": "2026-05-02T18:30:54.343Z",
   "relationships": {
     "parent": "6e4e89c5",
     "depends_on": [
@@ -21,5 +21,12 @@
     "models",
     "pricing",
     "integration"
-  ]
+  ],
+  "resolution": {
+    "commit": "7e37a37f849c2846250275db03a5c171a029e652",
+    "resolved_at": "2026-05-02T18:30:54.343Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "note": "Slug resolution wired into /api/query: pro reads preferred_model, free pinned to DEFAULT_CURATED_SLUG, stale/unknown slugs fall through to default. complete/completeStream signature changed to take resolved modelId. UserPreferences type gained preferredModel: string | null (required); all fixtures updated. /api/preferences PUT validates against isCuratedSlug. 209 tests pass."
+  }
 }
