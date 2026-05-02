@@ -1,13 +1,13 @@
 {
   "id": "27e49cb9",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "C4: sync-pricing systemd timer + CI guard test + runbook",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-02T16:23:29.599Z",
-  "updated_at": "2026-05-02T16:25:27.124Z",
+  "updated_at": "2026-05-02T18:34:26.630Z",
   "relationships": {
     "parent": "6e4e89c5",
     "depends_on": [
@@ -21,5 +21,12 @@
     "ops",
     "ci",
     "runbook"
-  ]
+  ],
+  "resolution": {
+    "commit": "1577e7fe11a27f5b01b1a9c6dc4b2e6cc560377c",
+    "resolved_at": "2026-05-02T18:34:26.630Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/curated-models-coverage.test.ts",
+    "note": "Three layers shipped: daily systemd timer (deploy/sync-pricing.{runner.sh,service,timer}) + CI guard (curated-models-coverage.test.ts) + runbook sections. Wrapper script resolves the latest release dir because Next standalone excludes scripts/. CI guard fails the build when a CURATED_MODELS slug lacks a FALLBACK_PRICING entry. systemd-analyze verify clean (warns binary not installed locally — installed by VPS hand-patch per runbook)."
+  }
 }
