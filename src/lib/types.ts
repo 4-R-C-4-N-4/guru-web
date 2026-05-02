@@ -63,5 +63,12 @@ export interface QueryRecord {
   response_text: string;
   chunks_used: string[];
   model_used: string;
+  /** Token + cost columns from queries; nullable on rows that
+   *  pre-date the cost-tracking migration or where the usage chunk
+   *  never arrived (truncated stream). Surfaced in the chat view's
+   *  per-response attribution line (model-selection BRD §7.4). */
+  input_tokens?:  number | null;
+  output_tokens?: number | null;
+  cost_usd?:      number | null;
   created_at: string;
 }

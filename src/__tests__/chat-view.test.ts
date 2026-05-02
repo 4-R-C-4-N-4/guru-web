@@ -64,6 +64,51 @@ describe('recordsToMessages', () => {
     // User messages never get citations (the user typed the question).
     expect(out[0]!.citations).toBeUndefined();
   });
+
+  // ── Per-response attribution surface (BRD §7.4 / C6) ───────────────
+  it('passes through model_used + tokens + cost_usd from persisted records', () => {
+    const out = recordsToMessages([{
+      query_text:    'Q',
+      response_text: 'A',
+      model_used:    'anthropic/claude-sonnet-4.6',
+      input_tokens:  1234,
+      output_tokens: 567,
+      cost_usd:      0.0451,
+    }]);
+    const assistant = out[1]!;
+    expect(assistant.role).toBe('assistant');
+    expect(assistant.modelUsed).toBe('anthropic/claude-sonnet-4.6');
+    expect(assistant.inputTokens).toBe(1234);
+    expect(assistant.outputTokens).toBe(567);
+    expect(assistant.costUsd).toBeCloseTo(0.0451, 6);
+  });
+
+  it('omits attribution fields entirely when the record lacks them (legacy rows)', () => {
+    // Pre-cost-tracking rows. The chat-view render guards on
+    // msg.modelUsed, so omitting the fields hides the line.
+    const out = recordsToMessages([{ query_text: 'Q', response_text: 'A' }]);
+    const assistant = out[1]!;
+    expect(assistant.modelUsed).toBeUndefined();
+    expect(assistant.inputTokens).toBeUndefined();
+    expect(assistant.outputTokens).toBeUndefined();
+    expect(assistant.costUsd).toBeUndefined();
+  });
+
+  it('omits attribution fields when the record carries explicit nulls (truncated stream)', () => {
+    // Stream truncated before the usage chunk arrived → cost_usd
+    // persisted as NULL. The chat view shouldn't render a partial
+    // line ("anthropic/... · NaN tokens · $0.NaN").
+    const out = recordsToMessages([{
+      query_text: 'Q', response_text: 'A',
+      model_used: 'anthropic/claude-sonnet-4.6',
+      input_tokens: null, output_tokens: null, cost_usd: null,
+    }]);
+    const assistant = out[1]!;
+    expect(assistant.modelUsed).toBe('anthropic/claude-sonnet-4.6');
+    expect(assistant.inputTokens).toBeUndefined();
+    expect(assistant.outputTokens).toBeUndefined();
+    expect(assistant.costUsd).toBeUndefined();
+  });
 });
 
 describe('chat-view markdown rendering', () => {

@@ -36,6 +36,14 @@ export interface Message {
   text?: string;
   citations?: CitationData[];
   meta?: { chunks: number; traditions: number; verified: number; proposed: number };
+  /** Per-response attribution surface (model-selection BRD §7.4). Only
+   *  present on persisted assistant messages; live-streaming responses
+   *  populate these fields after the stream completes and the row is
+   *  written to `queries`. */
+  modelUsed?:    string | null;
+  inputTokens?:  number | null;
+  outputTokens?: number | null;
+  costUsd?:      number | null;
 }
 
 const SAMPLE_QUERIES = [
@@ -49,6 +57,16 @@ const SAMPLE_QUERIES = [
 const QUERY_MAX_CHARS    = 4000;
 const QUERY_WARN_CHARS   = 3000;
 const QUERY_DANGER_CHARS = 3800;
+
+// Compact token formatter for the per-response attribution line.
+// 4321 → "4.3k", 821 → "821", 12_345 → "12.3k". Avoids "k" for tiny
+// counts (jarring for a 200-token response) and rounds to 1 decimal
+// for readability (no false precision on a self-reported figure).
+function fmtTokens(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return '0';
+  if (n < 1000) return String(Math.round(n));
+  return `${(n / 1000).toFixed(1)}k`;
+}
 
 // ── Markdown rendering ───────────────────────────────────────────────
 // Assistant messages from DeepSeek/Claude come back as standard markdown
@@ -265,6 +283,25 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                     </div>
                   </>
                 )}
+                {/* Per-response attribution (model-selection BRD §7.4).
+                    Shown for persisted assistant messages (where the
+                    queries row exists with model_used + cost_usd).
+                    Hidden during streaming and on synthetic quota-error
+                    messages where modelUsed is undefined. */}
+                {msg.modelUsed && (
+                  <div style={{
+                    marginTop: msg.citations?.length ? 6 : 10,
+                    fontFamily: tokens.font.mono,
+                    fontSize: 10,
+                    color: tokens.text.muted,
+                  }}>
+                    {msg.modelUsed}
+                    {(msg.inputTokens != null || msg.outputTokens != null) && (
+                      <> · {fmtTokens((msg.inputTokens ?? 0) + (msg.outputTokens ?? 0))} tokens</>
+                    )}
+                    {msg.costUsd != null && <> · ${msg.costUsd.toFixed(4)}</>}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -344,14 +381,27 @@ export function recordsToMessages(records: ReadonlyArray<{
   query_text: string;
   response_text: string;
   citations?: CitationData[];
+  // Attribution columns surfaced from /api/sessions/[id]. Optional so
+  // the helper still types older fixtures that don't carry them.
+  model_used?:    string | null;
+  input_tokens?:  number | null;
+  output_tokens?: number | null;
+  cost_usd?:      number | null;
 }>): Message[] {
   const out: Message[] = [];
   for (const r of records) {
     out.push({ role: 'user', content: r.query_text });
+    // Spread the attribution fields conditionally so older fixtures
+    // (and back-compat tests) without them stay structurally
+    // identical to their pre-attribution shape.
     out.push({
       role: 'assistant',
       text: r.response_text,
       citations: r.citations,
+      ...(r.model_used    != null && { modelUsed:    r.model_used    }),
+      ...(r.input_tokens  != null && { inputTokens:  r.input_tokens  }),
+      ...(r.output_tokens != null && { outputTokens: r.output_tokens }),
+      ...(r.cost_usd      != null && { costUsd:      r.cost_usd      }),
     });
   }
   return out;
