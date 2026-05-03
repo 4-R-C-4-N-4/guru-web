@@ -141,14 +141,31 @@ describe('getBudget', () => {
 });
 
 describe('TIER_LIMITS', () => {
-  // Lock the live values — accidental drift fails CI loudly. See
-  // BRD-model-selection.md §6.2 for the $0.17/day rationale.
-  it('free tier: 10 queries, no USD cap', () => {
-    expect(TIER_LIMITS.free).toEqual({ query_limit: 10, usd_limit: null });
+  // Lock the live values via pricing-config constants — TIER_LIMITS
+  // is now a derivation, not a literal. Accidental drift between
+  // policy and enforcement fails CI loudly. See pricing-config.ts.
+  it('free tier: query cap from FREE_DAILY_QUERY_LIMIT, no USD cap', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    expect(TIER_LIMITS.free).toEqual({
+      query_limit: cfg.FREE_DAILY_QUERY_LIMIT,
+      usd_limit:   null,
+    });
   });
 
-  it('pro tier: 100 queries (soft) + $0.17/day USD cap (primary)', () => {
-    expect(TIER_LIMITS.pro).toEqual({ query_limit: 100, usd_limit: 0.17 });
+  it('pro tier: query cap (soft) from PRO_DAILY_QUERY_LIMIT, USD cap from PRO_DAILY_USD_CAP', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    expect(TIER_LIMITS.pro).toEqual({
+      query_limit: cfg.PRO_DAILY_QUERY_LIMIT,
+      usd_limit:   cfg.PRO_DAILY_USD_CAP,
+    });
+  });
+
+  it('PRO_DAILY_USD_CAP derives from PRO_MONTHLY_USD_TARGET / PERIOD_DAYS', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    expect(cfg.PRO_DAILY_USD_CAP).toBeCloseTo(
+      cfg.PRO_MONTHLY_USD_TARGET / cfg.PERIOD_DAYS,
+      6,
+    );
   });
 });
 

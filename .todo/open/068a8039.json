@@ -1,0 +1,24 @@
+{
+  "id": "068a8039",
+  "type": "chore",
+  "state": "active",
+  "summary": "Refactor pricing constants into single config module",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-03T17:06:58.081Z",
+  "updated_at": "2026-05-03T17:07:21.263Z",
+  "description": "PR #40 review surfaced that pricing-related numbers were\nhardcoded in three different files with no compile-time link\nbetween them:\n\n  src/lib/spend.ts            usd_limit: 0.17       (= \\$5/30)\n  src/lib/provider-display.ts questionsPerDay: 30/10/4/4\n  scripts/sync-pricing.ts     FALLBACK_PRICING rates\n\nIf the cap policy changes (\\$5 → \\$8/mo, period changes, etc.) all\nthree drift independently. Comment-as-documentation is the only\nlink.\n\nRefactor: single pricing-config.ts as the source of truth.\n\nFiles:\n  - src/lib/pricing-config.ts (new)\n      PRO_MONTHLY_USD_TARGET, PERIOD_DAYS,\n      PRO_DAILY_USD_CAP (derived),\n      FREE_DAILY_QUERY_LIMIT, PRO_DAILY_QUERY_LIMIT,\n      TYPICAL_INPUT_TOKENS, TYPICAL_OUTPUT_TOKENS.\n\n  - src/lib/fallback-pricing.ts (new)\n      FALLBACK_PRICING + ModelPrice interface, moved out of\n      scripts/sync-pricing.ts so client-side code (picker, chat)\n      can import it without pulling in pg. Same client-bundle\n      hygiene rationale that drove the curated-models.ts split.\n\n  - src/lib/spend.ts\n      TIER_LIMITS values now reference pricing-config constants;\n      the literal 0.17 disappears.\n\n  - src/lib/provider-display.ts\n      questionsPerDay is computed via PRO_DAILY_USD_CAP /\n      per-query cost. Hardcoded 30/10/4/4 disappear.\n\n  - scripts/sync-pricing.ts\n      Re-exports FALLBACK_PRICING from the new file so existing\n      tests that reach for it still resolve.\n\n  - src/__tests__/curated-models-coverage.test.ts\n      Imports FALLBACK_PRICING from the new file.\n  - src/__tests__/spend.test.ts\n      TIER_LIMITS lock-test asserts derived values via\n      pricing-config constants, not literal 0.17.\n  - src/__tests__/provider-display.test.ts\n      questionsPerDay tests check the derivation result, not\n      hardcoded numbers.\n\nDone when:\n  - Searching for '0.17' in src/ returns nothing.\n  - Searching for the literal numbers 30, 10, 4 in\n    provider-display.ts returns nothing (or only in test\n    fixtures).\n  - Bumping PRO_MONTHLY_USD_TARGET in pricing-config.ts is the\n    single change required to update both enforcement and\n    user-facing labels.\n  - Tests + tsc + lint + build clean.\n\nSpec ref: PR #40 review thread.",
+  "tags": [
+    "refactor",
+    "pricing",
+    "model-selection",
+    "pre-launch"
+  ],
+  "work": {
+    "branch": "todo/068a8039",
+    "base_branch": "main",
+    "started_at": "2026-05-03T17:07:21.263Z",
+    "started_by": "4-R-C-4-N-4"
+  }
+}

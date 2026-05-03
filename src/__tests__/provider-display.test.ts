@@ -35,6 +35,26 @@ describe('PROVIDER_DISPLAY', () => {
     const counts = Object.values(PROVIDER_DISPLAY).map((d) => d.questionsPerDay);
     expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBe(Math.max(...counts));
   });
+
+  // Lock the derivation: questionsPerDay must come from
+  // PRO_DAILY_USD_CAP ÷ per-query cost (FALLBACK_PRICING + typical
+  // tokens), not a hand-edited literal. This catches the
+  // refactor-regression where someone reintroduces a static number.
+  it('questionsPerDay is computed from pricing-config + FALLBACK_PRICING', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    const { FALLBACK_PRICING } = await import('@/lib/fallback-pricing');
+
+    for (const [slug, d] of Object.entries(PROVIDER_DISPLAY)) {
+      const modelId = CURATED_MODELS[slug as keyof typeof CURATED_MODELS];
+      const fb = FALLBACK_PRICING[modelId];
+      expect(fb, `${slug} → ${modelId} missing from FALLBACK_PRICING`).toBeDefined();
+      const perQueryCost =
+        (cfg.TYPICAL_INPUT_TOKENS  / 1e6) * fb!.input_per_mtok +
+        (cfg.TYPICAL_OUTPUT_TOKENS / 1e6) * fb!.output_per_mtok;
+      const expected = Math.round(cfg.PRO_DAILY_USD_CAP / perQueryCost);
+      expect(d.questionsPerDay, slug).toBe(expected);
+    }
+  });
 });
 
 describe('providerSlugFromModelId()', () => {
