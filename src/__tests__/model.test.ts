@@ -16,7 +16,7 @@ import {
   resolveCuratedModel,
   isCuratedSlug,
   type CuratedSlug,
-} from '@/lib/model';
+} from '@/lib/curated-models';
 
 describe('CURATED_MODELS', () => {
   it('has exactly four picker entries — one per provider', () => {

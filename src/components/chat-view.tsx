@@ -238,13 +238,27 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
       const used = res.headers.get('X-Quota-Used');
       if (used) setQuotaUsed(parseInt(used, 10));
 
+      // Resolved model id arrives in headers — populates the
+      // attribution line in-session without waiting for a session
+      // reload. Tokens + cost still arrive on the next reload via
+      // recordsToMessages (they're null until persistence +
+      // finalizeBudget complete). Spec: model-selection BRD §7.4.
+      const modelUsedHeader = res.headers.get('X-Model-Used');
+
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
 
       const decoder = new TextDecoder();
       let fullText = '';
 
-      setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: '',
+          ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
+        },
+      ]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -252,7 +266,11 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         fullText += decoder.decode(value, { stream: true });
         setMessages(prev => {
           const next = [...prev];
-          next[next.length - 1] = { role: 'assistant', text: fullText };
+          next[next.length - 1] = {
+            role: 'assistant',
+            text: fullText,
+            ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
+          };
           return next;
         });
       }

@@ -47,58 +47,18 @@ export type Tier = keyof typeof MODELS;
 
 // ── Curated model picker ─────────────────────────────────────────────
 //
-// Slug → OpenRouter id map. Slugs are the stable identifier the rest
-// of the system uses (preferences storage, settings UI radio values).
-// The OpenRouter id is the resolved truth — it goes into
-// queries.model_used so historical pricing stays attributable across
-// silent version bumps. Spec: BRD-model-selection.md §5.1.
-//
-// Bumping an entry IS the version-rollover mechanism. After editing,
-// run `npm run sync-pricing` so model_pricing has a row for the new
-// id (`computeCost` throws if missing — see BRD §5.4). The CI guard
-// in C4 catches "I forgot to sync" as a red CI run.
-//
-// FALLBACK_PRICING in scripts/sync-pricing.ts mirrors this map so a
-// fresh-VPS sync during an OpenRouter outage still seeds rows.
-export const CURATED_MODELS = {
-  deepseek:  'deepseek/deepseek-v4-pro',
-  xai:       'x-ai/grok-4.3',
-  anthropic: 'anthropic/claude-sonnet-4.6',
-  openai:    'openai/gpt-5.4',
-} as const;
-
-export type CuratedSlug = keyof typeof CURATED_MODELS;
-
-/**
- * The default slug picked when a free user queries, or when a pro
- * user has no preferred_model saved. Spec: BRD-model-selection.md
- * §1, §4.1.
- */
-export const DEFAULT_CURATED_SLUG: CuratedSlug = 'deepseek';
-
-/**
- * Resolve a slug to its current OpenRouter model id. Throws on
- * unknown slug — TypeScript should catch this at compile time, but
- * the runtime check guards against stale preference rows that
- * predate a slug rename.
- */
-export function resolveCuratedModel(slug: CuratedSlug): string {
-  const id = CURATED_MODELS[slug];
-  if (!id) {
-    throw new Error(`Unknown CURATED_MODELS slug: ${slug as string}`);
-  }
-  return id;
-}
-
-/**
- * Type guard for arbitrary string input (e.g. user_preferences row
- * read from DB, request body field). Rejects values that don't match
- * a current slug. Used by /api/preferences validation in C5 and by
- * /api/query when reading saved preferences in C3.
- */
-export function isCuratedSlug(value: unknown): value is CuratedSlug {
-  return typeof value === 'string' && value in CURATED_MODELS;
-}
+// CURATED_MODELS, CuratedSlug, DEFAULT_CURATED_SLUG, resolveCuratedModel,
+// isCuratedSlug — moved to src/lib/curated-models.ts so client-side code
+// (e.g. /settings) can import them without pulling in the OpenAI SDK
+// initialised at the top of this file. Re-exported here for back-compat
+// with server-side consumers.
+export {
+  CURATED_MODELS,
+  DEFAULT_CURATED_SLUG,
+  resolveCuratedModel,
+  isCuratedSlug,
+} from './curated-models';
+export type { CuratedSlug } from './curated-models';
 
 // Headroom for the structured response format (analysis + MANDATORY
 // citations block).  Previous 2048 cap was eating the citations section

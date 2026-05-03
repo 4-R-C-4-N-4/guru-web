@@ -7,7 +7,7 @@
 
 import { requireUser } from '@/lib/auth';
 import { loadPreferences, savePreferences } from '@/lib/prefs';
-import { isCuratedSlug } from '@/lib/model';
+import { isCuratedSlug } from '@/lib/curated-models';
 import type { UserPreferences } from '@/lib/types';
 
 export async function GET() {

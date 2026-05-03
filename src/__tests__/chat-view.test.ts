@@ -188,6 +188,30 @@ describe('chat-view model-picker announcement banner (todo:f238dc42)', () => {
   });
 });
 
+describe('chat-view streaming attribution (post-fix #1)', () => {
+  // Source-level guard. The streaming path reads X-Model-Used from
+  // the response headers and seeds it on the assistant message so the
+  // attribution line (BRD §7.4) renders during the live stream —
+  // not just after a session reload via recordsToMessages. Tokens +
+  // cost still arrive on the next reload (server doesn't know them
+  // until the usage chunk + finalizeBudget complete).
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('reads X-Model-Used from the response headers', () => {
+    expect(SRC).toMatch(/res\.headers\.get\(['"]X-Model-Used['"]\)/);
+  });
+
+  it('seeds modelUsed on the assistant message before the stream loop', () => {
+    // The setMessages call that adds the empty placeholder spreads
+    // modelUsed conditionally (only when the header was present).
+    expect(SRC).toMatch(/modelUsedHeader && \{ modelUsed: modelUsedHeader \}/);
+  });
+});
+
 describe('chat-view URL-update contract', () => {
   // Source-level guards. The chat UI is React + DOM-heavy; we don't have
   // a DOM test harness configured. These string checks are blunt but

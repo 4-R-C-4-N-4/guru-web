@@ -525,6 +525,10 @@ describe('POST /api/query', () => {
     expect(res.headers.get('X-Quota-Limit')).toBe('10');
     expect(res.headers.get('X-Spend-Used')).toBe('0.001');
     expect(res.headers.get('X-Spend-Limit')).toBe('unlimited');
+    // Resolved model id surfaced in headers so the chat-view can
+    // render the attribution line during the live stream (BRD §7.4).
+    // Free tier always resolves to the deepseek default.
+    expect(res.headers.get('X-Model-Used')).toBe('deepseek/deepseek-v4-pro');
 
     const text = await res.text();
     expect(text).toBe('Hello world');

@@ -28,7 +28,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CURATED_MODELS } from '@/lib/model';
+import { CURATED_MODELS } from '@/lib/curated-models';
 import { FALLBACK_PRICING } from '../../scripts/sync-pricing';
 
 describe('CURATED_MODELS ↔ FALLBACK_PRICING coverage', () => {

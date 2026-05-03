@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { CURATED_MODELS, type CuratedSlug } from '@/lib/model';
+// Import from curated-models (not model.ts) so the client bundle
+// doesn't pull in the OpenAI SDK that model.ts initialises.
+import { CURATED_MODELS, type CuratedSlug } from '@/lib/curated-models';
 
 // Catalog comes from /api/corpus (DISTINCT tradition/text from chunks).
 // Empty/error states are rendered as-is — no hardcoded fallback. If this UI

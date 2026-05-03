@@ -20,13 +20,12 @@
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
 import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
+import { completeStream, MAX_OUTPUT_TOKENS } from '@/lib/model';
 import {
-  completeStream,
-  MAX_OUTPUT_TOKENS,
   DEFAULT_CURATED_SLUG,
   isCuratedSlug,
   resolveCuratedModel,
-} from '@/lib/model';
+} from '@/lib/curated-models';
 import { reserveBudget, finalizeBudget } from '@/lib/spend';
 import { computeCost } from '@/lib/cost';
 import { loadPreferences } from '@/lib/prefs';
@@ -267,6 +266,15 @@ export async function POST(req: Request) {
       'X-Quota-Limit': String(reserve.query_limit ?? 'unlimited'),
       'X-Spend-Used':  String(reserve.usd_used),
       'X-Spend-Limit': String(reserve.usd_limit ?? 'unlimited'),
+      // Resolved model id, so the client can render the per-response
+      // attribution line (model-selection BRD §7.4) the moment the
+      // stream opens — without waiting for a session-reload to pull
+      // the row through recordsToMessages. Tokens + cost are still
+      // null until persistence + finalizeBudget complete; they fill
+      // in on the next session fetch. We expose just the model name
+      // in-session, since it's known up-front and is the most useful
+      // bit ("which model wrote this answer").
+      'X-Model-Used':  modelId,
       ...(streamError ? { 'X-Stream-Error': 'truncated' } : {}),
     },
   });
