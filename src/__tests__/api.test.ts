@@ -421,10 +421,13 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(429);
     const body = await res.json() as { error: string; reason: string };
     expect(body.reason).toBe('queries');
-    expect(body.error).toMatch(/Daily query limit/);
+    // Unified user-facing message regardless of axis (todo:e8105324) —
+    // 'reason' on the body stays for log/admin telemetry but the
+    // string the user sees doesn't branch on it.
+    expect(body.error).toMatch(/Daily question limit/);
   });
 
-  it('returns 429 with reason=usd when spend cap would overrun', async () => {
+  it('returns 429 with reason=usd when spend cap would overrun (same user-facing message)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockOne.mockResolvedValueOnce({ id: 's1' });
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
@@ -441,7 +444,12 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(429);
     const body = await res.json() as { reason: string; error: string };
     expect(body.reason).toBe('usd');
-    expect(body.error).toMatch(/Daily spend limit/);
+    // Same user-facing copy as reason=queries — USD axis hidden from
+    // user (todo:e8105324).
+    expect(body.error).toMatch(/Daily question limit/);
+    // The phrase 'spend' must NOT appear — that would leak the
+    // dollar mechanism we deliberately abstracted.
+    expect(body.error).not.toMatch(/spend/i);
   });
 
   it('returns 404 when sessionId belongs to another user', async () => {

@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 // Import from curated-models (not model.ts) so the client bundle
 // doesn't pull in the OpenAI SDK that model.ts initialises.
 import { CURATED_MODELS, type CuratedSlug } from '@/lib/curated-models';
+import { PROVIDER_DISPLAY } from '@/lib/provider-display';
 
 // Catalog comes from /api/corpus (DISTINCT tradition/text from chunks).
 // Empty/error states are rendered as-is — no hardcoded fallback. If this UI
@@ -14,15 +15,12 @@ type TraditionsState = Record<string, { active: boolean; texts: Record<string, b
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
-// Picker copy. The model id portion comes from CURATED_MODELS at
-// render time — when the operator bumps a slug, the row updates
-// with no copy change. Spec: BRD-model-selection.md §7.3.
-const PICKER_OPTIONS: { slug: CuratedSlug; label: string; vibe: string; pricePerQuery: string }[] = [
-  { slug: 'deepseek',  label: 'DeepSeek',  vibe: 'cheap, fast',         pricePerQuery: '~$0.005' },
-  { slug: 'xai',       label: 'X.AI',      vibe: 'mid-cost, fluent',    pricePerQuery: '~$0.015' },
-  { slug: 'anthropic', label: 'Anthropic', vibe: 'premium reasoning',   pricePerQuery: '~$0.045' },
-  { slug: 'openai',    label: 'OpenAI',    vibe: 'premium',             pricePerQuery: '~$0.040' },
-];
+// Picker order. Provider name + questions-per-day come from
+// PROVIDER_DISPLAY so the picker stays consistent with the chat
+// attribution badge (todo:e8105324). Sorted DeepSeek first because
+// it's the default; remainder by descending capacity so the
+// tradeoff is visible at a glance.
+const PICKER_ORDER: CuratedSlug[] = ['deepseek', 'xai', 'anthropic', 'openai'];
 
 export default function SettingsPage() {
   const mobile = useIsMobile();
@@ -137,9 +135,6 @@ export default function SettingsPage() {
   const activeTexts = Object.values(traditions).flatMap(t => t.active ? Object.values(t.texts).filter(Boolean) : []).length;
   const activeTrad  = Object.values(traditions).filter(t => t.active).length;
 
-  // Resolved-id fallback for display when no preference saved.
-  const activeSlug: CuratedSlug = preferredModel ?? 'deepseek';
-
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: mobile ? '16px 14px' : 24 }}>
       {/* Model section — pro picker, free disabled. */}
@@ -151,24 +146,28 @@ export default function SettingsPage() {
       </div>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 12 }}>
         {tier === 'free'
-          ? <>Default: {CURATED_MODELS.deepseek}. <a href="/account" style={{ color: tokens.text.link }}>Upgrade to pick</a>.</>
-          : modelSaving ? 'saving…' : `current: ${CURATED_MODELS[activeSlug]}`}
+          ? <>Default model. <a href="/account" style={{ color: tokens.text.link }}>Upgrade to Pro</a> to choose another.</>
+          : modelSaving
+            ? 'saving…'
+            : 'Choose how Guru answers. Some models give fewer questions per day.'}
       </div>
 
       <div style={{ marginBottom: 24 }}>
-        {PICKER_OPTIONS.map((opt) => {
-          const isActive = preferredModel === opt.slug || (preferredModel === null && opt.slug === 'deepseek');
+        {PICKER_ORDER.map((slug) => {
+          const display = PROVIDER_DISPLAY[slug];
+          const isActive = preferredModel === slug || (preferredModel === null && slug === 'deepseek');
           const disabled = tier !== 'pro';
+          const isDefault = slug === 'deepseek';
           return (
             <label
-              key={opt.slug}
+              key={slug}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 padding: mobile ? '12px 12px' : '10px 14px',
                 background: tokens.bg.surface,
-                border: `1px solid ${isActive ? tokens.text.accent + '55' : tokens.border.subtle}`,
+                border: `1px solid ${isActive ? display.color + '88' : tokens.border.subtle}`,
                 borderRadius: 4,
                 marginBottom: 5,
                 cursor: disabled ? 'not-allowed' : 'pointer',
@@ -178,23 +177,30 @@ export default function SettingsPage() {
               <input
                 type="radio"
                 name="preferredModel"
-                value={opt.slug}
+                value={slug}
                 checked={isActive}
                 disabled={disabled}
-                onChange={() => handleModelChange(opt.slug)}
-                style={{ accentColor: tokens.text.accent }}
+                onChange={() => handleModelChange(slug)}
+                style={{ accentColor: display.color }}
               />
-              <span style={{ fontFamily: tokens.font.display, fontSize: mobile ? 16 : 15, color: tokens.text.primary, minWidth: 90 }}>
-                {opt.label}
+              <span style={{
+                fontFamily: tokens.font.display,
+                fontSize: mobile ? 16 : 15,
+                color: isActive ? display.color : tokens.text.primary,
+                minWidth: 100,
+              }}>
+                {display.name}
               </span>
-              <span style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted, flex: 1 }}>
-                {CURATED_MODELS[opt.slug]}
-              </span>
-              <span style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.secondary, marginRight: 6 }}>
-                {opt.vibe}
-              </span>
-              <span style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, whiteSpace: 'nowrap' }}>
-                {opt.pricePerQuery}
+              <span style={{
+                fontFamily: tokens.font.mono,
+                fontSize: 10,
+                color: tokens.text.muted,
+                flex: 1,
+                textAlign: 'right',
+                whiteSpace: 'nowrap',
+              }}>
+                {isDefault && <span style={{ color: tokens.text.secondary, marginRight: 8 }}>Default</span>}
+                ~{display.questionsPerDay} questions per day
               </span>
             </label>
           );

@@ -121,11 +121,15 @@ export async function POST(req: Request) {
     estimatedCostUsd,
   });
   if (!reserve.allowed) {
+    // Unified user-facing message regardless of which axis bound. The
+    // USD cap is intentionally hidden from the user — it still enforces
+    // and the `reason` field stays in the response for log/admin
+    // telemetry, but we don't surface 'spend' as user-facing language
+    // (todo:e8105324). Both axes feel like 'I ran out of questions
+    // today.'
     return Response.json(
       {
-        error: reserve.reason === 'usd'
-          ? 'Daily spend limit reached'
-          : 'Daily query limit reached',
+        error: 'Daily question limit reached. Resets at midnight UTC.',
         reason: reserve.reason,
         queries_used: reserve.queries_used,
         query_limit:  reserve.query_limit,

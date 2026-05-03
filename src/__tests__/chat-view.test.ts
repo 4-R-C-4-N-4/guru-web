@@ -191,10 +191,8 @@ describe('chat-view model-picker announcement banner (todo:f238dc42)', () => {
 describe('chat-view streaming attribution (post-fix #1)', () => {
   // Source-level guard. The streaming path reads X-Model-Used from
   // the response headers and seeds it on the assistant message so the
-  // attribution line (BRD §7.4) renders during the live stream —
-  // not just after a session reload via recordsToMessages. Tokens +
-  // cost still arrive on the next reload (server doesn't know them
-  // until the usage chunk + finalizeBudget complete).
+  // attribution badge renders during the live stream — not just after
+  // a session reload via recordsToMessages.
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const SRC = readFileSync(
     resolve(__dirname, '../components/chat-view.tsx'),
@@ -209,6 +207,44 @@ describe('chat-view streaming attribution (post-fix #1)', () => {
     // The setMessages call that adds the empty placeholder spreads
     // modelUsed conditionally (only when the header was present).
     expect(SRC).toMatch(/modelUsedHeader && \{ modelUsed: modelUsedHeader \}/);
+  });
+});
+
+describe('chat-view UX simplification (todo:e8105324)', () => {
+  // Source-level guards locking in the C9 reframe:
+  //   - per-response attribution shows 'via <Provider>' only,
+  //     not model id / tokens / cost.
+  //   - quota header shows 'X today' (no hard ceiling).
+  //   - 429 copy doesn't mention 'spend'.
+  //   - displayForModelId is the source of the badge metadata.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('imports displayForModelId from provider-display', () => {
+    expect(SRC).toMatch(/import\s+\{\s*displayForModelId\s*\}\s+from\s+['"]@\/lib\/provider-display['"]/);
+  });
+
+  it('attribution renders "via <name>" — no tokens, no cost, no model id', () => {
+    expect(SRC).toMatch(/via\s+<span style=\{\{\s*color:\s*display\.color/);
+    // Token + cost rendering must not be in the file anymore.
+    expect(SRC).not.toMatch(/fmtTokens/);
+    expect(SRC).not.toMatch(/msg\.costUsd\?\.toFixed/);
+    expect(SRC).not.toMatch(/\{msg\.modelUsed\}/);  // raw id render — gone
+  });
+
+  it('quota header shows "X today", not "X/Y remaining today"', () => {
+    expect(SRC).toMatch(/\{quotaUsed\} today/);
+    expect(SRC).not.toMatch(/remaining today/);
+    expect(SRC).not.toMatch(/quotaRemaining/);  // unused var dropped
+  });
+
+  it('429 copy uses "Daily question limit" — never "spend" or "query limit"', () => {
+    expect(SRC).toMatch(/Daily question limit/);
+    expect(SRC).not.toMatch(/Daily spend limit/);
+    expect(SRC).not.toMatch(/Daily query limit/);
   });
 });
 

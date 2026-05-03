@@ -21,6 +21,7 @@ import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
+import { displayForModelId } from '@/lib/provider-display';
 
 interface CitationData {
   tradition: string;
@@ -57,16 +58,6 @@ const SAMPLE_QUERIES = [
 const QUERY_MAX_CHARS    = 4000;
 const QUERY_WARN_CHARS   = 3000;
 const QUERY_DANGER_CHARS = 3800;
-
-// Compact token formatter for the per-response attribution line.
-// 4321 → "4.3k", 821 → "821", 12_345 → "12.3k". Avoids "k" for tiny
-// counts (jarring for a 200-token response) and rounds to 1 decimal
-// for readability (no false precision on a self-reported figure).
-function fmtTokens(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return '0';
-  if (n < 1000) return String(Math.round(n));
-  return `${(n / 1000).toFixed(1)}k`;
-}
 
 // ── Markdown rendering ───────────────────────────────────────────────
 // Assistant messages from DeepSeek/Claude come back as standard markdown
@@ -139,7 +130,6 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   const [loading,     setLoading]     = useState(false);
   const [sessionId,   setSessionId]   = useState<string | null>(initialSessionId ?? null);
   const [quotaUsed,   setQuotaUsed]   = useState<number | null>(null);
-  const [quotaLimit,  setQuotaLimit]  = useState<number>(30);
   const [tier,        setTier]        = useState<'free' | 'pro' | null>(null);
   // Banner dismissal lives in component state for the active session.
   // Persistence to localStorage happens in dismissPickerBanner so the
@@ -163,9 +153,8 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   }, [input, inputMaxHeight]);
 
   useEffect(() => {
-    fetch('/api/quota').then(r => r.json()).then((d: { used: number; limit: number; tier?: 'free' | 'pro' }) => {
+    fetch('/api/quota').then(r => r.json()).then((d: { used: number; tier?: 'free' | 'pro' }) => {
       setQuotaUsed(d.used);
-      setQuotaLimit(d.limit);
       if (d.tier) setTier(d.tier);
     }).catch(() => {});
   }, []);
@@ -230,7 +219,14 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
       });
 
       if (res.status === 429) {
-        setMessages(prev => [...prev, { role: 'assistant', text: 'Daily query limit reached. Upgrade to Pro for unlimited queries.' }]);
+        // Tier-aware copy: free user → upgrade nudge, pro user →
+        // try-tomorrow. Both axes (queries cap, USD cap behind the
+        // scenes) collapse to the same user-visible message
+        // (todo:e8105324).
+        const text = tier === 'pro'
+          ? 'Daily question limit reached. Resets at midnight.'
+          : 'Daily question limit reached. Upgrade to Pro for more.';
+        setMessages(prev => [...prev, { role: 'assistant', text }]);
         setLoading(false);
         return;
       }
@@ -281,9 +277,8 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId]);
+  }, [input, loading, sessionId, tier]);
 
-  const quotaRemaining = quotaLimit - (quotaUsed ?? 0);
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;
   const counterColor   = input.length >= QUERY_DANGER_CHARS ? '#c25a7a' : tokens.text.muted;
@@ -391,25 +386,24 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                     </div>
                   </>
                 )}
-                {/* Per-response attribution (model-selection BRD §7.4).
-                    Shown for persisted assistant messages (where the
-                    queries row exists with model_used + cost_usd).
-                    Hidden during streaming and on synthetic quota-error
-                    messages where modelUsed is undefined. */}
-                {msg.modelUsed && (
-                  <div style={{
-                    marginTop: msg.citations?.length ? 6 : 10,
-                    fontFamily: tokens.font.mono,
-                    fontSize: 10,
-                    color: tokens.text.muted,
-                  }}>
-                    {msg.modelUsed}
-                    {(msg.inputTokens != null || msg.outputTokens != null) && (
-                      <> · {fmtTokens((msg.inputTokens ?? 0) + (msg.outputTokens ?? 0))} tokens</>
-                    )}
-                    {msg.costUsd != null && <> · ${msg.costUsd.toFixed(4)}</>}
-                  </div>
-                )}
+                {/* Per-response attribution badge — provider only.
+                    Tokens + cost are deliberately not surfaced to
+                    users; admin views show those for diagnostics.
+                    todo:e8105324. */}
+                {(() => {
+                  const display = displayForModelId(msg.modelUsed);
+                  if (!display) return null;
+                  return (
+                    <div style={{
+                      marginTop: msg.citations?.length ? 6 : 10,
+                      fontFamily: tokens.font.mono,
+                      fontSize: 10,
+                      color: tokens.text.muted,
+                    }}>
+                      via <span style={{ color: display.color }}>{display.name}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -467,7 +461,13 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         <div style={{ maxWidth: 680, margin: '5px auto 0', fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, display: 'flex', gap: mobile ? 8 : 16, flexWrap: 'wrap' }}>
           <span>8 traditions</span>
           <span>34 texts</span>
-          {quotaUsed !== null && <span>{quotaRemaining}/{quotaLimit} remaining today</span>}
+          {/* Today's question count. We deliberately don't show a
+              hard ceiling (X/Y) because the effective ceiling
+              varies by selected model — the USD cap binds at ~30
+              for DeepSeek, ~4 for Anthropic, etc. — and a static
+              "/30" misleads pro users who switched picker. The 429
+              surfaces the actual cap when it binds. todo:e8105324. */}
+          {quotaUsed !== null && <span>{quotaUsed} today</span>}
           {showCounter && <span style={{ color: counterColor, marginLeft: 'auto' }}>{input.length}/{QUERY_MAX_CHARS}</span>}
         </div>
       </div>
