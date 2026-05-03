@@ -51,7 +51,18 @@ export const PRO_DAILY_QUERY_LIMIT  = 100;
 
 /** Typical Guru workload — used by provider-display.ts to estimate
  *  per-query cost for the picker's "~N questions per day" labels.
- *  Heavy retrieval contexts on this corpus run ~10k input tokens;
- *  responses ~1k. BRD §3 worked the cap math against these numbers. */
+ *
+ *  Calibration sources (only real data we have pre-launch — see
+ *  operator session e4f9d4f7):
+ *    deepseek/deepseek-chat   ~5,200 in / 1,200 out
+ *    anthropic/claude-sonnet-4.5  ~12,400 in / 2,000-2,600 out
+ *
+ *  We have ZERO data on the curated picker models themselves
+ *  (deepseek-v4-pro, grok-4.3, sonnet-4.6, gpt-5.4). The 10k/2k
+ *  pair is a conservative middle ground that covers DeepSeek's
+ *  terse 1.2k case and Sonnet 4.5's 2-2.6k case with headroom.
+ *
+ *  Recalibrate post-launch from real queries data — admin
+ *  telemetry script TBD. */
 export const TYPICAL_INPUT_TOKENS  = 10_000;
-export const TYPICAL_OUTPUT_TOKENS = 1_000;
+export const TYPICAL_OUTPUT_TOKENS = 2_000;
