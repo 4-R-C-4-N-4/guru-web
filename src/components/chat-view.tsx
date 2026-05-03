@@ -309,12 +309,13 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         >
           <span style={{ color: tokens.text.accent }}>NEW</span>
           <span style={{ flex: 1 }}>
-            Pro now lets you pick your AI model. Default switched to
-            DeepSeek for cost reasons —{' '}
+            Pro now lets you choose how Guru answers — Anthropic for
+            careful comparison, OpenAI for analysis, X.AI for
+            conversational. Adjust in{' '}
             <a href="/settings" style={{ color: tokens.text.link, textDecoration: 'underline' }}>
-              change it in Settings
-            </a>{' '}
-            if you&rsquo;d rather use Anthropic, OpenAI, or X.AI.
+              Settings
+            </a>
+            .
           </span>
           <button
             type="button"

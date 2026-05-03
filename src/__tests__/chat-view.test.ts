@@ -182,9 +182,13 @@ describe('chat-view model-picker announcement banner (todo:f238dc42)', () => {
   it('renders banner block with data-testid + dismiss button', () => {
     expect(SRC).toMatch(/data-testid=['"]model-picker-banner['"]/);
     expect(SRC).toMatch(/aria-label=['"]Dismiss banner['"]/);
-    // Banner copy carries the "DeepSeek" and "Settings" link.
-    expect(SRC).toMatch(/Default switched to/);
+    // Banner copy frames the picker positively (todo:e8105324
+    // reframe — no "cost" language, names the providers).
+    expect(SRC).toMatch(/choose how Guru answers/);
+    expect(SRC).toMatch(/Adjust in/);
     expect(SRC).toMatch(/href=['"]\/settings['"]/);
+    // Negative guard: never reintroduce cost framing in the banner.
+    expect(SRC).not.toMatch(/cost reasons/);
   });
 });
 
