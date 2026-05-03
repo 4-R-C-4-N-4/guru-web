@@ -1,17 +1,23 @@
 {
   "id": "843e00ad",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "reservation: estimate at typical output, not max",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-03T19:16:33.005Z",
-  "updated_at": "2026-05-03T19:16:52.735Z",
+  "updated_at": "2026-05-03T19:18:30.657Z",
   "description": "Live testing surfaced the picker-vs-reservation gap I flagged in\nPR #40 review:\n\n  Picker says ~2 Anthropic queries per day (typical-output math).\n  Reservation reserves at MAX_OUTPUT_TOKENS=8192 worst-case.\n  → User does 1 Anthropic query (\\$0.04 actual), tries Q2,\n    reservation \\$0.15 worst-case won't fit alongside \\$0.04\n    already used. 429.\n\nReality after fix (estimate at TYPICAL_OUTPUT_TOKENS=2000):\n  Q1 reserve \\$0.06; actual \\$0.07 → usd_used 0.07.\n  Q2 reserve \\$0.06; 0.07+0.06=0.13 ≤ 0.1667 → allowed.\n  Q3 attempt: 0.14+0.06=0.20 > 0.1667 → rejected.\n  User gets 2 Anthropic queries — matches picker.\n\nFiles:\n  - src/app/api/query/route.ts: change the computeCost estimate\n    from MAX_OUTPUT_TOKENS to TYPICAL_OUTPUT_TOKENS. Add import\n    from pricing-config. Add a comment explaining the distinction\n    between reservation estimate (typical-case budget reservation)\n    and the API ceiling (max_tokens still passes 8192 to OpenRouter\n    so verbose responses don't truncate).\n\nRisk acknowledged: a single verbose query whose actual exceeds the\ntypical reservation will overshoot the cap. finalizeBudget records\nthe overage; subsequent reservations correctly reject. Operator\nabsorbs ~\\$0.10 max per overshoot — bounded and small at pre-launch\nscale.\n\nDone when:\n  - /api/query reservation uses TYPICAL_OUTPUT_TOKENS not MAX.\n  - Tests + tsc + lint + build clean.\n  - Live: a fresh pro user can run 2-3 Anthropic queries before\n    cap rejects (matching picker label of ~2).\n\nSpec: BRD-model-selection.md §6.2 + PR #40 review thread.",
   "tags": [
     "pricing",
     "reservation",
     "model-selection"
-  ]
+  ],
+  "resolution": {
+    "commit": "7c1f66d6f9117c5b310062188c298988d8bedab8",
+    "resolved_at": "2026-05-03T19:18:30.657Z",
+    "resolved_by": "unknown",
+    "note": "Reservation now estimates at TYPICAL_OUTPUT_TOKENS instead of MAX_OUTPUT_TOKENS. Picker labels and actual reservation behavior now align — user gets the queries/day the picker shows. Verbose-response overshoot bounded and operator-absorbable at pre-launch scale. 247 tests pass; tsc + lint + build clean."
+  }
 }
