@@ -75,7 +75,13 @@ function estimateQueryCostUsd(slug: CuratedSlug): number {
 function computeQuestionsPerDay(slug: CuratedSlug): number {
   const cost = estimateQueryCostUsd(slug);
   if (cost <= 0 || !Number.isFinite(cost)) return 0;
-  return Math.round(PRO_DAILY_USD_CAP / cost);
+  // Floor (not round) so the displayed "~N" matches what the user
+  // can actually do before the cap binds. Math.round overpromises:
+  // at $0.045/query Anthropic gives 0.1667/0.045 = 3.7 queries
+  // before cap, which round → 4 but the 4th query is rejected. The
+  // user counting to 3 then seeing 429 with "~4 per day" displayed
+  // is the wrong first impression. todo:068a8039 review.
+  return Math.floor(PRO_DAILY_USD_CAP / cost);
 }
 
 /**

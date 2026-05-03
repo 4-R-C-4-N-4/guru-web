@@ -51,9 +51,28 @@ describe('PROVIDER_DISPLAY', () => {
       const perQueryCost =
         (cfg.TYPICAL_INPUT_TOKENS  / 1e6) * fb!.input_per_mtok +
         (cfg.TYPICAL_OUTPUT_TOKENS / 1e6) * fb!.output_per_mtok;
-      const expected = Math.round(cfg.PRO_DAILY_USD_CAP / perQueryCost);
+      // Floor, not round — see provider-display.ts comment. The
+      // displayed "~N" must match what users can actually do
+      // before cap binds; rounding up overpromises.
+      const expected = Math.floor(cfg.PRO_DAILY_USD_CAP / perQueryCost);
       expect(d.questionsPerDay, slug).toBe(expected);
     }
+  });
+
+  // Sanity bounds — separate from the derivation test so a flipped
+  // formula (round, ceil, etc.) that compiles cleanly still gets
+  // caught by the order-of-magnitude check. These ranges reflect
+  // BRD §3.2 expectations under the current $5/30d cap; bump if the
+  // policy moves materially.
+  it('questionsPerDay falls in expected ranges per provider', () => {
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeGreaterThanOrEqual(20);
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeLessThanOrEqual(40);
+    expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeGreaterThanOrEqual(8);
+    expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeLessThanOrEqual(15);
+    expect(PROVIDER_DISPLAY.anthropic.questionsPerDay).toBeGreaterThanOrEqual(2);
+    expect(PROVIDER_DISPLAY.anthropic.questionsPerDay).toBeLessThanOrEqual(6);
+    expect(PROVIDER_DISPLAY.openai.questionsPerDay).toBeGreaterThanOrEqual(2);
+    expect(PROVIDER_DISPLAY.openai.questionsPerDay).toBeLessThanOrEqual(6);
   });
 });
 
