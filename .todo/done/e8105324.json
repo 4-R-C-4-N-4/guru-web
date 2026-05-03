@@ -1,13 +1,13 @@
 {
   "id": "e8105324",
   "type": "chore",
-  "state": "active",
+  "state": "done",
   "summary": "C9: simplify model-picker UX — provider names, no metrics, hidden dollar mechanism",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-03T01:20:38.836Z",
-  "updated_at": "2026-05-03T01:21:07.075Z",
+  "updated_at": "2026-05-03T01:27:08.532Z",
   "relationships": {
     "parent": "6e4e89c5"
   },
@@ -17,5 +17,12 @@
     "picker",
     "model-selection",
     "pre-launch"
-  ]
+  ],
+  "resolution": {
+    "commit": "165ff574a891259028a0f3ca7f5a3b1e0ffcf812",
+    "resolved_at": "2026-05-03T01:27:08.532Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/provider-display.test.ts",
+    "note": "Picker now shows provider names + ~N questions/day (no model ids, no $ hints). Per-response badge is 'via <Provider>' in provider color. /api/quota strips USD fields from client response. 429 unified to 'Daily question limit reached.' regardless of axis. 244 tests pass; lint + tsc + build clean. Voice/personality reframe deferred."
+  }
 }
