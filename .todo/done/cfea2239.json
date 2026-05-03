@@ -1,0 +1,27 @@
+{
+  "id": "cfea2239",
+  "type": "chore",
+  "state": "done",
+  "summary": "C2: CURATED_MODELS map + slug resolver in lib/model.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.537Z",
+  "updated_at": "2026-05-02T18:23:55.458Z",
+  "relationships": {
+    "parent": "6e4e89c5"
+  },
+  "description": "Slug → OpenRouter ID indirection (BRD §5.1). Server-side only;\nno UI yet. The map is the source of truth for which model each\nprovider slug points at; bumping it is how we silently roll\nforward across version releases.\n\nFiles:\n  - src/lib/model.ts — add CURATED_MODELS const + CuratedSlug\n    type + resolveCuratedModel(slug) helper. Existing MODELS\n    const stays for backwards compat during phase 1; new code\n    references CURATED_MODELS only.\n  - src/__tests__/model.test.ts (new) — exhaustive slug coverage.\n\nMap at landing time:\n    deepseek  → deepseek/deepseek-v4-pro\n    xai       → x-ai/grok-4.3\n    anthropic → anthropic/claude-sonnet-4.6\n    openai    → openai/gpt-5.4\n\nDone when:\n  - CURATED_MODELS keys are exactly: deepseek, xai, anthropic, openai.\n  - resolveCuratedModel('anthropic') === 'anthropic/claude-sonnet-4.6'.\n  - Unknown-slug calls are TypeScript compile errors.\n  - npx vitest run src/__tests__/model.test.ts clean.\n\nTests: vitest unit only — small constant + small resolver.\n\nOperator action post-merge: none.\n\nDepends on: nothing. Can land before or after C1.",
+  "tags": [
+    "models",
+    "pricing",
+    "slug-indirection"
+  ],
+  "resolution": {
+    "commit": "3b0507881a5101ecb7c8bfd52d586a68d4491c87",
+    "resolved_at": "2026-05-02T18:23:55.458Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/model.test.ts",
+    "note": "CURATED_MODELS const + CuratedSlug type + DEFAULT_CURATED_SLUG + resolveCuratedModel() + isCuratedSlug() type guard. 9 tests pass; tsc clean. Existing MODELS const retained for backwards compat during phase 1."
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "6e4e89c5",
+  "type": "feature",
+  "state": "done",
+  "summary": "feat: model selection picker + USD budget cap",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:22:59.701Z",
+  "updated_at": "2026-05-03T01:20:38.836Z",
+  "description": "Umbrella for the model-selection feature. Implementation plan:\ndocs/model-selection/IMPL-model-selection.md. Spec:\ndocs/model-selection/BRD-model-selection.md.\n\nShips BRD §12 phases 1–2:\n  Phase 1 (C1–C4): server-side default switch + USD cap + sync\n  timer + CI guard. Addresses the cost concern on its own; no UI.\n  Phase 2 (C5–C7): pro picker UI + chat attribution + announcement\n  banner.\n  Phase 3 (C8): post-launch telemetry review.\n\nHard rules:\n  - C1 (schema + tier limits) and C2 (CURATED_MODELS map) land\n    before C3 (route integration).\n  - C4 (sync timer + CI guard) ships with C1–C3 — without it, the\n    first slug bump after launch can take down /api/query (BRD\n    §5.4: computeCost throws on missing pricing).\n  - C5 (picker UI) before C7 (banner links to /settings).\n\nCloses when all eight children close.",
+  "tags": [
+    "pricing",
+    "models",
+    "budget",
+    "ux"
+  ],
+  "relationships": {
+    "children": [
+      "9a0dedf3",
+      "cfea2239",
+      "ae3e5de8",
+      "27e49cb9",
+      "f764d5dc",
+      "497ff5ce",
+      "f238dc42",
+      "057792c7",
+      "e8105324"
+    ]
+  },
+  "work": {
+    "branch": "todo/6e4e89c5",
+    "base_branch": "main",
+    "started_at": "2026-05-02T18:18:55.039Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "61f84df2bbbc90a172ee255569ae4ab08919aa6c",
+    "resolved_at": "2026-05-02T18:45:44.829Z",
+    "resolved_by": "unknown",
+    "note": "All 8 subtasks complete. Phase 1 (C1-C4): server-side defaults flipped, USD cap enforced, sync timer + CI guard shipped. Phase 2 (C5-C7): pro picker UI on /settings with resolved-id labels, per-response chat attribution line, default-switch banner. Phase 3 (C8): telemetry chore deferred to post-launch +7d. 224 tests pass; tsc + lint + build clean. Operator action post-merge: install sync-pricing.timer on the VPS (deploy/README.md 'Pricing sync' install)."
+  }
+}

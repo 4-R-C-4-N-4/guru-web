@@ -7,6 +7,7 @@
 
 import { requireUser } from '@/lib/auth';
 import { loadPreferences, savePreferences } from '@/lib/prefs';
+import { isCuratedSlug } from '@/lib/curated-models';
 import type { UserPreferences } from '@/lib/types';
 
 export async function GET() {
@@ -39,6 +40,21 @@ export async function PUT(req: Request) {
     );
   }
 
+  // Validate preferredModel: must be a CURATED_MODELS slug, null, or
+  // unset. Free users may send any of these but the value is ignored
+  // at query time per BRD §7.2 (route resolves to tier default for
+  // free regardless). Spec: BRD-model-selection.md §6.1.
+  if (
+    body.preferredModel !== undefined &&
+    body.preferredModel !== null &&
+    !isCuratedSlug(body.preferredModel)
+  ) {
+    return Response.json(
+      { error: `preferredModel must be a curated slug or null` },
+      { status: 400 }
+    );
+  }
+
   // Merge with existing prefs so partial updates are safe
   const existing = await loadPreferences(user.id);
   const updated: UserPreferences = {
@@ -47,6 +63,9 @@ export async function PUT(req: Request) {
     blockedTexts:          body.blockedTexts          ?? existing.blockedTexts,
     whitelistedTraditions: body.whitelistedTraditions ?? existing.whitelistedTraditions,
     whitelistedTexts:      body.whitelistedTexts      ?? existing.whitelistedTexts,
+    preferredModel:        body.preferredModel !== undefined
+                             ? body.preferredModel
+                             : existing.preferredModel,
   };
 
   await savePreferences(user.id, updated);

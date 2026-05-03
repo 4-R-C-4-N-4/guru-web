@@ -34,6 +34,13 @@ export interface UserPreferences {
   blockedTexts: string[];
   whitelistedTraditions: string[];
   whitelistedTexts: string[];
+  /**
+   * Curated-picker slug (deepseek | xai | anthropic | openai) or null
+   * to mean "use the tier default." Only consulted for pro tier; free
+   * is always pinned. Validated against CURATED_MODELS at write time
+   * via /api/preferences. Spec: BRD-model-selection.md §5.1, §6.1.
+   */
+  preferredModel: string | null;
 }
 
 export interface User {
@@ -56,5 +63,12 @@ export interface QueryRecord {
   response_text: string;
   chunks_used: string[];
   model_used: string;
+  /** Token + cost columns from queries; nullable on rows that
+   *  pre-date the cost-tracking migration or where the usage chunk
+   *  never arrived (truncated stream). Surfaced in the chat view's
+   *  per-response attribution line (model-selection BRD §7.4). */
+  input_tokens?:  number | null;
+  output_tokens?: number | null;
+  cost_usd?:      number | null;
   created_at: string;
 }

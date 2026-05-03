@@ -13,6 +13,7 @@ const DEFAULT_PREFS: UserPreferences = {
   blockedTexts: [],
   whitelistedTraditions: [],
   whitelistedTexts: [],
+  preferredModel: null,
 };
 
 const makeChunk = (id: string, tradition: string, tier: RetrievedChunk['tier'] = 'verified'): RetrievedChunk => ({

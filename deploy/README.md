@@ -476,6 +476,91 @@ mutation outside this UI.
 
 ---
 
+## Pricing sync
+
+`scripts/sync-pricing.ts` keeps the `model_pricing` table current
+against the live OpenRouter rates. The live query path
+(`/api/query` → `computeCost`) **throws** if no pricing row covers
+the resolved model — so this script must run before any new model
+id is reachable from the picker. Spec:
+`docs/model-selection/BRD-model-selection.md` §8.
+
+Three layers:
+
+1. **Daily systemd timer** — drift catcher (this section).
+2. **PR-time sync** — operator runs `npm run sync-pricing` against
+   prod before merging a `CURATED_MODELS` bump. See the
+   model-selection runbook below.
+3. **CI guard** — `src/__tests__/curated-models-coverage.test.ts`
+   fails the build if a slug lacks a `FALLBACK_PRICING` entry.
+   Catches "I forgot the fallback" at PR review time.
+
+### Install
+
+One-time hand-patch on the VPS, mirroring the tailnet-cert-renew
+install. As root:
+
+```bash
+ssh root@guru-web-prod
+SHA=$(ls -1t /srv/guru-web/releases | head -1)
+install -m 0755 /srv/guru-web/releases/$SHA/deploy/sync-pricing-runner.sh \
+                /usr/local/bin/sync-pricing
+install -m 0644 /srv/guru-web/releases/$SHA/deploy/sync-pricing.service \
+                /etc/systemd/system/sync-pricing.service
+install -m 0644 /srv/guru-web/releases/$SHA/deploy/sync-pricing.timer \
+                /etc/systemd/system/sync-pricing.timer
+
+# First run before enabling the timer — confirms the wrapper resolves
+# the right release and the DB credentials in /etc/guru-web.env are
+# usable from the `guru` user.
+sudo -u guru /usr/local/bin/sync-pricing
+
+systemctl daemon-reload
+systemctl enable --now sync-pricing.timer
+systemctl list-timers sync-pricing.timer    # confirm active
+```
+
+### Validation
+
+After enabling, the next scheduled run logs to journald:
+
+```bash
+journalctl -u sync-pricing -n 50 --no-pager
+# Expect a final line like:
+#   [sync-pricing] done: seeded=N updated=M unchanged=K
+```
+
+`seeded` = first time we've seen this model id; `updated` = price
+changed on OpenRouter side; `unchanged` = no-op (the typical
+case).
+
+### Manual run
+
+```bash
+sudo systemctl start sync-pricing
+sudo -u guru /usr/local/bin/sync-pricing   # equivalent, by-hand
+```
+
+Either is idempotent. Safe to re-run.
+
+### Failure modes
+
+- **OpenRouter unreachable** — falls back to `FALLBACK_PRICING` in
+  `scripts/sync-pricing.ts` for the curated models only. Other ids
+  not in fallback get skipped. The next successful network sync
+  fills them in.
+- **Timer silently failing** — `systemctl list-timers
+  sync-pricing.timer` is the diagnostic surface. If `LAST` is more
+  than a few days old, look at the journal.
+- **`/api/query` 500s with "No model_pricing row for X"** —
+  pricing for X is missing. Either OpenRouter never had it
+  (verify with `curl https://openrouter.ai/api/v1/models | jq
+  '.data[].id' | grep X`), or sync hasn't run. Manual sync should
+  fix it; if not, the model id is dead and `CURATED_MODELS` needs
+  to be bumped to a live one.
+
+---
+
 ## Admin UI runbook
 
 The admin UI is the read-only observability surface at
@@ -613,6 +698,59 @@ Failure modes mapped to fixes:
 - Soft-delete of users / quota resets / tier flips / corpus content
   removal: deliberately not in the admin UI. See the deferred
   `BRD-operator-mutations.md` for psql snippets when those land.
+
+---
+
+## Bumping a curated model (slug rollover)
+
+`CURATED_MODELS` in `src/lib/model.ts` is the source of truth for
+which OpenRouter id each provider slug points at. Bumping an entry
+is how we silently roll users forward when a new version ships
+(e.g. Sonnet 4.6 → Sonnet 5). Spec:
+`docs/model-selection/BRD-model-selection.md` §5.1, §8.2.
+
+The throw-on-missing-pricing behaviour means this is a careful
+sequence — skip a step and the next pro user query 500s. Process:
+
+```bash
+# 1. Confirm the new id exists on OpenRouter.
+curl -sS https://openrouter.ai/api/v1/models | jq -r '.data[].id' | grep <pattern>
+
+# 2. Edit src/lib/model.ts CURATED_MODELS — bump one entry.
+$EDITOR src/lib/model.ts
+
+# 3. Edit scripts/sync-pricing.ts FALLBACK_PRICING — add the new id
+#    with current rates from OpenRouter (pull from the curl above).
+#    The CI guard (curated-models-coverage.test.ts) fails without this.
+$EDITOR scripts/sync-pricing.ts
+
+# 4. Update docs/model-selection/BRD-model-selection.md §3 pricing
+#    table to reflect the new pinned model.
+
+# 5. Run sync against PROD DB before merging — seeds the new
+#    model_pricing row so /api/query doesn't throw on first
+#    user query post-deploy.
+ssh root@guru-web-prod
+sudo systemctl start sync-pricing
+journalctl -u sync-pricing -n 20 --no-pager   # expect "seeded=1"
+
+# 6. Open PR; merge after CI green.
+
+# 7. Spot-check: hit /admin/users/<your-id> after a query, look at
+#    the queries deep dive — model_used should be the new id with
+#    a fresh pricing_effective_from in admin model_pricing table.
+```
+
+If you skip step 5 and merge: the daily sync timer catches it
+within 24h, but until then the new picker option 500s on selection.
+If you spot the issue, run sync manually on the VPS and the next
+attempt succeeds.
+
+### Cross-references
+
+- Pricing sync (timer install + manual run): "Pricing sync" above.
+- USD cap math + tier limits: BRD-model-selection §3, §6.2.
+- Picker UX + chat attribution surface: BRD-model-selection §7.
 
 ---
 

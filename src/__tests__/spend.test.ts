@@ -141,12 +141,66 @@ describe('getBudget', () => {
 });
 
 describe('TIER_LIMITS', () => {
-  // Lock the live values — accidental drift fails CI loudly.
-  it('free tier: 10 queries, no USD cap (today)', () => {
-    expect(TIER_LIMITS.free).toEqual({ query_limit: 10, usd_limit: null });
+  // Lock the live values via pricing-config constants — TIER_LIMITS
+  // is now a derivation, not a literal. Accidental drift between
+  // policy and enforcement fails CI loudly. See pricing-config.ts.
+  it('free tier: query cap from FREE_DAILY_QUERY_LIMIT, no USD cap', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    expect(TIER_LIMITS.free).toEqual({
+      query_limit: cfg.FREE_DAILY_QUERY_LIMIT,
+      usd_limit:   null,
+    });
   });
 
-  it('pro tier: 30 queries, no USD cap (today)', () => {
-    expect(TIER_LIMITS.pro).toEqual({ query_limit: 30, usd_limit: null });
+  it('pro tier: query cap (soft) from PRO_DAILY_QUERY_LIMIT, USD cap from PRO_DAILY_USD_CAP', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    expect(TIER_LIMITS.pro).toEqual({
+      query_limit: cfg.PRO_DAILY_QUERY_LIMIT,
+      usd_limit:   cfg.PRO_DAILY_USD_CAP,
+    });
+  });
+
+  it('PRO_DAILY_USD_CAP derives from PRO_MONTHLY_USD_TARGET / PERIOD_DAYS', async () => {
+    const cfg = await import('@/lib/pricing-config');
+    expect(cfg.PRO_DAILY_USD_CAP).toBeCloseTo(
+      cfg.PRO_MONTHLY_USD_TARGET / cfg.PERIOD_DAYS,
+      6,
+    );
+  });
+});
+
+describe('reserveBudget — pro dual-axis (model-selection BRD §3.2)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('rejects pro for usd reason at $0.17 cap even when queries_used is well below 100', async () => {
+    // Sonnet costs ~$0.045/query, so day 4 takes a pro user from
+    // ~$0.135 used to ~$0.18 — over the $0.17/day cap with only
+    // 4 queries against a 100/day soft limit.
+    mockExec.mockResolvedValueOnce(undefined);
+    mockOne.mockResolvedValueOnce(null); // increment WHERE excluded → null
+    mockOne.mockResolvedValueOnce({
+      queries_used: 3, usd_used: '0.135',
+      query_limit: 100, usd_limit: '0.17',
+    });
+
+    const result = await reserveBudget({ userId: 'u1', tier: 'pro', estimatedCostUsd: 0.045 });
+    expect(result).toMatchObject({
+      allowed: false,
+      reason: 'usd',
+      queries_used: 3,
+      usd_used: 0.135,
+      usd_limit: 0.17,
+    });
+  });
+
+  it('allows pro under both axes (DeepSeek at $0.005/query, day 1)', async () => {
+    mockExec.mockResolvedValueOnce(undefined);
+    mockOne.mockResolvedValueOnce({
+      queries_used: 1, usd_used: '0.005',
+      query_limit: 100, usd_limit: '0.17',
+    });
+
+    const result = await reserveBudget({ userId: 'u1', tier: 'pro', estimatedCostUsd: 0.005 });
+    expect(result).toMatchObject({ allowed: true, query_limit: 100, usd_limit: 0.17 });
   });
 });

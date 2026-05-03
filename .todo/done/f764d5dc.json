@@ -1,0 +1,32 @@
+{
+  "id": "f764d5dc",
+  "type": "chore",
+  "state": "done",
+  "summary": "C5: pro picker UI in /settings + /api/preferences validation",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.631Z",
+  "updated_at": "2026-05-02T18:37:48.910Z",
+  "relationships": {
+    "parent": "6e4e89c5",
+    "depends_on": [
+      "cfea2239",
+      "ae3e5de8"
+    ]
+  },
+  "description": "Pro-only model picker on /settings (BRD §7.3). Native HTML, four\nradio options. Each row reads '<provider> — <resolved id>' so the\nuser always sees the actual model — when operator bumps the map,\nthe UI label updates with no copy migration.\n\nFiles:\n  - src/app/(app)/settings/page.tsx — new 'Model' section\n    rendering CURATED_MODELS entries. Resolved ID rendered from\n    the const at render time.\n  - src/app/api/preferences/route.ts (extend) — accept\n    preferred_model in PATCH body, validate against CURATED_MODELS\n    keys, reject other values with 400. Free users may save (it's\n    ignored at query time per C3).\n  - src/__tests__/preferences.test.ts (extend or new) — round-trip\n    write/read; invalid slug rejected with 400.\n\nPicker rendering:\n    [○] DeepSeek  — deepseek-v4-pro     cheap, fast            ~$0.005/query\n    [○] X.AI      — grok-4.3            mid-cost, fluent       ~$0.015/query\n    [●] Anthropic — claude-sonnet-4.6   premium reasoning      ~$0.045/query\n    [○] OpenAI    — gpt-5.4             premium                ~$0.040/query\n\nDone when:\n  - Pro user sees the four picker options, current selection\n    highlighted (DeepSeek default if unset).\n  - Selecting another option PATCHes the preference; reload\n    persists.\n  - Free user sees disabled section + 'Pro only' tag + upgrade\n    link.\n  - Invalid slug rejected at API with 400.\n  - npm run build + npm run lint clean.\n\nTests:\n  - Unit/component: round-trip with mocked fetch.\n  - Smoke (manual): pick each of the four, verify chat responses\n    attribute correctly (relies on C6).\n\nOperator action post-merge: none.\n\nDepends on: C2 (CURATED_MODELS source), C3 (route reading prefs).",
+  "tags": [
+    "ui",
+    "settings",
+    "models",
+    "pro"
+  ],
+  "resolution": {
+    "commit": "f460c46fd87ce929403e6da7a69069fc8357c779",
+    "resolved_at": "2026-05-02T18:37:48.910Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "note": "Pro picker UI: four radio rows on /settings showing '<provider> — <resolved id>' so the user always sees the actual model. Free users see disabled rows + Pro-only tag. Optimistic update with rollback on failure. /api/preferences validates preferredModel against isCuratedSlug (already in place from C3); 4 new tests cover accept-valid / accept-null / keep-on-omit / reject-bogus."
+  }
+}

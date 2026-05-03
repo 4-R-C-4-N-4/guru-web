@@ -1,0 +1,33 @@
+# deploy/sync-pricing.service
+#
+# Oneshot unit that runs scripts/sync-pricing.ts against the live DB.
+# Fired daily by sync-pricing.timer; can also be invoked manually
+# (`systemctl start sync-pricing`).
+#
+# Drift catcher: provider prices change on the order of weeks-to-
+# months; daily idempotent re-sync catches any change within ~24h.
+# A successful run logs '[sync-pricing] done: seeded=N updated=M
+# unchanged=K' to journald.
+#
+# See BRD-model-selection.md §8.1 and deploy/README.md "Pricing
+# sync".
+
+[Unit]
+Description=Resync model_pricing from OpenRouter
+Documentation=https://github.com/your-org/guru-web/blob/main/deploy/README.md
+After=postgresql.service network-online.target
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=guru
+EnvironmentFile=/etc/guru-web.env
+ExecStart=/usr/local/bin/sync-pricing
+# The runner resolves the latest release dir (Next standalone build
+# excludes scripts/, so we can't ExecStart from /srv/guru-web/current
+# directly — see sync-pricing-runner.sh).
+#
+# Don't restart on failure — failure means OpenRouter unreachable or
+# DB locked, which the next scheduled run will retry. The script
+# itself is idempotent; partial progress is fine.

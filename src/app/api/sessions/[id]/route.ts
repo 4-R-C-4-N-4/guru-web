@@ -17,6 +17,13 @@ import type { Citation, QueryRecord, Session } from '@/lib/types';
 
 interface MessageWithCitations extends QueryRecord {
   citations: Citation[];
+  // Attribution columns surfaced for the chat-view per-response line
+  // (model-selection BRD §7.4). Streaming queries populate these after
+  // finalizeBudget; historical rows may have nulls for older queries
+  // that pre-date the cost-tracking migration.
+  input_tokens:  number | null;
+  output_tokens: number | null;
+  cost_usd:      number | null;
 }
 
 export async function GET(
@@ -40,8 +47,13 @@ export async function GET(
     return Response.json({ error: 'Session not found' }, { status: 404 });
   }
 
-  const records = await query<QueryRecord>(
-    `SELECT id, query_text, response_text, chunks_used, model_used, created_at
+  const records = await query<QueryRecord & {
+    input_tokens:  number | null;
+    output_tokens: number | null;
+    cost_usd:      string | number | null;
+  }>(
+    `SELECT id, query_text, response_text, chunks_used, model_used,
+            input_tokens, output_tokens, cost_usd, created_at
      FROM queries
      WHERE session_id = $1
      ORDER BY created_at ASC`,
@@ -78,6 +90,7 @@ export async function GET(
 
   const messages: MessageWithCitations[] = records.map(m => ({
     ...m,
+    cost_usd: m.cost_usd === null ? null : Number(m.cost_usd),
     citations: Array.isArray(m.chunks_used)
       ? m.chunks_used
           .map(cid => chunkMap.get(cid))

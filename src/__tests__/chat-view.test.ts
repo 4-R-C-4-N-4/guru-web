@@ -64,6 +64,51 @@ describe('recordsToMessages', () => {
     // User messages never get citations (the user typed the question).
     expect(out[0]!.citations).toBeUndefined();
   });
+
+  // ── Per-response attribution surface (BRD §7.4 / C6) ───────────────
+  it('passes through model_used + tokens + cost_usd from persisted records', () => {
+    const out = recordsToMessages([{
+      query_text:    'Q',
+      response_text: 'A',
+      model_used:    'anthropic/claude-sonnet-4.6',
+      input_tokens:  1234,
+      output_tokens: 567,
+      cost_usd:      0.0451,
+    }]);
+    const assistant = out[1]!;
+    expect(assistant.role).toBe('assistant');
+    expect(assistant.modelUsed).toBe('anthropic/claude-sonnet-4.6');
+    expect(assistant.inputTokens).toBe(1234);
+    expect(assistant.outputTokens).toBe(567);
+    expect(assistant.costUsd).toBeCloseTo(0.0451, 6);
+  });
+
+  it('omits attribution fields entirely when the record lacks them (legacy rows)', () => {
+    // Pre-cost-tracking rows. The chat-view render guards on
+    // msg.modelUsed, so omitting the fields hides the line.
+    const out = recordsToMessages([{ query_text: 'Q', response_text: 'A' }]);
+    const assistant = out[1]!;
+    expect(assistant.modelUsed).toBeUndefined();
+    expect(assistant.inputTokens).toBeUndefined();
+    expect(assistant.outputTokens).toBeUndefined();
+    expect(assistant.costUsd).toBeUndefined();
+  });
+
+  it('omits attribution fields when the record carries explicit nulls (truncated stream)', () => {
+    // Stream truncated before the usage chunk arrived → cost_usd
+    // persisted as NULL. The chat view shouldn't render a partial
+    // line ("anthropic/... · NaN tokens · $0.NaN").
+    const out = recordsToMessages([{
+      query_text: 'Q', response_text: 'A',
+      model_used: 'anthropic/claude-sonnet-4.6',
+      input_tokens: null, output_tokens: null, cost_usd: null,
+    }]);
+    const assistant = out[1]!;
+    expect(assistant.modelUsed).toBe('anthropic/claude-sonnet-4.6');
+    expect(assistant.inputTokens).toBeUndefined();
+    expect(assistant.outputTokens).toBeUndefined();
+    expect(assistant.costUsd).toBeUndefined();
+  });
 });
 
 describe('chat-view markdown rendering', () => {
@@ -93,6 +138,117 @@ describe('chat-view markdown rendering', () => {
   it('user messages render as plain text (not through markdown)', () => {
     // The user branch should still render {msg.content} directly.
     expect(SRC).toMatch(/\{msg\.content\}/);
+  });
+});
+
+describe('chat-view model-picker announcement banner (todo:f238dc42)', () => {
+  // Same source-level approach as the markdown describe above.
+  // Locks in:
+  //   - localStorage key is versioned (so a future banner doesn't
+  //     un-dismiss this one),
+  //   - banner only shows when tier === 'pro',
+  //   - dismiss writes the key,
+  //   - reads tier from /api/quota.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('declares a versioned localStorage key', () => {
+    expect(SRC).toMatch(/MODEL_PICKER_BANNER_KEY\s*=\s*['"]guru\.banner\.modelpicker\.v1['"]/);
+  });
+
+  it('gates banner show on tier === "pro"', () => {
+    // useMemo derives showPickerBanner; first short-circuits when
+    // tier isn't 'pro'.
+    expect(SRC).toMatch(/if \(tier !== ['"]pro['"]\) return false/);
+  });
+
+  it('dismiss writes the key to localStorage', () => {
+    expect(SRC).toMatch(/localStorage\.setItem\(MODEL_PICKER_BANNER_KEY, ['"]1['"]\)/);
+  });
+
+  it('reads localStorage and treats "1" as dismissed', () => {
+    expect(SRC).toMatch(/localStorage\.getItem\(MODEL_PICKER_BANNER_KEY\) !== ['"]1['"]/);
+  });
+
+  it('reads tier from /api/quota response', () => {
+    // The quota effect should now consume tier in addition to used/limit.
+    expect(SRC).toMatch(/tier\??:\s*['"]free['"]\s*\|\s*['"]pro['"]/);
+    expect(SRC).toMatch(/setTier/);
+  });
+
+  it('renders banner block with data-testid + dismiss button', () => {
+    expect(SRC).toMatch(/data-testid=['"]model-picker-banner['"]/);
+    expect(SRC).toMatch(/aria-label=['"]Dismiss banner['"]/);
+    // Banner copy frames the picker positively (todo:e8105324
+    // reframe — no "cost" language, names the providers).
+    expect(SRC).toMatch(/choose how Guru answers/);
+    expect(SRC).toMatch(/Adjust in/);
+    expect(SRC).toMatch(/href=['"]\/settings['"]/);
+    // Negative guard: never reintroduce cost framing in the banner.
+    expect(SRC).not.toMatch(/cost reasons/);
+  });
+});
+
+describe('chat-view streaming attribution (post-fix #1)', () => {
+  // Source-level guard. The streaming path reads X-Model-Used from
+  // the response headers and seeds it on the assistant message so the
+  // attribution badge renders during the live stream — not just after
+  // a session reload via recordsToMessages.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('reads X-Model-Used from the response headers', () => {
+    expect(SRC).toMatch(/res\.headers\.get\(['"]X-Model-Used['"]\)/);
+  });
+
+  it('seeds modelUsed on the assistant message before the stream loop', () => {
+    // The setMessages call that adds the empty placeholder spreads
+    // modelUsed conditionally (only when the header was present).
+    expect(SRC).toMatch(/modelUsedHeader && \{ modelUsed: modelUsedHeader \}/);
+  });
+});
+
+describe('chat-view UX simplification (todo:e8105324)', () => {
+  // Source-level guards locking in the C9 reframe:
+  //   - per-response attribution shows 'via <Provider>' only,
+  //     not model id / tokens / cost.
+  //   - quota header shows 'X today' (no hard ceiling).
+  //   - 429 copy doesn't mention 'spend'.
+  //   - displayForModelId is the source of the badge metadata.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('imports displayForModelId from provider-display', () => {
+    expect(SRC).toMatch(/import\s+\{\s*displayForModelId\s*\}\s+from\s+['"]@\/lib\/provider-display['"]/);
+  });
+
+  it('attribution renders "via <name>" — no tokens, no cost, no model id', () => {
+    expect(SRC).toMatch(/via\s+<span style=\{\{\s*color:\s*display\.color/);
+    // Token + cost rendering must not be in the file anymore.
+    expect(SRC).not.toMatch(/fmtTokens/);
+    expect(SRC).not.toMatch(/msg\.costUsd\?\.toFixed/);
+    expect(SRC).not.toMatch(/\{msg\.modelUsed\}/);  // raw id render — gone
+  });
+
+  it('quota header shows "X today", not "X/Y remaining today"', () => {
+    expect(SRC).toMatch(/\{quotaUsed\} today/);
+    expect(SRC).not.toMatch(/remaining today/);
+    expect(SRC).not.toMatch(/quotaRemaining/);  // unused var dropped
+  });
+
+  it('429 copy uses "Daily question limit" — never "spend" or "query limit"', () => {
+    expect(SRC).toMatch(/Daily question limit/);
+    expect(SRC).not.toMatch(/Daily spend limit/);
+    expect(SRC).not.toMatch(/Daily query limit/);
   });
 });
 

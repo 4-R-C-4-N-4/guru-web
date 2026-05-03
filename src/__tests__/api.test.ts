@@ -50,11 +50,16 @@ vi.mock('@/lib/prompt', () => ({
   SYSTEM_PROMPT: 'mock system prompt',
 }));
 
-vi.mock('@/lib/model', () => ({
-  completeStream: vi.fn(),
-  MODELS: { free: 'deepseek/deepseek-chat', pro: 'anthropic/claude-sonnet-4.5' },
-  MAX_OUTPUT_TOKENS: 8192,
-}));
+vi.mock('@/lib/model', async () => {
+  // Use real CURATED_MODELS / resolveCuratedModel so the route's
+  // slug-resolution logic exercises the production map. Only the
+  // network-touching `completeStream` is stubbed.
+  const actual = await vi.importActual<typeof import('@/lib/model')>('@/lib/model');
+  return {
+    ...actual,
+    completeStream: vi.fn(),
+  };
+});
 
 vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn(),
@@ -112,7 +117,13 @@ const ALLOWED_RESERVE = {
 };
 
 const FREE_USER = { id: 'user_1', email: 'a@b.com', tier: 'free' as const, stripe_customer_id: null };
-const DEFAULT_PREFS = { scopeMode: 'all' as const, blockedTraditions: [], blockedTexts: [], whitelistedTraditions: [], whitelistedTexts: [] };
+const DEFAULT_PREFS = {
+  scopeMode: 'all' as const,
+  blockedTraditions: [], blockedTexts: [],
+  whitelistedTraditions: [], whitelistedTexts: [],
+  preferredModel: null,
+};
+const PRO_USER  = { id: 'user_2', email: 'p@b.com', tier: 'pro'  as const, stripe_customer_id: 'cus_x' };
 
 // ---------------------------------------------------------------------------
 // /api/sessions
@@ -279,6 +290,59 @@ describe('PUT /api/preferences', () => {
   });
 });
 
+// ── preferredModel validation (todo:f764d5dc / C5 picker) ────────────
+// Separate describe block with vi.resetAllMocks so queued mock returns
+// from earlier tests (e.g., the 'rejects invalid scopeMode' test which
+// queues but never consumes mockPrefs) don't bleed into these.
+describe('PUT /api/preferences — preferredModel', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('accepts a valid preferredModel slug and persists it', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: 'anthropic' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredModel).toBe('anthropic');
+    const [, savedPrefs] = mockSavePrefs.mock.calls[0]!;
+    expect(savedPrefs.preferredModel).toBe('anthropic');
+  });
+
+  it('accepts null preferredModel (clears the preference)', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredModel: 'anthropic' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: null }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredModel).toBeNull();
+  });
+
+  it('keeps existing preferredModel when field absent from body', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredModel: 'xai' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { scopeMode: 'all' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(body.preferredModel).toBe('xai');
+  });
+
+  it('rejects invalid preferredModel slug with 400', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: 'frontier-bogus' }));
+    expect(res.status).toBe(400);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+});
+
 describe('GET /api/corpus', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -357,10 +421,13 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(429);
     const body = await res.json() as { error: string; reason: string };
     expect(body.reason).toBe('queries');
-    expect(body.error).toMatch(/Daily query limit/);
+    // Unified user-facing message regardless of axis (todo:e8105324) —
+    // 'reason' on the body stays for log/admin telemetry but the
+    // string the user sees doesn't branch on it.
+    expect(body.error).toMatch(/Daily question limit/);
   });
 
-  it('returns 429 with reason=usd when spend cap would overrun', async () => {
+  it('returns 429 with reason=usd when spend cap would overrun (same user-facing message)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockOne.mockResolvedValueOnce({ id: 's1' });
     mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
@@ -377,7 +444,12 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(429);
     const body = await res.json() as { reason: string; error: string };
     expect(body.reason).toBe('usd');
-    expect(body.error).toMatch(/Daily spend limit/);
+    // Same user-facing copy as reason=queries — USD axis hidden from
+    // user (todo:e8105324).
+    expect(body.error).toMatch(/Daily question limit/);
+    // The phrase 'spend' must NOT appear — that would leak the
+    // dollar mechanism we deliberately abstracted.
+    expect(body.error).not.toMatch(/spend/i);
   });
 
   it('returns 404 when sessionId belongs to another user', async () => {
@@ -461,6 +533,10 @@ describe('POST /api/query', () => {
     expect(res.headers.get('X-Quota-Limit')).toBe('10');
     expect(res.headers.get('X-Spend-Used')).toBe('0.001');
     expect(res.headers.get('X-Spend-Limit')).toBe('unlimited');
+    // Resolved model id surfaced in headers so the chat-view can
+    // render the attribution line during the live stream (BRD §7.4).
+    // Free tier always resolves to the deepseek default.
+    expect(res.headers.get('X-Model-Used')).toBe('deepseek/deepseek-v4-pro');
 
     const text = await res.text();
     expect(text).toBe('Hello world');
@@ -611,5 +687,69 @@ describe('POST /api/query', () => {
     expect(mockExec).toHaveBeenCalledTimes(1);
     const [, params] = mockExec.mock.calls[0]!;
     expect(typeof params![3]).toBe('string'); // response_text — partial is fine
+  });
+});
+
+// ── Curated model slug resolution (todo:ae3e5de8) ──────────────────────
+// Separate describe block with its own beforeEach so we get a clean
+// mock queue (vi.resetAllMocks vs the parent block's clearAllMocks —
+// resetAllMocks also wipes queued mockResolvedValueOnce values that
+// can leak from earlier tests).
+//
+// Asserts the BRD §7.2 contract: pro consults preferred_model from
+// user_preferences; free is always pinned to the default regardless
+// of saved value. The resolved OpenRouter id is what's passed to
+// completeStream and stored in queries.model_used.
+
+describe('POST /api/query — curated slug resolution', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRateLimit.mockResolvedValue({ allowed: true });
+  });
+
+  async function runQueryWithPrefs(user: typeof FREE_USER | typeof PRO_USER, preferredModel: string | null) {
+    mockAuth.mockResolvedValueOnce(user);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredModel });
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('p');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text();
+    return res;
+  }
+
+  it('pro user with preferredModel=anthropic resolves to sonnet-4.6', async () => {
+    await runQueryWithPrefs(PRO_USER, 'anthropic');
+    const [streamPrompt, modelId] = mockStream.mock.calls[0]!;
+    expect(streamPrompt).toBe('p');
+    expect(modelId).toBe('anthropic/claude-sonnet-4.6');
+    const [, persistParams] = mockExec.mock.calls[0]!;
+    expect(persistParams![5]).toBe('anthropic/claude-sonnet-4.6');
+  });
+
+  it('pro user with preferredModel=null falls through to deepseek default', async () => {
+    await runQueryWithPrefs(PRO_USER, null);
+    const [, modelId] = mockStream.mock.calls[0]!;
+    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    const [, persistParams] = mockExec.mock.calls[0]!;
+    expect(persistParams![5]).toBe('deepseek/deepseek-v4-pro');
+  });
+
+  it('free user with any preferredModel value still resolves to default', async () => {
+    await runQueryWithPrefs(FREE_USER, 'anthropic');
+    const [, modelId] = mockStream.mock.calls[0]!;
+    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+  });
+
+  it('pro user with stale/unknown slug (post-rename) falls through to default', async () => {
+    await runQueryWithPrefs(PRO_USER, 'old-removed-slug');
+    const [, modelId] = mockStream.mock.calls[0]!;
+    expect(modelId).toBe('deepseek/deepseek-v4-pro');
   });
 });

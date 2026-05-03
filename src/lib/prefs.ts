@@ -13,6 +13,7 @@ const DEFAULT_PREFS: UserPreferences = {
   blockedTexts: [],
   whitelistedTraditions: [],
   whitelistedTexts: [],
+  preferredModel: null,
 };
 
 export async function loadPreferences(userId: string): Promise<UserPreferences> {
@@ -22,9 +23,11 @@ export async function loadPreferences(userId: string): Promise<UserPreferences> 
     blocked_texts: string[];
     whitelisted_traditions: string[];
     whitelisted_texts: string[];
+    preferred_model: string | null;
   }>(
     `SELECT scope_mode, blocked_traditions, blocked_texts,
-            whitelisted_traditions, whitelisted_texts
+            whitelisted_traditions, whitelisted_texts,
+            preferred_model
      FROM user_preferences
      WHERE user_id = $1`,
     [userId]
@@ -38,6 +41,7 @@ export async function loadPreferences(userId: string): Promise<UserPreferences> 
     blockedTexts:          row.blocked_texts          ?? [],
     whitelistedTraditions: row.whitelisted_traditions ?? [],
     whitelistedTexts:      row.whitelisted_texts      ?? [],
+    preferredModel:        row.preferred_model        ?? null,
   };
 }
 
@@ -48,14 +52,15 @@ export async function savePreferences(
   await exec(
     `INSERT INTO user_preferences
        (user_id, scope_mode, blocked_traditions, blocked_texts,
-        whitelisted_traditions, whitelisted_texts, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, now())
+        whitelisted_traditions, whitelisted_texts, preferred_model, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, now())
      ON CONFLICT (user_id) DO UPDATE SET
        scope_mode             = EXCLUDED.scope_mode,
        blocked_traditions     = EXCLUDED.blocked_traditions,
        blocked_texts          = EXCLUDED.blocked_texts,
        whitelisted_traditions = EXCLUDED.whitelisted_traditions,
        whitelisted_texts      = EXCLUDED.whitelisted_texts,
+       preferred_model        = EXCLUDED.preferred_model,
        updated_at             = now()`,
     [
       userId,
@@ -64,6 +69,7 @@ export async function savePreferences(
       prefs.blockedTexts,
       prefs.whitelistedTraditions,
       prefs.whitelistedTexts,
+      prefs.preferredModel,
     ]
   );
 }

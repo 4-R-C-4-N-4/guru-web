@@ -15,9 +15,9 @@
  *
  * Limits are tier-driven and rewritten on every reserveBudget call, so
  * a tier upgrade/downgrade takes effect on the next request without
- * any extra plumbing.  Either axis being null means unenforced — today
- * free=10/null and pro=30/null; future pro will be null/$0.50 once the
- * model-selection UI ships.
+ * any extra plumbing.  Either axis being null means unenforced.
+ * The literal numbers live in src/lib/pricing-config.ts — bumping
+ * the policy is a one-file edit there.
  *
  * Period reset is lazy (no cron): when reserveBudget reads a row whose
  * reset_at <= now(), it zeros both counters and bumps reset_at to the
@@ -31,6 +31,11 @@
 
 import { exec, one } from './db';
 import type { Tier } from './model';
+import {
+  FREE_DAILY_QUERY_LIMIT,
+  PRO_DAILY_QUERY_LIMIT,
+  PRO_DAILY_USD_CAP,
+} from './pricing-config';
 
 export interface BudgetState {
   queries_used: number;
@@ -45,8 +50,12 @@ export interface ReserveResult extends BudgetState {
 }
 
 export const TIER_LIMITS: Record<Tier, { query_limit: number | null; usd_limit: number | null }> = {
-  free: { query_limit: 10, usd_limit: null },
-  pro:  { query_limit: 30, usd_limit: null },
+  free: { query_limit: FREE_DAILY_QUERY_LIMIT, usd_limit: null },
+  // Pro: query_limit is a soft secondary gate against runaway loops;
+  // usd_limit is the primary economic gate. Numbers derive from
+  // pricing-config.ts — see BRD-model-selection.md §3.2 for the
+  // per-model implications.
+  pro:  { query_limit: PRO_DAILY_QUERY_LIMIT, usd_limit: PRO_DAILY_USD_CAP },
 } as const;
 
 const PERIOD = 'daily' as const;

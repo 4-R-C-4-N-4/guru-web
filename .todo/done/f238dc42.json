@@ -1,0 +1,31 @@
+{
+  "id": "f238dc42",
+  "type": "chore",
+  "state": "done",
+  "summary": "C7: default-switch announcement banner on /chat (one-time, dismissible)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.700Z",
+  "updated_at": "2026-05-02T18:45:01.498Z",
+  "relationships": {
+    "parent": "6e4e89c5",
+    "depends_on": [
+      "f764d5dc"
+    ]
+  },
+  "description": "One-time dismissible banner on /chat for existing pro users\nexplaining the silent default-model change (Sonnet 4.5 → DeepSeek\nV4 Pro). BRD §9 step 4. Without this the silent switch surprises\nmid-session.\n\nFiles:\n  - src/components/chat-view.tsx — small banner component at top\n    of chat pane. Dismissed-state in localStorage with a versioned\n    key (admin.banner.modelpicker.v1) so future banners can ship\n    without un-dismissing this one.\n  - src/__tests__/chat-view.test.ts (extend) — banner shows when\n    localStorage key absent; hidden after dismiss; persists\n    across reloads.\n\nBanner copy:\n    Pro now lets you pick your AI model. Default switched to\n    DeepSeek for cost reasons — change it in Settings if you'd\n    rather use Anthropic, OpenAI, or X.AI.\n\nDone when:\n  - Pro user's first /chat visit after deploy shows the banner.\n  - Dismiss button removes banner + writes localStorage.\n  - Reload doesn't re-show.\n  - Free users never see it (pro-only check in render).\n  - New signups post-launch may briefly see it; acceptable\n    (smaller code, smaller foot-gun than gating on\n    users.created_at < banner_release_date).\n\nTests: component-level, mocked localStorage.\n\nOperator action post-merge: none.\n\nDepends on: C5 (banner links to /settings; section must exist).",
+  "tags": [
+    "ui",
+    "ux",
+    "banner",
+    "communication"
+  ],
+  "resolution": {
+    "commit": "b30a2531a7c52245711a9f401912cb254a33f60b",
+    "resolved_at": "2026-05-02T18:45:01.498Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/chat-view.test.ts",
+    "note": "Pro-only dismissible banner above chat pane explaining the default-model switch. Versioned localStorage key. Render-time useMemo derivation (vs useEffect+setState) avoids the react-hooks/set-state-in-effect lint rule. 6 source-level guards in tests."
+  }
+}

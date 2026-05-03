@@ -1,0 +1,32 @@
+{
+  "id": "ae3e5de8",
+  "type": "chore",
+  "state": "done",
+  "summary": "C3: /api/query slug resolution + prefs.ts + types.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-02T16:23:29.567Z",
+  "updated_at": "2026-05-02T18:30:54.343Z",
+  "relationships": {
+    "parent": "6e4e89c5",
+    "depends_on": [
+      "9a0dedf3",
+      "cfea2239"
+    ]
+  },
+  "description": "Wire C2's resolver into the live query path. BRD §7.2.\n\nFiles:\n  - src/app/api/query/route.ts — replace MODELS[user.tier] with\n    slug-aware logic: load user_preferences.preferred_model,\n    default to 'deepseek' if null or tier=free, resolve via\n    resolveCuratedModel(), pass into complete()/completeStream().\n  - src/lib/prefs.ts — extend loadPrefs to include preferred_model\n    in SELECT and returned shape (nullable slug type).\n  - src/lib/types.ts — extend UserPreferences type with new field.\n  - src/__tests__/api.test.ts (extend) — pro+anthropic resolves to\n    sonnet-4.6; pro+null resolves to deepseek-v4-pro; free with\n    any preference still resolves to default (free can't pick).\n\nDone when:\n  - Pro user with no pref saved → DeepSeek V4 Pro on every query.\n  - Pro user with preferred_model='anthropic' → Sonnet 4.6, with\n    resolved ID stored in queries.model_used.\n  - Free user → DeepSeek V4 Pro regardless of preferred_model\n    value.\n  - Cost estimate before reserveBudget uses resolved ID's pricing\n    (verified by checking queries.cost_usd).\n  - npx tsc --noEmit clean; full suite pass.\n\nTests:\n  - Unit: route handler with mocked auth/loadPrefs/complete/\n    reserveBudget/finalizeBudget — assert complete() called with\n    resolved ID.\n  - Smoke (manual, post-deploy): query as pro user, flip\n    preference via SQL on VPS, query again, verify\n    queries.model_used shows the new ID.\n\nOperator action post-merge: none. Default switch (Sonnet 4.5 →\nDeepSeek V4 Pro) happens silently on next pro user query. C7's\nbanner is the user-facing announcement.\n\nDepends on: C1 (preferred_model column), C2 (CURATED_MODELS map).",
+  "tags": [
+    "api",
+    "models",
+    "pricing",
+    "integration"
+  ],
+  "resolution": {
+    "commit": "7e37a37f849c2846250275db03a5c171a029e652",
+    "resolved_at": "2026-05-02T18:30:54.343Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "note": "Slug resolution wired into /api/query: pro reads preferred_model, free pinned to DEFAULT_CURATED_SLUG, stale/unknown slugs fall through to default. complete/completeStream signature changed to take resolved modelId. UserPreferences type gained preferredModel: string | null (required); all fixtures updated. /api/preferences PUT validates against isCuratedSlug. 209 tests pass."
+  }
+}

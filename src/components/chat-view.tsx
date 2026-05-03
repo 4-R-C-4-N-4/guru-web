@@ -15,12 +15,13 @@
  * fetch.
  */
 
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
+import { displayForModelId } from '@/lib/provider-display';
 
 interface CitationData {
   tradition: string;
@@ -36,6 +37,14 @@ export interface Message {
   text?: string;
   citations?: CitationData[];
   meta?: { chunks: number; traditions: number; verified: number; proposed: number };
+  /** Per-response attribution surface (model-selection BRD §7.4). Only
+   *  present on persisted assistant messages; live-streaming responses
+   *  populate these fields after the stream completes and the row is
+   *  written to `queries`. */
+  modelUsed?:    string | null;
+  inputTokens?:  number | null;
+  outputTokens?: number | null;
+  costUsd?:      number | null;
 }
 
 const SAMPLE_QUERIES = [
@@ -109,6 +118,11 @@ export interface ChatViewProps {
   initialMessages?: Message[];
 }
 
+// LocalStorage key for the model-picker default-switch announcement
+// banner. Versioned so future banners can ship without un-dismissing
+// this one (BRD-model-selection §9 / IMPL §7).
+const MODEL_PICKER_BANNER_KEY = 'guru.banner.modelpicker.v1';
+
 export default function ChatView({ initialSessionId, initialMessages }: ChatViewProps = {}) {
   const mobile  = useIsMobile();
   const [messages,    setMessages]    = useState<Message[]>(initialMessages ?? []);
@@ -116,7 +130,13 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   const [loading,     setLoading]     = useState(false);
   const [sessionId,   setSessionId]   = useState<string | null>(initialSessionId ?? null);
   const [quotaUsed,   setQuotaUsed]   = useState<number | null>(null);
-  const [quotaLimit,  setQuotaLimit]  = useState<number>(30);
+  const [tier,        setTier]        = useState<'free' | 'pro' | null>(null);
+  // Banner dismissal lives in component state for the active session.
+  // Persistence to localStorage happens in dismissPickerBanner so the
+  // dismissed state survives reloads. The visible/hidden derivation is
+  // a pure compute (useMemo below) — keeps us out of the
+  // react-hooks/set-state-in-effect rule.
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
 
@@ -133,10 +153,37 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   }, [input, inputMaxHeight]);
 
   useEffect(() => {
-    fetch('/api/quota').then(r => r.json()).then((d: { used: number; limit: number }) => {
+    fetch('/api/quota').then(r => r.json()).then((d: { used: number; tier?: 'free' | 'pro' }) => {
       setQuotaUsed(d.used);
-      setQuotaLimit(d.limit);
+      if (d.tier) setTier(d.tier);
     }).catch(() => {});
+  }, []);
+
+  // Show the picker banner only when the user is pro AND localStorage
+  // hasn't been marked dismissed AND the current session hasn't just
+  // dismissed it. Free users never see it. New post-launch signups
+  // may briefly see it before dismissing — accepted UX cost vs. the
+  // complexity of gating on users.created_at < banner_release_date.
+  //
+  // localStorage is read during render via useMemo (key on tier so we
+  // re-evaluate when tier resolves) — keeps us out of the
+  // react-hooks/set-state-in-effect rule that would fire on a
+  // useEffect+setState pattern.
+  const showPickerBanner = useMemo(() => {
+    if (tier !== 'pro') return false;
+    if (bannerDismissed) return false;
+    try {
+      return localStorage.getItem(MODEL_PICKER_BANNER_KEY) !== '1';
+    } catch {
+      // localStorage blocked (private mode etc.) — show the banner;
+      // dismiss in this session works via setBannerDismissed.
+      return true;
+    }
+  }, [tier, bannerDismissed]);
+
+  const dismissPickerBanner = useCallback(() => {
+    setBannerDismissed(true);
+    try { localStorage.setItem(MODEL_PICKER_BANNER_KEY, '1'); } catch { /* ignore */ }
   }, []);
 
   const handleSend = useCallback(async () => {
@@ -172,7 +219,14 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
       });
 
       if (res.status === 429) {
-        setMessages(prev => [...prev, { role: 'assistant', text: 'Daily query limit reached. Upgrade to Pro for unlimited queries.' }]);
+        // Tier-aware copy: free user → upgrade nudge, pro user →
+        // try-tomorrow. Both axes (queries cap, USD cap behind the
+        // scenes) collapse to the same user-visible message
+        // (todo:e8105324).
+        const text = tier === 'pro'
+          ? 'Daily question limit reached. Resets at midnight.'
+          : 'Daily question limit reached. Upgrade to Pro for more.';
+        setMessages(prev => [...prev, { role: 'assistant', text }]);
         setLoading(false);
         return;
       }
@@ -180,13 +234,27 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
       const used = res.headers.get('X-Quota-Used');
       if (used) setQuotaUsed(parseInt(used, 10));
 
+      // Resolved model id arrives in headers — populates the
+      // attribution line in-session without waiting for a session
+      // reload. Tokens + cost still arrive on the next reload via
+      // recordsToMessages (they're null until persistence +
+      // finalizeBudget complete). Spec: model-selection BRD §7.4.
+      const modelUsedHeader = res.headers.get('X-Model-Used');
+
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
 
       const decoder = new TextDecoder();
       let fullText = '';
 
-      setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: '',
+          ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
+        },
+      ]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -194,7 +262,11 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         fullText += decoder.decode(value, { stream: true });
         setMessages(prev => {
           const next = [...prev];
-          next[next.length - 1] = { role: 'assistant', text: fullText };
+          next[next.length - 1] = {
+            role: 'assistant',
+            text: fullText,
+            ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
+          };
           return next;
         });
       }
@@ -205,9 +277,8 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId]);
+  }, [input, loading, sessionId, tier]);
 
-  const quotaRemaining = quotaLimit - (quotaUsed ?? 0);
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;
   const counterColor   = input.length >= QUERY_DANGER_CHARS ? '#c25a7a' : tokens.text.muted;
@@ -215,6 +286,57 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 53px)', background: tokens.bg.deep }}>
+      {/* One-time announcement banner — pro users only, dismissible.
+          BRD-model-selection §9 step 4. Drops after the model-picker
+          rollout settles (track on the parent ticket and remove the
+          banner block once telemetry shows >95% of pro users have
+          dismissed). */}
+      {showPickerBanner && (
+        <div
+          role="status"
+          data-testid="model-picker-banner"
+          style={{
+            background: tokens.bg.surface,
+            borderBottom: `1px solid ${tokens.border.subtle}`,
+            padding: mobile ? '10px 14px' : '10px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            fontFamily: tokens.font.mono,
+            fontSize: 11,
+            color: tokens.text.secondary,
+          }}
+        >
+          <span style={{ color: tokens.text.accent }}>NEW</span>
+          <span style={{ flex: 1 }}>
+            Pro now lets you choose how Guru answers — Anthropic for
+            careful comparison, OpenAI for analysis, X.AI for
+            conversational. Adjust in{' '}
+            <a href="/settings" style={{ color: tokens.text.link, textDecoration: 'underline' }}>
+              Settings
+            </a>
+            .
+          </span>
+          <button
+            type="button"
+            onClick={dismissPickerBanner}
+            aria-label="Dismiss banner"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: tokens.text.muted,
+              cursor: 'pointer',
+              fontFamily: tokens.font.mono,
+              fontSize: 14,
+              padding: '0 4px',
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: mobile ? '16px 0' : '24px 0', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {messages.length === 0 && (
@@ -265,6 +387,24 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                     </div>
                   </>
                 )}
+                {/* Per-response attribution badge — provider only.
+                    Tokens + cost are deliberately not surfaced to
+                    users; admin views show those for diagnostics.
+                    todo:e8105324. */}
+                {(() => {
+                  const display = displayForModelId(msg.modelUsed);
+                  if (!display) return null;
+                  return (
+                    <div style={{
+                      marginTop: msg.citations?.length ? 6 : 10,
+                      fontFamily: tokens.font.mono,
+                      fontSize: 10,
+                      color: tokens.text.muted,
+                    }}>
+                      via <span style={{ color: display.color }}>{display.name}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -322,7 +462,13 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         <div style={{ maxWidth: 680, margin: '5px auto 0', fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, display: 'flex', gap: mobile ? 8 : 16, flexWrap: 'wrap' }}>
           <span>8 traditions</span>
           <span>34 texts</span>
-          {quotaUsed !== null && <span>{quotaRemaining}/{quotaLimit} remaining today</span>}
+          {/* Today's question count. We deliberately don't show a
+              hard ceiling (X/Y) because the effective ceiling
+              varies by selected model — the USD cap binds at ~30
+              for DeepSeek, ~4 for Anthropic, etc. — and a static
+              "/30" misleads pro users who switched picker. The 429
+              surfaces the actual cap when it binds. todo:e8105324. */}
+          {quotaUsed !== null && <span>{quotaUsed} today</span>}
           {showCounter && <span style={{ color: counterColor, marginLeft: 'auto' }}>{input.length}/{QUERY_MAX_CHARS}</span>}
         </div>
       </div>
@@ -344,14 +490,27 @@ export function recordsToMessages(records: ReadonlyArray<{
   query_text: string;
   response_text: string;
   citations?: CitationData[];
+  // Attribution columns surfaced from /api/sessions/[id]. Optional so
+  // the helper still types older fixtures that don't carry them.
+  model_used?:    string | null;
+  input_tokens?:  number | null;
+  output_tokens?: number | null;
+  cost_usd?:      number | null;
 }>): Message[] {
   const out: Message[] = [];
   for (const r of records) {
     out.push({ role: 'user', content: r.query_text });
+    // Spread the attribution fields conditionally so older fixtures
+    // (and back-compat tests) without them stay structurally
+    // identical to their pre-attribution shape.
     out.push({
       role: 'assistant',
       text: r.response_text,
       citations: r.citations,
+      ...(r.model_used    != null && { modelUsed:    r.model_used    }),
+      ...(r.input_tokens  != null && { inputTokens:  r.input_tokens  }),
+      ...(r.output_tokens != null && { outputTokens: r.output_tokens }),
+      ...(r.cost_usd      != null && { costUsd:      r.cost_usd      }),
     });
   }
   return out;

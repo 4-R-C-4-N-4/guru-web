@@ -1,20 +1,24 @@
 /**
  * src/app/api/quota/route.ts
  *
- * GET /api/quota — return today's budget for the current user.
+ * GET /api/quota — return today's question count for the current user.
  *
- * Response shape (todo:7c8fdae7):
+ * Response shape (todo:e8105324 reframe):
  *   {
  *     tier:         'free' | 'pro',
  *     queries_used: number,
  *     query_limit:  number | null,    // null = unenforced on this axis
- *     usd_used:     number,
- *     usd_limit:    number | null,
+ *
+ *     // Backwards-compat aliases for the existing chat-view header.
+ *     used:  number,                  // mirrors queries_used
+ *     limit: number | null,           // mirrors query_limit
  *   }
  *
- * Backwards-compatible aliases `used` and `limit` (today's frontend
- * reads these) keep mirroring the queries axis until a separate UI
- * ticket switches the display to dollars.
+ * Spend axis (`usd_used`, `usd_limit`) is deliberately omitted from
+ * this client-facing endpoint. The USD cap still enforces server-side
+ * via reserveBudget; admin endpoints (/api/admin/users/[id]) surface
+ * the dollar figures for the operator. Users see questions, not
+ * dollars (todo:e8105324).
  */
 
 import { requireUser } from '@/lib/auth';
@@ -30,10 +34,7 @@ export async function GET() {
     tier: user.tier,
     queries_used: budget.queries_used,
     query_limit:  budget.query_limit,
-    usd_used:     budget.usd_used,
-    usd_limit:    budget.usd_limit,
-    // Backwards-compat: today's UI reads `used`/`limit`. These mirror
-    // the queries axis. Drop after the UI flips to dollars.
+    // Backwards-compat aliases — chat-view header reads these.
     used:  budget.queries_used,
     limit: budget.query_limit,
   });

@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+// Import from curated-models (not model.ts) so the client bundle
+// doesn't pull in the OpenAI SDK that model.ts initialises.
+import { CURATED_MODELS, type CuratedSlug } from '@/lib/curated-models';
+import { PROVIDER_DISPLAY } from '@/lib/provider-display';
 
 // Catalog comes from /api/corpus (DISTINCT tradition/text from chunks).
 // Empty/error states are rendered as-is — no hardcoded fallback. If this UI
@@ -11,6 +15,13 @@ type TraditionsState = Record<string, { active: boolean; texts: Record<string, b
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
+// Picker order. Provider name + questions-per-day come from
+// PROVIDER_DISPLAY so the picker stays consistent with the chat
+// attribution badge (todo:e8105324). Sorted DeepSeek first because
+// it's the default; remainder by descending capacity so the
+// tradeoff is visible at a glance.
+const PICKER_ORDER: CuratedSlug[] = ['deepseek', 'xai', 'anthropic', 'openai'];
+
 export default function SettingsPage() {
   const mobile = useIsMobile();
   const [traditions, setTraditions] = useState<TraditionsState>({});
@@ -18,9 +29,13 @@ export default function SettingsPage() {
   const [expanded,  setExpanded]    = useState<string | null>(null);
   const [saving,    setSaving]      = useState(false);
   const [saved,     setSaved]       = useState(false);
+  const [tier,      setTier]        = useState<'free' | 'pro' | null>(null);
+  const [preferredModel, setPreferredModel] = useState<CuratedSlug | null>(null);
+  const [modelSaving, setModelSaving] = useState(false);
 
   // Fetch the corpus catalog + the user's blocked-tradition prefs together,
-  // so we can mark blocked entries inactive in a single setState.
+  // so we can mark blocked entries inactive in a single setState. Also pull
+  // tier + preferred_model so the Model section renders in the same paint.
   useEffect(() => {
     Promise.all([
       fetch('/api/corpus').then(r => {
@@ -29,10 +44,14 @@ export default function SettingsPage() {
       }),
       fetch('/api/preferences').then(r => {
         if (!r.ok) throw new Error(`preferences ${r.status}`);
-        return r.json() as Promise<{ scopeMode: string; blockedTraditions: string[] }>;
+        return r.json() as Promise<{ scopeMode: string; blockedTraditions: string[]; preferredModel: string | null }>;
+      }),
+      fetch('/api/quota').then(r => {
+        if (!r.ok) throw new Error(`quota ${r.status}`);
+        return r.json() as Promise<{ tier: 'free' | 'pro' }>;
       }),
     ])
-      .then(([corpus, prefs]) => {
+      .then(([corpus, prefs, quota]) => {
         const blocked = new Set(
           prefs.scopeMode === 'blacklist' ? prefs.blockedTraditions : []
         );
@@ -45,10 +64,32 @@ export default function SettingsPage() {
           };
         }
         setTraditions(next);
+        setTier(quota.tier);
+        setPreferredModel(
+          prefs.preferredModel && prefs.preferredModel in CURATED_MODELS
+            ? (prefs.preferredModel as CuratedSlug)
+            : null,
+        );
         setStatus('ready');
       })
       .catch(() => setStatus('error'));
   }, []);
+
+  const handleModelChange = async (slug: CuratedSlug) => {
+    if (slug === preferredModel) return;
+    setModelSaving(true);
+    setPreferredModel(slug);  // optimistic
+    const res = await fetch('/api/preferences', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ preferredModel: slug }),
+    }).catch(() => null);
+    setModelSaving(false);
+    if (!res || !res.ok) {
+      // Roll back on failure — surface state to the user.
+      setPreferredModel(preferredModel);
+    }
+  };
 
   const toggleTradition = (name: string) => {
     setTraditions(prev => {
@@ -96,6 +137,76 @@ export default function SettingsPage() {
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: mobile ? '16px 14px' : 24 }}>
+      {/* Model section — pro picker, free disabled. */}
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>
+        Model
+        {tier === 'free' && (
+          <span style={{ marginLeft: 8, color: tokens.text.accent, fontSize: 9 }}>PRO ONLY</span>
+        )}
+      </div>
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 12 }}>
+        {tier === 'free'
+          ? <>Default model. <a href="/account" style={{ color: tokens.text.link }}>Upgrade to Pro</a> to choose another.</>
+          : modelSaving
+            ? 'saving…'
+            : 'Choose how Guru answers. Some models give fewer questions per day.'}
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        {PICKER_ORDER.map((slug) => {
+          const display = PROVIDER_DISPLAY[slug];
+          const isActive = preferredModel === slug || (preferredModel === null && slug === 'deepseek');
+          const disabled = tier !== 'pro';
+          const isDefault = slug === 'deepseek';
+          return (
+            <label
+              key={slug}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: mobile ? '12px 12px' : '10px 14px',
+                background: tokens.bg.surface,
+                border: `1px solid ${isActive ? display.color + '88' : tokens.border.subtle}`,
+                borderRadius: 4,
+                marginBottom: 5,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+              }}
+            >
+              <input
+                type="radio"
+                name="preferredModel"
+                value={slug}
+                checked={isActive}
+                disabled={disabled}
+                onChange={() => handleModelChange(slug)}
+                style={{ accentColor: display.color }}
+              />
+              <span style={{
+                fontFamily: tokens.font.display,
+                fontSize: mobile ? 16 : 15,
+                color: isActive ? display.color : tokens.text.primary,
+                minWidth: 100,
+              }}>
+                {display.name}
+              </span>
+              <span style={{
+                fontFamily: tokens.font.mono,
+                fontSize: 10,
+                color: tokens.text.muted,
+                flex: 1,
+                textAlign: 'right',
+                whiteSpace: 'nowrap',
+              }}>
+                {isDefault && <span style={{ color: tokens.text.secondary, marginRight: 8 }}>Default</span>}
+                ~{display.questionsPerDay} questions per day
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
       <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>Corpus Scope</div>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 20 }}>
         {status === 'loading' && 'loading…'}

@@ -29,6 +29,7 @@ describe.skipIf(SKIP)('Retrieval pipeline — integration', () => {
     blockedTexts: [],
     whitelistedTraditions: [],
     whitelistedTexts: [],
+    preferredModel: null,
   };
 
   beforeAll(async () => {

@@ -23,6 +23,7 @@
  */
 
 import { Pool, type PoolClient } from 'pg';
+import { FALLBACK_PRICING, type ModelPrice } from '../src/lib/fallback-pricing';
 
 // ── Provider allowlist ──────────────────────────────────────────────
 // Ids are matched on the prefix before '/'.  Curated to frontier-model
@@ -40,31 +41,12 @@ const PROVIDER_ALLOWLIST = [
   'qwen',
 ] as const;
 
-export interface ModelPrice {
-  input_per_mtok: number;
-  output_per_mtok: number;
-  cached_input_per_mtok: number | null; // null = model doesn't cache
-}
-
-// Fallback when OpenRouter is unreachable.  Only covers models we
-// ACTIVELY route to (src/lib/model.ts MODELS) — the broader allowlist
-// is best-effort via the live API; if OpenRouter is down on a fresh
-// VPS, at least the routed-models path keeps working.
-//
-// Keep these in sync with provider docs; small drift is fine, the next
-// successful network sync will correct it.
-const FALLBACK_PRICING: Record<string, ModelPrice> = {
-  'deepseek/deepseek-chat': {
-    input_per_mtok: 0.14,
-    output_per_mtok: 0.28,
-    cached_input_per_mtok: null,
-  },
-  'anthropic/claude-sonnet-4.5': {
-    input_per_mtok: 3.0,
-    output_per_mtok: 15.0,
-    cached_input_per_mtok: 0.30,
-  },
-};
+// FALLBACK_PRICING + ModelPrice moved to src/lib/fallback-pricing.ts
+// so client-side code (the picker, the chat-view) can import it
+// without pulling in `pg` from this file. Re-export here so existing
+// `npx tsx scripts/sync-pricing.ts` consumers and tests that still
+// import from this path keep working.
+export { FALLBACK_PRICING, type ModelPrice };
 
 interface OpenRouterModel {
   id: string;
