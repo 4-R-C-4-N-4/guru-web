@@ -1,0 +1,21 @@
+{
+  "id": "e8105324",
+  "type": "chore",
+  "state": "active",
+  "summary": "C9: simplify model-picker UX — provider names, no metrics, hidden dollar mechanism",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-03T01:20:38.836Z",
+  "updated_at": "2026-05-03T01:21:07.075Z",
+  "relationships": {
+    "parent": "6e4e89c5"
+  },
+  "description": "Self-review of PR #40 surfaced that the picker UI exposes\nimplementation detail that's wrong for an esoteric-literature\naudience: model id strings, per-query dollar amounts, token\ncounts. The infra (USD cap, slug→id resolution, sync timer) is\ncorrect; the surfacing is wrong.\n\nReframing decisions (operator-confirmed):\n  - Picker stays. Voice/personality reframe deferred to a future\n    spec; today's job is just to translate the USD-cap mechanism\n    into 'questions per day' and hide the rest.\n  - Provider names only — DeepSeek, X.AI, Anthropic, OpenAI.\n  - Each non-default option shows '~N questions per day' so users\n    see the tradeoff. Numbers are typical-case approximations\n    derived from the \\$0.17/day cap ÷ per-query cost at our 10k-in\n    /1k-out workload assumption (DeepSeek ~30, X.AI ~10, Anthropic\n    ~4, OpenAI ~4).\n  - Per-response attribution becomes a tiny 'via <Provider>' badge\n    in a provider-specific token color. No version, no tokens, no\n    cost.\n  - Quota header shows 'X today' (no hard ceiling). When cap binds,\n    unified 429 message regardless of which axis triggered.\n  - Client-facing /api/quota response drops usd_used/usd_limit.\n    Admin endpoints keep them.\n\nFiles:\n  - src/lib/provider-display.ts (new) — slug → { name, color }\n    map + providerFromModelId(modelId) helper. Reverse-mapping from\n    model id is robust against version bumps (anthropic/X stays\n    'anthropic' even when X changes).\n  - src/app/(app)/settings/page.tsx — replace PICKER_OPTIONS rows;\n    drop model-id and price-hint columns; show 'Default · ~30\n    questions per day' style label.\n  - src/components/chat-view.tsx — replace metric line with 'via\n    Anthropic' badge in provider-specific muted color. Banner copy\n    updated to operator-approved phrasing.\n  - src/app/api/quota/route.ts — strip usd_used, usd_limit from\n    response (kept on admin endpoints).\n  - src/app/api/query/route.ts — unified 'Daily question limit\n    reached' message regardless of reason. The reason field stays\n    on the response for logs/admin telemetry but the user-facing\n    string doesn't branch.\n  - tests updated to match.\n\nDone when:\n  - Settings picker shows 4 rows, provider name + per-day quota\n    only. No model id strings, no '\\$' anywhere user-facing.\n  - Chat responses carry 'via <Provider>' badge in correct\n    provider color. Tokens + cost not visible to users.\n  - Cap 429s show unified message.\n  - /api/quota client response has no USD fields.\n  - npm run lint + tsc + tests + build clean.\n\nOut of scope:\n  - Voice/personality reframe (future BRD).\n  - Dynamic per-model effective ceiling in quota header (just\n    show 'X today').\n  - Real-time price hints in picker (numbers stay static, sourced\n    from BRD §3 — bit-rot accepted, daily timer + telemetry\n    catches drift).\n\nSpec ref: PR #40 self-review thread.",
+  "tags": [
+    "ux",
+    "picker",
+    "model-selection",
+    "pre-launch"
+  ]
+}
