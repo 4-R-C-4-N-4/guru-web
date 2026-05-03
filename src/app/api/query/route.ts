@@ -9,9 +9,9 @@
  *   2. Parse + validate body
  *   2b. Session ownership check
  *   3. Retrieve + build prompt
- *   4. Estimate cost (worst-case: input + MAX_OUTPUT_TOKENS) and reserve
- *      budget atomically across both axes (todo:7c8fdae7).  Reject 429
- *      with reason when over query or USD limit.
+ *   4. Estimate cost (typical-case: input + TYPICAL_OUTPUT_TOKENS) and
+ *      reserve budget atomically across both axes (todo:7c8fdae7).
+ *      Reject 429 with reason when over query or USD limit.
  *   5. Stream LLM response back to client.
  *   6. Compute actual cost from usage chunk; reconcile with finalize.
  *   7. Persist query row with cost_usd + cached_input_tokens.
@@ -20,12 +20,13 @@
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
 import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
-import { completeStream, MAX_OUTPUT_TOKENS } from '@/lib/model';
+import { completeStream } from '@/lib/model';
 import {
   DEFAULT_CURATED_SLUG,
   isCuratedSlug,
   resolveCuratedModel,
 } from '@/lib/curated-models';
+import { TYPICAL_OUTPUT_TOKENS } from '@/lib/pricing-config';
 import { reserveBudget, finalizeBudget } from '@/lib/spend';
 import { computeCost } from '@/lib/cost';
 import { loadPreferences } from '@/lib/prefs';
@@ -95,9 +96,28 @@ export async function POST(req: Request) {
   const prompt = buildPrompt(queryText, chunks, prefs, user.tier);
 
   // 4. Estimate cost + reserve budget atomically.
-  // Estimate is intentionally a worst-case ceiling: assumed input tokens
-  // from prompt+system char count, output capped at MAX_OUTPUT_TOKENS.
-  // finalizeBudget reconciles to the actual cost from the usage chunk.
+  //
+  // Reservation estimate uses TYPICAL_OUTPUT_TOKENS, not MAX_OUTPUT_TOKENS.
+  // The two serve different purposes:
+  //
+  //   MAX_OUTPUT_TOKENS (8192)  — the API-ceiling we pass to OpenRouter as
+  //                                max_tokens. Hard cap so verbose responses
+  //                                don't truncate mid-citation. Stays.
+  //   TYPICAL_OUTPUT_TOKENS (2k) — the budget-reservation estimate. Calibrated
+  //                                from real production data: real responses
+  //                                land at ~1-3k tokens, well below the API
+  //                                ceiling.
+  //
+  // Reserving at MAX bricked the picker UX: an Anthropic user picks the
+  // option that promises ~2 queries/day, does 1 query (actual ~$0.07),
+  // tries Q2 — reservation worst-case ($0.15) won't fit alongside $0.07
+  // already used → 429 after 1 query, not 2. todo:843e00ad.
+  //
+  // Risk: if a single response IS verbose (8k output, $0.15 actual), the
+  // delta over typical ($0.06 reservation) gets added to usd_used by
+  // finalizeBudget. Subsequent reservations correctly reject; operator
+  // absorbs the per-query overshoot. Bounded at ~$0.10 per blown query,
+  // small at pre-launch scale.
   //
   // Model resolution: pro consults user_preferences.preferred_model
   // (a CURATED_MODELS slug); free is always pinned to the default.
@@ -112,7 +132,7 @@ export async function POST(req: Request) {
   const { cost_usd: estimatedCostUsd } = await computeCost({
     modelId,
     inputTokens: estimatedInputTokens,
-    outputTokens: MAX_OUTPUT_TOKENS,
+    outputTokens: TYPICAL_OUTPUT_TOKENS,
   });
 
   const reserve = await reserveBudget({
