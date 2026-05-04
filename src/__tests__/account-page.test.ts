@@ -45,6 +45,18 @@ describe('account page Pro bullets reflect the real product (todo:dffc2b19)', ()
   });
 });
 
+describe('account page Usage Today bar (todo:6e255bb7)', () => {
+  it('Pro renders a count-only label, never with the runaway-loop denominator', () => {
+    // Pro branch must render `${quota.used} today` and must NOT render the
+    // misleading `/ ${quota.limit}` shape on the same branch.
+    expect(SRC).toMatch(/tier\s*===\s*['"]pro['"]\s*\n?\s*\?\s*`\$\{quota\.used\}\s*today`/);
+  });
+
+  it('hides the progress bar for Pro (no real query-count denominator to fill)', () => {
+    expect(SRC).toMatch(/tier\s*!==\s*['"]pro['"]\s*&&\s*\(/);
+  });
+});
+
 describe('account page subscription management (todo:7854e1ba)', () => {
   it('POSTs to /api/portal to open the Stripe Customer Portal', () => {
     expect(SRC).toMatch(/fetch\(\s*['"]\/api\/portal['"]\s*,\s*\{\s*method:\s*['"]POST['"]/);

@@ -109,22 +109,31 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {/* Usage bar */}
+      {/* Usage bar — Free has a real {used}/{limit} cap (FREE_DAILY_QUERY_LIMIT).
+          Pro is bounded by PRO_DAILY_USD_CAP, not query count, so showing "/100"
+          (the runaway-loop guard) misleads. Pro renders count-only without the
+          progress bar; per-provider cap lives on /settings (todo:6e255bb7). */}
       <div style={{ background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`, borderRadius: 4, padding: mobile ? 14 : 20, marginBottom: 12 }}>
         <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>Usage Today</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: tier === 'pro' ? 0 : 8 }}>
           <span style={{ fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.secondary }}>Queries</span>
           <span style={{ fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.primary }}>
-            {quota ? `${quota.used} / ${quota.limit}` : '—'}
+            {quota
+              ? tier === 'pro'
+                ? `${quota.used} today`
+                : `${quota.used} / ${quota.limit}`
+              : '—'}
           </span>
         </div>
-        <div style={{ height: 3, background: tokens.bg.raised, borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{
-            width: quota ? `${Math.min((quota.used / quota.limit) * 100, 100)}%` : '0%',
-            height: '100%', background: tokens.text.accent, borderRadius: 2,
-            transition: 'width 0.3s ease',
-          }} />
-        </div>
+        {tier !== 'pro' && (
+          <div style={{ height: 3, background: tokens.bg.raised, borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{
+              width: quota ? `${Math.min((quota.used / quota.limit) * 100, 100)}%` : '0%',
+              height: '100%', background: tokens.text.accent, borderRadius: 2,
+              transition: 'width 0.3s ease',
+            }} />
+          </div>
+        )}
       </div>
 
       {/* Account details */}
