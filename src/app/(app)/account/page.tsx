@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { FREE_DAILY_QUERY_LIMIT } from '@/lib/pricing-config';
 
 interface QuotaData { used: number; limit: number; tier: string; }
 
+// Free bullet sourced from FREE_DAILY_QUERY_LIMIT so the marketing copy
+// can't drift from the server-enforced cap (todo:23153adc). Pro's "3×"
+// calibrates against DeepSeek's ~27/day vs Free's 10/day — see
+// PROVIDER_DISPLAY.questionsPerDay (todo:dffc2b19).
 const PLANS = [
-  { id: 'free', name: 'Free',  price: null,    features: ['30 queries/day', 'All traditions', 'Standard model'] },
-  { id: 'pro',  name: 'Pro',   price: '$12/mo', features: ['Unlimited queries', 'Premium model', 'Citation export', 'Priority retrieval'] },
+  { id: 'free', name: 'Free', price: null,     features: [`${FREE_DAILY_QUERY_LIMIT} queries/day`, 'All traditions', 'Standard model'] },
+  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['Up to 3× more queries per day', 'Choose your provider'] },
 ];
 
 export default function AccountPage() {
@@ -32,6 +37,17 @@ export default function AccountPage() {
 
   const handleUpgrade = async () => {
     const res = await fetch('/api/checkout', { method: 'POST' });
+    if (res.ok) {
+      const { url } = await res.json() as { url: string };
+      window.location.href = url;
+    }
+  };
+
+  // Stripe Customer Portal — Pro users self-serve cancel / update card /
+  // view invoices. Cancellation in the portal fires customer.subscription.*
+  // webhooks which downgrade users.tier to 'free' (todo:7854e1ba).
+  const handleManageSubscription = async () => {
+    const res = await fetch('/api/portal', { method: 'POST' });
     if (res.ok) {
       const { url } = await res.json() as { url: string };
       window.location.href = url;
@@ -65,7 +81,20 @@ export default function AccountPage() {
                 {plan.features.map((f, i) => <div key={i}>{f}</div>)}
               </div>
               {tier === plan.id
-                ? <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.accent, marginTop: 8, letterSpacing: 1 }}>CURRENT</div>
+                ? (
+                  <>
+                    <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.accent, marginTop: 8, letterSpacing: 1 }}>CURRENT</div>
+                    {plan.id === 'pro' && (
+                      <button onClick={handleManageSubscription} style={{
+                        marginTop: 10, fontFamily: tokens.font.mono, fontSize: 10,
+                        padding: mobile ? '10px 14px' : '6px 14px',
+                        background: 'none', color: tokens.text.link,
+                        border: `1px solid ${tokens.border.subtle}`,
+                        borderRadius: 2, cursor: 'pointer', letterSpacing: 1,
+                      }}>MANAGE SUBSCRIPTION</button>
+                    )}
+                  </>
+                )
                 : plan.id === 'pro' && (
                   <button onClick={handleUpgrade} style={{
                     marginTop: 10, fontFamily: tokens.font.mono, fontSize: 10,

@@ -40,11 +40,13 @@ vi.mock('@clerk/nextjs/server', () => ({
   })),
 }));
 
+const mockBillingPortalCreate = vi.fn();
 vi.mock('stripe', () => {
   function Stripe() {
     return {
       webhooks: { constructEvent: mockConstructEvent },
       checkout:  { sessions: { create: vi.fn() } },
+      billingPortal: { sessions: { create: mockBillingPortalCreate } },
     };
   }
   return { default: Stripe };
@@ -65,6 +67,7 @@ const mockRateLimit = rl.rateLimit as MockedFunction<typeof rl.rateLimit>;
 
 const { POST: stripeWebhookPOST } = await import('@/app/api/webhooks/stripe/route');
 const { POST: checkoutPOST } = await import('@/app/api/checkout/route');
+const { POST: portalPOST } = await import('@/app/api/portal/route');
 
 const PRO_USER = {
   id: 'user_1',
@@ -293,5 +296,61 @@ describe('POST /api/checkout', () => {
     const body = await res.json() as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toContain('Pro');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Customer Portal endpoint tests (todo:7854e1ba)
+// ---------------------------------------------------------------------------
+
+describe('POST /api/portal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+    mockRateLimit.mockResolvedValue({ allowed: true });
+  });
+
+  it('returns 401 if not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce(Response.json({ error: 'Unauthorized' }, { status: 401 }));
+    const res = await portalPOST();
+    expect(res.status).toBe(401);
+    expect(mockBillingPortalCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 with Retry-After when within the per-user cooldown', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockRateLimit.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 30 });
+
+    const res = await portalPOST();
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('30');
+    expect(mockBillingPortalCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 if the user has no stripe_customer_id', async () => {
+    mockAuth.mockResolvedValueOnce({ id: 'user_1', email: 'a@b.com', tier: 'free', stripe_customer_id: null });
+
+    const res = await portalPOST();
+    const body = await res.json() as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/Stripe customer/i);
+    expect(mockBillingPortalCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates a billing-portal session for the user customer and returns its url', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockBillingPortalCreate.mockResolvedValueOnce({ url: 'https://billing.stripe.com/session/abc' });
+
+    const res = await portalPOST();
+    expect(res.status).toBe(200);
+
+    expect(mockBillingPortalCreate).toHaveBeenCalledOnce();
+    const arg = mockBillingPortalCreate.mock.calls[0][0] as { customer: string; return_url: string };
+    expect(arg.customer).toBe('cus_123');
+    expect(arg.return_url).toBe('https://example.com/account');
+
+    const body = await res.json() as { url: string };
+    expect(body.url).toBe('https://billing.stripe.com/session/abc');
   });
 });
