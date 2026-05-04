@@ -44,6 +44,17 @@ export default function AccountPage() {
     }
   };
 
+  // Stripe Customer Portal — Pro users self-serve cancel / update card /
+  // view invoices. Cancellation in the portal fires customer.subscription.*
+  // webhooks which downgrade users.tier to 'free' (todo:7854e1ba).
+  const handleManageSubscription = async () => {
+    const res = await fetch('/api/portal', { method: 'POST' });
+    if (res.ok) {
+      const { url } = await res.json() as { url: string };
+      window.location.href = url;
+    }
+  };
+
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : '—';
@@ -71,7 +82,20 @@ export default function AccountPage() {
                 {plan.features.map((f, i) => <div key={i}>{f}</div>)}
               </div>
               {tier === plan.id
-                ? <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.accent, marginTop: 8, letterSpacing: 1 }}>CURRENT</div>
+                ? (
+                  <>
+                    <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.accent, marginTop: 8, letterSpacing: 1 }}>CURRENT</div>
+                    {plan.id === 'pro' && (
+                      <button onClick={handleManageSubscription} style={{
+                        marginTop: 10, fontFamily: tokens.font.mono, fontSize: 10,
+                        padding: mobile ? '10px 14px' : '6px 14px',
+                        background: 'none', color: tokens.text.link,
+                        border: `1px solid ${tokens.border.subtle}`,
+                        borderRadius: 2, cursor: 'pointer', letterSpacing: 1,
+                      }}>MANAGE SUBSCRIPTION</button>
+                    )}
+                  </>
+                )
                 : plan.id === 'pro' && (
                   <button onClick={handleUpgrade} style={{
                     marginTop: 10, fontFamily: tokens.font.mono, fontSize: 10,

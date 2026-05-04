@@ -27,3 +27,16 @@ describe('account page plan cards', () => {
     expect(SRC).not.toMatch(/['"][0-9]+\s*queries\/day['"]/);
   });
 });
+
+describe('account page subscription management (todo:7854e1ba)', () => {
+  it('POSTs to /api/portal to open the Stripe Customer Portal', () => {
+    expect(SRC).toMatch(/fetch\(\s*['"]\/api\/portal['"]\s*,\s*\{\s*method:\s*['"]POST['"]/);
+  });
+
+  it('renders a MANAGE SUBSCRIPTION button on the Pro card for current Pro users', () => {
+    // The button text should be present, and it should be wired to the
+    // portal handler (not the upgrade handler).
+    expect(SRC).toMatch(/MANAGE SUBSCRIPTION/);
+    expect(SRC).toMatch(/onClick=\{handleManageSubscription\}/);
+  });
+});
