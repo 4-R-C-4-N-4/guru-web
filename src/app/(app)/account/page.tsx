@@ -14,7 +14,7 @@ interface QuotaData { used: number; limit: number; tier: string; }
 // PROVIDER_DISPLAY.questionsPerDay (todo:dffc2b19).
 const PLANS = [
   { id: 'free', name: 'Free', price: null,     features: [`${FREE_DAILY_QUERY_LIMIT} queries/day`, 'All traditions', 'Standard model'] },
-  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['3× more queries per day', 'Choose your provider'] },
+  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['Up to 3× more queries per day', 'Choose your provider'] },
 ];
 
 export default function AccountPage() {
