@@ -4,12 +4,18 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { FREE_DAILY_QUERY_LIMIT } from '@/lib/pricing-config';
 
 interface QuotaData { used: number; limit: number; tier: string; }
 
+// Free's bullet is sourced from FREE_DAILY_QUERY_LIMIT so the marketing
+// copy can't drift from the server-enforced cap (todo:23153adc). Pro's
+// "Unlimited queries" stays a literal: PRO_DAILY_QUERY_LIMIT is a soft
+// runaway-loop guard, not a user-facing quota — the binding gate on Pro
+// is USD spend, not query count (BRD §6.2).
 const PLANS = [
-  { id: 'free', name: 'Free',  price: null,    features: ['30 queries/day', 'All traditions', 'Standard model'] },
-  { id: 'pro',  name: 'Pro',   price: '$12/mo', features: ['Unlimited queries', 'Premium model', 'Citation export', 'Priority retrieval'] },
+  { id: 'free', name: 'Free', price: null,     features: [`${FREE_DAILY_QUERY_LIMIT} queries/day`, 'All traditions', 'Standard model'] },
+  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['Unlimited queries', 'Premium model', 'Citation export', 'Priority retrieval'] },
 ];
 
 export default function AccountPage() {
