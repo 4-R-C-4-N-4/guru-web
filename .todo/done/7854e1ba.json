@@ -1,0 +1,36 @@
+{
+  "id": "7854e1ba",
+  "type": "feature",
+  "state": "done",
+  "summary": "no downgrade path: Pro users can't return to Free tier",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-04T11:53:09.255Z",
+  "updated_at": "2026-05-04T12:11:00.018Z",
+  "files": [
+    {
+      "path": "src/app/(app)/account/page.tsx"
+    }
+  ],
+  "tags": [
+    "billing",
+    "stripe",
+    "account"
+  ],
+  "description": "There is no UI path for a Pro user to return to the Free tier. The Account page (src/app/(app)/account/page.tsx) shows an UPGRADE button only for free users; the Pro card just says CURRENT with no action. The only \"billing management\" link is a vague \"Manage in Clerk\" anchor — Clerk does not own subscription state here.\n\nToday, downgrade ONLY happens when an operator manually cancels the subscription in the Stripe dashboard, which fires:\n\n  src/app/api/webhooks/stripe/route.ts:145-206\n    customer.subscription.deleted   → users.tier = 'free'\n    customer.subscription.updated   → users.tier = 'free'\n                                       (status: canceled/past_due/unpaid)\n\nThat webhook handling is correct and tested (src/__tests__/stripe.test.ts:145-190). The bug is the missing user-facing trigger.\n\nRecommended fix — Stripe Customer Portal:\n\n  1. New route: src/app/api/portal/route.ts\n       POST handler creates a billing-portal session via\n       stripe.billingPortal.sessions.create({\n         customer: user.stripe_customer_id,\n         return_url: <account page>,\n       })\n       and returns { url }.\n\n  2. Account page button (replaces or supplements \"Manage in Clerk\"):\n       Pro users see \"MANAGE SUBSCRIPTION\" button that POSTs to\n       /api/portal and redirects to session.url. Free users\n       continue to see UPGRADE only.\n\n  3. Stripe Customer Portal handles cancel, update card, view\n     invoices, switch plans — all out-of-the-box. Existing\n     webhooks already pick up the resulting state changes; no\n     new server logic needed beyond the portal session creator.\n\n  4. Configure portal features in Stripe Dashboard\n     (Settings → Billing → Customer portal): enable cancel,\n     update payment method, invoice history. One-time setup\n     per environment.\n\nAlternative (rejected): build a custom in-app cancel flow that\ncalls stripe.subscriptions.update({ cancel_at_period_end: true }).\nMore code, more edge cases, no real benefit over the hosted portal\nwhich Stripe maintains and translates.\n\nDone when:\n  - Pro user can click a button on /account that opens the\n    Stripe portal in the same tab.\n  - Cancelling in the portal eventually downgrades the user\n    (covered by existing webhook + tests).\n  - tsc + lint + build clean. Add a route test for /api/portal\n    that mocks Stripe and verifies session creation +\n    redirect URL shape.\n\nSpec: live user feedback during pre-launch cleanup.",
+  "work": {
+    "branch": "chore/pre-launch-cleanup-tickets",
+    "base_branch": "main",
+    "started_at": "2026-05-04T12:08:59.960Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "80c7a1146b719b75072dcdd3d7c6e16e3e1bcdf2",
+    "resolved_at": "2026-05-04T12:11:00.018Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/stripe.test.ts",
+    "test_function": "creates a billing-portal session for the user customer and returns its url",
+    "note": "POST /api/portal returns a Stripe Customer Portal session URL for users with a stripe_customer_id. Account page gained MANAGE SUBSCRIPTION button on the Pro card; clicking redirects to the hosted portal. Cancel/update-card/invoice flows are Stripe-hosted; existing webhooks handle the resulting tier transitions. 6 new tests (4 route, 2 source-level UI). 254 tests pass; tsc + lint + build clean."
+  }
+}
