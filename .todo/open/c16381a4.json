@@ -1,0 +1,24 @@
+{
+  "id": "c16381a4",
+  "type": "debt",
+  "state": "open",
+  "summary": "Confirm quota_usage legacy table is unused, then drop",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:49.000Z",
+  "updated_at": "2026-05-04T22:52:49.000Z",
+  "files": [
+    {
+      "path": "migrations/004_quota.sql",
+      "lines": [
+        1,
+        1
+      ]
+    }
+  ],
+  "tags": [
+    "schema",
+    "debt"
+  ]
+}

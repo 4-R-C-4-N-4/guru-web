@@ -1,0 +1,24 @@
+{
+  "id": "6a2e77b5",
+  "type": "bug",
+  "state": "open",
+  "summary": "Two loading idioms in chat surface — plain 'Loading…' vs animated dots",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:29.867Z",
+  "updated_at": "2026-05-04T22:52:29.867Z",
+  "files": [
+    {
+      "path": "src/app/(app)/chat/[sessionId]/page.tsx",
+      "lines": [
+        38,
+        38
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "inconsistency"
+  ]
+}

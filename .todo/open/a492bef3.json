@@ -1,0 +1,25 @@
+{
+  "id": "a492bef3",
+  "type": "refactor",
+  "state": "open",
+  "summary": "mirrorTierToClerk is dead weight + silent failure mode — remove or wire reader",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.749Z",
+  "updated_at": "2026-05-04T22:52:12.749Z",
+  "files": [
+    {
+      "path": "src/app/api/webhooks/stripe/route.ts",
+      "lines": [
+        90,
+        99
+      ]
+    }
+  ],
+  "tags": [
+    "stripe",
+    "clerk",
+    "refactor"
+  ]
+}

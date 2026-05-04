@@ -1,0 +1,25 @@
+{
+  "id": "aebd196a",
+  "type": "bug",
+  "state": "open",
+  "summary": "Admin layout not responsive — fixed 200px sidebar + 1480px max-width",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:30.069Z",
+  "updated_at": "2026-05-04T22:52:30.069Z",
+  "files": [
+    {
+      "path": "src/app/(admin)/layout.tsx",
+      "lines": [
+        56,
+        66
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "mobile",
+    "admin"
+  ]
+}

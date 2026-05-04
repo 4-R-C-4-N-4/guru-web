@@ -1,0 +1,25 @@
+{
+  "id": "58d94d41",
+  "type": "refactor",
+  "state": "open",
+  "summary": "Rename PRO_MONTHLY_USD_TARGET → PRO_MONTHLY_COGS_TARGET_USD — confusable with sticker price",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:49.301Z",
+  "updated_at": "2026-05-04T22:52:49.301Z",
+  "files": [
+    {
+      "path": "src/lib/pricing-config.ts",
+      "lines": [
+        35,
+        35
+      ]
+    }
+  ],
+  "tags": [
+    "refactor",
+    "naming",
+    "pricing"
+  ]
+}

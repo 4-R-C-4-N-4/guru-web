@@ -1,0 +1,25 @@
+{
+  "id": "f4842e61",
+  "type": "bug",
+  "state": "open",
+  "summary": "Stripe customer dedupe — checkout retry creates duplicate customers",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.380Z",
+  "updated_at": "2026-05-04T22:51:53.380Z",
+  "files": [
+    {
+      "path": "src/app/api/checkout/route.ts",
+      "lines": [
+        64,
+        68
+      ]
+    }
+  ],
+  "tags": [
+    "stripe",
+    "billing",
+    "launch-blocker"
+  ]
+}

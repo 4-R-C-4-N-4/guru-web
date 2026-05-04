@@ -1,0 +1,25 @@
+{
+  "id": "d034b6b8",
+  "type": "bug",
+  "state": "open",
+  "summary": "queries.model_used has no FK to model_pricing — silent under-charging on rename",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.911Z",
+  "updated_at": "2026-05-04T22:52:12.911Z",
+  "files": [
+    {
+      "path": "migrations/006_cost_and_budgets.sql",
+      "lines": [
+        25,
+        33
+      ]
+    }
+  ],
+  "tags": [
+    "schema",
+    "billing",
+    "observability"
+  ]
+}
