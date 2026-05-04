@@ -1,0 +1,40 @@
+{
+  "id": "6e255bb7",
+  "type": "bug",
+  "state": "done",
+  "summary": "Usage Today bar shows '0/100' for Pro — denominator is the runaway-loop guard, not a real cap",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-04T12:34:25.338Z",
+  "updated_at": "2026-05-04T12:35:23.850Z",
+  "files": [
+    {
+      "path": "src/app/(app)/account/page.tsx",
+      "lines": [
+        95,
+        108
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "account",
+    "quota"
+  ],
+  "description": "The /account \"Usage Today\" section renders {used} / {limit} from /api/quota.\nFor Pro users, /api/quota returns query_limit = PRO_DAILY_QUERY_LIMIT (100),\nwhich is a soft runaway-loop guard — NOT the user's actual cap. Pro is\ngated on PRO_DAILY_USD_CAP, which translates to ~2 to ~27 queries/day\ndepending on provider (per /settings). Showing \"0 / 100\" misleads Pro\nusers about both their headroom and what their cap actually is.\n\nFree users have a real query-count cap (FREE_DAILY_QUERY_LIMIT = 10),\nso the {used} / {limit} display is correct for them.\n\nFix:\n\n  - Free tier: keep \"{used} / {limit}\" with the progress bar. Limit\n    is real and binding.\n\n  - Pro tier: drop the denominator. Show \"{used} today\" only, and\n    hide the progress bar (or render it at 0% — there's no meaningful\n    fill ratio to show without a real cap). Pro users get their real\n    per-provider cap from /settings, where it already lives.\n\n  - The /api/quota endpoint stays unchanged. The 100 still serves its\n    purpose server-side as a runaway-loop guard; we just stop\n    rendering it as if it were the user's quota.\n\nDone when:\n  - Pro users see \"0 today\" or similar (no /100), no fill bar\n    suggesting a denominator.\n  - Free users see \"0 / 10\" with the bar (unchanged behavior).\n  - Source-level test guards both shapes.\n  - tsc + lint + build clean.\n\nSpec: live user feedback after the rest of the pre-launch cleanup\nlanded on chore/pre-launch-cleanup-tickets.",
+  "work": {
+    "branch": "chore/pre-launch-cleanup-tickets",
+    "base_branch": "main",
+    "started_at": "2026-05-04T12:34:38.104Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "527459d722f9a280481e793dd00bb45b398a232b",
+    "resolved_at": "2026-05-04T12:35:23.850Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/account-page.test.ts",
+    "test_function": "Pro renders a count-only label, never with the runaway-loop denominator",
+    "note": "Pro Usage Today renders count-only (\"0 today\"); progress bar hidden. Free unchanged. 259 tests pass; tsc + lint clean."
+  }
+}
