@@ -43,3 +43,25 @@ describe('nav-bar avatar dropdown', () => {
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('nav-bar avatar label fallback (todo:11310d03)', () => {
+  it("does not fall back to the literal '?' character", () => {
+    // The old fallback was `... .join('') || '?';`. Either an empty-string
+    // sentinel (rendered as the SVG glyph) or an email-letter is fine —
+    // a literal '?' is not.
+    expect(SRC).not.toMatch(/\|\|\s*['"]\?['"]/);
+  });
+
+  it('reads primaryEmailAddress for the email-letter fallback', () => {
+    expect(SRC).toMatch(/primaryEmailAddress/);
+  });
+
+  it('renders an SVG person glyph when no label is available', () => {
+    // The render branch must include an <svg> with aria-hidden so the
+    // button still announces "Account menu" via aria-label and doesn't
+    // double-announce the decorative icon.
+    expect(SRC).toMatch(/<svg[^>]*aria-hidden/);
+    // And the label must be conditionally rendered (string OR svg).
+    expect(SRC).toMatch(/avatarLabel\s*\?\?/);
+  });
+});

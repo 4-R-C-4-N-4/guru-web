@@ -63,7 +63,13 @@ export default function NavBar() {
       .catch(() => {});
   }, []);
 
-  const initials = [user?.firstName, user?.lastName].filter(Boolean).map(n => n![0]).join('') || '?';
+  // Avatar label cascade (todo:11310d03). Email-only / social signups
+  // commonly have no firstName/lastName; falling back to '?' looked broken.
+  // Order: first+last initials → first letter of primary email → null
+  // (caller renders a person glyph SVG instead of any character).
+  const nameInitials = [user?.firstName, user?.lastName].filter(Boolean).map(n => n![0]!.toUpperCase()).join('');
+  const emailLetter  = user?.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() ?? null;
+  const avatarLabel: string | null = nameInitials || emailLetter;
 
   return (
     <nav style={{
@@ -131,7 +137,12 @@ export default function NavBar() {
                 fontSize: 11, fontFamily: tokens.font.mono, color: tokens.bg.deep, fontWeight: 700,
                 border: 'none', padding: 0, cursor: 'pointer',
               }}
-            >{initials}</button>
+            >{avatarLabel ?? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+              </svg>
+            )}</button>
 
             {avatarOpen && (
               <div role="menu" style={{
