@@ -1,0 +1,40 @@
+{
+  "id": "dffc2b19",
+  "type": "bug",
+  "state": "done",
+  "summary": "Pro plan card claims 'Unlimited queries' + features that don't exist (citations, premium model, priority retrieval)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-04T12:17:28.458Z",
+  "updated_at": "2026-05-04T12:18:37.683Z",
+  "files": [
+    {
+      "path": "src/app/(app)/account/page.tsx",
+      "lines": [
+        18,
+        18
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "account",
+    "marketing-copy"
+  ],
+  "description": "Follow-up to 23153adc. After fixing the Free bullet to source from FREE_DAILY_QUERY_LIMIT, the Pro card was left with marketing copy that doesn't match the product:\n\n  src/app/(app)/account/page.tsx:18\n    { id: 'pro', name: 'Pro', price: '\\$12/mo',\n      features: ['Unlimited queries', 'Premium model',\n                 'Citation export', 'Priority retrieval'] }\n\nTruth on each bullet:\n\n  'Unlimited queries' — false. Pro is bounded by PRO_DAILY_USD_CAP\n    via the budget reservation. Provider-dependent caps shown on\n    /settings: ~27/day DeepSeek, ~9 X.AI, ~3 OpenAI, ~2 Anthropic.\n    PRO_DAILY_QUERY_LIMIT (100) is a soft runaway-loop guard, not\n    a quota.\n  'Premium model'      — vapor. There is no 'premium model' tier;\n    Pro means picking among DeepSeek/X.AI/OpenAI/Anthropic. The\n    settings page already calls this 'choose how Guru answers'.\n  'Citation export'    — vapor. Grep confirms no implementation —\n    this string is the only occurrence in the codebase.\n  'Priority retrieval' — vapor. Same: no implementation, only\n    occurrence is this marketing string.\n\nFix — replace the four bullets with two that are true:\n\n  features: ['3× more queries per day', 'Choose your provider']\n\n  '3× more queries per day' calibrates against DeepSeek's\n  ~27/day vs Free's 10/day (≈ 2.7×, rounded). This is the\n  best-case provider; Anthropic at ~2/day is actually LESS\n  than Free, but Pro users opt into that tradeoff knowingly\n  via the settings picker.\n\nDone when:\n  - Pro card on /account shows two bullets only:\n    '3× more queries per day' and 'Choose your provider'.\n  - No mention of citations, premium model, or priority\n    retrieval anywhere in the account page.\n  - Existing source-level tests for the page still pass; add\n    a guard so the vapor strings can't be reintroduced.\n  - tsc + lint + build clean.\n\nSpec: live user feedback after 23153adc shipped on the\nchore/pre-launch-cleanup-tickets branch.",
+  "work": {
+    "branch": "chore/pre-launch-cleanup-tickets",
+    "base_branch": "main",
+    "started_at": "2026-05-04T12:17:46.242Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "a80bc45e8af6fb08c02ebd72df3405e08723b458",
+    "resolved_at": "2026-05-04T12:18:37.683Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/account-page.test.ts",
+    "test_function": "Pro features include the queries-multiplier and provider-choice bullets",
+    "note": "Pro card now lists \"3× more queries per day\" + \"Choose your provider\". Vapor bullets removed and locked out by test. 257 tests pass; tsc + lint + build clean."
+  }
+}
