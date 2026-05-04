@@ -510,12 +510,17 @@ install -m 0644 /srv/guru-web/releases/$SHA/deploy/sync-pricing.service \
 install -m 0644 /srv/guru-web/releases/$SHA/deploy/sync-pricing.timer \
                 /etc/systemd/system/sync-pricing.timer
 
-# First run before enabling the timer — confirms the wrapper resolves
-# the right release and the DB credentials in /etc/guru-web.env are
-# usable from the `guru` user.
-sudo -u guru /usr/local/bin/sync-pricing
-
+# First run via systemd to validate. Don't run /usr/local/bin/sync-pricing
+# directly under `sudo -u guru` — /etc/guru-web.env is mode 600
+# root:guru so the `guru` user can't read it without going through
+# systemd's EnvironmentFile resolution. The wrapper would fail with
+# "DATABASE_URL is not set" because the env file never loads.
 systemctl daemon-reload
+systemctl start sync-pricing
+journalctl -u sync-pricing -n 30 --no-pager
+# Expect a final line like '[sync-pricing] done: seeded=N updated=M
+# unchanged=K'.
+
 systemctl enable --now sync-pricing.timer
 systemctl list-timers sync-pricing.timer    # confirm active
 ```
@@ -538,10 +543,17 @@ case).
 
 ```bash
 sudo systemctl start sync-pricing
-sudo -u guru /usr/local/bin/sync-pricing   # equivalent, by-hand
+journalctl -u sync-pricing -n 30 --no-pager
 ```
 
-Either is idempotent. Safe to re-run.
+Idempotent. Safe to re-run.
+
+Don't bypass systemd with `sudo -u guru /usr/local/bin/sync-pricing`:
+that path skips the `EnvironmentFile=/etc/guru-web.env` directive
+(systemd reads the env file as root and injects into the service
+running as `guru`; a direct shell invocation runs without the env
+loaded and fails with "DATABASE_URL is not set"). The env file is
+mode 600 root:guru so the `guru` user can't read it directly.
 
 ### Failure modes
 
