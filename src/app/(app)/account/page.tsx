@@ -8,14 +8,13 @@ import { FREE_DAILY_QUERY_LIMIT } from '@/lib/pricing-config';
 
 interface QuotaData { used: number; limit: number; tier: string; }
 
-// Free's bullet is sourced from FREE_DAILY_QUERY_LIMIT so the marketing
-// copy can't drift from the server-enforced cap (todo:23153adc). Pro's
-// "Unlimited queries" stays a literal: PRO_DAILY_QUERY_LIMIT is a soft
-// runaway-loop guard, not a user-facing quota — the binding gate on Pro
-// is USD spend, not query count (BRD §6.2).
+// Free bullet sourced from FREE_DAILY_QUERY_LIMIT so the marketing copy
+// can't drift from the server-enforced cap (todo:23153adc). Pro's "3×"
+// calibrates against DeepSeek's ~27/day vs Free's 10/day — see
+// PROVIDER_DISPLAY.questionsPerDay (todo:dffc2b19).
 const PLANS = [
   { id: 'free', name: 'Free', price: null,     features: [`${FREE_DAILY_QUERY_LIMIT} queries/day`, 'All traditions', 'Standard model'] },
-  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['Unlimited queries', 'Premium model', 'Citation export', 'Priority retrieval'] },
+  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['3× more queries per day', 'Choose your provider'] },
 ];
 
 export default function AccountPage() {

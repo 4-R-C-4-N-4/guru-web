@@ -28,6 +28,23 @@ describe('account page plan cards', () => {
   });
 });
 
+describe('account page Pro bullets reflect the real product (todo:dffc2b19)', () => {
+  it('does not advertise "Unlimited queries" — Pro is bounded by PRO_DAILY_USD_CAP', () => {
+    expect(SRC).not.toMatch(/Unlimited queries/);
+  });
+
+  it('does not mention Citation export, Premium model, or Priority retrieval (vapor)', () => {
+    expect(SRC).not.toMatch(/Citation export/);
+    expect(SRC).not.toMatch(/Premium model/);
+    expect(SRC).not.toMatch(/Priority retrieval/);
+  });
+
+  it('Pro features include the queries-multiplier and provider-choice bullets', () => {
+    expect(SRC).toMatch(/3×\s*more queries per day/);
+    expect(SRC).toMatch(/Choose your provider/);
+  });
+});
+
 describe('account page subscription management (todo:7854e1ba)', () => {
   it('POSTs to /api/portal to open the Stripe Customer Portal', () => {
     expect(SRC).toMatch(/fetch\(\s*['"]\/api\/portal['"]\s*,\s*\{\s*method:\s*['"]POST['"]/);
