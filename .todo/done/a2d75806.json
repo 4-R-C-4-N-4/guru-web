@@ -1,0 +1,31 @@
+{
+  "id": "a2d75806",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Clerk sign-in renders white card on dark bg — pass appearance prop",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:29.794Z",
+  "updated_at": "2026-05-05T17:46:03.425Z",
+  "files": [
+    {
+      "path": "src/app/sign-in/[[...sign-in]]/page.tsx",
+      "lines": [
+        14,
+        14
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "clerk",
+    "launch-visible"
+  ],
+  "resolution": {
+    "commit": "31d758f",
+    "resolved_at": "2026-05-05T17:46:03.425Z",
+    "resolved_by": "unknown",
+    "note": "Defined clerkAppearance in src/styles/clerk-appearance.ts sourced from tokens; passed once on ClerkProvider so SignIn/SignUp/UserProfile all inherit the dark theme."
+  }
+}

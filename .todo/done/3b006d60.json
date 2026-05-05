@@ -1,13 +1,13 @@
 {
   "id": "3b006d60",
   "type": "debt",
-  "state": "open",
+  "state": "done",
   "summary": "getClerkUser() unused — wire into requireUser lazy upsert or delete",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-04T22:52:49.120Z",
-  "updated_at": "2026-05-04T22:52:49.120Z",
+  "updated_at": "2026-05-05T17:45:35.785Z",
   "files": [
     {
       "path": "src/lib/auth.ts",
@@ -20,5 +20,11 @@
   "tags": [
     "debt",
     "refactor"
-  ]
+  ],
+  "resolution": {
+    "commit": "e96aacc",
+    "resolved_at": "2026-05-05T17:45:35.785Z",
+    "resolved_by": "unknown",
+    "note": "getClerkUser() removed. The lazy-upsert in requireUser() now calls currentUser() directly. Closed alongside todo:a7ffea2b."
+  }
 }

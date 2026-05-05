@@ -1,0 +1,32 @@
+{
+  "id": "33d44563",
+  "type": "bug",
+  "state": "done",
+  "summary": "Missing Stripe webhook events: subscription.created, payment_failed, async_*",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.716Z",
+  "updated_at": "2026-05-05T17:45:35.914Z",
+  "files": [
+    {
+      "path": "src/app/api/webhooks/stripe/route.ts",
+      "lines": [
+        60,
+        76
+      ]
+    }
+  ],
+  "tags": [
+    "stripe",
+    "webhooks"
+  ],
+  "resolution": {
+    "commit": "69c9d00",
+    "resolved_at": "2026-05-05T17:45:35.914Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/stripe.test.ts",
+    "test_function": "invoice.payment_failed: marks payment_state past_due (todo:33d44563)",
+    "note": "Migration 011 adds users.payment_state. Webhook handles invoice.payment_failed (sets past_due) and invoice.payment_succeeded (clears). Critically: subscription.updated past_due no longer demotes — Stripe is still retrying, so we keep tier='pro' and surface a banner. Nav-bar renders past-due banner with Update Payment CTA."
+  }
+}

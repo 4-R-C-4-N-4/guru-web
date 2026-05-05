@@ -1,0 +1,30 @@
+{
+  "id": "35c5a088",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Hardcoded accounts.clerk.dev/user link — replace with UserProfile component",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.787Z",
+  "updated_at": "2026-05-05T17:46:03.297Z",
+  "files": [
+    {
+      "path": "src/app/(app)/account/page.tsx",
+      "lines": [
+        153,
+        153
+      ]
+    }
+  ],
+  "tags": [
+    "clerk",
+    "ui"
+  ],
+  "resolution": {
+    "commit": "c4734e5",
+    "resolved_at": "2026-05-05T17:46:03.297Z",
+    "resolved_by": "unknown",
+    "note": "Account page now opens Clerk's UserProfile via useClerk().openUserProfile() instead of linking to https://accounts.clerk.dev/user. Inherits the dark-theme appearance set on ClerkProvider (todo:a2d75806)."
+  }
+}

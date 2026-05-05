@@ -1,0 +1,30 @@
+{
+  "id": "4670ef9d",
+  "type": "chore",
+  "state": "done",
+  "summary": "JumpById admin form doesn't redirect — input visibly does nothing",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:30.108Z",
+  "updated_at": "2026-05-05T17:46:03.344Z",
+  "files": [
+    {
+      "path": "src/app/(admin)/layout.tsx",
+      "lines": [
+        112,
+        112
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "admin"
+  ],
+  "resolution": {
+    "commit": "b082bf4",
+    "resolved_at": "2026-05-05T17:46:03.344Z",
+    "resolved_by": "unknown",
+    "note": "Added admin-gated index pages at /admin/sessions and /admin/queries that read searchParams.id and redirect to the [id] route. JumpById form is now functional."
+  }
+}
