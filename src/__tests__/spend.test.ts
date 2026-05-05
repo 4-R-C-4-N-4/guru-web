@@ -160,10 +160,10 @@ describe('TIER_LIMITS', () => {
     });
   });
 
-  it('PRO_DAILY_USD_CAP derives from PRO_MONTHLY_USD_TARGET / PERIOD_DAYS', async () => {
+  it('PRO_DAILY_USD_CAP derives from PRO_MONTHLY_COG / PERIOD_DAYS', async () => {
     const cfg = await import('@/lib/pricing-config');
     expect(cfg.PRO_DAILY_USD_CAP).toBeCloseTo(
-      cfg.PRO_MONTHLY_USD_TARGET / cfg.PERIOD_DAYS,
+      cfg.PRO_MONTHLY_COG / cfg.PERIOD_DAYS,
       6,
     );
   });
