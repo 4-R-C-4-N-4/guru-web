@@ -8,7 +8,7 @@
   - Name: `Guru Pro`
   - Description: `Unlimited queries, premium model, citation export, priority retrieval`
   - Pricing model: `Recurring`
-  - Price: `$12.00 USD / month`
+  - Price: `$15.00 USD / month` (must match `PRO_MONTHLY_PRICE_USD` in `src/lib/pricing-config.ts`)
 - Save the product — copy the **Price ID** (starts with `price_`)
 
 ### 2. Copy keys into .env.local
