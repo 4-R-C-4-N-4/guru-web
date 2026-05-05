@@ -9,8 +9,9 @@
  * systemd reports the unit as failed → operator gets a clear signal.
  *
  * What we check:
- *   - Required env vars are present (and non-empty)
- *   - Recommended env vars (warn only — webhook secrets work without)
+ *   - Required env vars are present (and non-empty) — includes the
+ *     Clerk + Stripe webhook secrets, since a missing secret silently
+ *     500s every webhook with no operator-visible signal at boot
  *   - Ollama is reachable and serves the expected embedding model
  *   - Embedding dimension matches what the corpus was built with (768)
  *
@@ -25,15 +26,12 @@ const REQUIRED_ENV = [
   'OPENROUTER_API_KEY',
   'CLERK_SECRET_KEY',
   'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+  'CLERK_WEBHOOK_SECRET',
   'STRIPE_SECRET_KEY',
   'STRIPE_PRO_PRICE_ID',
+  'STRIPE_WEBHOOK_SECRET',
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_APP_URL',
-] as const;
-
-const RECOMMENDED_ENV = [
-  'CLERK_WEBHOOK_SECRET',
-  'STRIPE_WEBHOOK_SECRET',
 ] as const;
 
 // MUST match the model used by guru-pipeline when embedding the corpus.
@@ -57,13 +55,6 @@ function checkEnv(): void {
   const missing = REQUIRED_ENV.filter(k => !process.env[k]);
   if (missing.length > 0) {
     throw new BootError(`Missing required env: ${missing.join(', ')}`);
-  }
-
-  const missingOpt = RECOMMENDED_ENV.filter(k => !process.env[k]);
-  if (missingOpt.length > 0) {
-    console.warn(
-      `[boot] Missing recommended env (webhooks won't verify signatures): ${missingOpt.join(', ')}`
-    );
   }
 }
 
