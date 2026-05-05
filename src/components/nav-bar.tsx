@@ -87,9 +87,9 @@ export default function NavBar() {
         <div
           role="alert"
           style={{
-            background: '#3a1a22',
-            borderBottom: `1px solid #c25a7a`,
-            color: '#e8c8d0',
+            background: tokens.bg.danger,
+            borderBottom: `1px solid ${tokens.border.danger}`,
+            color: tokens.text.errorSoft,
             fontFamily: tokens.font.mono,
             fontSize: 11,
             padding: mobile ? '10px 16px' : '8px 24px',
@@ -107,8 +107,8 @@ export default function NavBar() {
             onClick={() => router.push('/account')}
             style={{
               background: 'none',
-              color: '#e8c8d0',
-              border: `1px solid #c25a7a`,
+              color: tokens.text.errorSoft,
+              border: `1px solid ${tokens.border.danger}`,
               padding: '4px 12px',
               fontFamily: tokens.font.mono,
               fontSize: 10,

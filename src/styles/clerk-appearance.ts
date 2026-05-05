@@ -29,7 +29,7 @@ export const clerkAppearance = {
     colorInputBackground: tokens.bg.raised,
     colorInputText:       tokens.text.primary,
     colorNeutral:         tokens.text.secondary,
-    colorDanger:          '#c25a7a',
+    colorDanger:          tokens.text.error,
     fontFamily:           tokens.font.mono,
     borderRadius:         '4px',
   },
