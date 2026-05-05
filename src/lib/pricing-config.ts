@@ -29,9 +29,17 @@
  * in OpenAI, pg, or anything else.
  */
 
-/** Monthly USD spend target per pro user. Sets the margin floor at
- *  $15/mo gross — see BRD §3.1 for the math. Bumping requires
- *  re-eyeballing the per-day-by-model implications in BRD §3.2. */
+/** Sticker price shown to users and charged by Stripe. Single source
+ *  of truth for the displayed Pro price — UI and runbooks must import
+ *  this rather than hardcoding "$15/mo" so the marketing copy can't
+ *  drift from the Stripe Price the user actually pays. The Stripe
+ *  Price ID itself (STRIPE_PRO_PRICE_ID env) must be created at
+ *  exactly this amount; verify after any change. */
+export const PRO_MONTHLY_PRICE_USD = 15;
+
+/** Monthly USD COGS target per pro user. Sets the margin floor at
+ *  PRO_MONTHLY_PRICE_USD gross — see BRD §3.1 for the math. Bumping
+ *  requires re-eyeballing the per-day-by-model implications in BRD §3.2. */
 export const PRO_MONTHLY_USD_TARGET = 5.00;
 
 /** Days the budget rolls over. spend.ts uses PERIOD = 'daily', so

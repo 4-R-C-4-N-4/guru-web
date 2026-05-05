@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { FREE_DAILY_QUERY_LIMIT } from '@/lib/pricing-config';
+import { FREE_DAILY_QUERY_LIMIT, PRO_MONTHLY_PRICE_USD } from '@/lib/pricing-config';
 
 interface QuotaData { used: number; limit: number; tier: string; }
 
@@ -14,7 +14,7 @@ interface QuotaData { used: number; limit: number; tier: string; }
 // PROVIDER_DISPLAY.questionsPerDay (todo:dffc2b19).
 const PLANS = [
   { id: 'free', name: 'Free', price: null,     features: [`${FREE_DAILY_QUERY_LIMIT} queries/day`, 'All traditions', 'Standard model'] },
-  { id: 'pro',  name: 'Pro',  price: '$12/mo', features: ['Up to 3× more queries per day', 'Choose your provider'] },
+  { id: 'pro',  name: 'Pro',  price: `$${PRO_MONTHLY_PRICE_USD}/mo`, features: ['Up to 3× more queries per day', 'Choose your provider'] },
 ];
 
 export default function AccountPage() {
