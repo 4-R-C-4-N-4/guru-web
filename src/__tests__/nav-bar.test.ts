@@ -42,6 +42,16 @@ describe('nav-bar avatar dropdown', () => {
     const matches = SRC.match(/Sign out/g) ?? [];
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('NAV_ITEMS includes Account so the mobile menu surfaces it (todo:bddd1603)', () => {
+    // Mobile dropdown renders NAV_ITEMS.map; every item there is reachable
+    // on mobile. If Account is dropped from NAV_ITEMS the only mobile path
+    // to it would be typing the URL. Lock the entry in.
+    expect(SRC).toMatch(/href:\s*['"]\/account['"]\s*,\s*label:\s*['"]Account['"]/);
+    // And the mobile dropdown must actually map NAV_ITEMS rather than
+    // duplicating a hand-rolled subset (which is how this drift happens).
+    expect(SRC).toMatch(/mobile && menuOpen[\s\S]{0,400}NAV_ITEMS\.map/);
+  });
 });
 
 describe('nav-bar avatar label fallback (todo:11310d03)', () => {
