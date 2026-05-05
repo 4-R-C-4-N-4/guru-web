@@ -302,7 +302,7 @@ describe('requireUser()', () => {
       expect((result as Response).status).toBe(401);
     });
 
-    it('returns 401 when the upsert throws (e.g. UNIQUE email collision)', async () => {
+    it('returns 401 when the upsert throws unique_violation (UNIQUE email collision)', async () => {
       mockClerkAuth.mockResolvedValueOnce({ userId: 'user_collide' } as never);
       mockOne.mockResolvedValueOnce(null);
       mockClerkCurrentUser.mockResolvedValueOnce({
@@ -310,12 +310,31 @@ describe('requireUser()', () => {
         primaryEmailAddress: { emailAddress: 'taken@example.com' },
         emailAddresses: [{ emailAddress: 'taken@example.com' }],
       } as never);
-      mockExec.mockRejectedValueOnce(new Error('unique constraint violation'));
+      // pg surfaces unique_violation as code '23505'.
+      const collision = Object.assign(new Error('duplicate key value'), { code: '23505' });
+      mockExec.mockRejectedValueOnce(collision);
 
       const result = await requireUser();
       expect(result).toBeInstanceOf(Response);
       expect((result as Response).status).toBe(401);
       // Should NOT re-SELECT after a failed upsert.
+      expect(mockOne).toHaveBeenCalledOnce();
+    });
+
+    it('rethrows non-collision DB errors so the route returns 500, not a misleading 401', async () => {
+      mockClerkAuth.mockResolvedValueOnce({ userId: 'user_dbdown' } as never);
+      mockOne.mockResolvedValueOnce(null);
+      mockClerkCurrentUser.mockResolvedValueOnce({
+        id: 'user_dbdown',
+        primaryEmailAddress: { emailAddress: 'a@b.com' },
+        emailAddresses: [{ emailAddress: 'a@b.com' }],
+      } as never);
+      // Transient connection error — code is e.g. '57P01' (admin_shutdown)
+      // or undefined (network). Either way, not 23505.
+      mockExec.mockRejectedValueOnce(Object.assign(new Error('server closed the connection'), { code: '57P01' }));
+
+      await expect(requireUser()).rejects.toThrow(/server closed/);
+      // And no re-SELECT either.
       expect(mockOne).toHaveBeenCalledOnce();
     });
   });

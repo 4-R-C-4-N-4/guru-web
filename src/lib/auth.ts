@@ -68,11 +68,17 @@ export async function requireUser(): Promise<User | Response> {
       [userId, email]
     );
   } catch (err) {
-    // Likely a UNIQUE(email) collision with a soft-deleted account
-    // re-registering with the same address (todo:ab118d8c). Surface
-    // it for ops; user gets a generic 401.
-    console.error('[requireUser] lazy upsert failed:', err);
-    return Response.json({ error: 'User not found' }, { status: 401 });
+    // Postgres unique_violation = '23505'. The expected case here is
+    // a UNIQUE(email) collision with a soft-deleted account that's
+    // re-registering with the same address (todo:ab118d8c) — not a
+    // server error, so 401 the user. Anything else is a real DB
+    // problem; rethrow so the route handler returns 500 and the
+    // failure shows up in metrics rather than as a misleading 401.
+    if ((err as { code?: string }).code === '23505') {
+      console.error('[requireUser] email collision on lazy upsert:', err);
+      return Response.json({ error: 'User not found' }, { status: 401 });
+    }
+    throw err;
   }
 
   const created = await one<User>(SELECT_USER_SQL, [userId]);
