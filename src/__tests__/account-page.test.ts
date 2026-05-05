@@ -26,6 +26,16 @@ describe('account page plan cards', () => {
     expect(SRC).toMatch(/\$\{FREE_DAILY_QUERY_LIMIT\}\s*queries\/day/);
     expect(SRC).not.toMatch(/['"][0-9]+\s*queries\/day['"]/);
   });
+
+  it('imports PRO_MONTHLY_PRICE_USD and interpolates it (todo:212682c6)', () => {
+    // Pro price must come from the pricing-config constant, not a
+    // hardcoded string. Was "$12/mo" — drifted from the locked $15
+    // sticker price; same drift class as the FREE_DAILY_QUERY_LIMIT
+    // guard above.
+    expect(SRC).toMatch(/import\s*\{[^}]*\bPRO_MONTHLY_PRICE_USD\b[^}]*\}\s*from\s*['"]@\/lib\/pricing-config['"]/);
+    expect(SRC).toMatch(/\$\{PRO_MONTHLY_PRICE_USD\}\/mo/);
+    expect(SRC).not.toMatch(/['"]\$[0-9]+\/mo['"]/);
+  });
 });
 
 describe('account page Pro bullets reflect the real product (todo:dffc2b19)', () => {
