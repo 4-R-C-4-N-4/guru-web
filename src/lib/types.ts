@@ -48,6 +48,7 @@ export interface User {
   email: string;
   tier: 'free' | 'pro';
   stripe_customer_id: string | null;
+  currency: string;
 }
 
 export interface Session {

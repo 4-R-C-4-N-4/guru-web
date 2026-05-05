@@ -267,6 +267,7 @@ export interface UserListRow {
   email: string;
   tier: 'free' | 'pro';
   stripe_customer_id: string | null;
+  currency: string;
   created_at: string;
   last_query_at: string | null;
   queries_7d: number;
@@ -352,12 +353,13 @@ export async function listUsers(
   const rows = await query<{
     id: string; email: string; tier: 'free' | 'pro';
     stripe_customer_id: string | null;
+    currency: string;
     created_at: string;
     last_query_at: string | null;
     queries_7d: string | number;
     spend_7d:   string | number;
   }>(
-    `SELECT u.id, u.email, u.tier, u.stripe_customer_id, u.created_at,
+    `SELECT u.id, u.email, u.tier, u.stripe_customer_id, u.currency, u.created_at,
             qstats.last_query_at, qstats.queries_7d, qstats.spend_7d
        FROM users u
        ${joinSql}
@@ -372,6 +374,7 @@ export async function listUsers(
     email: r.email,
     tier: r.tier,
     stripe_customer_id: r.stripe_customer_id,
+    currency: r.currency,
     created_at: r.created_at,
     last_query_at: r.last_query_at,
     queries_7d: Number(r.queries_7d),
@@ -404,6 +407,7 @@ export interface UserDeepDive {
     email: string;
     tier: 'free' | 'pro';
     stripe_customer_id: string | null;
+    currency: string;
     created_at: string;
   };
   /** Account age in whole days, computed server-side at fetch time
@@ -422,7 +426,7 @@ export interface UserDeepDive {
 
 export async function getUserDeepDive(userId: string): Promise<UserDeepDive | null> {
   const user = await one<UserDeepDive['user']>(
-    `SELECT id, email, tier, stripe_customer_id, created_at
+    `SELECT id, email, tier, stripe_customer_id, currency, created_at
        FROM users WHERE id = $1 AND deleted_at IS NULL`,
     [userId],
   );

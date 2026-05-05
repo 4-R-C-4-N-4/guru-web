@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 interface UserRow {
   id: string; email: string; tier: 'free' | 'pro';
   stripe_customer_id: string | null;
+  currency: string;
   created_at: string;
   last_query_at: string | null;
   queries_7d: number;
