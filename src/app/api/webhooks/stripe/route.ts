@@ -255,13 +255,32 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   if (!customerId) return;
 
-  await exec(
+  // RETURNING id so we can distinguish "marked past_due" from
+  // "no user matched" — same logging shape as handleSubscriptionUpdated.
+  // Operator-debugging: a wrong-environment customer event silently
+  // updating zero rows is otherwise indistinguishable from the
+  // already-flagged no-op.
+  const updated = await one<{ id: string }>(
     `UPDATE users SET payment_state = 'past_due', updated_at = now()
-     WHERE stripe_customer_id = $1 AND payment_state IS DISTINCT FROM 'past_due'`,
+     WHERE stripe_customer_id = $1 AND payment_state IS DISTINCT FROM 'past_due'
+     RETURNING id`,
     [customerId]
   );
 
-  console.log(`[stripe-webhook] invoice payment failed for customer ${customerId}`);
+  if (updated) {
+    console.log(`[stripe-webhook] invoice payment failed for customer ${customerId}`);
+  } else {
+    // Either already past_due (no-op) or no user with this customer id.
+    // Distinguish the two by re-querying — kept lightweight since this
+    // path runs at most once per failed invoice.
+    const existing = await one<{ id: string }>(
+      `SELECT id FROM users WHERE stripe_customer_id = $1`,
+      [customerId]
+    );
+    if (!existing) {
+      console.error(`[stripe-webhook] invoice.payment_failed: no user found for customer ${customerId}`);
+    }
+  }
 }
 
 /**
@@ -277,9 +296,17 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   if (!customerId) return;
 
-  await exec(
+  // Same RETURNING shape as the failed handler so operator logs are
+  // symmetric. The expected case here is a no-op (payment_state was
+  // already null); we only log when the clear actually happened.
+  const cleared = await one<{ id: string }>(
     `UPDATE users SET payment_state = NULL, updated_at = now()
-     WHERE stripe_customer_id = $1 AND payment_state IS NOT NULL`,
+     WHERE stripe_customer_id = $1 AND payment_state IS NOT NULL
+     RETURNING id`,
     [customerId]
   );
+
+  if (cleared) {
+    console.log(`[stripe-webhook] invoice payment succeeded after retry for customer ${customerId}`);
+  }
 }

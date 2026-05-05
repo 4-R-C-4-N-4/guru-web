@@ -295,14 +295,34 @@ describe('POST /api/webhooks/stripe', () => {
       type: 'invoice.payment_failed',
       data: { object: { customer: 'cus_123' } },
     });
-    mockExec.mockResolvedValueOnce(undefined);
+    // RETURNING id — the row was updated.
+    mockOne.mockResolvedValueOnce({ id: 'user_1' });
 
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
-    const [sql, params] = mockExec.mock.calls[0];
+    const [sql, params] = mockOne.mock.calls[0];
     expect(sql).toContain("payment_state = 'past_due'");
     expect(sql).toContain('IS DISTINCT FROM');
+    expect(sql).toContain('RETURNING id');
     expect(params).toEqual(['cus_123']);
+  });
+
+  it('invoice.payment_failed: error-logs unknown customer (todo:33d44563 review)', async () => {
+    mockConstructEvent.mockReturnValueOnce({
+      type: 'invoice.payment_failed',
+      data: { object: { customer: 'cus_unknown' } },
+    });
+    // First UPDATE matches no rows; existence check also returns null.
+    mockOne.mockResolvedValueOnce(null);
+    mockOne.mockResolvedValueOnce(null);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await stripeWebhookPOST(makeWebhookReq({}));
+    expect(res.status).toBe(200);
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining('no user found for customer cus_unknown'),
+    );
+    errSpy.mockRestore();
   });
 
   it('invoice.payment_succeeded: clears payment_state (todo:33d44563)', async () => {
@@ -310,14 +330,31 @@ describe('POST /api/webhooks/stripe', () => {
       type: 'invoice.payment_succeeded',
       data: { object: { customer: 'cus_123' } },
     });
-    mockExec.mockResolvedValueOnce(undefined);
+    mockOne.mockResolvedValueOnce({ id: 'user_1' });
 
     const res = await stripeWebhookPOST(makeWebhookReq({}));
     expect(res.status).toBe(200);
-    const [sql, params] = mockExec.mock.calls[0];
+    const [sql, params] = mockOne.mock.calls[0];
     expect(sql).toContain('payment_state = NULL');
     expect(sql).toContain('IS NOT NULL');
+    expect(sql).toContain('RETURNING id');
     expect(params).toEqual(['cus_123']);
+  });
+
+  it('invoice.payment_succeeded: silent no-op when nothing to clear (todo:33d44563 review)', async () => {
+    mockConstructEvent.mockReturnValueOnce({
+      type: 'invoice.payment_succeeded',
+      data: { object: { customer: 'cus_123' } },
+    });
+    // No row matches the WHERE clause (payment_state already NULL).
+    mockOne.mockResolvedValueOnce(null);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const res = await stripeWebhookPOST(makeWebhookReq({}));
+    expect(res.status).toBe(200);
+    // Successful normal-case payments shouldn't pollute ops logs.
+    expect(logSpy).not.toHaveBeenCalled();
+    logSpy.mockRestore();
   });
 
   it('unknown event type: acknowledged without error', async () => {
