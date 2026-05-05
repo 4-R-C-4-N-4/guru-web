@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { FREE_DAILY_QUERY_LIMIT, PRO_MONTHLY_PRICE_USD } from '@/lib/pricing-config';
@@ -18,9 +18,10 @@ const PLANS = [
 ];
 
 export default function AccountPage() {
-  const { user } = useUser();
-  const mobile   = useIsMobile();
-  const [quota,  setQuota]  = useState<QuotaData | null>(null);
+  const { user }            = useUser();
+  const { openUserProfile } = useClerk();
+  const mobile              = useIsMobile();
+  const [quota, setQuota]   = useState<QuotaData | null>(null);
 
   // Tier comes from /api/quota, not Clerk's publicMetadata. The Stripe
   // webhook writes Postgres users.tier; nothing in this codebase mirrors
@@ -150,11 +151,11 @@ export default function AccountPage() {
           </div>
         ))}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, flexDirection: mobile ? 'column' : 'row' }}>
-          <a href="https://accounts.clerk.dev/user" target="_blank" rel="noreferrer" style={{
+          <button onClick={() => openUserProfile()} style={{
             fontFamily: tokens.font.mono, fontSize: 10, padding: mobile ? '12px 14px' : '6px 14px',
             background: 'none', color: tokens.text.link, border: `1px solid ${tokens.border.subtle}`,
-            borderRadius: 2, cursor: 'pointer', textDecoration: 'none', textAlign: 'center',
-          }}>Manage in Clerk</a>
+            borderRadius: 2, cursor: 'pointer', textAlign: 'center', letterSpacing: 1,
+          }}>MANAGE PROFILE</button>
         </div>
       </div>
     </div>
