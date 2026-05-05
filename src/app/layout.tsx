@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, IBM_Plex_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
+import { clerkAppearance } from '@/styles/clerk-appearance';
 import './globals.css';
 
 const display = Cormorant_Garamond({
@@ -28,7 +29,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" className={`${display.variable} ${mono.variable}`}>
         <body>{children}</body>
       </html>
