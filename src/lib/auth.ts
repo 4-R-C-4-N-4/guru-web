@@ -9,7 +9,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { exec, one } from './db';
 import type { User } from './types';
 
-const SELECT_USER_SQL = `SELECT id, email, tier, stripe_customer_id FROM users
+const SELECT_USER_SQL = `SELECT id, email, tier, stripe_customer_id, payment_state FROM users
                            WHERE id = $1 AND deleted_at IS NULL`;
 
 /**

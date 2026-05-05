@@ -43,11 +43,21 @@ export interface UserPreferences {
   preferredModel: string | null;
 }
 
+/** Billing-health flag (todo:33d44563). Tracks Stripe's retry state
+ *  independent of tier so a paying user with a temporary card decline
+ *  keeps Pro access during Stripe's smart-retry window while seeing a
+ *  banner prompting them to update their card.
+ *    null        → billing healthy or N/A
+ *    'past_due'  → most recent invoice failed; retry pending
+ */
+export type PaymentState = 'past_due' | null;
+
 export interface User {
   id: string;
   email: string;
   tier: 'free' | 'pro';
   stripe_customer_id: string | null;
+  payment_state: PaymentState;
 }
 
 export interface Session {

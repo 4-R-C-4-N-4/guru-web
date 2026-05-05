@@ -189,7 +189,7 @@ describe('requireUser()', () => {
   it('returns the user record when active (deleted_at IS NULL)', async () => {
     mockClerkAuth.mockResolvedValueOnce({ userId: 'user_live' } as never);
     mockOne.mockResolvedValueOnce({
-      id: 'user_live', email: 'a@b.com', tier: 'free', stripe_customer_id: null,
+      id: 'user_live', email: 'a@b.com', tier: 'free', stripe_customer_id: null, payment_state: null,
     });
 
     const result = await requireUser();
@@ -226,7 +226,7 @@ describe('requireUser()', () => {
       mockExec.mockResolvedValueOnce(undefined);
       // Re-SELECT after upsert: row now exists.
       mockOne.mockResolvedValueOnce({
-        id: 'user_new', email: 'new@example.com', tier: 'free', stripe_customer_id: null,
+        id: 'user_new', email: 'new@example.com', tier: 'free', stripe_customer_id: null, payment_state: null,
       });
 
       const result = await requireUser();
@@ -251,7 +251,7 @@ describe('requireUser()', () => {
       } as never);
       mockExec.mockResolvedValueOnce(undefined);
       mockOne.mockResolvedValueOnce({
-        id: 'user_alt', email: 'alt@example.com', tier: 'free', stripe_customer_id: null,
+        id: 'user_alt', email: 'alt@example.com', tier: 'free', stripe_customer_id: null, payment_state: null,
       });
 
       const result = await requireUser();

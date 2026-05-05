@@ -43,6 +43,18 @@ describe('nav-bar avatar dropdown', () => {
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('reads payment_state from /api/quota and renders past-due banner (todo:33d44563)', () => {
+    // The /api/quota fetch must include payment_state in the destructure
+    // and a role="alert" banner must render conditional on past_due.
+    expect(SRC).toMatch(/payment_state\??\s*:\s*string\s*\|\s*null/);
+    expect(SRC).toMatch(/setPaymentState/);
+    expect(SRC).toMatch(/paymentState\s*===\s*['"]past_due['"]/);
+    expect(SRC).toMatch(/role="alert"/);
+    // The banner must offer a path to /account so the user can update
+    // their card via the Stripe customer portal.
+    expect(SRC).toMatch(/router\.push\(['"]\/account['"]\)/);
+  });
+
   it('NAV_ITEMS includes Account so the mobile menu surfaces it (todo:bddd1603)', () => {
     // Mobile dropdown renders NAV_ITEMS.map; every item there is reachable
     // on mobile. If Account is dropped from NAV_ITEMS the only mobile path

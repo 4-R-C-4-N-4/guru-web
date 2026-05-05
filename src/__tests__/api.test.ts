@@ -116,14 +116,14 @@ const ALLOWED_RESERVE = {
   usd_limit:    null,
 };
 
-const FREE_USER = { id: 'user_1', email: 'a@b.com', tier: 'free' as const, stripe_customer_id: null };
+const FREE_USER = { id: 'user_1', email: 'a@b.com', tier: 'free' as const, stripe_customer_id: null, payment_state: null };
 const DEFAULT_PREFS = {
   scopeMode: 'all' as const,
   blockedTraditions: [], blockedTexts: [],
   whitelistedTraditions: [], whitelistedTexts: [],
   preferredModel: null,
 };
-const PRO_USER  = { id: 'user_2', email: 'p@b.com', tier: 'pro'  as const, stripe_customer_id: 'cus_x' };
+const PRO_USER  = { id: 'user_2', email: 'p@b.com', tier: 'pro'  as const, stripe_customer_id: 'cus_x', payment_state: null };
 
 // ---------------------------------------------------------------------------
 // /api/sessions
