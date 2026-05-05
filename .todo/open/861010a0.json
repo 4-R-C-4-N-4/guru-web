@@ -1,0 +1,24 @@
+{
+  "id": "861010a0",
+  "type": "bug",
+  "state": "open",
+  "summary": "Checkout success_url missing CHECKOUT_SESSION_ID — race shows 'free' before webhook",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.829Z",
+  "updated_at": "2026-05-04T22:52:12.829Z",
+  "files": [
+    {
+      "path": "src/app/api/checkout/route.ts",
+      "lines": [
+        57,
+        57
+      ]
+    }
+  ],
+  "tags": [
+    "stripe",
+    "ui"
+  ]
+}

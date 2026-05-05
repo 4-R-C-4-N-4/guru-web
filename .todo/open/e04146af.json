@@ -1,0 +1,24 @@
+{
+  "id": "e04146af",
+  "type": "bug",
+  "state": "open",
+  "summary": "finalizeBudget GREATEST(0,...) clamp masks cost overshoots vs cap",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.867Z",
+  "updated_at": "2026-05-04T22:52:12.867Z",
+  "files": [
+    {
+      "path": "src/lib/spend.ts",
+      "lines": [
+        151,
+        156
+      ]
+    }
+  ],
+  "tags": [
+    "billing",
+    "spend"
+  ]
+}

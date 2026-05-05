@@ -1,0 +1,25 @@
+{
+  "id": "29b0b339",
+  "type": "bug",
+  "state": "open",
+  "summary": "reserveBudget race lets two concurrent requests bypass cap by 1",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.262Z",
+  "updated_at": "2026-05-04T22:51:53.262Z",
+  "files": [
+    {
+      "path": "src/lib/spend.ts",
+      "lines": [
+        86,
+        114
+      ]
+    }
+  ],
+  "tags": [
+    "billing",
+    "concurrency",
+    "launch-blocker"
+  ]
+}

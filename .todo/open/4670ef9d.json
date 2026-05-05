@@ -1,0 +1,24 @@
+{
+  "id": "4670ef9d",
+  "type": "bug",
+  "state": "open",
+  "summary": "JumpById admin form doesn't redirect — input visibly does nothing",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:30.108Z",
+  "updated_at": "2026-05-04T22:52:30.108Z",
+  "files": [
+    {
+      "path": "src/app/(admin)/layout.tsx",
+      "lines": [
+        112,
+        112
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "admin"
+  ]
+}

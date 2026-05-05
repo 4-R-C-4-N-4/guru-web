@@ -1,0 +1,24 @@
+{
+  "id": "51891d46",
+  "type": "chore",
+  "state": "open",
+  "summary": "Confirm /chat/[sessionId] URL shape is locked in for life (alternative: /c/<short-id>)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:13.072Z",
+  "updated_at": "2026-05-04T22:52:13.072Z",
+  "files": [
+    {
+      "path": "src/app/(app)/chat/[sessionId]/page.tsx",
+      "lines": [
+        1,
+        1
+      ]
+    }
+  ],
+  "tags": [
+    "routing",
+    "ux"
+  ]
+}

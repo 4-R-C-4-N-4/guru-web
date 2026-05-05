@@ -1,0 +1,25 @@
+{
+  "id": "522dc04a",
+  "type": "bug",
+  "state": "open",
+  "summary": "stripe-setup.md doc says $12.00 but Pro price is $15",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.117Z",
+  "updated_at": "2026-05-04T22:51:53.117Z",
+  "files": [
+    {
+      "path": "docs/stripe-setup.md",
+      "lines": [
+        11,
+        11
+      ]
+    }
+  ],
+  "tags": [
+    "pricing",
+    "docs",
+    "launch-blocker"
+  ]
+}

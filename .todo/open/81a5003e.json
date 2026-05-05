@@ -1,0 +1,24 @@
+{
+  "id": "81a5003e",
+  "type": "debt",
+  "state": "open",
+  "summary": "Tests heavily mocked — add real-DB integration tests for money paths (query, checkout, webhooks)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:49.219Z",
+  "updated_at": "2026-05-04T22:52:49.219Z",
+  "files": [
+    {
+      "path": "src/__tests__/api.test.ts",
+      "lines": [
+        14,
+        66
+      ]
+    }
+  ],
+  "tags": [
+    "tests",
+    "debt"
+  ]
+}
