@@ -1,0 +1,39 @@
+{
+  "id": "212682c6",
+  "type": "bug",
+  "state": "done",
+  "summary": "UI shows Pro at $12/mo but locked price is $15/mo",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.081Z",
+  "updated_at": "2026-05-05T13:02:42.659Z",
+  "files": [
+    {
+      "path": "src/app/(app)/account/page.tsx",
+      "lines": [
+        17,
+        17
+      ]
+    }
+  ],
+  "tags": [
+    "pricing",
+    "launch-blocker",
+    "billing"
+  ],
+  "work": {
+    "branch": "todo/212682c6",
+    "base_branch": "main",
+    "started_at": "2026-05-05T13:01:43.369Z",
+    "started_by": "4-R-C-4-N-4"
+  },
+  "resolution": {
+    "commit": "9421d78a8a3ef80b810e9eae6ee1b6fefc97fd42",
+    "resolved_at": "2026-05-05T13:02:42.659Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/account-page.test.ts",
+    "test_function": "imports PRO_MONTHLY_PRICE_USD and interpolates it (todo:212682c6)",
+    "note": "Pro price now imported from PRO_MONTHLY_PRICE_USD = 15 in pricing-config.ts; source guard test prevents regression to a hardcoded literal."
+  }
+}
