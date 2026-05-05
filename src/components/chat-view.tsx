@@ -281,7 +281,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
 
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;
-  const counterColor   = input.length >= QUERY_DANGER_CHARS ? '#c25a7a' : tokens.text.muted;
+  const counterColor   = input.length >= QUERY_DANGER_CHARS ? tokens.text.error : tokens.text.muted;
   const sendDisabled   = !input.trim() || loading || overLimit;
 
   return (

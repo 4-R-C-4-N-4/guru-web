@@ -1,0 +1,33 @@
+{
+  "id": "a7ffea2b",
+  "type": "bug",
+  "state": "done",
+  "summary": "requireUser 401s if Clerk webhook hasn't landed — add lazy upsert",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.346Z",
+  "updated_at": "2026-05-05T17:45:35.746Z",
+  "files": [
+    {
+      "path": "src/lib/auth.ts",
+      "lines": [
+        24,
+        42
+      ]
+    }
+  ],
+  "tags": [
+    "clerk",
+    "auth",
+    "launch-blocker"
+  ],
+  "resolution": {
+    "commit": "e96aacc",
+    "resolved_at": "2026-05-05T17:45:35.746Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/auth.test.ts",
+    "test_function": "lazy upsert when DB row is missing (todo:a7ffea2b)",
+    "note": "On a missing users row for a signed-in Clerk user, requireUser() now fetches currentUser() and INSERT ON CONFLICT (id) DO NOTHING with primary email, then re-SELECTs. Soft-deleted accounts still 401 (ON CONFLICT no-op). Six new test cases covering each branch."
+  }
+}

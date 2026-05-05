@@ -6,7 +6,7 @@
  * real OpenRouter response when the operator runs the script.
  */
 import { describe, it, expect } from 'vitest';
-import { extractPricing, pricingMatches } from '../../scripts/sync-pricing';
+import { extractPricing, findMissingCuratedIds, pricingMatches } from '../../scripts/sync-pricing';
 
 describe('extractPricing', () => {
   // Provider-prefix allowlist (todo:fbd30eff). Models with ids
@@ -94,6 +94,36 @@ describe('extractPricing', () => {
       ],
     }, PROVIDERS);
     expect(out).toEqual({});
+  });
+});
+
+describe('findMissingCuratedIds (todo:bcb7ea04)', () => {
+  const CURATED = {
+    deepseek:  'deepseek/deepseek-v4-pro',
+    anthropic: 'anthropic/claude-sonnet-4.6',
+  } as const;
+
+  it('returns empty when every curated id is present', () => {
+    const remote = {
+      'deepseek/deepseek-v4-pro':     {},
+      'anthropic/claude-sonnet-4.6':  {},
+      'openai/gpt-4o':                {},
+    };
+    expect(findMissingCuratedIds(remote, CURATED)).toEqual([]);
+  });
+
+  it('returns the missing slug+id pairs when ids drift out of OpenRouter', () => {
+    const remote = {
+      'deepseek/deepseek-v4-pro': {},
+      // anthropic/claude-sonnet-4.6 silently removed upstream
+    };
+    expect(findMissingCuratedIds(remote, CURATED)).toEqual([
+      { slug: 'anthropic', id: 'anthropic/claude-sonnet-4.6' },
+    ]);
+  });
+
+  it('returns all curated ids when remote is empty', () => {
+    expect(findMissingCuratedIds({}, CURATED)).toHaveLength(2);
   });
 });
 

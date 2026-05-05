@@ -4,17 +4,29 @@
  * POST /api/webhooks/stripe — Stripe subscription lifecycle webhook.
  *
  * Handles:
- *   checkout.session.completed  → user upgrades to Pro
- *   customer.subscription.deleted → subscription cancelled
- *   customer.subscription.updated → status changes (canceled, past_due, active)
+ *   checkout.session.completed     → user upgrades to Pro
+ *   customer.subscription.deleted  → subscription cancelled
+ *   customer.subscription.updated  → status changes (active, past_due,
+ *                                    canceled, unpaid)
+ *   invoice.payment_failed         → mark payment_state='past_due'
+ *                                    (KEEP tier — Stripe is retrying)
+ *   invoice.payment_succeeded      → clear payment_state
  *
  * Signature verification via stripe.webhooks.constructEvent.
  *
- * Tier source of truth is Postgres users.tier. After every update we
- * mirror the new value into Clerk's user.publicMetadata.tier as a cache
- * — Clerk-session-driven UI can read tier from the JWT without an
- * extra /api/quota fetch. Clerk failures are logged and swallowed so
- * the webhook still 200s and Postgres remains canonical.
+ * Tier source of truth is Postgres users.tier. After every tier
+ * update we mirror the new value into Clerk's user.publicMetadata.tier
+ * as a cache — Clerk-session-driven UI can read tier from the JWT
+ * without an extra /api/quota fetch. Clerk failures are logged and
+ * swallowed so the webhook still 200s and Postgres remains canonical.
+ *
+ * Past-due handling (todo:33d44563): subscription.status='past_due'
+ * means the latest invoice failed and Stripe is retrying — typically
+ * over a 1-3 week smart-retry window. The user has paid for the
+ * current period; demoting them to free immediately would cut service
+ * before Stripe gives up. Instead we set payment_state='past_due',
+ * keep tier='pro', and let the UI surface a banner. The terminal
+ * statuses ('canceled', 'unpaid') still demote.
  */
 
 import Stripe from 'stripe';
@@ -68,6 +80,14 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
+
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
         break;
 
       default:
@@ -140,7 +160,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 /**
  * customer.subscription.deleted — subscription cancelled/expired.
- * Demote to Free tier (but keep stripe_customer_id for the customer portal).
+ * Demote to Free, clear any payment_state warning. Keep
+ * stripe_customer_id for the customer portal flow.
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const customerId = typeof subscription.customer === 'string'
@@ -152,7 +173,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   // RETURNING id so we can mirror the change into Clerk metadata.
   const updated = await one<{ id: string }>(
     `UPDATE users
-     SET tier = 'free', updated_at = now()
+     SET tier = 'free', payment_state = NULL, updated_at = now()
      WHERE stripe_customer_id = $1
      RETURNING id`,
     [customerId]
@@ -167,8 +188,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 /**
  * customer.subscription.updated — subscription status changed.
- * Demote to Free if status is 'canceled', 'past_due', or 'unpaid'.
- * Promote back to Pro if status is 'active'.
+ *
+ *   active             → ensure tier='pro', clear payment_state
+ *   past_due           → KEEP tier (Stripe retries for 1-3 weeks),
+ *                        set payment_state='past_due' so UI warns
+ *   canceled / unpaid  → demote to free, clear payment_state
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const customerId = typeof subscription.customer === 'string'
@@ -177,8 +201,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   if (!customerId) return;
 
-  const user = await one<{ id: string; tier: string }>(
-    `SELECT id, tier FROM users WHERE stripe_customer_id = $1`,
+  const user = await one<{ id: string; tier: string; payment_state: string | null }>(
+    `SELECT id, tier, payment_state FROM users WHERE stripe_customer_id = $1`,
     [customerId]
   );
 
@@ -187,20 +211,102 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return;
   }
 
-  if (subscription.status === 'active' && user.tier !== 'pro') {
-    await exec(
-      `UPDATE users SET tier = 'pro', updated_at = now() WHERE id = $1`,
-      [user.id]
+  if (subscription.status === 'active') {
+    // Promote (or stay pro) and clear any prior past_due flag.
+    if (user.tier !== 'pro' || user.payment_state !== null) {
+      await exec(
+        `UPDATE users SET tier = 'pro', payment_state = NULL, updated_at = now() WHERE id = $1`,
+        [user.id]
+      );
+      if (user.tier !== 'pro') await mirrorTierToClerk(user.id, 'pro');
+    }
+  } else if (subscription.status === 'past_due') {
+    // Don't demote — Stripe is still retrying. Just flag it.
+    if (user.payment_state !== 'past_due') {
+      await exec(
+        `UPDATE users SET payment_state = 'past_due', updated_at = now() WHERE id = $1`,
+        [user.id]
+      );
+      console.log(`[stripe-webhook] customer ${customerId} marked past_due (tier preserved)`);
+    }
+  } else if (['canceled', 'unpaid'].includes(subscription.status)) {
+    if (user.tier !== 'free' || user.payment_state !== null) {
+      await exec(
+        `UPDATE users SET tier = 'free', payment_state = NULL, updated_at = now() WHERE id = $1`,
+        [user.id]
+      );
+      if (user.tier !== 'free') await mirrorTierToClerk(user.id, 'free');
+    }
+  }
+}
+
+/**
+ * invoice.payment_failed — fires when Stripe attempts to charge an
+ * invoice and the payment method declines. Set payment_state but
+ * preserve tier; the user still has access for the current period and
+ * Stripe will retry. This event is finer-grained than
+ * subscription.updated → past_due (it fires per-attempt) and gives
+ * the operator earlier signal in logs.
+ */
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const customerId = typeof invoice.customer === 'string'
+    ? invoice.customer
+    : invoice.customer?.id;
+
+  if (!customerId) return;
+
+  // RETURNING id so we can distinguish "marked past_due" from
+  // "no user matched" — same logging shape as handleSubscriptionUpdated.
+  // Operator-debugging: a wrong-environment customer event silently
+  // updating zero rows is otherwise indistinguishable from the
+  // already-flagged no-op.
+  const updated = await one<{ id: string }>(
+    `UPDATE users SET payment_state = 'past_due', updated_at = now()
+     WHERE stripe_customer_id = $1 AND payment_state IS DISTINCT FROM 'past_due'
+     RETURNING id`,
+    [customerId]
+  );
+
+  if (updated) {
+    console.log(`[stripe-webhook] invoice payment failed for customer ${customerId}`);
+  } else {
+    // Either already past_due (no-op) or no user with this customer id.
+    // Distinguish the two by re-querying — kept lightweight since this
+    // path runs at most once per failed invoice.
+    const existing = await one<{ id: string }>(
+      `SELECT id FROM users WHERE stripe_customer_id = $1`,
+      [customerId]
     );
-    await mirrorTierToClerk(user.id, 'pro');
-  } else if (
-    ['canceled', 'past_due', 'unpaid'].includes(subscription.status) &&
-    user.tier !== 'free'
-  ) {
-    await exec(
-      `UPDATE users SET tier = 'free', updated_at = now() WHERE id = $1`,
-      [user.id]
-    );
-    await mirrorTierToClerk(user.id, 'free');
+    if (!existing) {
+      console.error(`[stripe-webhook] invoice.payment_failed: no user found for customer ${customerId}`);
+    }
+  }
+}
+
+/**
+ * invoice.payment_succeeded — clears payment_state. Fires both for
+ * the initial invoice (where payment_state was already null) and on
+ * a successful retry after a failed attempt; the WHERE clause makes
+ * the no-op case cheap.
+ */
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  const customerId = typeof invoice.customer === 'string'
+    ? invoice.customer
+    : invoice.customer?.id;
+
+  if (!customerId) return;
+
+  // Same RETURNING shape as the failed handler so operator logs are
+  // symmetric. The expected case here is a no-op (payment_state was
+  // already null); we only log when the clear actually happened.
+  const cleared = await one<{ id: string }>(
+    `UPDATE users SET payment_state = NULL, updated_at = now()
+     WHERE stripe_customer_id = $1 AND payment_state IS NOT NULL
+     RETURNING id`,
+    [customerId]
+  );
+
+  if (cleared) {
+    console.log(`[stripe-webhook] invoice payment succeeded after retry for customer ${customerId}`);
   }
 }

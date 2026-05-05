@@ -45,7 +45,7 @@ export async function requireAdmin(): Promise<User | Response> {
   }
 
   const user = await one<User>(
-    `SELECT id, email, tier, stripe_customer_id FROM users
+    `SELECT id, email, tier, stripe_customer_id, payment_state FROM users
        WHERE id = $1 AND deleted_at IS NULL`,
     [userId],
   );

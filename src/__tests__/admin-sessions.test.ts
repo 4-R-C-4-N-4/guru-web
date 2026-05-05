@@ -21,7 +21,7 @@ import * as adminQ from '@/lib/admin-queries';
 const mockRequireAdmin = admin.requireAdmin       as MockedFunction<typeof admin.requireAdmin>;
 const mockGetSession   = adminQ.getSessionDeepDive as MockedFunction<typeof adminQ.getSessionDeepDive>;
 
-const ADMIN = { id: 'user_admin', email: 'op@x', tier: 'pro' as const, stripe_customer_id: null };
+const ADMIN = { id: 'user_admin', email: 'op@x', tier: 'pro' as const, stripe_customer_id: null, payment_state: null };
 
 const SESSION_FIXTURE = {
   session: {

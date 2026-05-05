@@ -1,0 +1,30 @@
+{
+  "id": "a58e2d0c",
+  "type": "debt",
+  "state": "done",
+  "summary": "MODELS map points at retired model IDs — grep callers and delete or update",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:48.963Z",
+  "updated_at": "2026-05-05T17:45:35.654Z",
+  "files": [
+    {
+      "path": "src/lib/model.ts",
+      "lines": [
+        41,
+        44
+      ]
+    }
+  ],
+  "tags": [
+    "models",
+    "debt"
+  ],
+  "resolution": {
+    "commit": "97be2ad",
+    "resolved_at": "2026-05-05T17:45:35.654Z",
+    "resolved_by": "unknown",
+    "note": "Grep across src/ scripts/ confirmed no callers import MODELS — only the derived Tier type was in use (by spend.ts). Defined Tier as a literal union 'free' | 'pro'; deleted the stale MODELS map."
+  }
+}

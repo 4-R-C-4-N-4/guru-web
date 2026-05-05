@@ -19,9 +19,10 @@ export default function NavBar() {
   const pathname = usePathname();
   const router   = useRouter();
   const mobile   = useIsMobile();
-  const [menuOpen,   setMenuOpen]   = useState(false);
-  const [avatarOpen, setAvatarOpen] = useState(false);
-  const [tier,       setTier]       = useState<string>('free');
+  const [menuOpen,     setMenuOpen]     = useState(false);
+  const [avatarOpen,   setAvatarOpen]   = useState(false);
+  const [tier,         setTier]         = useState<string>('free');
+  const [paymentState, setPaymentState] = useState<string | null>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   // Close the desktop avatar dropdown on click-outside / Escape.
@@ -55,11 +56,15 @@ export default function NavBar() {
   // Tier comes from /api/quota, not Clerk's publicMetadata — the Stripe
   // webhook updates Postgres users.tier and nothing mirrors that into
   // Clerk (todo:c19a7b6b). Reading from publicMetadata always showed
-  // 'free' for upgraded users.
+  // 'free' for upgraded users. payment_state piggybacks the same
+  // request to drive the past-due banner (todo:33d44563).
   useEffect(() => {
     fetch('/api/quota')
       .then(r => r.json())
-      .then((d: { tier?: string }) => { if (d.tier) setTier(d.tier); })
+      .then((d: { tier?: string; payment_state?: string | null }) => {
+        if (d.tier) setTier(d.tier);
+        setPaymentState(d.payment_state ?? null);
+      })
       .catch(() => {});
   }, []);
 
@@ -72,6 +77,52 @@ export default function NavBar() {
   const avatarLabel: string | null = nameInitials || emailLetter;
 
   return (
+    <>
+      {/* Past-due payment banner (todo:33d44563). Renders above the
+          nav on every authenticated page when Stripe has flagged the
+          subscription as past_due. Tier is preserved on the user's
+          record so they keep Pro access during Stripe's smart-retry
+          window — this banner is the call to update the card. */}
+      {paymentState === 'past_due' && (
+        <div
+          role="alert"
+          style={{
+            background: tokens.bg.danger,
+            borderBottom: `1px solid ${tokens.border.danger}`,
+            color: tokens.text.errorSoft,
+            fontFamily: tokens.font.mono,
+            fontSize: 11,
+            padding: mobile ? '10px 16px' : '8px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexDirection: mobile ? 'column' : 'row',
+          }}
+        >
+          <span>
+            Your last payment failed. Update your card to keep Pro access.
+          </span>
+          <button
+            onClick={() => router.push('/account')}
+            style={{
+              background: 'none',
+              color: tokens.text.errorSoft,
+              border: `1px solid ${tokens.border.danger}`,
+              padding: '4px 12px',
+              fontFamily: tokens.font.mono,
+              fontSize: 10,
+              letterSpacing: 1,
+              cursor: 'pointer',
+              borderRadius: 2,
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Update payment
+          </button>
+        </div>
+      )}
     <nav style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: mobile ? '10px 16px' : '12px 24px',
@@ -202,5 +253,6 @@ export default function NavBar() {
         </div>
       )}
     </nav>
+    </>
   );
 }

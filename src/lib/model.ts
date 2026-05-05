@@ -2,11 +2,10 @@
  * src/lib/model.ts
  *
  * OpenRouter completion client — non-streaming and streaming variants.
- * Uses the OpenAI SDK with OpenRouter's base URL.
- *
- * Model routing by tier:
- *   free → deepseek/deepseek-chat       (fast, cost-efficient)
- *   pro  → anthropic/claude-sonnet-4-5  (highest quality)
+ * Uses the OpenAI SDK with OpenRouter's base URL. Model routing now
+ * lives in curated-models.ts (re-exported below); callers resolve a
+ * curated slug to an OpenRouter id and pass the id to complete() /
+ * completeStream() directly.
  */
 
 import OpenAI from 'openai';
@@ -32,18 +31,10 @@ function client(): OpenAI {
   return _client;
 }
 
-// Canonical OpenRouter model ids (matches what /api/v1/models advertises).
-// queries.model_used + model_pricing.model_id agree on this form.
-//
-// MODELS retained for backwards compatibility during phase 1 of the
-// model-selection rollout. New code paths read from CURATED_MODELS
-// below via resolveCuratedModel(); /api/query will switch in C3.
-export const MODELS = {
-  free: 'deepseek/deepseek-chat',
-  pro:  'anthropic/claude-sonnet-4.5',
-} as const;
-
-export type Tier = keyof typeof MODELS;
+// Tier names used across spend caps, pricing, and the /api/quota
+// response shape. Tier no longer carries a default-model mapping —
+// model resolution is the curated picker's job (see curated-models.ts).
+export type Tier = 'free' | 'pro';
 
 // ── Curated model picker ─────────────────────────────────────────────
 //
@@ -75,8 +66,7 @@ export const MAX_OUTPUT_TOKENS = 8192;
 /**
  * Non-streaming completion. Takes a resolved OpenRouter id directly
  * (post-model-selection BRD §7.2 — caller resolves slug → id, then
- * calls this). Pass MODELS[tier] for legacy tier-pinned callers, or
- * resolveCuratedModel(slug) for the picker path.
+ * calls this). Use resolveCuratedModel(slug) to obtain the id.
  */
 export async function complete(prompt: string, modelId: string): Promise<string> {
   const response = await client().chat.completions.create({

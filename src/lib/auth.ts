@@ -6,8 +6,11 @@
  */
 
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { one } from './db';
+import { exec, one } from './db';
 import type { User } from './types';
+
+const SELECT_USER_SQL = `SELECT id, email, tier, stripe_customer_id, payment_state FROM users
+                           WHERE id = $1 AND deleted_at IS NULL`;
 
 /**
  * requireUser() — use in Route Handlers.
@@ -15,6 +18,16 @@ import type { User } from './types';
  * Returns the authenticated app User record (from our DB).
  * Returns a 401 Response if the user is not signed in.
  * The caller should check the return type and return early on Response.
+ *
+ * On a missing users row for a signed-in Clerk user we lazy-upsert from
+ * currentUser() rather than 401'ing (todo:a7ffea2b). The Clerk
+ * user.created webhook *should* land first and create the row, but
+ * webhook delays of a few seconds are normal and a missed delivery
+ * (network blip, secret-rotation gap) would otherwise lock the user
+ * out forever. Lazy upsert closes that gap. ON CONFLICT DO NOTHING
+ * means a soft-deleted row stays soft-deleted — the re-SELECT then
+ * returns null and we 401, which is the correct behavior for a user
+ * who explicitly deleted their account.
  *
  * Usage:
  *   const result = await requireUser();
@@ -28,17 +41,52 @@ export async function requireUser(): Promise<User | Response> {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const user = await one<User>(
-    `SELECT id, email, tier, stripe_customer_id FROM users
-       WHERE id = $1 AND deleted_at IS NULL`,
-    [userId]
-  );
+  const existing = await one<User>(SELECT_USER_SQL, [userId]);
+  if (existing) return existing;
 
-  if (!user) {
+  // No active row. Could be (a) Clerk webhook delayed/missed for a
+  // brand-new signup, or (b) the user soft-deleted. Distinguish via
+  // currentUser(): if Clerk has no current record either, this is a
+  // stale session — 401. If Clerk knows about them, lazy-upsert.
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
     return Response.json({ error: 'User not found' }, { status: 401 });
   }
 
-  return user;
+  const email = clerkUser.primaryEmailAddress?.emailAddress
+    ?? clerkUser.emailAddresses[0]?.emailAddress
+    ?? null;
+  if (!email) {
+    return Response.json({ error: 'No email on Clerk user' }, { status: 401 });
+  }
+
+  try {
+    await exec(
+      `INSERT INTO users (id, email, tier, created_at, updated_at)
+       VALUES ($1, $2, 'free', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [userId, email]
+    );
+  } catch (err) {
+    // Postgres unique_violation = '23505'. The expected case here is
+    // a UNIQUE(email) collision with a soft-deleted account that's
+    // re-registering with the same address (todo:ab118d8c) — not a
+    // server error, so 401 the user. Anything else is a real DB
+    // problem; rethrow so the route handler returns 500 and the
+    // failure shows up in metrics rather than as a misleading 401.
+    if ((err as { code?: string }).code === '23505') {
+      console.error('[requireUser] email collision on lazy upsert:', err);
+      return Response.json({ error: 'User not found' }, { status: 401 });
+    }
+    throw err;
+  }
+
+  const created = await one<User>(SELECT_USER_SQL, [userId]);
+  if (!created) {
+    // ON CONFLICT was a no-op (soft-deleted row exists). Keep 401.
+    return Response.json({ error: 'User not found' }, { status: 401 });
+  }
+  return created;
 }
 
 /**
@@ -62,10 +110,3 @@ export async function requireTier(
   return result;
 }
 
-/**
- * getClerkUser() — get the full Clerk user object (includes email addresses).
- * Only needed for operations like syncing email from Clerk → our DB.
- */
-export async function getClerkUser() {
-  return currentUser();
-}

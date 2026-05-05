@@ -1,0 +1,32 @@
+{
+  "id": "bcb7ea04",
+  "type": "bug",
+  "state": "done",
+  "summary": "Curated model IDs may not exist on OpenRouter (gpt-5.4, claude-4.6, etc)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.412Z",
+  "updated_at": "2026-05-05T17:45:35.874Z",
+  "files": [
+    {
+      "path": "src/lib/curated-models.ts",
+      "lines": [
+        21,
+        26
+      ]
+    }
+  ],
+  "tags": [
+    "models",
+    "launch-blocker"
+  ],
+  "resolution": {
+    "commit": "fc1e6aa",
+    "resolved_at": "2026-05-05T17:45:35.874Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/sync-pricing.test.ts",
+    "test_function": "findMissingCuratedIds (todo:bcb7ea04)",
+    "note": "Manual verification on 2026-05-05 confirmed all four CURATED_MODELS ids resolve on https://openrouter.ai/api/v1/models. Added a drift guard in sync-pricing main(): on a successful OpenRouter fetch, warn loudly if any curated id is absent. Cron timer journal output is the operator's signal."
+  }
+}

@@ -35,7 +35,7 @@ const mockListSessions    = adminQ.listUserSessions  as MockedFunction<typeof ad
 
 beforeEach(() => vi.clearAllMocks());
 
-const ADMIN = { id: 'user_admin', email: 'op@x', tier: 'pro' as const, stripe_customer_id: null };
+const ADMIN = { id: 'user_admin', email: 'op@x', tier: 'pro' as const, stripe_customer_id: null, payment_state: null };
 
 describe('parseUserListSearchParams', () => {
   it('round-trips defaults when no params are set', async () => {

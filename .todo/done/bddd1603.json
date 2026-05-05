@@ -1,0 +1,32 @@
+{
+  "id": "bddd1603",
+  "type": "bug",
+  "state": "done",
+  "summary": "Mobile nav menu missing Account row — desktop dropdown has it",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:30.031Z",
+  "updated_at": "2026-05-05T17:45:35.602Z",
+  "files": [
+    {
+      "path": "src/components/nav-bar.tsx",
+      "lines": [
+        1,
+        1
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "mobile"
+  ],
+  "resolution": {
+    "commit": "3495d7a",
+    "resolved_at": "2026-05-05T17:45:35.602Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/nav-bar.test.ts",
+    "test_function": "NAV_ITEMS includes Account so the mobile menu surfaces it (todo:bddd1603)",
+    "note": "Re-read of nav-bar.tsx confirmed the Account row was already present in NAV_ITEMS and the mobile dropdown maps NAV_ITEMS — original review was a misread. Locked the entry in via source-level guard test so the misread can't recur."
+  }
+}

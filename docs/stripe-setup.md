@@ -26,6 +26,8 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
   - `checkout.session.completed`
   - `customer.subscription.updated`
   - `customer.subscription.deleted`
+  - `invoice.payment_failed` — flags `users.payment_state='past_due'` for the in-app banner (todo:33d44563)
+  - `invoice.payment_succeeded` — clears `users.payment_state` on a successful retry
 - Copy the **Signing secret** → set as `STRIPE_WEBHOOK_SECRET` in `.env.local`
 
 ### 4. Local testing with Stripe CLI

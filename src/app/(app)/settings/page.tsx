@@ -210,7 +210,7 @@ export default function SettingsPage() {
       <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>Corpus Scope</div>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 20 }}>
         {status === 'loading' && 'loading…'}
-        {status === 'error'   && <span style={{ color: '#c25a7a' }}>failed to load corpus</span>}
+        {status === 'error'   && <span style={{ color: tokens.text.error }}>failed to load corpus</span>}
         {status === 'ready'   && `${activeTexts}/${totalTexts} texts · ${activeTrad}/${Object.keys(traditions).length} traditions`}
       </div>
 

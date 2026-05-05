@@ -25,7 +25,7 @@ import * as adminQ from '@/lib/admin-queries';
 const mockRequireAdmin = admin.requireAdmin     as MockedFunction<typeof admin.requireAdmin>;
 const mockGetQuery     = adminQ.getQueryDeepDive as MockedFunction<typeof adminQ.getQueryDeepDive>;
 
-const ADMIN = { id: 'user_admin', email: 'op@x', tier: 'pro' as const, stripe_customer_id: null };
+const ADMIN = { id: 'user_admin', email: 'op@x', tier: 'pro' as const, stripe_customer_id: null, payment_state: null };
 
 const QUERY_ROW = {
   id: 'q1', query_text: 'searchable distinctive marker phrase',

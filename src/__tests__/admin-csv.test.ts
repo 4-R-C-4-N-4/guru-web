@@ -94,7 +94,7 @@ describe('GET /api/admin/users.csv', () => {
 
   it('streams headers then rows, paginating until short batch', async () => {
     mockRequireAdmin.mockResolvedValueOnce({
-      id: 'user_admin', email: 'op@x', tier: 'pro', stripe_customer_id: null,
+      id: 'user_admin', email: 'op@x', tier: 'pro', stripe_customer_id: null, payment_state: null,
     });
     // First page returns a "full" batch — but we use smaller batch
     // sizes via a single short return for the test. The route uses

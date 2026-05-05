@@ -9,6 +9,7 @@ export const tokens = {
     raised:  '#1a1a24',
     overlay: '#22222e',
     hover:   '#2a2a38',
+    danger:  '#3a1a22',
   },
   text: {
     primary:   '#d4cfc4',
@@ -16,11 +17,14 @@ export const tokens = {
     muted:     '#5a5650',
     accent:    '#c4a35a',
     link:      '#7a9ec2',
+    error:     '#c25a7a',
+    errorSoft: '#e8c8d0',
   },
   border: {
     subtle: '#2a2a34',
     medium: '#3a3a48',
     accent: '#c4a35a33',
+    danger: '#c25a7a',
   },
   tradition: {
     gnosticism:  '#c2785a',

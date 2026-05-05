@@ -53,7 +53,7 @@ describe('GET /api/admin/overview', () => {
 
   it('returns the full payload to an admin', async () => {
     mockRequireAdmin.mockResolvedValueOnce({
-      id: 'user_admin', email: 'op@x', tier: 'pro', stripe_customer_id: null,
+      id: 'user_admin', email: 'op@x', tier: 'pro', stripe_customer_id: null, payment_state: null,
     });
     mockStats.mockResolvedValueOnce({
       users_total: 42, users_new_30d: 3, users_active_7d: 17,

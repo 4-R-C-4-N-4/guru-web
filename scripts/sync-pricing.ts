@@ -24,6 +24,7 @@
 
 import { Pool, type PoolClient } from 'pg';
 import { FALLBACK_PRICING, type ModelPrice } from '../src/lib/fallback-pricing';
+import { CURATED_MODELS } from '../src/lib/curated-models';
 
 // ── Provider allowlist ──────────────────────────────────────────────
 // Ids are matched on the prefix before '/'.  Curated to frontier-model
@@ -82,6 +83,21 @@ export function extractPricing(
     };
   }
   return out;
+}
+
+/**
+ * Find curated picker entries whose OpenRouter id is missing from a
+ * live /api/v1/models response. Returned as `{slug, id}` pairs so the
+ * caller can render a clear warning. Pure (no IO) so it can be unit
+ * tested with a mocked response. Spec: todo:bcb7ea04.
+ */
+export function findMissingCuratedIds(
+  remote: Record<string, unknown>,
+  curated: Readonly<Record<string, string>>,
+): Array<{ slug: string; id: string }> {
+  return Object.entries(curated)
+    .filter(([, id]) => !(id in remote))
+    .map(([slug, id]) => ({ slug, id }));
 }
 
 /**
@@ -177,6 +193,25 @@ async function main() {
   const remote = await fetchPricingFromOpenRouter();
   const pricing = remote ?? FALLBACK_PRICING;
   if (!remote) console.log('[sync-pricing] using committed fallback values (routed models only)');
+
+  // Drift guard for the curated picker (todo:bcb7ea04). If a remote
+  // fetch succeeded, every CURATED_MODELS id MUST appear in it; if
+  // one doesn't, the picker will route to a model OpenRouter has
+  // since renamed/removed — every Pro user who selects that option
+  // gets a 500. Log loudly so the operator sees it in the daily
+  // sync-pricing.timer journal output. We don't exit non-zero
+  // because FALLBACK_PRICING still seeds a row, so paid usage
+  // continues at the last-known rate; the operator just needs to
+  // bump CURATED_MODELS.
+  if (remote) {
+    const missing = findMissingCuratedIds(remote, CURATED_MODELS);
+    if (missing.length > 0) {
+      console.warn(
+        `[sync-pricing] WARN: curated id(s) not present in OpenRouter response — picker will 500 if selected:\n` +
+        missing.map(m => `  ${m.slug} → ${m.id}`).join('\n'),
+      );
+    }
+  }
 
   const ids = Object.keys(pricing).sort();
   console.log(`[sync-pricing] ${ids.length} model(s) in scope`);

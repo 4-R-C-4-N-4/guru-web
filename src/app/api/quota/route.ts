@@ -3,15 +3,16 @@
  *
  * GET /api/quota — return today's question count for the current user.
  *
- * Response shape (todo:e8105324 reframe):
+ * Response shape (todo:e8105324 reframe + todo:33d44563 banner):
  *   {
- *     tier:         'free' | 'pro',
- *     queries_used: number,
- *     query_limit:  number | null,    // null = unenforced on this axis
+ *     tier:          'free' | 'pro',
+ *     queries_used:  number,
+ *     query_limit:   number | null,    // null = unenforced on this axis
+ *     payment_state: 'past_due' | null,
  *
  *     // Backwards-compat aliases for the existing chat-view header.
- *     used:  number,                  // mirrors queries_used
- *     limit: number | null,           // mirrors query_limit
+ *     used:  number,                   // mirrors queries_used
+ *     limit: number | null,            // mirrors query_limit
  *   }
  *
  * Spend axis (`usd_used`, `usd_limit`) is deliberately omitted from
@@ -32,8 +33,9 @@ export async function GET() {
   const budget = await getBudget(user.id, user.tier);
   return Response.json({
     tier: user.tier,
-    queries_used: budget.queries_used,
-    query_limit:  budget.query_limit,
+    queries_used:  budget.queries_used,
+    query_limit:   budget.query_limit,
+    payment_state: user.payment_state,
     // Backwards-compat aliases — chat-view header reads these.
     used:  budget.queries_used,
     limit: budget.query_limit,

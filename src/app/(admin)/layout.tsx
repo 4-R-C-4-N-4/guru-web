@@ -105,24 +105,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Plain HTML form that GETs to /admin/<prefix>/<input>. No JS — the
- * browser handles the navigation. Works without hydration. Server
- * 404s a non-existent ID, which is the correct UX.
+ * Plain HTML form that GETs to /admin/<prefix>?id=<input>. The
+ * destination index page (admin/sessions/page.tsx,
+ * admin/queries/page.tsx) reads searchParams.id and redirects to
+ * /admin/<prefix>/<id>, which 404s if the id doesn't exist.
+ * No client JS required.
  */
 function JumpById({ prefix, placeholder }: { prefix: string; placeholder: string }) {
   return (
-    <form
-      action={prefix}
-      method="get"
-      style={{ display: 'flex', gap: 4 }}
-      // The form will POST to e.g. /admin/sessions/?id=xxx without
-      // help; we want a path of /admin/sessions/<id>. Use a tiny
-      // inline script-free trick: the input name is 'id', and the
-      // server-side route reads searchParams.id at the index page
-      // and redirects.  Implemented in a future ticket; for now the
-      // input lands on /admin/sessions/?id=... which the future page
-      // can redirect from.
-    >
+    <form action={prefix} method="get" style={{ display: 'flex', gap: 4 }}>
       <input
         name="id"
         type="text"

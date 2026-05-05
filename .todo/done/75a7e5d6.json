@@ -1,0 +1,32 @@
+{
+  "id": "75a7e5d6",
+  "type": "chore",
+  "state": "done",
+  "summary": "Webhook secrets are recommended not required at boot",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:51:53.225Z",
+  "updated_at": "2026-05-05T17:46:03.260Z",
+  "files": [
+    {
+      "path": "src/lib/boot.ts",
+      "lines": [
+        34,
+        37
+      ]
+    }
+  ],
+  "tags": [
+    "stripe",
+    "clerk",
+    "launch-blocker",
+    "config"
+  ],
+  "resolution": {
+    "commit": "a1d9279",
+    "resolved_at": "2026-05-05T17:46:03.260Z",
+    "resolved_by": "unknown",
+    "note": "Promoted CLERK_WEBHOOK_SECRET + STRIPE_WEBHOOK_SECRET to REQUIRED_ENV in src/lib/boot.ts. A misconfigured prod now fails fast at boot instead of silently 500'ing every webhook."
+  }
+}

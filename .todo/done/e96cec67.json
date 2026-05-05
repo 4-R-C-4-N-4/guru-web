@@ -1,0 +1,31 @@
+{
+  "id": "e96cec67",
+  "type": "chore",
+  "state": "done",
+  "summary": "pg.Pool max:10 with no connectionTimeoutMillis — saturated pool hangs forever",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:12.950Z",
+  "updated_at": "2026-05-05T17:46:03.380Z",
+  "files": [
+    {
+      "path": "src/lib/db.ts",
+      "lines": [
+        1,
+        8
+      ]
+    }
+  ],
+  "tags": [
+    "db",
+    "perf",
+    "reliability"
+  ],
+  "resolution": {
+    "commit": "9921816",
+    "resolved_at": "2026-05-05T17:46:03.380Z",
+    "resolved_by": "unknown",
+    "note": "Added connectionTimeoutMillis: 5000 + idleTimeoutMillis: 30000 to the pg.Pool. Saturated pool now errors at 5s instead of hanging forever."
+  }
+}
