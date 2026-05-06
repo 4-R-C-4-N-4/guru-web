@@ -160,8 +160,16 @@ export async function POST(req: Request) {
     );
   }
 
-  // 5. Stream — completeStream takes the resolved model id (BRD §7.2).
-  const stream = await completeStream(prompt, modelId);
+  // 5. Stream — completeStream takes the resolved model id (BRD §7.2)
+  // and a fully-assembled messages array. Session-history threading
+  // lands in BRD-conversation-continuity §4.5.
+  const stream = await completeStream(
+    [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user',   content: prompt },
+    ],
+    modelId,
+  );
 
   let fullResponse = '';
   let inputTokens: number | null = null;

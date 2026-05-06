@@ -1,15 +1,16 @@
 /**
  * src/lib/model.ts
  *
- * OpenRouter completion client — non-streaming and streaming variants.
- * Uses the OpenAI SDK with OpenRouter's base URL. Model routing now
- * lives in curated-models.ts (re-exported below); callers resolve a
- * curated slug to an OpenRouter id and pass the id to complete() /
- * completeStream() directly.
+ * OpenRouter streaming completion client. Uses the OpenAI SDK against
+ * OpenRouter's base URL. Model routing lives in curated-models.ts
+ * (re-exported below); callers resolve a curated slug to an OpenRouter
+ * id and pass the id, plus a fully-assembled messages array, to
+ * completeStream(). Multi-turn continuity (system + history + new turn)
+ * is the caller's responsibility — see BRD-conversation-continuity.
  */
 
 import OpenAI from 'openai';
-import { SYSTEM_PROMPT } from './prompt';
+import type { ChatMessage } from './history';
 
 // Lazy-init: module-level `new OpenAI(...)` runs during Next.js build's
 // page-data collection phase, where env vars may not be injected yet — the
@@ -60,38 +61,19 @@ export type { CuratedSlug } from './curated-models';
 export const MAX_OUTPUT_TOKENS = 8192;
 
 // ---------------------------------------------------------------------------
-// Non-streaming completion (for internal/testing use)
-// ---------------------------------------------------------------------------
-
-/**
- * Non-streaming completion. Takes a resolved OpenRouter id directly
- * (post-model-selection BRD §7.2 — caller resolves slug → id, then
- * calls this). Use resolveCuratedModel(slug) to obtain the id.
- */
-export async function complete(prompt: string, modelId: string): Promise<string> {
-  const response = await client().chat.completions.create({
-    model: modelId,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user',   content: prompt },
-    ],
-    temperature: 0.3,
-    max_tokens: MAX_OUTPUT_TOKENS,
-  });
-  return response.choices[0]?.message?.content ?? '';
-}
-
-// ---------------------------------------------------------------------------
 // Streaming completion (used by POST /api/query)
 // ---------------------------------------------------------------------------
 
-export async function completeStream(prompt: string, modelId: string) {
+/**
+ * Stream a chat completion. Caller assembles the full `messages` array —
+ * including the system prompt and any prior turns — so multi-turn
+ * continuity logic can live at the route layer where session ownership
+ * and budget reservation already are. Spec: BRD-conversation-continuity §4.2.
+ */
+export async function completeStream(messages: ChatMessage[], modelId: string) {
   return client().chat.completions.create({
     model: modelId,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user',   content: prompt },
-    ],
+    messages,
     temperature: 0.3,
     max_tokens: MAX_OUTPUT_TOKENS,
     stream: true,

@@ -726,8 +726,11 @@ describe('POST /api/query — curated slug resolution', () => {
 
   it('pro user with preferredModel=anthropic resolves to sonnet-4.6', async () => {
     await runQueryWithPrefs(PRO_USER, 'anthropic');
-    const [streamPrompt, modelId] = mockStream.mock.calls[0]!;
-    expect(streamPrompt).toBe('p');
+    const [messages, modelId] = mockStream.mock.calls[0]!;
+    expect(messages).toEqual([
+      { role: 'system', content: 'mock system prompt' },
+      { role: 'user',   content: 'p' },
+    ]);
     expect(modelId).toBe('anthropic/claude-sonnet-4.6');
     const [, persistParams] = mockExec.mock.calls[0]!;
     expect(persistParams![5]).toBe('anthropic/claude-sonnet-4.6');
