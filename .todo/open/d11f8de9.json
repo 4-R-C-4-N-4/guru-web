@@ -1,0 +1,30 @@
+{
+  "id": "d11f8de9",
+  "type": "feature",
+  "state": "open",
+  "summary": "Multi-turn conversation continuity (phase 1) — replay prior turns to model",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-06T23:05:12.634Z",
+  "updated_at": "2026-05-06T23:05:17.978Z",
+  "files": [
+    {
+      "path": "docs/conversation-continuity/IMPL-conversation-continuity.md"
+    }
+  ],
+  "tags": [
+    "api",
+    "model",
+    "sessions",
+    "history"
+  ],
+  "relationships": {
+    "children": [
+      "6ba3f6ef",
+      "da1c3b9d",
+      "d2d876ab",
+      "32b08ade"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "6ba3f6ef",
+  "type": "chore",
+  "state": "open",
+  "summary": "Add loadSessionHistory helper in src/lib/history.ts",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-06T23:05:17.848Z",
+  "updated_at": "2026-05-06T23:05:17.848Z",
+  "files": [
+    {
+      "path": "src/lib/history.ts"
+    }
+  ],
+  "tags": [
+    "sessions",
+    "db",
+    "history"
+  ],
+  "relationships": {
+    "parent": "d11f8de9"
+  }
+}
