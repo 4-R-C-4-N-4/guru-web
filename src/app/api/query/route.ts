@@ -21,6 +21,7 @@ import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
 import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
 import { completeStream } from '@/lib/model';
+import { loadSessionHistory, type ChatMessage } from '@/lib/history';
 import {
   DEFAULT_CURATED_SLUG,
   isCuratedSlug,
@@ -92,8 +93,21 @@ export async function POST(req: Request) {
   // 3. Retrieve + build prompt (before budget reservation — failed retrieval
   // shouldn't consume quota)
   const prefs = await loadPreferences(user.id);
+
+  // Load prior turns so the model can resolve referents like "it" / "that"
+  // across turns. Empty when no sessionId (auto-create path) — the first
+  // turn has no history by definition. Pruning caps live in history.ts.
+  // Spec: BRD-conversation-continuity §4.5.
+  const history = sessionId
+    ? await loadSessionHistory(sessionId, { maxTurns: 6, maxTokens: 4000 })
+    : [];
+  const historyChars  = history.reduce((n, m) => n + m.content.length, 0);
+  const historyTokens = Math.ceil(historyChars / 4);
+
   const chunks = await retrieve(queryText, prefs);
-  const prompt = buildPrompt(queryText, chunks, prefs, user.tier);
+  // Reserve room for history in the chunk-fitting budget so long sessions
+  // retrieve fewer chunks rather than blowing the context window.
+  const prompt = buildPrompt(queryText, chunks, prefs, user.tier, historyTokens);
 
   // 4. Estimate cost + reserve budget atomically.
   //
@@ -128,7 +142,9 @@ export async function POST(req: Request) {
     ? prefs.preferredModel
     : DEFAULT_CURATED_SLUG;
   const modelId = resolveCuratedModel(slug);
-  const estimatedInputTokens = Math.ceil((SYSTEM_PROMPT.length + prompt.length) / 4);
+  const estimatedInputTokens = Math.ceil(
+    (SYSTEM_PROMPT.length + historyChars + prompt.length) / 4,
+  );
   const { cost_usd: estimatedCostUsd } = await computeCost({
     modelId,
     inputTokens: estimatedInputTokens,
@@ -160,16 +176,15 @@ export async function POST(req: Request) {
     );
   }
 
-  // 5. Stream — completeStream takes the resolved model id (BRD §7.2)
-  // and a fully-assembled messages array. Session-history threading
-  // lands in BRD-conversation-continuity §4.5.
-  const stream = await completeStream(
-    [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user',   content: prompt },
-    ],
-    modelId,
-  );
+  // 5. Stream — system + prior turns + new user message. The history
+  // gives the model the context to resolve referents like "it" across
+  // turns. Spec: BRD-conversation-continuity §4.5.
+  const messages: ChatMessage[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...history,
+    { role: 'user',   content: prompt },
+  ];
+  const stream = await completeStream(messages, modelId);
 
   let fullResponse = '';
   let inputTokens: number | null = null;

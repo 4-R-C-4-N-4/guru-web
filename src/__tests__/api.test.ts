@@ -389,6 +389,9 @@ describe('POST /api/query', () => {
     vi.clearAllMocks();
     // Default: rate-limit allows. Tests that exercise the 429 path override.
     mockRateLimit.mockResolvedValue({ allowed: true });
+    // Default: no prior turns — loadSessionHistory reads via db.query.
+    // Multi-turn tests override per-test.
+    mockQuery.mockResolvedValue([]);
   });
 
   it('returns 429 with Retry-After when rate-limited', async () => {
@@ -688,6 +691,128 @@ describe('POST /api/query', () => {
     const [, params] = mockExec.mock.calls[0]!;
     expect(typeof params![3]).toBe('string'); // response_text — partial is fine
   });
+
+  // ── Multi-turn conversation continuity (BRD-conversation-continuity §4.5) ──
+
+  it('threads prior turns into the messages array when sessionId has history', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    // loadSessionHistory: one prior user/assistant pair.
+    mockQuery.mockResolvedValueOnce([
+      { query_text: 'prior q', response_text: 'prior a' },
+    ]);
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('new turn prompt');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'follow-up', sessionId: 's1' }));
+    await res.text();
+
+    const [messages] = mockStream.mock.calls[0]!;
+    expect(messages).toEqual([
+      { role: 'system',    content: 'mock system prompt' },
+      { role: 'user',      content: 'prior q' },
+      { role: 'assistant', content: 'prior a' },
+      { role: 'user',      content: 'new turn prompt' },
+    ]);
+  });
+
+  it('sends a 2-message array when no sessionId (auto-create path)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    // No ownership lookup expected; the mock for `one` is still used by
+    // the auto-create insert. Returning {id:'new'} satisfies that path.
+    mockOne.mockResolvedValueOnce({ id: 'auto-created' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('first prompt');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'first turn' }));
+    await res.text();
+
+    const [messages] = mockStream.mock.calls[0]!;
+    expect(messages).toEqual([
+      { role: 'system', content: 'mock system prompt' },
+      { role: 'user',   content: 'first prompt' },
+    ]);
+    // loadSessionHistory should not have been called when sessionId is absent.
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('skips errored prior turns (empty response_text) when threading history', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockQuery.mockResolvedValueOnce([
+      { query_text: 'good q',    response_text: 'good a' },
+      { query_text: 'errored q', response_text: '' },     // streamed, then aborted
+    ]);
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('next prompt');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text();
+
+    const [messages] = mockStream.mock.calls[0]!;
+    expect(messages).toEqual([
+      { role: 'system',    content: 'mock system prompt' },
+      { role: 'user',      content: 'good q' },
+      { role: 'assistant', content: 'good a' },
+      { role: 'user',      content: 'next prompt' },
+    ]);
+  });
+
+  it('reservation estimate grows when history is present', async () => {
+    // Two runs of the same shape, distinguished only by whether prior turns
+    // exist — assert computeCost sees a larger inputTokens count in the
+    // history case.
+    async function runOnce(history: { query_text: string; response_text: string }[]) {
+      mockAuth.mockResolvedValueOnce(FREE_USER);
+      mockOne.mockResolvedValueOnce({ id: 's1' });
+      mockQuery.mockResolvedValueOnce(history);
+      mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);   // estimate
+      mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);   // actual (post-stream)
+      mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+      mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+      mockRetrieve.mockResolvedValueOnce([]);
+      mockBuild.mockReturnValueOnce('p');
+      mockExec.mockResolvedValue(undefined);
+      async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+      mockStream.mockResolvedValueOnce(s() as never);
+      const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+      await res.text();
+    }
+
+    // Without history.
+    await runOnce([]);
+    const tokensWithoutHistory = (mockComputeCost.mock.calls[0]![0] as { inputTokens: number }).inputTokens;
+
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ allowed: true });
+    mockQuery.mockResolvedValue([]);
+
+    // With ~400 chars of history (~100 tokens at 4 chars/token).
+    const big = 'x'.repeat(200);
+    await runOnce([{ query_text: big, response_text: big }]);
+    const tokensWithHistory = (mockComputeCost.mock.calls[0]![0] as { inputTokens: number }).inputTokens;
+
+    expect(tokensWithHistory).toBeGreaterThan(tokensWithoutHistory);
+    expect(tokensWithHistory - tokensWithoutHistory).toBeGreaterThanOrEqual(100);
+  });
 });
 
 // ── Curated model slug resolution (todo:ae3e5de8) ──────────────────────
@@ -705,6 +830,7 @@ describe('POST /api/query — curated slug resolution', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockRateLimit.mockResolvedValue({ allowed: true });
+    mockQuery.mockResolvedValue([]);   // loadSessionHistory: no prior turns
   });
 
   async function runQueryWithPrefs(user: typeof FREE_USER | typeof PRO_USER, preferredModel: string | null) {
