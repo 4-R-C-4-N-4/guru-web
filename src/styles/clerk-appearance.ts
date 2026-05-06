@@ -8,82 +8,72 @@
  * inherits the dark theme without each call site having to repeat
  * the appearance object (todo:a2d75806).
  *
- * Variables map onto Clerk's CSS-variable theming layer:
- *   https://clerk.com/docs/customization/variables
- *
- * Values are sourced from tokens.ts so the Clerk surface stays in
- * lock-step with the rest of the app's palette.
+ * Two prior attempts to override Clerk's default light theme via
+ * `variables` + `elements` produced near-illegible results — Clerk's
+ * baked-in CSS won the specificity war on most text colors. Switched
+ * to @clerk/themes' packaged `dark` baseTheme as the foundation,
+ * then overlay the guru-gold accent on every text-bearing element
+ * so the surface reads as ours, not Clerk's. The packaged theme
+ * handles all the long-tail elements (dividers, hints, error states,
+ * verification-code inputs, etc.) we'd otherwise have to enumerate
+ * by hand.
  */
 
+import { dark } from '@clerk/themes';
 import { tokens } from './tokens';
 
-// Untyped: @clerk/types is not in our dep tree (we only have
-// @clerk/nextjs at top level), so let TypeScript infer the shape
-// from the literal. ClerkProvider validates it at the call site.
-// Contrast notes: the rest of the app uses tokens.text.secondary
-// (#8a8578) for de-emphasised body text, but it always sits next to
-// high-contrast primary text or visual context that lifts it. Clerk
-// uses colorTextSecondary for nearly *all* labels, dividers, and
-// helper copy in isolation, where #8a8578 just looks washed out.
-// Keep colorText and colorTextSecondary both at primary; reserve the
-// muted token for the explicitly-de-emphasised footer link variant.
-//
-// Card sits on the page bg (tokens.bg.deep). Use bg.raised for the
-// card so it visibly lifts off the page; bg.overlay for inputs so
-// they stand out within the card. Earlier values (surface for card,
-// raised for inputs) gave near-zero elevation cues in dark mode.
+// Guru gold (#c4a35a). Reads at ~7:1 on the dark theme's card bg —
+// well above WCAG AA's 4.5:1 for body text. Used as the blanket
+// text color so the Clerk surface visually ties in with the rest
+// of the app's accent palette.
+const GURU_GOLD = tokens.text.accent;
+
 export const clerkAppearance = {
+  baseTheme: dark,
   variables: {
-    colorBackground:      tokens.bg.raised,
-    colorPrimary:         tokens.text.accent,
-    colorText:            tokens.text.primary,
-    colorTextSecondary:   tokens.text.primary,
-    colorInputBackground: tokens.bg.overlay,
-    colorInputText:       tokens.text.primary,
-    colorNeutral:         tokens.text.primary,
-    colorDanger:          tokens.text.error,
-    fontFamily:           tokens.font.mono,
-    borderRadius:         '4px',
+    colorPrimary:                 GURU_GOLD,
+    colorText:                    GURU_GOLD,
+    colorTextSecondary:           GURU_GOLD,
+    colorInputText:               GURU_GOLD,
+    colorTextOnPrimaryBackground: tokens.bg.deep,
+    colorDanger:                  tokens.text.error,
+    fontFamily:                   tokens.font.mono,
+    borderRadius:                 '4px',
   },
   elements: {
-    card: {
-      backgroundColor: tokens.bg.raised,
-      border:          `1px solid ${tokens.border.medium}`,
-      boxShadow:       'none',
-    },
-    // The OAuth/social-button row defaults to a near-white pill that
-    // visually breaks against the dark card. Slightly elevated bg +
-    // a more visible border so the buttons read as buttons.
-    socialButtonsBlockButton: {
-      backgroundColor: tokens.bg.overlay,
-      borderColor:     tokens.border.medium,
-      color:           tokens.text.primary,
-    },
+    // Belt-and-braces: every text-bearing element gets the gold
+    // override directly so Clerk's element-scoped CSS can't fall
+    // back to its own theme defaults. Listing the long-tail
+    // elements is verbose but defensive — the variables layer
+    // alone proved unreliable across Clerk versions.
+    formFieldLabel:               { color: GURU_GOLD },
+    formFieldInput:               { color: GURU_GOLD },
+    formFieldHintText:            { color: GURU_GOLD },
+    formFieldErrorText:           { color: tokens.text.error },
+    headerTitle:                  { color: GURU_GOLD },
+    headerSubtitle:               { color: GURU_GOLD },
+    socialButtonsBlockButtonText: { color: GURU_GOLD },
+    dividerText:                  { color: GURU_GOLD },
+    dividerLine:                  { background: tokens.border.subtle },
+    footerActionText:             { color: GURU_GOLD },
+    footerActionLink:             { color: GURU_GOLD, textDecoration: 'underline' },
+    identityPreviewText:          { color: GURU_GOLD },
+    identityPreviewEditButton:    { color: GURU_GOLD },
+    formResendCodeLink:           { color: GURU_GOLD },
+    otpCodeFieldInput:            { color: GURU_GOLD },
+    profileSectionTitleText:      { color: GURU_GOLD },
+    profileSectionPrimaryButton:  { color: GURU_GOLD },
+    profileSectionContent:        { color: GURU_GOLD },
+    accordionTriggerButton:       { color: GURU_GOLD },
+    breadcrumbsItem:              { color: GURU_GOLD },
+    breadcrumbsItemDivider:       { color: GURU_GOLD },
+    badge:                        { color: GURU_GOLD },
+    // Primary CTA stays gold-on-deep — overrides the dark baseTheme's
+    // default which uses accent-background-with-white-text.
     formButtonPrimary: {
-      backgroundColor: tokens.text.accent,
+      backgroundColor: GURU_GOLD,
       color:           tokens.bg.deep,
-      '&:hover': { backgroundColor: tokens.text.accent, opacity: 0.9 },
-    },
-    footer: {
-      backgroundColor: tokens.bg.raised,
-    },
-    // Labels above input fields — Clerk's default uses
-    // colorTextSecondary, which we just bumped, but the hover-help
-    // text (e.g. "Forgot password?") needs a slight lift too.
-    formFieldLabel: {
-      color: tokens.text.primary,
-    },
-    formFieldHintText: {
-      color: tokens.text.secondary,
-    },
-    // The "Don't have an account? Sign up" line at the bottom of
-    // SignIn — keep this slightly muted (it's secondary CTA) but
-    // not so muted it disappears.
-    footerActionText: {
-      color: tokens.text.secondary,
-    },
-    footerActionLink: {
-      color: tokens.text.link,
+      '&:hover':       { backgroundColor: GURU_GOLD, opacity: 0.9 },
     },
   },
 };
