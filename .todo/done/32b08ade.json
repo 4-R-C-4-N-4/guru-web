@@ -1,0 +1,33 @@
+{
+  "id": "32b08ade",
+  "type": "chore",
+  "state": "done",
+  "summary": "Wire session history into /api/query messages array; update spend reservation",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-06T23:05:17.978Z",
+  "updated_at": "2026-05-06T23:45:40.866Z",
+  "files": [
+    {
+      "path": "src/app/api/query/route.ts"
+    }
+  ],
+  "tags": [
+    "api",
+    "sessions",
+    "history",
+    "integration"
+  ],
+  "relationships": {
+    "parent": "d11f8de9"
+  },
+  "resolution": {
+    "commit": "f8e53cf8a0ca59569e88db26e3a8e831261a9227",
+    "resolved_at": "2026-05-06T23:45:40.866Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "POST /api/query > threads prior turns into the messages array when sessionId has history",
+    "note": "Route loads history, threads it into messages array, updates spend reservation, reserves chunk-fitting budget room. 4 new tests, 291 total pass."
+  }
+}
