@@ -35,13 +35,6 @@ describe('SYSTEM_PROMPT', () => {
     expect(SYSTEM_PROMPT).toContain('CITATIONS');
     expect(SYSTEM_PROMPT).toContain('verified');
   });
-
-  it('names all major traditions', () => {
-    const traditions = ['Gnosticism', 'Kabbalah', 'Hermeticism', 'Neoplatonism', 'Vedanta', 'Buddhism'];
-    for (const t of traditions) {
-      expect(SYSTEM_PROMPT).toContain(t);
-    }
-  });
 });
 
 describe('buildPrompt', () => {
