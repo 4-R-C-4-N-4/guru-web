@@ -80,8 +80,9 @@ export function buildPrompt(
   chunks: RetrievedChunk[],
   _prefs: UserPreferences,
   tier: "free" | "pro",
+  reservedExtra = 0,
 ): string {
-  const budget = makeBudget(tier);
+  const budget = makeBudget(tier, reservedExtra);
 
   // Target tokens per chunk for compression (don't let one chunk eat the budget)
   const targetPerChunk = Math.floor(

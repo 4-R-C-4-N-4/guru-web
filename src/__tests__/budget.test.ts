@@ -84,4 +84,10 @@ describe('makeBudget', () => {
     const pro  = makeBudget('pro');
     expect(free.available).toBeLessThan(pro.available);
   });
+
+  it('reservedExtra reduces available budget by exactly that token count', () => {
+    const base  = makeBudget('pro');
+    const extra = makeBudget('pro', 1000);
+    expect(base.available - extra.available).toBe(1000);
+  });
 });
