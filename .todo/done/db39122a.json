@@ -1,0 +1,36 @@
+{
+  "id": "db39122a",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add PREFERRED_PROVIDER map + preferredProviderFor() helper in curated-models.ts",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-07T12:15:34.645Z",
+  "updated_at": "2026-05-07T12:17:13.264Z",
+  "files": [
+    {
+      "path": "src/lib/curated-models.ts"
+    }
+  ],
+  "tags": [
+    "openrouter",
+    "caching",
+    "models"
+  ],
+  "relationships": {
+    "parent": "eb3d6223"
+  },
+  "work": {
+    "branch": "todo/eb3d6223",
+    "base_branch": "main",
+    "started_at": "2026-05-07T12:16:19.273Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "8ea8b70b0afb4ba456b2a1fc2f5bbed2129ef754",
+    "resolved_at": "2026-05-07T12:17:13.264Z",
+    "resolved_by": "unknown",
+    "note": "PREFERRED_PROVIDER map + preferredProviderFor() helper. Coverage test ensures every curated slug has a mapping. 4 tests pass."
+  }
+}
