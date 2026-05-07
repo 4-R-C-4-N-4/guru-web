@@ -184,7 +184,7 @@ export async function POST(req: Request) {
     ...history,
     { role: 'user',   content: prompt },
   ];
-  const stream = await completeStream(messages, modelId);
+  const stream = await completeStream(messages, modelId, slug);
 
   let fullResponse = '';
   let inputTokens: number | null = null;
