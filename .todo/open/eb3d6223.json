@@ -1,0 +1,28 @@
+{
+  "id": "eb3d6223",
+  "type": "bug",
+  "state": "open",
+  "summary": "OpenRouter provider routing — restore prompt cache hits on multi-upstream models",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-07T12:15:29.911Z",
+  "updated_at": "2026-05-07T12:15:34.676Z",
+  "files": [
+    {
+      "path": "docs/cache-routing/BUGFIX-openrouter-provider-routing.md"
+    }
+  ],
+  "tags": [
+    "openrouter",
+    "caching",
+    "cost",
+    "model"
+  ],
+  "relationships": {
+    "children": [
+      "db39122a",
+      "b0aed238"
+    ]
+  }
+}
