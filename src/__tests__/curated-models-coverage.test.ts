@@ -28,7 +28,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CURATED_MODELS } from '@/lib/curated-models';
+import { CURATED_MODELS, PREFERRED_PROVIDER, preferredProviderFor } from '@/lib/curated-models';
 import { FALLBACK_PRICING } from '../../scripts/sync-pricing';
 
 describe('CURATED_MODELS ↔ FALLBACK_PRICING coverage', () => {
@@ -57,5 +57,21 @@ describe('CURATED_MODELS ↔ FALLBACK_PRICING coverage', () => {
         expect(price.cached_input_per_mtok, modelId).toBeLessThanOrEqual(price.input_per_mtok);
       }
     }
+  });
+});
+
+describe('CURATED_MODELS ↔ PREFERRED_PROVIDER coverage', () => {
+  it('every curated slug has a preferred provider mapping', () => {
+    for (const slug of Object.keys(CURATED_MODELS)) {
+      expect(PREFERRED_PROVIDER, slug).toHaveProperty(slug);
+      expect(typeof PREFERRED_PROVIDER[slug as keyof typeof PREFERRED_PROVIDER]).toBe('string');
+    }
+  });
+
+  it('preferredProviderFor returns the canonical name for each slug', () => {
+    expect(preferredProviderFor('deepseek')).toBe('DeepSeek');
+    expect(preferredProviderFor('xai')).toBe('xAI');
+    expect(preferredProviderFor('anthropic')).toBe('Anthropic');
+    expect(preferredProviderFor('openai')).toBe('OpenAI');
   });
 });

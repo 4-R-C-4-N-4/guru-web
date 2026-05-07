@@ -852,33 +852,37 @@ describe('POST /api/query — curated slug resolution', () => {
 
   it('pro user with preferredModel=anthropic resolves to sonnet-4.6', async () => {
     await runQueryWithPrefs(PRO_USER, 'anthropic');
-    const [messages, modelId] = mockStream.mock.calls[0]!;
+    const [messages, modelId, slug] = mockStream.mock.calls[0]!;
     expect(messages).toEqual([
       { role: 'system', content: 'mock system prompt' },
       { role: 'user',   content: 'p' },
     ]);
     expect(modelId).toBe('anthropic/claude-sonnet-4.6');
+    expect(slug).toBe('anthropic');
     const [, persistParams] = mockExec.mock.calls[0]!;
     expect(persistParams![5]).toBe('anthropic/claude-sonnet-4.6');
   });
 
   it('pro user with preferredModel=null falls through to deepseek default', async () => {
     await runQueryWithPrefs(PRO_USER, null);
-    const [, modelId] = mockStream.mock.calls[0]!;
+    const [, modelId, slug] = mockStream.mock.calls[0]!;
     expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(slug).toBe('deepseek');
     const [, persistParams] = mockExec.mock.calls[0]!;
     expect(persistParams![5]).toBe('deepseek/deepseek-v4-pro');
   });
 
   it('free user with any preferredModel value still resolves to default', async () => {
     await runQueryWithPrefs(FREE_USER, 'anthropic');
-    const [, modelId] = mockStream.mock.calls[0]!;
+    const [, modelId, slug] = mockStream.mock.calls[0]!;
     expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(slug).toBe('deepseek');
   });
 
   it('pro user with stale/unknown slug (post-rename) falls through to default', async () => {
     await runQueryWithPrefs(PRO_USER, 'old-removed-slug');
-    const [, modelId] = mockStream.mock.calls[0]!;
+    const [, modelId, slug] = mockStream.mock.calls[0]!;
     expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(slug).toBe('deepseek');
   });
 });

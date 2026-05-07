@@ -57,3 +57,29 @@ export function resolveCuratedModel(slug: CuratedSlug): string {
 export function isCuratedSlug(value: unknown): value is CuratedSlug {
   return typeof value === 'string' && value in CURATED_MODELS;
 }
+
+/**
+ * Per-slug preferred upstream provider name for the OpenRouter
+ * `provider.order` extension. Without this, OpenRouter may route to
+ * third-party hosters (e.g. AtlasCloud for deepseek) that don't expose
+ * the upstream's prompt-caching tier — silently turning off cache hits
+ * and burning the cost discount.
+ *
+ * Names must match OpenRouter's canonical provider strings exactly;
+ * typos silently fall back to default routing because the chat-
+ * completions request uses `allow_fallbacks: true`. Verify against
+ * `https://openrouter.ai/api/v1/models/{model}/endpoints` when adding
+ * or renaming an entry.
+ *
+ * Spec: BUGFIX-openrouter-provider-routing.md.
+ */
+export const PREFERRED_PROVIDER: Record<CuratedSlug, string> = {
+  deepseek:  'DeepSeek',
+  xai:       'xAI',
+  anthropic: 'Anthropic',
+  openai:    'OpenAI',
+};
+
+export function preferredProviderFor(slug: CuratedSlug): string {
+  return PREFERRED_PROVIDER[slug];
+}

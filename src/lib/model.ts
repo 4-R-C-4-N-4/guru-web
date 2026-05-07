@@ -10,7 +10,22 @@
  */
 
 import OpenAI from 'openai';
+import type { ChatCompletionCreateParamsStreaming } from 'openai/resources/chat/completions';
 import type { ChatMessage } from './history';
+import { preferredProviderFor, type CuratedSlug } from './curated-models';
+
+// OpenRouter accepts a `provider` field beyond the OpenAI chat-completions
+// schema. The OpenAI SDK's request types don't include it, so we intersect
+// it onto the streaming-params type at the call site rather than using a
+// blanket `as any`. Spec: BUGFIX-openrouter-provider-routing.md.
+type OpenRouterProviderExtension = {
+  provider?: {
+    order?: string[];
+    allow_fallbacks?: boolean;
+  };
+};
+type OpenRouterStreamParams =
+  ChatCompletionCreateParamsStreaming & OpenRouterProviderExtension;
 
 // Lazy-init: module-level `new OpenAI(...)` runs during Next.js build's
 // page-data collection phase, where env vars may not be injected yet — the
@@ -69,9 +84,21 @@ export const MAX_OUTPUT_TOKENS = 8192;
  * including the system prompt and any prior turns — so multi-turn
  * continuity logic can live at the route layer where session ownership
  * and budget reservation already are. Spec: BRD-conversation-continuity §4.2.
+ *
+ * The slug pins OpenRouter routing to the model's canonical upstream
+ * provider so prompt caching is reachable. Without this, OpenRouter may
+ * route to third-party hosters (e.g. AtlasCloud for deepseek) that don't
+ * expose the upstream's cache tier — a silent ~99% cost regression on
+ * input tokens for multi-turn sessions. `allow_fallbacks: true` keeps
+ * availability identical to default routing during canonical-provider
+ * outages. Spec: BUGFIX-openrouter-provider-routing.md.
  */
-export async function completeStream(messages: ChatMessage[], modelId: string) {
-  return client().chat.completions.create({
+export async function completeStream(
+  messages: ChatMessage[],
+  modelId: string,
+  slug: CuratedSlug,
+) {
+  const body: OpenRouterStreamParams = {
     model: modelId,
     messages,
     temperature: 0.3,
@@ -80,5 +107,10 @@ export async function completeStream(messages: ChatMessage[], modelId: string) {
     // OpenAI-compatible streams omit usage by default; opt in so the API emits
     // a final chunk with prompt_tokens/completion_tokens (empty choices[]).
     stream_options: { include_usage: true },
-  });
+    provider: {
+      order: [preferredProviderFor(slug)],
+      allow_fallbacks: true,
+    },
+  };
+  return client().chat.completions.create(body);
 }
