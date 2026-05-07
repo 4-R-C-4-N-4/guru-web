@@ -79,6 +79,14 @@ const CONTEXT_WINDOWS = {
 const SYSTEM_RESERVE  = 512;
 const RESPONSE_RESERVE = 2_048;
 
-export function makeBudget(tier: 'free' | 'pro'): TokenBudget {
-  return new TokenBudget(CONTEXT_WINDOWS[tier], SYSTEM_RESERVE, RESPONSE_RESERVE);
+// `reservedExtra` lets callers earmark additional tokens on top of the system
+// reserve (e.g. multi-turn history; spec: BRD-conversation-continuity §4.3).
+// Folded into systemReserve rather than added as a 4th constructor arg so
+// TokenBudget itself stays unchanged. Defaults to 0 — backwards compatible.
+export function makeBudget(tier: 'free' | 'pro', reservedExtra = 0): TokenBudget {
+  return new TokenBudget(
+    CONTEXT_WINDOWS[tier],
+    SYSTEM_RESERVE + reservedExtra,
+    RESPONSE_RESERVE,
+  );
 }

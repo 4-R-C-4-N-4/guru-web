@@ -75,4 +75,17 @@ describe('buildPrompt', () => {
     const proCount  = (proResult.match(/^\[\d+\]/gm) ?? []).length;
     expect(proCount).toBeGreaterThanOrEqual(freeCount);
   });
+
+  it('reservedExtra shrinks the chunk budget so fewer chunks fit', () => {
+    // Pile on enough chunks that the budget genuinely binds.
+    const chunks = Array.from({ length: 30 }, (_, i) =>
+      makeChunk(`c${i}`, 'vedanta', 'verified')
+    );
+    const baseline = buildPrompt('atman', chunks, DEFAULT_PREFS, 'free');
+    // Free available is ~5632 tokens; reserve enough that <30 chunks fit.
+    const squeezed = buildPrompt('atman', chunks, DEFAULT_PREFS, 'free', 5_400);
+    const baselineCount = (baseline.match(/^\[\d+\]/gm) ?? []).length;
+    const squeezedCount = (squeezed.match(/^\[\d+\]/gm) ?? []).length;
+    expect(squeezedCount).toBeLessThan(baselineCount);
+  });
 });

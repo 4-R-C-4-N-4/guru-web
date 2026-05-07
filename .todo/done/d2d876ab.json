@@ -1,0 +1,29 @@
+{
+  "id": "d2d876ab",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Refactor completeStream to take messages array; delete unused complete()",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-06T23:05:17.929Z",
+  "updated_at": "2026-05-06T23:42:58.683Z",
+  "files": [
+    {
+      "path": "src/lib/model.ts"
+    }
+  ],
+  "tags": [
+    "model",
+    "breaking-change"
+  ],
+  "relationships": {
+    "parent": "d11f8de9"
+  },
+  "resolution": {
+    "commit": "d1314071d585e88ba1c4c13701e45d19b0571bf7",
+    "resolved_at": "2026-05-06T23:42:58.683Z",
+    "resolved_by": "unknown",
+    "note": "completeStream(messages, modelId) is the new shape. complete() removed. Route call site updated to keep build green; history threading deferred to child 32b08ade as planned."
+  }
+}
