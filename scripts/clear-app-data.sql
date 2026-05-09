@@ -12,7 +12,13 @@
 -- in a single TRUNCATE makes the blast radius auditable and avoids
 -- needing CASCADE.
 --
--- Usage:
+-- Usage on the VPS (as postgres user — mirrors the corpus restore
+-- pattern). Stdin redirection runs in your shell before sudo, so the
+-- postgres user doesn't need read access to the repo checkout:
+--   sudo -u postgres psql guru -v ON_ERROR_STOP=1 < scripts/clear-app-data.sql
+--
+-- Usage with a connection string (local, CI, or anywhere DATABASE_URL
+-- is exported):
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/clear-app-data.sql
 --
 -- Dry run:
