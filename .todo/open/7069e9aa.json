@@ -1,0 +1,21 @@
+{
+  "id": "7069e9aa",
+  "type": "bug",
+  "state": "open",
+  "summary": "SignIn/SignUp use forceRedirectUrl, breaking admin session-ceiling redirect_url propagation",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-09T23:53:11.204Z",
+  "updated_at": "2026-05-09T23:53:41.501Z",
+  "files": [
+    {
+      "path": "src/app/sign-in/[[...sign-in]]/page.tsx,src/app/sign-up/[[...sign-up]]/page.tsx,src/middleware.ts"
+    }
+  ],
+  "tags": [
+    "admin",
+    "clerk-auth"
+  ],
+  "description": "## Symptom\n\nHitting /admin on the tailnet hostname (guru-web-prod.tailb5626e.ts.net) when the Clerk session is older than 1 hour bounces the user to /chat instead of forcing a fresh sign-in and returning to /admin. Reproduced live during the 2026-05-09 production cutover.\n\n## Root cause\n\nsrc/middleware.ts:50-57 enforces a 1-hour session ceiling on /admin paths: when iat > 1h old it redirects to /sign-in?redirect_url=/admin. But:\n\n- src/app/sign-in/[[...sign-in]]/page.tsx:18 — `<SignIn signUpUrl=\"/sign-up\" forceRedirectUrl=\"/chat\" />`\n- src/app/sign-up/[[...sign-up]]/page.tsx:18 — `<SignUp signInUrl=\"/sign-in\" forceRedirectUrl=\"/chat\" />`\n\n`forceRedirectUrl` is the Clerk prop that ALWAYS wins over the redirect_url query param. So the redirect_url emitted by middleware is dead code — Clerk reads it, ignores it, sends the user to /chat per forceRedirectUrl.\n\n## Fix\n\nSwap both `forceRedirectUrl` to `fallbackRedirectUrl`:\n\n- forceRedirectUrl   → always go here, even if redirect_url is set\n- fallbackRedirectUrl → only go here if redirect_url is NOT set\n\nDirect sign-in / sign-up flows have no redirect_url in the URL, so /chat still wins for them via the fallback. Only the admin re-auth path (which is the one currently broken) sets redirect_url, and that's what we want to honor.\n\n## Test\n\nAdd a vitest case in src/__tests__/admin.test.ts (or a new file alongside it) that asserts: given a session with iat > ADMIN_SESSION_MAX_AGE_SECONDS, middleware emits a redirect to /sign-in with redirect_url=/admin in the query string. (The Clerk-side prop change isn't unit-testable from our side; covering the middleware contract is enough.)\n\nAlso worth a manual smoke test post-fix: sign in, wait 61 minutes (or shorten ADMIN_SESSION_MAX_AGE_SECONDS to 60s in dev), hit /admin, confirm the round-trip lands on /admin not /chat."
+}
