@@ -8,9 +8,10 @@
  *
  * Spec: BRD-admin-ui §1.10, BRD-admin-ui-design §3.1, §2.1–§2.3.
  *
- * The middleware already gated this route group; by the time this
- * server component renders, the caller is in ADMIN_USER_IDS. We still
- * call requireAdmin() defensively (handler-level gate per BRD §1.2).
+ * Trust model (post 2026-05-09 cutover): the Caddy tailnet listener
+ * is the gate; requireAdmin() returns the synthetic tailnet operator
+ * when the X-Tailnet-Trust header is present, otherwise a 404
+ * Response. See src/lib/admin.ts for rationale.
  */
 
 import Link from 'next/link';

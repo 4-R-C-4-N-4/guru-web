@@ -14,7 +14,6 @@ import { csvEscape, csvLine, streamingCsv } from '@/components/admin/csv';
 
 vi.mock('@/lib/admin', () => ({
   requireAdmin: vi.fn(),
-  isAdmin:      vi.fn().mockReturnValue(true),
 }));
 vi.mock('@/lib/admin-queries', async () => {
   const actual = await vi.importActual<typeof import('@/lib/admin-queries')>('@/lib/admin-queries');

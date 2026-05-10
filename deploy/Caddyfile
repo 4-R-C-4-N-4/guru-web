@@ -32,6 +32,11 @@
     reverse_proxy localhost:3000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
+        # Strip any inbound X-Tailnet-Trust so a public caller can't
+        # forge the trust signal that gates /admin. The tailnet
+        # listener below adds it explicitly. See src/lib/admin.ts
+        # requireAdmin() for the handler-level check.
+        header_up -X-Tailnet-Trust
     }
 
     header {
@@ -51,6 +56,13 @@ guru-web-prod.tailb5626e.ts.net {
     reverse_proxy localhost:3000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
+        # Inject the trust signal that the in-app requireAdmin()
+        # check looks for. Only set on this listener; the public
+        # listener strips inbound copies of this header (see above).
+        # Trust comes from "you are reaching this listener," which
+        # in turn means "you are on the tailnet" — Tailscale ACL is
+        # the source-of-truth for who that includes.
+        header_up X-Tailnet-Trust 1
     }
 
     header {

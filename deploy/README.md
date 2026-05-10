@@ -300,6 +300,52 @@ page. Spec: `docs/admin-ui/BRD-admin-ui.md` §0.1, §0.3.
 This is a one-time hand-patch. `vps-bootstrap.sh` does not install it
 because bootstrap is one-shot and admin install is deliberate.
 
+### Trust model (post 2026-05-09 cutover)
+
+Admin auth is **not** Clerk-gated — Clerk's production keys are
+domain-locked to `guru-ai.org` and refuse to operate on the tailnet
+hostname (`Production Keys are only allowed for domain "guru-ai.org"`).
+Multi-domain / satellite-domain unlocks additional hosts but is paid.
+
+The Caddy tailnet listener injects `X-Tailnet-Trust: 1` on every
+request it forwards to Next; the public listener strips any inbound
+copy of that header so a malicious caller can't forge it. The in-app
+`requireAdmin()` helper (`src/lib/admin.ts`) reads the header and
+either returns a synthetic operator (`id="tailnet"`,
+`email="admin@tailnet"`) or a 404 Response.
+
+**This means everyone with access to your tailnet is effectively an
+admin.** Tailscale ACLs are the source of truth for that set — if you
+share tailnet access with anyone (family device, contractor, second
+laptop), they get admin too. Tighten by tagging admin-capable devices
+explicitly:
+
+```jsonc
+// Tailscale admin → Access Controls (ACL JSON)
+{
+  "tagOwners": {
+    "tag:admin-device": ["your-email@example.com"]
+  },
+  "acls": [
+    {
+      "action": "accept",
+      "src":    ["tag:admin-device"],
+      "dst":    ["guru-web-prod:443"]
+    }
+    // …default deny everything else to guru-web-prod:443
+  ]
+}
+```
+
+Then assign `tag:admin-device` to specific machines in the Tailscale
+admin → Machines view. Devices without that tag will fail to reach
+the tailnet hostname at the network level, before Caddy even sees
+the connection.
+
+The `ADMIN_USER_IDS` env var in `/etc/guru-web.env` is **vestigial**
+post-cutover — `requireAdmin()` no longer reads it. Safe to remove
+on next env edit (no app reload required just to drop a stale line).
+
 ### Prereqs
 
 - Tailscale running on the VPS (already true post-bootstrap).
