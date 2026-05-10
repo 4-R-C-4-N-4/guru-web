@@ -157,3 +157,53 @@ describe('middleware (post-cutover)', () => {
     expect(res).toBeUndefined();
   });
 });
+
+// ── matcher config ───────────────────────────────────────────────────
+//
+// Even with our handler doing nothing, clerkMiddleware on a non-prod
+// host (tailnet) triggers a handshake-rewrite to /clerk_* when there's
+// no session, which Next renders 404 → browser redirects to the Clerk
+// Account Portal at accounts.<prod-domain>. Excluding /admin and
+// /api/admin from the matcher keeps clerkMiddleware off those paths
+// entirely. These tests pin the matcher so a future "let me clean up
+// the regex" change can't silently re-include admin paths.
+
+describe('middleware matcher config', () => {
+  // Compile each Next-style matcher pattern to a JS regex. Anchored
+  // both ends so the test models "does Next decide to run middleware
+  // for this exact path." This is an approximation of Next's compiled
+  // matcher (which uses path-to-regexp under the hood) — sufficient
+  // for the lookahead-based exclusions we care about.
+  function matchesAny(path: string, patterns: string[]): boolean {
+    return patterns.some((p) => new RegExp(`^${p}$`).test(path));
+  }
+
+  it('excludes /admin paths', async () => {
+    const { config } = await import('@/middleware');
+    expect(matchesAny('/admin',                config.matcher)).toBe(false);
+    expect(matchesAny('/admin/users',          config.matcher)).toBe(false);
+    expect(matchesAny('/admin/sessions/abc',   config.matcher)).toBe(false);
+  });
+
+  it('excludes /api/admin paths', async () => {
+    const { config } = await import('@/middleware');
+    expect(matchesAny('/api/admin',            config.matcher)).toBe(false);
+    expect(matchesAny('/api/admin/overview',   config.matcher)).toBe(false);
+    expect(matchesAny('/api/admin/users/xyz',  config.matcher)).toBe(false);
+  });
+
+  it('still fires on ordinary app and api paths', async () => {
+    const { config } = await import('@/middleware');
+    expect(matchesAny('/chat',                 config.matcher)).toBe(true);
+    expect(matchesAny('/account',              config.matcher)).toBe(true);
+    expect(matchesAny('/api/query',            config.matcher)).toBe(true);
+    expect(matchesAny('/api/preferences',      config.matcher)).toBe(true);
+  });
+
+  it('still excludes Next internals and static files', async () => {
+    const { config } = await import('@/middleware');
+    expect(matchesAny('/_next/static/foo',     config.matcher)).toBe(false);
+    expect(matchesAny('/favicon.ico',          config.matcher)).toBe(false);
+    expect(matchesAny('/foo.css',              config.matcher)).toBe(false);
+  });
+});

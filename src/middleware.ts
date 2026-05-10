@@ -15,6 +15,17 @@
  * and strips any inbound copy on the public listener); see
  * src/lib/admin.ts requireAdmin() for the handler-level check.
  *
+ * Why the matcher excludes admin paths. Even with our handler doing
+ * nothing, clerkMiddleware on a non-prod-domain host (tailnet)
+ * triggers an internal handshake-rewrite to a synthetic /clerk_*
+ * path when there's no session token. Next then renders 404 against
+ * that synthetic path; in a browser the 404 page client-side
+ * redirects to accounts.guru-ai.org/sign-in, which is exactly the
+ * Clerk Account Portal. For admin paths — which no longer use Clerk
+ * at all — that handshake is pure noise that masks requireAdmin().
+ * Excluding /admin and /api/admin from the matcher keeps clerkMiddleware
+ * out of those code paths entirely.
+ *
  * Spec: BRD-admin-ui §1.2 (revised).
  */
 
@@ -28,9 +39,12 @@ export default clerkMiddleware(async () => {
 
 export const config = {
   matcher: [
-    // Skip Next internals + static assets (standard Clerk pattern).
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run on API routes.
-    '/(api|trpc)(.*)',
+    // Skip Next internals, static assets, and admin paths (the latter
+    // are gated by Caddy + requireAdmin(), not Clerk — see file
+    // docstring).
+    '/((?!_next|admin|api/admin|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // /api/* and /trpc/* — but NOT /api/admin/*. The (?!/admin)
+    // negative lookahead keeps clerkMiddleware off the admin API.
+    '/(api(?!/admin)|trpc)(.*)',
   ],
 };
