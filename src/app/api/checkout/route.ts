@@ -56,6 +56,7 @@ export async function POST() {
     ],
     success_url: `${origin}/account?success=true`,
     cancel_url: `${origin}/account`,
+    allow_promotion_codes: true,
     metadata: {
       user_id: user.id,
     },

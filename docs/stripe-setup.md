@@ -54,6 +54,30 @@ stripe trigger checkout.session.completed
 - Enable: manage subscriptions, view invoices, update payment method
 - This gives users a self-service billing page managed by Stripe
 
+### 6. Alpha discount coupons (promotion codes)
+The checkout session passes `allow_promotion_codes: true`, so any active
+promotion code in your Stripe account is redeemable on the hosted checkout
+page. To create an alpha discount:
+
+1. Stripe dashboard → **Products → Coupons → + New**
+   - **Type:** Percentage off (e.g. `50%`) or Amount off (e.g. `$10.00`)
+   - **Duration:** `Forever` (locks alpha pricing for the life of the sub),
+     `Repeating` for N months, or `Once` for first invoice only
+   - **Apply to:** restrict to the `Guru Pro` product if you don't want it
+     redeemable on future paid SKUs
+   - Save — note the coupon ID (e.g. `ALPHA50_FOREVER`)
+2. On that coupon's page → **+ Create promotion code**
+   - **Code:** human-friendly string users will type (e.g. `ALPHA`, `FIRSTLOOK50`)
+   - **Restrictions (optional):** max redemptions, expiry date, first-time
+     customer only — useful for capping the alpha cohort
+   - Save
+3. Share the code with alpha users. They click `Upgrade` on the account
+   page and enter the code in the **Add promotion code** field on Stripe's
+   hosted checkout.
+
+Test mode and live mode have separate coupon catalogs — recreate the code
+in live mode before launch.
+
 ## How it works
 
 1. User clicks "Upgrade" on the account page
