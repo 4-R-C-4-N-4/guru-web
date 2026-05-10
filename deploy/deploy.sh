@@ -66,7 +66,7 @@ if [[ -f "$NEW_SCRIPT" ]] && ! cmp -s "$SELF" "$NEW_SCRIPT"; then
     exec "$SELF" "$@"
 fi
 
-# 2. Install prod deps + build (Next.js standalone output → .next/standalone/)
+# 2. Install prod deps + build.
 #
 # `next build` bakes NEXT_PUBLIC_* into the client bundle. Those vars must
 # be in env at build time — systemd's EnvironmentFile only feeds the
@@ -74,6 +74,18 @@ fi
 # /etc/guru-web.public.env (mode 0644 — values are public anyway, they
 # ship in client JS) so the `deploy` user can read them without needing
 # read access to the secrets file (/etc/guru-web.env, mode 0600 root:guru).
+#
+# Bundler / output mode (post 2026-05-10 admin-on-tailnet outage):
+# - Build runs `next build --webpack`. Next 16's Turbopack does not
+#   reliably compile src/middleware.ts — the deployed manifest came
+#   back with a Clerk-default matcher even when our source had custom
+#   exclusions, and Turbopack treats proxy.ts as an SSR module rather
+#   than installing it as middleware. Webpack handles middleware.ts
+#   correctly. The flag is wired in package.json's "build" script.
+# - `output: "standalone"` is removed from next.config.ts — the
+#   standalone collector is incompatible with the proxy.ts convention
+#   (ENOENT on middleware.js.nft.json), and we don't need it now that
+#   the runtime tree is the whole release dir.
 log "npm ci + build"
 cd "$RELEASE"
 if [[ ! -r /etc/guru-web.public.env ]]; then
@@ -86,18 +98,6 @@ source /etc/guru-web.public.env
 set +a
 npm ci
 npm run build
-
-# Next.js standalone bundles only the necessary node_modules into
-# .next/standalone/. The systemd unit's WorkingDirectory points at
-# $CURRENT, with ExecStart=/usr/bin/node server.js — which lives at
-# .next/standalone/server.js. Symlink that path so 'current' resolves
-# correctly without changing the unit.
-log "stage runtime tree"
-# Copy static + public into standalone (Next.js standalone doesn't include them)
-cp -a "$RELEASE/.next/static" "$RELEASE/.next/standalone/.next/static"
-if [[ -d "$RELEASE/public" ]]; then
-    cp -a "$RELEASE/public" "$RELEASE/.next/standalone/public"
-fi
 
 # 3. Apply app-schema migrations BEFORE swapping the symlink. If a migration
 #    fails the old release stays live. Each file runs in a single transaction
@@ -129,10 +129,11 @@ for f in "$RELEASE"/migrations/*.sql; do
 done
 shopt -u nullglob
 
-# 4. Atomic symlink swap. `current` points at the standalone dir so
-# WorkingDirectory in the unit (/srv/guru-web/current) sees server.js.
+# 4. Atomic symlink swap. `current` points at the release dir; the
+# systemd unit runs `next start` from there using the in-tree
+# node_modules/.bin/next binary.
 log "symlink swap"
-ln -sfn "$RELEASE/.next/standalone" "$CURRENT.new"
+ln -sfn "$RELEASE" "$CURRENT.new"
 mv -Tf "$CURRENT.new" "$CURRENT"
 
 # 5. Restart the app (sudoers permits this single command)
