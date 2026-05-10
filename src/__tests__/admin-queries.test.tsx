@@ -13,7 +13,6 @@ import { ExpandableQuery } from '@/components/admin/ExpandableQuery';
 
 vi.mock('@/lib/admin', () => ({
   requireAdmin: vi.fn(),
-  isAdmin:      vi.fn().mockReturnValue(true),
 }));
 vi.mock('@/lib/admin-queries', async () => {
   const actual = await vi.importActual<typeof import('@/lib/admin-queries')>('@/lib/admin-queries');

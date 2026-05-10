@@ -1,0 +1,35 @@
+{
+  "id": "d3700325",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Move /admin off Clerk auth onto tailnet-membership trust",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-10T00:12:41.780Z",
+  "updated_at": "2026-05-10T00:28:33.978Z",
+  "files": [
+    {
+      "path": "src/middleware.ts,src/lib/admin.ts,src/app/(admin)/layout.tsx,deploy/Caddyfile"
+    }
+  ],
+  "tags": [
+    "admin",
+    "clerk-auth",
+    "tailnet",
+    "architecture"
+  ],
+  "description": "## Motivation\n\nClerk production keys are domain-locked at the SDK level — they refuse to initialize when `window.location.host` doesn't match the registered production domain (\"Clerk: Production Keys are only allowed for domain 'guru-ai.org'\"). The tailnet hostname `guru-web-prod.tailb5626e.ts.net` is a separate DNS root, so Clerk hard-rejects there. Clerk's Multi-domain / satellite-domain feature would unlock additional hosts but is a paid plan upgrade.\n\nThe original BRD-admin-ui §1.2 cited Clerk middleware as the \"third gate\" in defense in depth (after Caddy public-listener rewrite and tailnet-only routing). That third gate was structurally impossible on the free Clerk plan once the app moved to live keys — discovered during the 2026-05-09 production cutover.\n\n## Approach\n\nDrop Clerk auth on `/admin` and `/api/admin` entirely. Trust comes from being on the tailnet. Caddy already routes the tailnet hostname to the app; that listener is the gate.\n\n## File-by-file changes\n\n- **src/middleware.ts** — remove the admin block (no more allowlist check, no more iat ceiling). Middleware reverts to no-op for /admin paths. The `clerkMiddleware` wrapper stays since other paths still use Clerk.\n- **src/lib/admin.ts** — rename `requireAdmin()` → `requireTailnet()`. Returns either a synthetic operator object (id=\"tailnet\", email=\"admin@tailnet\") or 404. Trust signal: a Caddy-injected `X-Tailnet-Trust` header for belt-and-suspenders, since trusting deployment topology alone is fragile to future routing changes.\n- **src/app/(admin)/layout.tsx** — drop the `{operator.email}` display (just say \"ADMIN\") or pull from a single `ADMIN_DISPLAY_EMAIL` env var if attribution is wanted back without Clerk.\n- **src/__tests__/admin.test.ts** — rewrite. Drop iat-ceiling tests. New tests assert: tailnet trust signal yields the synthetic operator; absence yields 404.\n- **deploy/Caddyfile** — tailnet listener block adds `header_up X-Tailnet-Trust 1`. Public listener also strips any inbound `X-Tailnet-Trust` header (defense against an attacker setting it from the public side). The existing public-listener `/admin → /admin-404` rewrite stays in place — that's the second gate.\n- **Tailscale ACL** (out-of-repo, in Tailscale admin panel) — tag admin-capable devices explicitly (e.g. `tag:admin-device`) instead of \"everyone on the tailnet.\" Document the tag in deploy/README.md so the tag → /admin-access mapping is recoverable across operator handoffs.\n\n## Risks and mitigations\n\n- **Defense-in-depth collapses to the Caddy listener split.** Mitigation: keep the public-listener `/admin → /admin-404` rewrite (already in deploy/Caddyfile lines 27-28). That's the second gate.\n- **Identity attribution disappears.** Mitigation: `ADMIN_DISPLAY_EMAIL` env var if a name is wanted in the amber bar. Acceptable to skip until a second admin exists.\n- **Tailnet membership is more persistent than a Clerk session.** Mitigation: configure Tailscale device expiry / require periodic re-auth at the Tailscale level. Out of repo but document in deploy/README.md.\n- **Local dev needs a bypass** since dev devs aren't on the tailnet. Mitigation: `requireTailnet()` returns the synthetic operator unconditionally when `process.env.NODE_ENV === 'development'`. Pin with a test.\n- **Future routing path that doesn't go through Caddy could forge X-Tailnet-Trust.** Mitigation: Caddy strips inbound `X-Tailnet-Trust` on the public listener before adding it on the tailnet listener.\n- **Removes the iat ceiling that limits long-lived signed-in sessions.** Mitigation: this becomes Tailscale's job (device expiry / key rotation policy).\n\n## Test plan\n\n- Existing `src/__tests__/admin.test.ts` rewritten to cover the new model.\n- Test asserting middleware no longer touches /admin paths (regression against accidentally leaving the old block in).\n- Test asserting `requireTailnet()` returns 404 when `X-Tailnet-Trust` is absent and operator object when present.\n- `NODE_ENV=development` bypass test.\n- Manual smoke after deploy: hit /admin via tailnet (works) and via guru-ai.org (404, Caddy intercepted).\n\n## Related\n\n- Discovered during go-live cutover 2026-05-09 (PR #54).\n- The forceRedirectUrl bug in PR #55 is in the public-domain sign-in flow and is independent of this refactor.\n- Once this lands, `ADMIN_USER_IDS` env var becomes vestigial — remove from /etc/guru-web.env and from any docs.",
+  "work": {
+    "branch": "todo/d3700325",
+    "base_branch": "main",
+    "started_at": "2026-05-10T00:22:17.055Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "fdb03e59c5e290bb04bc526e8c645c008081a5a4",
+    "resolved_at": "2026-05-10T00:28:33.978Z",
+    "resolved_by": "unknown",
+    "note": "Caddy tailnet listener injects X-Tailnet-Trust=1; requireAdmin() returns synthetic operator on header presence (or NODE_ENV=development), 404 otherwise. Public listener strips inbound copies. ADMIN_USER_IDS env var no longer read; can drop on next env edit."
+  }
+}
