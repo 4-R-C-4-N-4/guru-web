@@ -137,21 +137,21 @@ describe('middleware (post-cutover)', () => {
     // moved out: Caddy is the tailnet gate, requireAdmin() is the
     // handler-level gate. The middleware no longer cares about the
     // admin path shape.
-    const middleware = (await import('@/middleware')).default;
+    const middleware = (await import('@/proxy')).default;
     const res = await middleware(makeReq('/admin/users') as never, {} as never);
 
     expect(res).toBeUndefined();
   });
 
   it('does not touch /api/admin paths either', async () => {
-    const middleware = (await import('@/middleware')).default;
+    const middleware = (await import('@/proxy')).default;
     const res = await middleware(makeReq('/api/admin/overview') as never, {} as never);
 
     expect(res).toBeUndefined();
   });
 
   it('does not touch ordinary app paths', async () => {
-    const middleware = (await import('@/middleware')).default;
+    const middleware = (await import('@/proxy')).default;
     const res = await middleware(makeReq('/chat') as never, {} as never);
 
     expect(res).toBeUndefined();
@@ -179,21 +179,21 @@ describe('middleware matcher config', () => {
   }
 
   it('excludes /admin paths', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/admin',                config.matcher)).toBe(false);
     expect(matchesAny('/admin/users',          config.matcher)).toBe(false);
     expect(matchesAny('/admin/sessions/abc',   config.matcher)).toBe(false);
   });
 
   it('excludes /api/admin paths', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/api/admin',            config.matcher)).toBe(false);
     expect(matchesAny('/api/admin/overview',   config.matcher)).toBe(false);
     expect(matchesAny('/api/admin/users/xyz',  config.matcher)).toBe(false);
   });
 
   it('still fires on ordinary app and api paths', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/chat',                 config.matcher)).toBe(true);
     expect(matchesAny('/account',              config.matcher)).toBe(true);
     expect(matchesAny('/api/query',            config.matcher)).toBe(true);
@@ -201,7 +201,7 @@ describe('middleware matcher config', () => {
   });
 
   it('still excludes Next internals and static files', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/_next/static/foo',     config.matcher)).toBe(false);
     expect(matchesAny('/favicon.ico',          config.matcher)).toBe(false);
     expect(matchesAny('/foo.css',              config.matcher)).toBe(false);

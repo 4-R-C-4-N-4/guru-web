@@ -1,9 +1,20 @@
 /**
- * src/middleware.ts
+ * src/proxy.ts
  *
  * Clerk middleware wrapper. Wires Clerk session decoding into the
  * request context so handlers that call auth() / useUser() see the
  * caller's userId.
+ *
+ * File convention: this used to be src/middleware.ts. Next 16
+ * deprecated that filename in favour of "proxy" (the build output
+ * legend literally reads "ƒ Proxy (Middleware)"). Observed during
+ * 2026-05-09 cutover: with only middleware.ts present, our
+ * handler-level short-circuit for /admin paths was completely
+ * ignored — clerkMiddleware fired on EVERY request, rewriting
+ * every path to /clerk_<id> and 404ing the entire app. Renaming
+ * to proxy.ts gets Next 16 to pick up our handler again. Likely
+ * Next 16's compat path for legacy middleware.ts auto-injects
+ * Clerk's protection without invoking our handler.
  *
  * /admin and /api/admin used to have an allowlist + iat-ceiling
  * gate here, that moved out post 2026-05-09 cutover. Clerk's
