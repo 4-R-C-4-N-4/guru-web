@@ -15,7 +15,7 @@ export default function SignInPage() {
         justifyContent: 'center',
       }}
     >
-      <SignIn signUpUrl="/sign-up" forceRedirectUrl="/chat" />
+      <SignIn signUpUrl="/sign-up" fallbackRedirectUrl="/chat" />
     </div>
   );
 }

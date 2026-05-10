@@ -39,8 +39,7 @@ UNION ALL SELECT 'user_preferences',   COUNT(*) FROM user_preferences
 UNION ALL SELECT 'quota_usage',        COUNT(*) FROM quota_usage
 UNION ALL SELECT 'rate_limits',        COUNT(*) FROM rate_limits
 UNION ALL SELECT 'user_budgets',       COUNT(*) FROM user_budgets
-UNION ALL SELECT 'model_pricing (kept)', COUNT(*) FROM model_pricing
-UNION ALL SELECT 'chunks (corpus, kept)', COUNT(*) FROM chunks;
+UNION ALL SELECT 'model_pricing (kept)', COUNT(*) FROM model_pricing;
 
 TRUNCATE TABLE
     queries,
@@ -60,7 +59,6 @@ UNION ALL SELECT 'user_preferences',   COUNT(*) FROM user_preferences
 UNION ALL SELECT 'quota_usage',        COUNT(*) FROM quota_usage
 UNION ALL SELECT 'rate_limits',        COUNT(*) FROM rate_limits
 UNION ALL SELECT 'user_budgets',       COUNT(*) FROM user_budgets
-UNION ALL SELECT 'model_pricing (kept)', COUNT(*) FROM model_pricing
-UNION ALL SELECT 'chunks (corpus, kept)', COUNT(*) FROM chunks;
+UNION ALL SELECT 'model_pricing (kept)', COUNT(*) FROM model_pricing;
 
 COMMIT;
