@@ -314,6 +314,33 @@ copy of that header so a malicious caller can't forge it. The in-app
 either returns a synthetic operator (`id="tailnet"`,
 `email="admin@tailnet"`) or a 404 Response.
 
+**The tailnet site block also `bind`s to the tailnet hostname** so
+Caddy only listens on the tailnet interface for that block. Without
+the bind, Caddy's default `0.0.0.0:443` listener accepts public-IP
+connections that present `SNI=guru-web-prod.<tailnet>.ts.net` and
+routes them into the tailnet block — which would let an internet
+attacker reach `/admin` and have `X-Tailnet-Trust` injected on
+their behalf. The `bind` closes that path at the network layer.
+
+For Caddy to resolve the bind hostname on a cold boot, the systemd
+drop-in installed by `vps-bootstrap.sh` (`step_caddy`) orders Caddy
+`After=tailscaled.service`. Existing VPS installs predating this
+change should patch the drop-in by hand and `systemctl
+daemon-reload`:
+
+```bash
+sudo tee /etc/systemd/system/caddy.service.d/env.conf >/dev/null <<EOF
+[Unit]
+After=tailscaled.service
+Wants=tailscaled.service
+
+[Service]
+Environment="DOMAIN=$(grep '^DOMAIN=' /etc/guru-bootstrap.env | cut -d= -f2)"
+EOF
+sudo systemctl daemon-reload
+sudo systemctl reload caddy
+```
+
 **This means everyone with access to your tailnet is effectively an
 admin.** Tailscale ACLs are the source of truth for that set — if you
 share tailnet access with anyone (family device, contractor, second

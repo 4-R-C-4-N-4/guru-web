@@ -257,8 +257,18 @@ step_caddy() {
     fi
 
     # Inject DOMAIN into caddy's systemd env (Caddyfile uses {$DOMAIN})
+    # and order Caddy after tailscaled so the tailnet site block's
+    # `bind guru-web-prod.<tailnet>.ts.net` directive can resolve via
+    # MagicDNS at config-load time. Without After=tailscaled.service,
+    # Caddy on a cold boot can race ahead of Tailscale and fail to
+    # bind. Wants= (not Requires=) so a tailscaled failure doesn't
+    # also take the public listener down.
     install -d -m 0755 /etc/systemd/system/caddy.service.d
     cat > /etc/systemd/system/caddy.service.d/env.conf <<EOF
+[Unit]
+After=tailscaled.service
+Wants=tailscaled.service
+
 [Service]
 Environment="DOMAIN=$DOMAIN"
 EOF

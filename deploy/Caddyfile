@@ -51,6 +51,17 @@
 # only). Cert files are kept fresh out-of-band by the
 # tailnet-cert-renew.timer systemd unit.
 guru-web-prod.tailb5626e.ts.net {
+    # Bind only to the tailnet interface. Without this, Caddy's default
+    # 0.0.0.0:443 listener accepts public-IP connections that present
+    # SNI=guru-web-prod.tailb5626e.ts.net and routes them into this
+    # block — which would let an internet attacker hit the tailnet
+    # admin surface and have X-Tailnet-Trust injected on their behalf.
+    # The hostname resolves via Tailscale's MagicDNS at config-load
+    # time; the systemd drop-in (vps-bootstrap.sh step_caddy) orders
+    # Caddy after tailscaled.service so resolution succeeds on cold
+    # boot.
+    bind guru-web-prod.tailb5626e.ts.net
+
     tls /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.crt /etc/ssl/tailnet/guru-web-prod.tailb5626e.ts.net.key
 
     reverse_proxy localhost:3000 {
