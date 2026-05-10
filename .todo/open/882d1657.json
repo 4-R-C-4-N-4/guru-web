@@ -1,0 +1,23 @@
+{
+  "id": "882d1657",
+  "type": "debt",
+  "state": "open",
+  "summary": "Revisit next build --webpack flag when Turbopack reliably compiles middleware.ts",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-10T20:00:58.767Z",
+  "updated_at": "2026-05-10T20:01:34.288Z",
+  "files": [
+    {
+      "path": "package.json,next.config.ts,deploy/deploy.sh,deploy/guru-web.service"
+    }
+  ],
+  "tags": [
+    "next16",
+    "turbopack",
+    "middleware",
+    "deploy"
+  ],
+  "description": "## Context\n\nPR #64 (2026-05-10) added `--webpack` to `next build` because Next 16's Turbopack silently ignores `src/middleware.ts` — the deployed manifest came back with Clerk's default matcher instead of our customized one, and grepping the edge chunks for our literal hostname returned zero hits. Webpack DOES compile middleware.ts correctly. The flag is what unblocked the live admin-on-tailnet outage.\n\nThis is technical debt because:\n\n- Vercel is moving Next toward Turbopack as the default bundler. The `--webpack` flag will eventually be deprecated and removed.\n- We're temporarily off the happy path; future Next upgrades may break this configuration in subtle ways.\n- Other deploy plumbing (no `output: \"standalone\"`, full node_modules per release ~500MB × 5 = 2.5GB disk) is coupled to this choice.\n\n## Trigger to revisit\n\nWhen any of:\n- A Next 16.x patch release notes \"Turbopack now correctly compiles middleware.ts\" (or similar fix in `next.js` issues — check https://github.com/vercel/next.js/issues for `middleware` + `turbopack`).\n- Next 17 released — recheck on upgrade.\n- `--webpack` flag itself starts emitting deprecation warnings.\n\n## Acceptance check\n\nAfter flipping `package.json`'s `\"build\"` back to plain `\"next build\"`:\n\n```bash\nrm -rf .next && npm run build\n\n# Manifest must contain our matcher, not Clerk's default:\ngrep originalSource .next/server/middleware-manifest.json\n# Expect: /(api(?!/admin)|trpc)(.*)  AND  /((?!_next|admin|api/admin|...).*)\n\n# Compiled middleware bundle must contain our literals:\ngrep -c \"guru-web-prod\\|TAILNET_HOST\" .next/server/src/middleware.js\n# Expect: ≥1 (Webpack puts it at .next/server/src/middleware.js;\n# Turbopack puts middleware bundle elsewhere — adjust path)\n```\n\nIf both checks pass, the flag can be removed. If either fails, the bug is still present in that Next version — keep `--webpack` and re-test on the next Next release.\n\n## Related: standalone output\n\n`output: \"standalone\"` was also removed in PR #64 (incompatible with the proxy.ts convention that Turbopack tries to use). Whether to re-add standalone is a separate decision driven by disk-footprint concerns (~2.5GB across retained releases without it), not by this ticket. If standalone is restored, deploy.sh + guru-web.service need to revert their respective changes.\n\n## Files touched by the workaround\n\n- `package.json` — `\"build\": \"next build --webpack\"`\n- `next.config.ts` — `output: \"standalone\"` removed\n- `deploy/deploy.sh` — symlink target changed (release dir, not release/.next/standalone); static-copy step removed\n- `deploy/guru-web.service` — `ExecStart` changed to `next start` from in-tree node_modules\n\nAll four need to be reverted together if revisiting.\n\n## Memory\n\nSee `project_next16_turbopack_middleware.md` in the auto-memory store for the full diagnosis. The memory entry should be updated or removed when this ticket is resolved."
+}
