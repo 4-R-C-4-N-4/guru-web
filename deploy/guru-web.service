@@ -13,7 +13,12 @@ WorkingDirectory=/srv/guru-web/current
 # secrets stay in the runtime-only file. systemd merges both.
 EnvironmentFile=/etc/guru-web.public.env
 EnvironmentFile=/etc/guru-web.env
-ExecStart=/usr/bin/node server.js
+# `current` symlinks to the release dir. `next start` resolves the build
+# from .next/ relative to its CWD. PORT is read from /etc/guru-web.env.
+# (Was `node server.js` when output: "standalone" was active — see
+# deploy/deploy.sh "Bundler / output mode" comment for why we moved off
+# standalone.)
+ExecStart=/srv/guru-web/current/node_modules/.bin/next start
 Restart=on-failure
 RestartSec=5
 

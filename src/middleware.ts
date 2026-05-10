@@ -1,9 +1,24 @@
 /**
- * src/middleware.ts
+ * src/proxy.ts
  *
  * Clerk middleware wrapper. Wires Clerk session decoding into the
  * request context so public-domain handlers that call auth() /
  * useUser() see the caller's userId.
+ *
+ * Filename: Next 16 renamed the middleware.ts file convention to
+ * proxy.ts ("ƒ Proxy (Middleware)" in build output). Live diagnostic
+ * during the 2026-05-09 cutover proved that Next 16 + Turbopack
+ * silently ignores src/middleware.ts and substitutes a default
+ * middleware bundle — the deployed manifest's matcher came back
+ * verbatim from Clerk's recommended default, with none of our
+ * admin exclusions or host checks even though they were in the
+ * source. proxy.ts is the file Next 16 actually compiles.
+ *
+ * Output mode: `output: "standalone"` was removed from
+ * next.config.ts at the same time because Next 16.2.4's standalone
+ * collector errors with `ENOENT: middleware.js.nft.json` when the
+ * source is proxy.ts. deploy.sh + guru-web.service were updated to
+ * run `next start` against the release dir directly.
  *
  * Two-axis bypass — both axes can fire, both lead to "skip Clerk":
  *
@@ -24,14 +39,6 @@
  *      tailnet case. Trust for admin comes from Caddy's
  *      X-Tailnet-Trust header + the handler-level requireAdmin()
  *      check (src/lib/admin.ts).
- *
- * Background: Next 16 deprecated middleware.ts in favour of proxy.ts
- * ("ƒ Proxy (Middleware)" in build output). Renaming to proxy.ts is
- * the right long-term fix but currently breaks Next 16.2.4's
- * standalone-output build with an ENOENT on
- * .next/server/middleware.js.nft.json. Until that's resolved
- * upstream, this file stays as middleware.ts and gets the host check
- * to work around clerkMiddleware's behaviour on tailnet.
  *
  * Spec: BRD-admin-ui §1.2 (revised).
  */
