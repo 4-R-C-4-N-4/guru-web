@@ -41,11 +41,12 @@ vi.mock('@clerk/nextjs/server', () => ({
 }));
 
 const mockBillingPortalCreate = vi.fn();
+const mockCheckoutSessionCreate = vi.fn();
 vi.mock('stripe', () => {
   function Stripe() {
     return {
       webhooks: { constructEvent: mockConstructEvent },
-      checkout:  { sessions: { create: vi.fn() } },
+      checkout:  { sessions: { create: mockCheckoutSessionCreate } },
       billingPortal: { sessions: { create: mockBillingPortalCreate } },
     };
   }
@@ -418,6 +419,17 @@ describe('POST /api/checkout', () => {
     const body = await res.json() as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toContain('Pro');
+  });
+
+  it('passes allow_promotion_codes so alpha coupons redeem on hosted checkout', async () => {
+    mockAuth.mockResolvedValueOnce({ id: 'user_1', email: 'a@b.com', tier: 'free', stripe_customer_id: null, payment_state: null });
+    mockCheckoutSessionCreate.mockResolvedValueOnce({ url: 'https://checkout.stripe.com/c/pay/xyz' });
+
+    const res = await checkoutPOST();
+    expect(res.status).toBe(200);
+    expect(mockCheckoutSessionCreate).toHaveBeenCalledOnce();
+    const arg = mockCheckoutSessionCreate.mock.calls[0][0] as { allow_promotion_codes: boolean };
+    expect(arg.allow_promotion_codes).toBe(true);
   });
 });
 
