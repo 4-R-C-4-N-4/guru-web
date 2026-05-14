@@ -35,6 +35,33 @@ describe('SYSTEM_PROMPT', () => {
     expect(SYSTEM_PROMPT).toContain('CITATIONS');
     expect(SYSTEM_PROMPT).toContain('verified');
   });
+
+  it('preserves the scholar identity opening', () => {
+    expect(SYSTEM_PROMPT).toContain('You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.');
+    expect(SYSTEM_PROMPT).toContain('rigorous academic care');
+  });
+
+  it('grounds claims and forbids invented citations', () => {
+    expect(SYSTEM_PROMPT).toContain('Every substantive claim about a tradition');
+    expect(SYSTEM_PROMPT).toContain('Do not invent quotations');
+    expect(SYSTEM_PROMPT).toContain('Avoid false equivalences');
+  });
+
+  it('signals register shifts with concrete phrase examples', () => {
+    expect(SYSTEM_PROMPT).toContain('the pattern here suggests');
+    expect(SYSTEM_PROMPT).toContain('outside the passages here');
+    expect(SYSTEM_PROMPT).toContain('name it by title');
+  });
+
+  it('requires a followup hook before the citation block', () => {
+    expect(SYSTEM_PROMPT).toContain('End each reply with a beat that opens the next turn');
+    expect(SYSTEM_PROMPT).toContain('This is not "let me know if you have more questions"');
+    expect(SYSTEM_PROMPT).toContain('The closing beat is the last\n  beat of your prose, immediately before the CITATIONS block.');
+  });
+
+  it('locks the citation format', () => {
+    expect(SYSTEM_PROMPT).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+  });
 });
 
 describe('buildPrompt', () => {
