@@ -28,6 +28,12 @@ export interface Citation {
   tier: 'verified' | 'proposed' | 'inferred';
 }
 
+/**
+ * Chat voice slug. The voice catalog lives in src/lib/prompt.ts
+ * (VOICE_OVERLAY + isVoiceSlug). Spec: BRD-chat-voice.md §3.
+ */
+export type VoiceSlug = 'scholar' | 'woowoo';
+
 export interface UserPreferences {
   scopeMode: 'all' | 'whitelist' | 'blacklist';
   blockedTraditions: string[];
@@ -41,6 +47,14 @@ export interface UserPreferences {
    * via /api/preferences. Spec: BRD-model-selection.md §5.1, §6.1.
    */
   preferredModel: string | null;
+  /**
+   * User's default voice for *new* sessions. Snapshotted onto
+   * sessions.voice at creation time (ticket 5). Free users always
+   * resolve to 'scholar' at query time regardless of what's stored.
+   * Validated via isVoiceSlug() at /api/preferences PUT.
+   * Spec: BRD-chat-voice.md §5.1, IMPL §4.
+   */
+  preferredVoice: VoiceSlug;
 }
 
 /** Billing-health flag (todo:33d44563). Tracks Stripe's retry state

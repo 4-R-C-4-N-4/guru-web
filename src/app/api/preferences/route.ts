@@ -66,6 +66,10 @@ export async function PUT(req: Request) {
     preferredModel:        body.preferredModel !== undefined
                              ? body.preferredModel
                              : existing.preferredModel,
+    // Ticket 4 wires the schema + type only; ticket 6 (preferences API)
+    // adds validation + pro gating for preferredVoice writes. For now
+    // the field passes through unchanged from storage on every PUT.
+    preferredVoice:        existing.preferredVoice,
   };
 
   await savePreferences(user.id, updated);

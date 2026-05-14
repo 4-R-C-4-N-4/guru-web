@@ -30,6 +30,7 @@ describe.skipIf(SKIP)('Retrieval pipeline — integration', () => {
     whitelistedTraditions: [],
     whitelistedTexts: [],
     preferredModel: null,
+    preferredVoice: 'scholar' as const,
   };
 
   beforeAll(async () => {

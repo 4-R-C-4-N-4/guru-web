@@ -9,7 +9,12 @@
 
 import { makeBudget } from "./budget";
 import { compressChunks } from "./compress";
-import type { RetrievedChunk, UserPreferences } from "./types";
+import type { RetrievedChunk, UserPreferences, VoiceSlug } from "./types";
+
+// Re-export VoiceSlug so callers can keep importing it from @/lib/prompt
+// alongside the runtime voice helpers (isVoiceSlug, DEFAULT_VOICE,
+// getSystemPrompt). The canonical declaration lives in types.ts.
+export type { VoiceSlug };
 
 // ---------------------------------------------------------------------------
 // System prompt — layered
@@ -21,8 +26,6 @@ import type { RetrievedChunk, UserPreferences } from "./types";
 //                followup hook, citation block). Per BRD §3, no overlay
 //                may relax these.
 // getSystemPrompt(voice) composes both.
-
-export type VoiceSlug = "scholar" | "woowoo";
 
 export const DEFAULT_VOICE: VoiceSlug = "scholar";
 

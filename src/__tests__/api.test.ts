@@ -123,6 +123,7 @@ const DEFAULT_PREFS = {
   blockedTraditions: [], blockedTexts: [],
   whitelistedTraditions: [], whitelistedTexts: [],
   preferredModel: null,
+  preferredVoice: 'scholar' as const,
 };
 const PRO_USER  = { id: 'user_2', email: 'p@b.com', tier: 'pro'  as const, stripe_customer_id: 'cus_x', payment_state: null };
 

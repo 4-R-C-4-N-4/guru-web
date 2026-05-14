@@ -14,6 +14,7 @@ const DEFAULT_PREFS: UserPreferences = {
   whitelistedTraditions: [],
   whitelistedTexts: [],
   preferredModel: null,
+  preferredVoice: 'scholar',
 };
 
 const makeChunk = (id: string, tradition: string, tier: RetrievedChunk['tier'] = 'verified'): RetrievedChunk => ({
