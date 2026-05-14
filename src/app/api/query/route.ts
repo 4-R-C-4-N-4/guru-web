@@ -19,7 +19,8 @@
 
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
-import { buildPrompt, getSystemPrompt, DEFAULT_VOICE } from '@/lib/prompt';
+import { buildPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
+import type { VoiceSlug } from '@/lib/types';
 import { completeStream } from '@/lib/model';
 import { loadSessionHistory, type ChatMessage } from '@/lib/history';
 import {
@@ -80,14 +81,19 @@ export async function POST(req: Request) {
   // 2b. Ownership check — if the client supplied a sessionId, confirm it
   // belongs to the authenticated user before we do any work or persist into it.
   // Returns 404 (not 403) so we don't leak whether a session exists for someone else.
+  // Also pulls session.voice (snapshotted at session creation) so the system
+  // prompt this turn matches the voice the thread was started under.
+  // Spec: BRD-chat-voice.md §5.
+  let sessionVoice: string | null = null;
   if (sessionId) {
-    const owned = await one<{ id: string }>(
-      `SELECT id FROM sessions WHERE id = $1 AND user_id = $2`,
+    const owned = await one<{ id: string; voice: string }>(
+      `SELECT id, voice FROM sessions WHERE id = $1 AND user_id = $2`,
       [sessionId, user.id]
     );
     if (!owned) {
       return Response.json({ error: 'Session not found' }, { status: 404 });
     }
+    sessionVoice = owned.voice;
   }
 
   // 3. Retrieve + build prompt (before budget reservation — failed retrieval
@@ -142,10 +148,26 @@ export async function POST(req: Request) {
     ? prefs.preferredModel
     : DEFAULT_CURATED_SLUG;
   const modelId = resolveCuratedModel(slug);
+
+  // Voice resolution: an existing session's voice is whatever was
+  // snapshotted at its creation — including 'woowoo' for a user whose
+  // tier has since flipped to free (thread coherence wins; the prior
+  // turns were generated under that voice). For a new session the
+  // tier gate applies: free users always snapshot to scholar
+  // regardless of their stored preference.
+  // Spec: BRD-chat-voice.md §5, §6.
+  const newSessionVoice: VoiceSlug =
+    user.tier === 'pro' && isVoiceSlug(prefs.preferredVoice)
+      ? prefs.preferredVoice
+      : DEFAULT_VOICE;
+  const voice: VoiceSlug =
+    sessionVoice !== null && isVoiceSlug(sessionVoice)
+      ? sessionVoice
+      : newSessionVoice;
+
   // Compose once and reuse — both the token estimate and the streamed
-  // message read from the same string. Ticket 5 will swap DEFAULT_VOICE
-  // for the session's snapshotted voice; for now there's only scholar.
-  const systemPrompt = getSystemPrompt(DEFAULT_VOICE);
+  // message read from the same string.
+  const systemPrompt = getSystemPrompt(voice);
   const estimatedInputTokens = Math.ceil(
     (systemPrompt.length + historyChars + prompt.length) / 4,
   );
@@ -272,12 +294,15 @@ export async function POST(req: Request) {
       // 7. Persist after stream closes — save partial response on error.
       try {
         if (!sessionId) {
-          // Auto-create a session if none provided
+          // Auto-create a session if none provided. Snapshot the resolved
+          // voice (already gated on tier above) onto the row so future
+          // turns on this thread read back the same value.
+          // Spec: BRD-chat-voice.md §5.
           const sessionRow = await one<{ id: string }>(
-            `INSERT INTO sessions (user_id, title, created_at, updated_at)
-             VALUES ($1, $2, now(), now())
+            `INSERT INTO sessions (user_id, title, voice, created_at, updated_at)
+             VALUES ($1, $2, $3, now(), now())
              RETURNING id`,
-            [user.id, queryText.slice(0, 80)]
+            [user.id, queryText.slice(0, 80), voice]
           );
           if (sessionRow) sessionId = sessionRow.id;
         }

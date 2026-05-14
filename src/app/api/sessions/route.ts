@@ -7,6 +7,8 @@
 
 import { requireUser } from '@/lib/auth';
 import { query, one } from '@/lib/db';
+import { loadPreferences } from '@/lib/prefs';
+import { DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { Session } from '@/lib/types';
 
 export async function GET(req: Request) {
@@ -53,11 +55,23 @@ export async function POST(req: Request) {
     // title is optional — empty body is fine
   }
 
+  // Snapshot the user's preferred voice onto the new session row. Free
+  // users always snapshot to scholar regardless of stored preference;
+  // pro users get whichever voice they've set (defaulting to scholar
+  // when unset or stored as an unknown slug). The snapshot is immutable
+  // for the life of the session — a later profile-voice change does not
+  // re-skin existing threads. Spec: BRD-chat-voice.md §5.
+  const prefs = await loadPreferences(user.id);
+  const voice =
+    user.tier === 'pro' && isVoiceSlug(prefs.preferredVoice)
+      ? prefs.preferredVoice
+      : DEFAULT_VOICE;
+
   const session = await one<Session>(
-    `INSERT INTO sessions (user_id, title, created_at, updated_at)
-     VALUES ($1, $2, now(), now())
+    `INSERT INTO sessions (user_id, title, voice, created_at, updated_at)
+     VALUES ($1, $2, $3, now(), now())
      RETURNING id, title, created_at, updated_at`,
-    [user.id, title]
+    [user.id, title, voice]
   );
 
   return Response.json(session, { status: 201 });
