@@ -1,0 +1,44 @@
+{
+  "id": "2f14b5d6",
+  "type": "feature",
+  "state": "done",
+  "summary": "Query route — voice snapshot at session creation, getSystemPrompt(session.voice) at query",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:18.728Z",
+  "updated_at": "2026-05-14T22:45:28.526Z",
+  "files": [
+    {
+      "path": "src/app/api/query/route.ts"
+    }
+  ],
+  "tags": [
+    "api",
+    "voice",
+    "integration"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90",
+      "5bae5b0b",
+      "1a6e4137"
+    ]
+  },
+  "description": "IMPL §5. Two touch points in src/app/api/query/route.ts: (1) at sessions INSERT, snapshot voice = (tier==='pro' && isVoiceSlug(prefs.preferredVoice)) ? prefs.preferredVoice : 'scholar'; (2) at query execution, call getSystemPrompt(session.voice). Free users always 'scholar' regardless of stored pref. Profile voice changes do NOT mutate existing sessions (snapshot is immutable). See IMPL §5.",
+  "work": {
+    "branch": "todo/e8417da2",
+    "base_branch": "main",
+    "started_at": "2026-05-14T22:40:32.144Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "fd839286fba5b46994e96af476dce08f3e5d78ca",
+    "resolved_at": "2026-05-14T22:45:28.526Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "pro user with preferredVoice=woowoo snapshots woowoo onto the new session",
+    "note": "Ownership SELECT now reads {id, voice}. Voice resolution block uses isVoiceSlug + tier gate; new sessions snapshot at INSERT time. Both /api/query auto-create and /api/sessions POST land voice on the row. Existing session voice wins over current pref (thread coherence). Defensive unknown-slug fallback to DEFAULT_VOICE. 9 new tests cover both paths + pro gate + downgrade preservation. 329 tests pass."
+  }
+}
