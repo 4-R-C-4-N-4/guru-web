@@ -1,0 +1,28 @@
+{
+  "id": "1a6e4137",
+  "type": "chore",
+  "state": "open",
+  "summary": "Schema — preferred_voice + sessions.voice columns",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:18.618Z",
+  "updated_at": "2026-05-14T17:05:18.693Z",
+  "files": [
+    {
+      "path": "migrations/012_chat_voice.sql"
+    }
+  ],
+  "tags": [
+    "schema",
+    "migration",
+    "voice"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90"
+    ]
+  },
+  "description": "IMPL §4. New migration 012_chat_voice.sql adding user_preferences.preferred_voice and sessions.voice columns (both TEXT NOT NULL DEFAULT 'scholar', no CHECK — validated in app code per preferred_model pattern). Extend src/lib/types.ts UserPreferences with preferredVoice: VoiceSlug. Extend src/lib/prefs.ts loadPrefs SELECT list and return shape. See IMPL §4."
+}

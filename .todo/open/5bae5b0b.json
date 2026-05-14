@@ -1,0 +1,28 @@
+{
+  "id": "5bae5b0b",
+  "type": "feature",
+  "state": "open",
+  "summary": "Author + register woowoo voice overlay",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:18.508Z",
+  "updated_at": "2026-05-14T17:05:18.584Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "prompt",
+    "voice",
+    "copy"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90"
+    ]
+  },
+  "description": "IMPL §3. Author docs/chat-voice/VOICE-woowoo-draft.md (companion to CORE_RULES-draft.md) for the woowoo overlay text. Starting point: the operator's 'alive to the material' prompt from conversation, with rules section stripped (those live in CORE_RULES). Add 'woowoo' to VoiceSlug union and VOICE_OVERLAY. Voice exists in code but not user-selectable yet — no schema, no API, no UI. Snapshot test pins composed prompt for the new voice. See IMPL §3."
+}
