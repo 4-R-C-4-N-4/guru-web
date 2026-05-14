@@ -1,0 +1,36 @@
+{
+  "id": "5bae5b0b",
+  "type": "feature",
+  "state": "done",
+  "summary": "Author + register woowoo voice overlay",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:18.508Z",
+  "updated_at": "2026-05-14T19:04:31.158Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "prompt",
+    "voice",
+    "copy"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90"
+    ]
+  },
+  "description": "IMPL §3. Author docs/chat-voice/VOICE-woowoo-draft.md (companion to CORE_RULES-draft.md) for the woowoo overlay text. Starting point: the operator's 'alive to the material' prompt from conversation, with rules section stripped (those live in CORE_RULES). Add 'woowoo' to VoiceSlug union and VOICE_OVERLAY. Voice exists in code but not user-selectable yet — no schema, no API, no UI. Snapshot test pins composed prompt for the new voice. See IMPL §3.",
+  "resolution": {
+    "commit": "5149b06770164d304679d96e6c9b2c6a05257ab6",
+    "resolved_at": "2026-05-14T19:04:31.158Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/prompt.test.ts",
+    "test_function": "shares CORE_RULES with the scholar voice",
+    "note": "Authored docs/chat-voice/VOICE-woowoo-draft.md (overlay text + rationale). Registered 'woowoo' in VoiceSlug + VOICE_OVERLAY + isVoiceSlug. 4 new tests cover overlay identity, launchpad framing, CORE_RULES sharing, and identical CITATIONS tail across voices. Not user-selectable yet — tickets 4–8 wire that in. 311 tests pass."
+  }
+}
