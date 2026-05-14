@@ -1,0 +1,36 @@
+{
+  "id": "1a6e4137",
+  "type": "chore",
+  "state": "done",
+  "summary": "Schema — preferred_voice + sessions.voice columns",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:18.618Z",
+  "updated_at": "2026-05-14T19:59:26.311Z",
+  "files": [
+    {
+      "path": "migrations/012_chat_voice.sql"
+    }
+  ],
+  "tags": [
+    "schema",
+    "migration",
+    "voice"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90"
+    ]
+  },
+  "description": "IMPL §4. New migration 012_chat_voice.sql adding user_preferences.preferred_voice and sessions.voice columns (both TEXT NOT NULL DEFAULT 'scholar', no CHECK — validated in app code per preferred_model pattern). Extend src/lib/types.ts UserPreferences with preferredVoice: VoiceSlug. Extend src/lib/prefs.ts loadPrefs SELECT list and return shape. See IMPL §4.",
+  "resolution": {
+    "commit": "14bcc569cf6372ffee48425bbbec4adef56373de",
+    "resolved_at": "2026-05-14T19:59:26.311Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/prefs.test.ts",
+    "test_function": "returns preferred_voice from the row when present",
+    "note": "Migration 012 (idempotent ADD COLUMN IF NOT EXISTS x2). VoiceSlug moved to types.ts (canonical home). UserPreferences gains preferredVoice: VoiceSlug. loadPreferences SELECTs + maps with defensive fallback for unknown slugs. savePreferences writes both INSERT and UPDATE paths. Preferences API PUT carries the field through unchanged; ticket 6 will add write-validation. 6 new prefs tests + 4 fixture updates. 320 total tests pass."
+  }
+}
