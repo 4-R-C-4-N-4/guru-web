@@ -89,7 +89,6 @@ const mockPrefs  = prefs.loadPreferences  as MockedFunction<typeof prefs.loadPre
 const mockSavePrefs = prefs.savePreferences as MockedFunction<typeof prefs.savePreferences>;
 const mockReserveBudget  = spend.reserveBudget  as MockedFunction<typeof spend.reserveBudget>;
 const mockFinalizeBudget = spend.finalizeBudget as MockedFunction<typeof spend.finalizeBudget>;
-const mockGetBudget      = spend.getBudget      as MockedFunction<typeof spend.getBudget>;
 const mockComputeCost    = cost.computeCost     as MockedFunction<typeof cost.computeCost>;
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
