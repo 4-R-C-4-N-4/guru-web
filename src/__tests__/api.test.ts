@@ -296,6 +296,16 @@ describe('GET /api/preferences', () => {
     const body = await res.json() as typeof DEFAULT_PREFS;
     expect(res.status).toBe(200);
     expect(body.scopeMode).toBe('all');
+    expect(body.preferredVoice).toBe('scholar');
+  });
+
+  it('returns preferredVoice from storage', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+
+    const res = await prefsGET();
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(body.preferredVoice).toBe('woowoo');
   });
 });
 
@@ -372,6 +382,85 @@ describe('PUT /api/preferences — preferredModel', () => {
     const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: 'frontier-bogus' }));
     expect(res.status).toBe(400);
     expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+});
+
+// ── preferredVoice validation + pro gate (BRD-chat-voice §6, IMPL §6, todo:e66c39c9) ──
+describe('PUT /api/preferences — preferredVoice', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('pro user can write preferredVoice=woowoo', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'woowoo' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredVoice).toBe('woowoo');
+    const [, savedPrefs] = mockSavePrefs.mock.calls[0]!;
+    expect(savedPrefs.preferredVoice).toBe('woowoo');
+  });
+
+  it('pro user can write preferredVoice=scholar (revert to default)', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'scholar' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredVoice).toBe('scholar');
+  });
+
+  it('free user may write preferredVoice=scholar (no-op write allowed)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'scholar' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('free user attempting preferredVoice=woowoo is rejected with 403', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'woowoo' }));
+    expect(res.status).toBe(403);
+    const body = await res.json() as { error: string };
+    expect(body.error).toMatch(/Pro/i);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it('rejects unknown voice slug with 400 for any tier', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'sage-of-atlantis' }));
+    expect(res.status).toBe(400);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it('rejects null preferredVoice with 400 (not a known slug)', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: null }));
+    expect(res.status).toBe(400);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it('keeps existing preferredVoice when field absent from body', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { scopeMode: 'all' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(body.preferredVoice).toBe('woowoo');
   });
 });
 
