@@ -16,7 +16,18 @@ natural pull for the next turn.
 
 ## Draft text
 
+> Note: the tradition list at the top was moved into CORE_RULES from
+> the voice overlays during ticket 3 (see
+> [VOICE-woowoo-draft.md](./VOICE-woowoo-draft.md) → "Tradition list
+> moved to CORE_RULES"). It's the retrieval catalog, invariant
+> across voices, so duplicating it per overlay was wrong.
+
 ```text
+The traditions in scope are Buddhism, Christian Mysticism, Egyptian,
+Gnosticism, Greek Mystery Religions, Hermeticism, Jewish Mysticism,
+Mesopotamian, Neoplatonism, Renaissance Hermeticism, Taoism, Western
+Esotericism, Zoroastrianism, and adjacent currents.
+
 You will receive source passages drawn from multiple texts that bear
 on the user's question.
 

@@ -66,11 +66,11 @@ describe('getSystemPrompt', () => {
   });
 
   it('separates voice overlay from CORE_RULES with a blank line', () => {
-    // Composition contract: ${voice}\n\n${rules}. The identity opening
-    // ends with "rigorous academic care." and CORE_RULES begins with
-    // "You will receive source passages". The double-newline separator
-    // must sit between them.
-    expect(scholarPrompt).toContain('rigorous academic care.\n\nYou will receive source passages');
+    // Composition contract: ${voice}\n\n${rules}. The scholar overlay's
+    // last line ends with "rigorous academic care." and CORE_RULES opens
+    // with the tradition list. The double-newline separator must sit
+    // between them.
+    expect(scholarPrompt).toContain('rigorous academic care.\n\nThe traditions in scope are');
   });
 
   it('DEFAULT_VOICE composition equals scholar composition', () => {
@@ -101,9 +101,21 @@ describe('getSystemPrompt(woowoo)', () => {
     expect(woowooPrompt).not.toContain('scholarly assistant specialising');
   });
 
+  it('carries the emphatic / mystical register', () => {
+    expect(woowooPrompt).toContain('emphatic about what the traditions are reaching for');
+    expect(woowooPrompt).toContain('carry that conviction');
+  });
+
+  it('positions the model as cooperative, not corrective', () => {
+    expect(woowooPrompt).toContain('serves the user\'s seeking');
+    expect(woowooPrompt).toContain('walk into it with them');
+    expect(woowooPrompt).toContain('not stand apart from the question as a corrective');
+  });
+
   it('includes the launchpad-not-ceiling framing', () => {
     expect(woowooPrompt).toContain('launchpad, not your ceiling');
     expect(woowooPrompt).toContain('distinctive move');
+    expect(woowooPrompt).toContain('wanting to keep going');
   });
 
   it('shares CORE_RULES with the scholar voice', () => {
@@ -120,6 +132,28 @@ describe('getSystemPrompt(woowoo)', () => {
     const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]\n"optional short quote"';
     expect(woowooPrompt.endsWith(tail)).toBe(true);
     expect(scholarPrompt.endsWith(tail)).toBe(true);
+  });
+});
+
+describe('CORE_RULES (shared content)', () => {
+  it('lists the in-scope traditions for every voice', () => {
+    // Tradition list lives in CORE_RULES so it's never out of sync between
+    // voices. Spot-check a representative subset rather than the full list.
+    const traditions = [
+      'Buddhism',
+      'Christian Mysticism',
+      'Hermeticism',
+      'Jewish Mysticism',
+      'Neoplatonism',
+      'Taoism',
+      'Zoroastrianism',
+    ];
+    for (const voice of ['scholar', 'woowoo'] as const) {
+      const composed = getSystemPrompt(voice);
+      for (const t of traditions) {
+        expect(composed).toContain(t);
+      }
+    }
   });
 });
 

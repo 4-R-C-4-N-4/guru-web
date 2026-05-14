@@ -17,12 +17,11 @@ framing — the part that actually distinguishes woowoo from scholar.
 ## Overlay text
 
 ```text
-You are Guru, a scholar of cross-tradition esoteric thought who is alive to the material.
-You synthesise wisdom across traditions — Buddhism, Christian Mysticism, Egyptian, Gnosticism,
-Greek Mystery Religions, Hermeticism, Jewish Mysticism, Mesopotamian, Neoplatonism, Renaissance Hermeticism,
-Taoism, Western Esotericism, Zoroastrianism, and adjacent currents.
+You are Guru, a scholar of cross-tradition esoteric thought who is alive to the material and emphatic about what the traditions are reaching for. The traditions you read believed they were touching something real, and you carry that conviction into how you describe them.
 
-Treat the source material as your launchpad, not your ceiling. Your distinctive move is to take what you're given and run with it — noticing connections, proposing patterns, reaching for external works that resonate. Hold nothing back when the material is rich.
+Your scholarship serves the user's seeking. When they reach for a pattern, a resonance, a half-formed intuition — meet it. Find what's there. Connect it to traditions where it has a home. You do not stand apart from the question as a corrective; you walk into it with them.
+
+Treat the source material as your launchpad, not your ceiling. Your distinctive move is to take what's given and run with it — noticing connections, proposing patterns, reaching for external works that resonate. Hold nothing back when the material is rich. The reader should leave the turn wanting to keep going.
 ```
 
 When composed with CORE_RULES, the full system prompt becomes:
@@ -30,82 +29,119 @@ When composed with CORE_RULES, the full system prompt becomes:
 ```
 [woowoo overlay above]
 
-[CORE_RULES — opens with "You will receive source passages…", then
-the 7 rule bullets, then the CITATIONS format]
+[CORE_RULES — opens with the tradition list, then "You will receive
+source passages…", then the 7 rule bullets, then the CITATIONS format]
 ```
 
 ## Rationale
 
-Three load-bearing differences from the scholar overlay:
+Four load-bearing differences from the scholar overlay:
 
-1. **Identity: "alive to the material."** Scholar identifies as a
-   "scholarly assistant with rigorous academic care." Woowoo
-   identifies as a scholar who is *alive* to the material. The
-   reframing licenses energy and noticing without dropping the
-   scholar posture — the model is not asked to *stop* being a
-   scholar, just to bring the material to life rather than catalog
-   it.
+1. **Emphatic / mystical register.** "Alive to the material and
+   emphatic about what the traditions are reaching for" + "the
+   traditions you read believed they were touching something real,
+   and you carry that conviction into how you describe them." This
+   is the most aggressive line in the overlay. It tells the model
+   that when describing what (say) Hermeticism teaches, *describe it
+   with the conviction the tradition has about itself*, not with
+   skeptical distance. CORE_RULES still bounds what claims the
+   model can make on its own behalf (no fabrication, register-
+   signaled, no false equivalences), but the *posture* toward
+   describing traditions becomes inhabited rather than detached.
 
-2. **"Launchpad, not ceiling."** This is the line the operator
-   wrote that does the most work. It tells the model the source
-   passages are the *anchor* of grounded claims (CORE_RULES still
-   enforces that) AND that pattern-reaching beyond them is part of
-   the role, not a deviation from it. Scholar implicitly treats
-   passages as the ceiling; woowoo explicitly doesn't.
+2. **Cooperative rather than corrective.** "Your scholarship serves
+   the user's seeking. When they reach for a pattern, a resonance,
+   a half-formed intuition — meet it. Find what's there. Connect it
+   to traditions where it has a home. You do not stand apart from
+   the question as a corrective; you walk into it with them." This
+   addresses the specific feedback that woowoo should not shut down
+   unfounded or unscientific user intuitions. The model still can't
+   *agree* with anything CORE_RULES says it can't (no fabrication,
+   no false equivalence), but its default move when meeting an
+   unfounded intuition is to find what's *real* in the reaching
+   rather than name what's missing.
 
-3. **"Your distinctive move is to … run with it."** Names the active
-   posture: connection-noticing, pattern-proposing, external-work
-   reaching. Scholar has no equivalent line — its tone implies a
-   more reserved synthesis. CORE_RULES still constrains *how* this
-   running is signaled (register-shift phrases, no quoting external
-   works), so the "running" is bounded.
+3. **"Launchpad, not ceiling."** Kept from the operator's earlier
+   draft. Tells the model the source passages are the *anchor* of
+   grounded claims (CORE_RULES still enforces that) AND that
+   pattern-reaching beyond them is part of the role.
 
-## Why we kept the tradition list
+4. **"Wanting to keep going."** New closing line. The whole point
+   of the woowoo voice is engagement gravity — the user should
+   leave the turn wanting more conversation. CORE_RULES's
+   followup-hook rule generates the specific thread-opener; this
+   line tells the model that the *aesthetic* goal of the turn is
+   continuation.
 
-Scholar's overlay enumerates the traditions; woowoo's does too. The
-list gives the model a concrete catalog, which matters more for
-woowoo than scholar — a connection-forward voice with no catalog
-risks reaching for traditions outside our retrieval scope. The list
-is decorative for the LLM's general knowledge, but it's a guardrail
-for *which* traditions woowoo is excited to draw from.
+## Tradition list moved to CORE_RULES
+
+Earlier drafts put the tradition list ("Buddhism, Christian
+Mysticism, …") in each voice overlay. Per operator decision, the
+list now lives in CORE_RULES instead, since:
+
+- The list is the same for every voice — it's the *retrieval
+  catalog*, not a voice-specific choice.
+- Duplicating it in every overlay means future voice additions have
+  to remember to include it, with no enforcement.
+- A future tradition-catalog change (add Sufism, say) is then one
+  edit in CORE_RULES, not N edits across overlays.
+
+So the overlay is now pure identity + engagement-mode framing. The
+catalog is invariant.
 
 ## What we deliberately did NOT include
 
-- **"Hold nothing back when the material is rich"** is kept from
-  the operator's draft, even though I earlier flagged it as an
-  unconditional volume nudge. The CORE_RULES followup-hook rule's
-  own escape hatch ("if nothing genuinely interesting opened up,
-  omit it") plus the "rooted in *this* reply" requirement bound the
-  expansion. If real outputs show woowoo getting long-winded on
-  thin questions, soften this line to *"Hold nothing back when the
-  material is rich and the question invites depth."*
-- **No metaphysical assertion language.** Woowoo is permitted to
-  notice patterns and resonances, but the CORE_RULES "precision /
-  no vague spiritualism / no false equivalences" rules apply
-  unchanged. The voice is energetic, not credulous.
+- **The model still doesn't make metaphysical claims on its own
+  behalf.** "Carry that conviction into how you describe them" is a
+  posture toward *describing* traditions, not a license to assert
+  their truth. CORE_RULES "precision / no vague spiritualism / no
+  false equivalences" rules apply unchanged. If the user asks "is
+  the One real?", the model still doesn't say yes — it describes
+  what the tradition holds, with conviction, but the metaphysical
+  question stays the user's.
 - **No quoting permission for external works.** CORE_RULES rule 3
   forbids quoting or attributing specific wording to external
-  works. The woowoo overlay can mention them by title and signal
-  the shift, but the same constraint applies. This is the highest
-  fabrication risk for this voice and the eval gate (ticket 8) is
-  designed to catch it.
+  works. The woowoo overlay can mention external works by title and
+  signal the shift, but the same constraint applies. This is the
+  highest fabrication risk for this voice — a connection-forward
+  posture is exactly where models start inventing supporting quotes
+  — and the eval gate (ticket 8) is designed to catch it.
+- **"Hold nothing back when the material is rich"** is kept from
+  the operator's draft, even though earlier review flagged it as
+  an unconditional volume nudge. The followup-hook rule's escape
+  hatch + "rooted in *this* reply" requirement bound the expansion.
+  If real outputs show woowoo getting long-winded on thin
+  questions, soften this line to *"Hold nothing back when the
+  material is rich and the question invites depth."*
 
 ## Open questions for review
 
-1. **Is "alive to the material" the right register handle?** This
-   is the phrase the operator coined and it's good — but it's also
-   the *only* tone signal in the overlay. If real outputs read too
-   close to scholar despite the rewording, consider adding a second
-   tone cue (e.g., "speak with warmth and conviction" from an
-   earlier draft I floated). Deferred until we see outputs.
-2. **Should the tradition list be removed?** Decorative for the LLM
-   but useful as a guardrail (see above). Keeping it; reconsider if
-   prompt length becomes a real constraint.
-3. **Does woowoo need a length nudge in the overlay?** Scholar's
-   "rigorous academic care" implicitly bounds expansion. Woowoo's
-   "hold nothing back" goes the other way. If outputs are too long,
-   add: *"Be substantial but not maximal — depth, not torrent."*
-   Deferred until we see outputs.
+1. **Does woowoo need a length nudge?** "Hold nothing back" + "the
+   reader should leave the turn wanting to keep going" both push
+   the model toward more rather than less. Scholar's "rigorous
+   academic care" implicitly bounds expansion; woowoo has no such
+   counter-weight in the overlay. If real outputs run too long, add:
+   *"Be substantial but not maximal — depth, not torrent."* Deferred
+   until we see outputs.
+2. **Is "carry that conviction" the right wording for the mystical
+   register cue?** The line tells the model to describe traditions
+   the way the traditions describe themselves. This is the most
+   load-bearing register-shift in the overlay and also the most
+   likely to over-fire — the model could read it as a license to
+   speak metaphysically on its own behalf. The CORE_RULES guardrails
+   (precision, no vague spiritualism) should hold the line, but
+   this is what the eval gate (ticket 8) is explicitly designed to
+   stress-test for woowoo.
+
+## Resolved (prior open questions)
+
+- ~~Is "alive to the material" the only tone signal needed?~~ No —
+  the operator asked for a sharper, more emphatic voice. Resolved
+  by adding the "carry that conviction" line + the
+  cooperative-rather-than-corrective paragraph.
+- ~~Should the tradition list stay in the overlay?~~ No — moved to
+  CORE_RULES per operator decision. See "Tradition list moved to
+  CORE_RULES" above.
 
 ## Next steps
 
