@@ -1,21 +1,33 @@
-# CORE_RULES — draft
+# CORE_RULES — shipped
 
-Status: **draft, not shipped**. This is the authored text for the
-invariant rule block that all future voices will compose with. Where
-and how it lands in `src/lib/prompt.ts` is a separate decision; see
-[BRD-chat-voice.md](./BRD-chat-voice.md) §3 for the architectural
-context.
+Status: **shipped in PR #67 (commit `1d4c581`, merged as `c66bee9`)**.
+This file is kept as the authoring history and the source-of-truth
+description of the rule set. The live prompt copy lives inline in
+`src/lib/prompt.ts`; the *structural* split into a named `CORE_RULES`
+export + `VOICE_OVERLAY` map + `getSystemPrompt(voice)` happens in
+ticket 2 (BRD §3 / IMPL §2), behavior-preserving.
 
-The driving change versus the current `SYSTEM_PROMPT` in
-`src/lib/prompt.ts:17`: a **followup-hook rule** that requires each
-reply to end with a specific thread-opener rooted in the reply itself.
-This addresses the engagement problem — that the current prompt
-produces polished but conversation-terminating answers, leaving the
-user with no natural pull for the next turn.
+The headline change versus the prior `SYSTEM_PROMPT`: a
+**followup-hook rule** that requires each reply to end with a
+specific thread-opener rooted in the reply itself. This addressed
+the engagement problem — that the prior prompt produced polished
+but conversation-terminating answers, leaving the user with no
+natural pull for the next turn.
 
 ## Draft text
 
+> Note: the tradition list at the top was moved into CORE_RULES from
+> the voice overlays during ticket 3 (see
+> [VOICE-woowoo-draft.md](./VOICE-woowoo-draft.md) → "Tradition list
+> moved to CORE_RULES"). It's the retrieval catalog, invariant
+> across voices, so duplicating it per overlay was wrong.
+
 ```text
+The traditions in scope are Buddhism, Christian Mysticism, Egyptian,
+Gnosticism, Greek Mystery Religions, Hermeticism, Jewish Mysticism,
+Mesopotamian, Neoplatonism, Renaissance Hermeticism, Taoism, Western
+Esotericism, Zoroastrianism, and adjacent currents.
+
 You will receive source passages drawn from multiple texts that bear
 on the user's question.
 

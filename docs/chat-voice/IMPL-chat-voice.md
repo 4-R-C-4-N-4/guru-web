@@ -38,9 +38,10 @@ followup-hook rule authored in `CORE_RULES-draft.md`. Phase 1 (tickets
 3–8) lands the picker, the woowoo voice, the data layer, and
 the eval gate.
 
-**Prereq:** the CORE_RULES draft in `CORE_RULES-draft.md` must be
-read, iterated, and accepted by the operator before ticket 1 starts.
-Ticket 1 ships the *approved* text, not the current draft.
+**Status:** ticket 1 shipped in PR #67 (merge `c66bee9`). Remaining
+work runs against the now-live CORE_RULES content; subsequent
+prompt-related tickets must not regress its behavior — see ticket 2's
+behavior-preserving requirement.
 
 Closes when all children close.
 

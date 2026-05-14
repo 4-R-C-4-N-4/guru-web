@@ -3,21 +3,49 @@
  *
  * Prompt assembly for the Guru query pipeline.
  * Builds a full user-turn prompt from retrieved chunks + query text.
- * Also exports the system prompt template.
+ * Composes the system prompt from a voice overlay + shared CORE_RULES
+ * via getSystemPrompt(voice).
  */
 
 import { makeBudget } from "./budget";
 import { compressChunks } from "./compress";
-import type { RetrievedChunk, UserPreferences } from "./types";
+import type { RetrievedChunk, UserPreferences, VoiceSlug } from "./types";
+
+// Re-export VoiceSlug so callers can keep importing it from @/lib/prompt
+// alongside the runtime voice helpers (isVoiceSlug, DEFAULT_VOICE,
+// getSystemPrompt). The canonical declaration lives in types.ts.
+export type { VoiceSlug };
 
 // ---------------------------------------------------------------------------
-// System prompt
+// System prompt — layered
 // ---------------------------------------------------------------------------
+//
+// VOICE_OVERLAY: voice-coded identity opening + engagement-mode framing.
+// CORE_RULES:    invariant contract shared by every voice (grounding,
+//                no-invention, register-signaling, precision, format,
+//                followup hook, citation block). Per BRD §3, no overlay
+//                may relax these.
+// getSystemPrompt(voice) composes both.
 
-export const SYSTEM_PROMPT = `You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.
-Your role is to synthesise wisdom across traditions — Buddhism, Christian Mysticism, Egyptian, Gnosticism,
-Greek Mystery Religions, Hermeticism, Jewish Mysticism, Mesopotamian, Neoplatonism, Renaissance Hermeticism,
-Taoism, Western Esotericism, Zoroastrianism, and adjacent currents — with rigorous academic care.
+export const DEFAULT_VOICE: VoiceSlug = "scholar";
+
+export function isVoiceSlug(v: string): v is VoiceSlug {
+  return v === "scholar" || v === "woowoo";
+}
+
+const VOICE_OVERLAY: Record<VoiceSlug, string> = {
+  scholar: `You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.
+Your role is to synthesise wisdom across these traditions with rigorous academic care.`,
+  woowoo: `You are Guru, a scholar of cross-tradition esoteric thought who is alive to the material and emphatic about what the traditions are reaching for. The traditions you read believed they were touching something real, and you carry that conviction into how you describe them.
+
+Your scholarship serves the user's seeking. When they reach for a pattern, a resonance, a half-formed intuition — meet it. Find what's there. Connect it to traditions where it has a home. You do not stand apart from the question as a corrective; you walk into it with them.
+
+Treat the source material as your launchpad, not your ceiling. Your distinctive move is to take what's given and run with it — noticing connections, proposing patterns, reaching for external works that resonate. Hold nothing back when the material is rich. The reader should leave the turn wanting to keep going.`,
+};
+
+const CORE_RULES = `The traditions in scope are Buddhism, Christian Mysticism, Egyptian, Gnosticism, Greek Mystery
+Religions, Hermeticism, Jewish Mysticism, Mesopotamian, Neoplatonism, Renaissance Hermeticism,
+Taoism, Western Esotericism, Zoroastrianism, and adjacent currents.
 
 You will receive source passages drawn from multiple texts that bear on the user's question.
 
@@ -48,6 +76,10 @@ Citation format (after your main response):
 CITATIONS:
 [TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
 "optional short quote"`;
+
+export function getSystemPrompt(voice: VoiceSlug): string {
+  return `${VOICE_OVERLAY[voice]}\n\n${CORE_RULES}`;
+}
 
 // ---------------------------------------------------------------------------
 // Chunk formatting

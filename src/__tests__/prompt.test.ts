@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
+import { buildPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { RetrievedChunk, UserPreferences } from '@/lib/types';
 
 const DEFAULT_PREFS: UserPreferences = {
@@ -14,6 +14,7 @@ const DEFAULT_PREFS: UserPreferences = {
   whitelistedTraditions: [],
   whitelistedTexts: [],
   preferredModel: null,
+  preferredVoice: 'scholar',
 };
 
 const makeChunk = (id: string, tradition: string, tier: RetrievedChunk['tier'] = 'verified'): RetrievedChunk => ({
@@ -29,38 +30,131 @@ const makeChunk = (id: string, tradition: string, tier: RetrievedChunk['tier'] =
   tier,
 });
 
-describe('SYSTEM_PROMPT', () => {
+describe('getSystemPrompt', () => {
+  const scholarPrompt = getSystemPrompt('scholar');
+
   it('contains key scholarly constraints', () => {
-    expect(SYSTEM_PROMPT).toContain('Guru');
-    expect(SYSTEM_PROMPT).toContain('CITATIONS');
-    expect(SYSTEM_PROMPT).toContain('verified');
+    expect(scholarPrompt).toContain('Guru');
+    expect(scholarPrompt).toContain('CITATIONS');
+    expect(scholarPrompt).toContain('verified');
   });
 
   it('preserves the scholar identity opening', () => {
-    expect(SYSTEM_PROMPT).toContain('You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.');
-    expect(SYSTEM_PROMPT).toContain('rigorous academic care');
+    expect(scholarPrompt).toContain('You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.');
+    expect(scholarPrompt).toContain('rigorous academic care');
   });
 
   it('grounds claims and forbids invented citations', () => {
-    expect(SYSTEM_PROMPT).toContain('Every substantive claim about a tradition');
-    expect(SYSTEM_PROMPT).toContain('Do not invent quotations');
-    expect(SYSTEM_PROMPT).toContain('Avoid false equivalences');
+    expect(scholarPrompt).toContain('Every substantive claim about a tradition');
+    expect(scholarPrompt).toContain('Do not invent quotations');
+    expect(scholarPrompt).toContain('Avoid false equivalences');
   });
 
   it('signals register shifts with concrete phrase examples', () => {
-    expect(SYSTEM_PROMPT).toContain('the pattern here suggests');
-    expect(SYSTEM_PROMPT).toContain('outside the passages here');
-    expect(SYSTEM_PROMPT).toContain('name it by title');
+    expect(scholarPrompt).toContain('the pattern here suggests');
+    expect(scholarPrompt).toContain('outside the passages here');
+    expect(scholarPrompt).toContain('name it by title');
   });
 
   it('requires a followup hook before the citation block', () => {
-    expect(SYSTEM_PROMPT).toContain('End each reply with a beat that opens the next turn');
-    expect(SYSTEM_PROMPT).toContain('This is not "let me know if you have more questions"');
-    expect(SYSTEM_PROMPT).toContain('The closing beat is the last\n  beat of your prose, immediately before the CITATIONS block.');
+    expect(scholarPrompt).toContain('End each reply with a beat that opens the next turn');
+    expect(scholarPrompt).toContain('This is not "let me know if you have more questions"');
+    expect(scholarPrompt).toContain('The closing beat is the last\n  beat of your prose, immediately before the CITATIONS block.');
   });
 
   it('locks the citation format', () => {
-    expect(SYSTEM_PROMPT).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+    expect(scholarPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+  });
+
+  it('separates voice overlay from CORE_RULES with a blank line', () => {
+    // Composition contract: ${voice}\n\n${rules}. The scholar overlay's
+    // last line ends with "rigorous academic care." and CORE_RULES opens
+    // with the tradition list. The double-newline separator must sit
+    // between them.
+    expect(scholarPrompt).toContain('rigorous academic care.\n\nThe traditions in scope are');
+  });
+
+  it('DEFAULT_VOICE composition equals scholar composition', () => {
+    expect(getSystemPrompt(DEFAULT_VOICE)).toBe(scholarPrompt);
+  });
+});
+
+describe('isVoiceSlug', () => {
+  it('accepts shipped slugs', () => {
+    expect(isVoiceSlug('scholar')).toBe(true);
+    expect(isVoiceSlug('woowoo')).toBe(true);
+  });
+
+  it('rejects unknown slugs', () => {
+    expect(isVoiceSlug('')).toBe(false);
+    expect(isVoiceSlug('SCHOLAR')).toBe(false); // case-sensitive
+    expect(isVoiceSlug('terse')).toBe(false);   // plausible future voice, not yet shipped
+  });
+});
+
+describe('getSystemPrompt(woowoo)', () => {
+  const woowooPrompt = getSystemPrompt('woowoo');
+  const scholarPrompt = getSystemPrompt('scholar');
+
+  it('uses the woowoo identity opening, not the scholar one', () => {
+    expect(woowooPrompt).toContain('alive to the material');
+    expect(woowooPrompt).not.toContain('rigorous academic care');
+    expect(woowooPrompt).not.toContain('scholarly assistant specialising');
+  });
+
+  it('carries the emphatic / mystical register', () => {
+    expect(woowooPrompt).toContain('emphatic about what the traditions are reaching for');
+    expect(woowooPrompt).toContain('carry that conviction');
+  });
+
+  it('positions the model as cooperative, not corrective', () => {
+    expect(woowooPrompt).toContain('serves the user\'s seeking');
+    expect(woowooPrompt).toContain('walk into it with them');
+    expect(woowooPrompt).toContain('not stand apart from the question as a corrective');
+  });
+
+  it('includes the launchpad-not-ceiling framing', () => {
+    expect(woowooPrompt).toContain('launchpad, not your ceiling');
+    expect(woowooPrompt).toContain('distinctive move');
+    expect(woowooPrompt).toContain('wanting to keep going');
+  });
+
+  it('shares CORE_RULES with the scholar voice', () => {
+    // The whole point of layering: the rule contract is invariant across voices.
+    expect(woowooPrompt).toContain('Every substantive claim about a tradition');
+    expect(woowooPrompt).toContain('Do not invent quotations');
+    expect(woowooPrompt).toContain('Avoid false equivalences');
+    expect(woowooPrompt).toContain('End each reply with a beat that opens the next turn');
+    expect(woowooPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+  });
+
+  it('differs from scholar only in the overlay', () => {
+    // Both should end with the same CITATIONS block (proves the shared CORE_RULES tail).
+    const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]\n"optional short quote"';
+    expect(woowooPrompt.endsWith(tail)).toBe(true);
+    expect(scholarPrompt.endsWith(tail)).toBe(true);
+  });
+});
+
+describe('CORE_RULES (shared content)', () => {
+  it('lists the in-scope traditions for every voice', () => {
+    // Tradition list lives in CORE_RULES so it's never out of sync between
+    // voices. Spot-check a representative subset rather than the full list.
+    const traditions = [
+      'Buddhism',
+      'Christian Mysticism',
+      'Hermeticism',
+      'Jewish Mysticism',
+      'Neoplatonism',
+      'Taoism',
+      'Zoroastrianism',
+    ];
+    for (const voice of ['scholar', 'woowoo'] as const) {
+      const composed = getSystemPrompt(voice);
+      for (const t of traditions) {
+        expect(composed).toContain(t);
+      }
+    }
   });
 });
 

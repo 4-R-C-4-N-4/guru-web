@@ -47,7 +47,9 @@ vi.mock('@/lib/retriever', () => ({
 
 vi.mock('@/lib/prompt', () => ({
   buildPrompt: vi.fn(),
-  SYSTEM_PROMPT: 'mock system prompt',
+  getSystemPrompt: vi.fn(() => 'mock system prompt'),
+  DEFAULT_VOICE: 'scholar' as const,
+  isVoiceSlug: vi.fn((v: string) => v === 'scholar'),
 }));
 
 vi.mock('@/lib/model', async () => {
@@ -87,7 +89,6 @@ const mockPrefs  = prefs.loadPreferences  as MockedFunction<typeof prefs.loadPre
 const mockSavePrefs = prefs.savePreferences as MockedFunction<typeof prefs.savePreferences>;
 const mockReserveBudget  = spend.reserveBudget  as MockedFunction<typeof spend.reserveBudget>;
 const mockFinalizeBudget = spend.finalizeBudget as MockedFunction<typeof spend.finalizeBudget>;
-const mockGetBudget      = spend.getBudget      as MockedFunction<typeof spend.getBudget>;
 const mockComputeCost    = cost.computeCost     as MockedFunction<typeof cost.computeCost>;
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
@@ -122,6 +123,7 @@ const DEFAULT_PREFS = {
   blockedTraditions: [], blockedTexts: [],
   whitelistedTraditions: [], whitelistedTexts: [],
   preferredModel: null,
+  preferredVoice: 'scholar' as const,
 };
 const PRO_USER  = { id: 'user_2', email: 'p@b.com', tier: 'pro'  as const, stripe_customer_id: 'cus_x', payment_state: null };
 

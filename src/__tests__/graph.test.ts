@@ -79,6 +79,7 @@ describe('walkGraph — chunks-query param alignment', () => {
       whitelistedTraditions: [],
       whitelistedTexts: [],
       preferredModel: null,
+      preferredVoice: 'scholar',
     };
 
     await walkGraph(['concept-a'], prefs, 25);
@@ -98,6 +99,7 @@ describe('walkGraph — chunks-query param alignment', () => {
       whitelistedTraditions: [],
       whitelistedTexts: [],
       preferredModel: null,
+      preferredVoice: 'scholar',
     };
 
     await walkGraph(['concept-a'], prefs, 25);
@@ -118,6 +120,7 @@ describe('walkGraph — chunks-query param alignment', () => {
       whitelistedTraditions: ['neoplatonism'],
       whitelistedTexts: ['enneads'],
       preferredModel: null,
+      preferredVoice: 'scholar',
     };
 
     await walkGraph(['concept-a'], prefs, 25);

@@ -19,7 +19,7 @@
 
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
-import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
+import { buildPrompt, getSystemPrompt, DEFAULT_VOICE } from '@/lib/prompt';
 import { completeStream } from '@/lib/model';
 import { loadSessionHistory, type ChatMessage } from '@/lib/history';
 import {
@@ -142,8 +142,12 @@ export async function POST(req: Request) {
     ? prefs.preferredModel
     : DEFAULT_CURATED_SLUG;
   const modelId = resolveCuratedModel(slug);
+  // Compose once and reuse — both the token estimate and the streamed
+  // message read from the same string. Ticket 5 will swap DEFAULT_VOICE
+  // for the session's snapshotted voice; for now there's only scholar.
+  const systemPrompt = getSystemPrompt(DEFAULT_VOICE);
   const estimatedInputTokens = Math.ceil(
-    (SYSTEM_PROMPT.length + historyChars + prompt.length) / 4,
+    (systemPrompt.length + historyChars + prompt.length) / 4,
   );
   const { cost_usd: estimatedCostUsd } = await computeCost({
     modelId,
@@ -180,7 +184,7 @@ export async function POST(req: Request) {
   // gives the model the context to resolve referents like "it" across
   // turns. Spec: BRD-conversation-continuity §4.5.
   const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     ...history,
     { role: 'user',   content: prompt },
   ];
