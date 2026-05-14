@@ -81,12 +81,45 @@ describe('getSystemPrompt', () => {
 describe('isVoiceSlug', () => {
   it('accepts shipped slugs', () => {
     expect(isVoiceSlug('scholar')).toBe(true);
+    expect(isVoiceSlug('woowoo')).toBe(true);
   });
 
   it('rejects unknown slugs', () => {
-    expect(isVoiceSlug('woowoo')).toBe(false); // ticket 3 adds this
     expect(isVoiceSlug('')).toBe(false);
     expect(isVoiceSlug('SCHOLAR')).toBe(false); // case-sensitive
+    expect(isVoiceSlug('terse')).toBe(false);   // plausible future voice, not yet shipped
+  });
+});
+
+describe('getSystemPrompt(woowoo)', () => {
+  const woowooPrompt = getSystemPrompt('woowoo');
+  const scholarPrompt = getSystemPrompt('scholar');
+
+  it('uses the woowoo identity opening, not the scholar one', () => {
+    expect(woowooPrompt).toContain('alive to the material');
+    expect(woowooPrompt).not.toContain('rigorous academic care');
+    expect(woowooPrompt).not.toContain('scholarly assistant specialising');
+  });
+
+  it('includes the launchpad-not-ceiling framing', () => {
+    expect(woowooPrompt).toContain('launchpad, not your ceiling');
+    expect(woowooPrompt).toContain('distinctive move');
+  });
+
+  it('shares CORE_RULES with the scholar voice', () => {
+    // The whole point of layering: the rule contract is invariant across voices.
+    expect(woowooPrompt).toContain('Every substantive claim about a tradition');
+    expect(woowooPrompt).toContain('Do not invent quotations');
+    expect(woowooPrompt).toContain('Avoid false equivalences');
+    expect(woowooPrompt).toContain('End each reply with a beat that opens the next turn');
+    expect(woowooPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+  });
+
+  it('differs from scholar only in the overlay', () => {
+    // Both should end with the same CITATIONS block (proves the shared CORE_RULES tail).
+    const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]\n"optional short quote"';
+    expect(woowooPrompt.endsWith(tail)).toBe(true);
+    expect(scholarPrompt.endsWith(tail)).toBe(true);
   });
 });
 
