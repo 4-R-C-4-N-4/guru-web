@@ -47,7 +47,9 @@ vi.mock('@/lib/retriever', () => ({
 
 vi.mock('@/lib/prompt', () => ({
   buildPrompt: vi.fn(),
-  SYSTEM_PROMPT: 'mock system prompt',
+  getSystemPrompt: vi.fn(() => 'mock system prompt'),
+  DEFAULT_VOICE: 'scholar' as const,
+  isVoiceSlug: vi.fn((v: string) => v === 'scholar'),
 }));
 
 vi.mock('@/lib/model', async () => {

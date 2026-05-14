@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildPrompt, SYSTEM_PROMPT } from '@/lib/prompt';
+import { buildPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { RetrievedChunk, UserPreferences } from '@/lib/types';
 
 const DEFAULT_PREFS: UserPreferences = {
@@ -29,38 +29,64 @@ const makeChunk = (id: string, tradition: string, tier: RetrievedChunk['tier'] =
   tier,
 });
 
-describe('SYSTEM_PROMPT', () => {
+describe('getSystemPrompt', () => {
+  const scholarPrompt = getSystemPrompt('scholar');
+
   it('contains key scholarly constraints', () => {
-    expect(SYSTEM_PROMPT).toContain('Guru');
-    expect(SYSTEM_PROMPT).toContain('CITATIONS');
-    expect(SYSTEM_PROMPT).toContain('verified');
+    expect(scholarPrompt).toContain('Guru');
+    expect(scholarPrompt).toContain('CITATIONS');
+    expect(scholarPrompt).toContain('verified');
   });
 
   it('preserves the scholar identity opening', () => {
-    expect(SYSTEM_PROMPT).toContain('You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.');
-    expect(SYSTEM_PROMPT).toContain('rigorous academic care');
+    expect(scholarPrompt).toContain('You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.');
+    expect(scholarPrompt).toContain('rigorous academic care');
   });
 
   it('grounds claims and forbids invented citations', () => {
-    expect(SYSTEM_PROMPT).toContain('Every substantive claim about a tradition');
-    expect(SYSTEM_PROMPT).toContain('Do not invent quotations');
-    expect(SYSTEM_PROMPT).toContain('Avoid false equivalences');
+    expect(scholarPrompt).toContain('Every substantive claim about a tradition');
+    expect(scholarPrompt).toContain('Do not invent quotations');
+    expect(scholarPrompt).toContain('Avoid false equivalences');
   });
 
   it('signals register shifts with concrete phrase examples', () => {
-    expect(SYSTEM_PROMPT).toContain('the pattern here suggests');
-    expect(SYSTEM_PROMPT).toContain('outside the passages here');
-    expect(SYSTEM_PROMPT).toContain('name it by title');
+    expect(scholarPrompt).toContain('the pattern here suggests');
+    expect(scholarPrompt).toContain('outside the passages here');
+    expect(scholarPrompt).toContain('name it by title');
   });
 
   it('requires a followup hook before the citation block', () => {
-    expect(SYSTEM_PROMPT).toContain('End each reply with a beat that opens the next turn');
-    expect(SYSTEM_PROMPT).toContain('This is not "let me know if you have more questions"');
-    expect(SYSTEM_PROMPT).toContain('The closing beat is the last\n  beat of your prose, immediately before the CITATIONS block.');
+    expect(scholarPrompt).toContain('End each reply with a beat that opens the next turn');
+    expect(scholarPrompt).toContain('This is not "let me know if you have more questions"');
+    expect(scholarPrompt).toContain('The closing beat is the last\n  beat of your prose, immediately before the CITATIONS block.');
   });
 
   it('locks the citation format', () => {
-    expect(SYSTEM_PROMPT).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+    expect(scholarPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+  });
+
+  it('separates voice overlay from CORE_RULES with a blank line', () => {
+    // Composition contract: ${voice}\n\n${rules}. The identity opening
+    // ends with "rigorous academic care." and CORE_RULES begins with
+    // "You will receive source passages". The double-newline separator
+    // must sit between them.
+    expect(scholarPrompt).toContain('rigorous academic care.\n\nYou will receive source passages');
+  });
+
+  it('DEFAULT_VOICE composition equals scholar composition', () => {
+    expect(getSystemPrompt(DEFAULT_VOICE)).toBe(scholarPrompt);
+  });
+});
+
+describe('isVoiceSlug', () => {
+  it('accepts shipped slugs', () => {
+    expect(isVoiceSlug('scholar')).toBe(true);
+  });
+
+  it('rejects unknown slugs', () => {
+    expect(isVoiceSlug('woowoo')).toBe(false); // ticket 3 adds this
+    expect(isVoiceSlug('')).toBe(false);
+    expect(isVoiceSlug('SCHOLAR')).toBe(false); // case-sensitive
   });
 });
 

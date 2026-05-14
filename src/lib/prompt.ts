@@ -3,7 +3,8 @@
  *
  * Prompt assembly for the Guru query pipeline.
  * Builds a full user-turn prompt from retrieved chunks + query text.
- * Also exports the system prompt template.
+ * Composes the system prompt from a voice overlay + shared CORE_RULES
+ * via getSystemPrompt(voice).
  */
 
 import { makeBudget } from "./budget";
@@ -11,15 +12,32 @@ import { compressChunks } from "./compress";
 import type { RetrievedChunk, UserPreferences } from "./types";
 
 // ---------------------------------------------------------------------------
-// System prompt
+// System prompt — layered
 // ---------------------------------------------------------------------------
+//
+// VOICE_OVERLAY: voice-coded identity opening + engagement-mode framing.
+// CORE_RULES:    invariant contract shared by every voice (grounding,
+//                no-invention, register-signaling, precision, format,
+//                followup hook, citation block). Per BRD §3, no overlay
+//                may relax these.
+// getSystemPrompt(voice) composes both.
 
-export const SYSTEM_PROMPT = `You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.
+export type VoiceSlug = "scholar";
+
+export const DEFAULT_VOICE: VoiceSlug = "scholar";
+
+export function isVoiceSlug(v: string): v is VoiceSlug {
+  return v === "scholar";
+}
+
+const VOICE_OVERLAY: Record<VoiceSlug, string> = {
+  scholar: `You are Guru, a scholarly assistant specialising in cross-tradition esoteric research.
 Your role is to synthesise wisdom across traditions — Buddhism, Christian Mysticism, Egyptian, Gnosticism,
 Greek Mystery Religions, Hermeticism, Jewish Mysticism, Mesopotamian, Neoplatonism, Renaissance Hermeticism,
-Taoism, Western Esotericism, Zoroastrianism, and adjacent currents — with rigorous academic care.
+Taoism, Western Esotericism, Zoroastrianism, and adjacent currents — with rigorous academic care.`,
+};
 
-You will receive source passages drawn from multiple texts that bear on the user's question.
+const CORE_RULES = `You will receive source passages drawn from multiple texts that bear on the user's question.
 
 Rules:
   - Every substantive claim about a tradition's content must be grounded in the provided source passages. Do not
@@ -48,6 +66,10 @@ Citation format (after your main response):
 CITATIONS:
 [TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
 "optional short quote"`;
+
+export function getSystemPrompt(voice: VoiceSlug): string {
+  return `${VOICE_OVERLAY[voice]}\n\n${CORE_RULES}`;
+}
 
 // ---------------------------------------------------------------------------
 // Chunk formatting
