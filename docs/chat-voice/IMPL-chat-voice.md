@@ -15,11 +15,17 @@ top of that foundation.
 ships first. It's a self-contained value drop and does not depend on
 any of the picker tickets. Don't let the picker work block it.
 
-**Hard rule 2:** ticket 8 (eval gate) gates ticket 7 (UI exposes the
-picker). A pro user must not be able to select a voice that hasn't
-been verified to preserve citation behavior. The voice can exist in
-code (ticket 3) without being user-selectable (ticket 7) — that's the
-intended landing pattern.
+**Note:** an earlier version of this plan included a ticket 8
+"eval gate" — an operator-run script that would stress-test prompt
+behavior on adversarial fixtures before exposing the woowoo voice
+in the picker. The work was implemented and then rewound: five
+hand-crafted fixtures with grep-style heuristic scoring turned out
+to be theatre-of-rigor rather than a real check. Either ship
+adversarial behavior testing as a substantive eval (hundreds of
+cases, LLM-judge scoring) or rely on smoke-testing in the chat UI;
+the in-between is the worst of both. The voice can still be
+verified by running representative queries in the chat UI before
+ticket 7 ships.
 
 ---
 
@@ -35,8 +41,9 @@ file:  docs/chat-voice/BRD-chat-voice.md
 Implements the voice picker described in `BRD-chat-voice.md` and the
 followup-hook rule authored in `CORE_RULES-draft.md`. Phase 1 (tickets
 1–2) ships the engagement fix on the current voice. Phase 2 (tickets
-3–8) lands the picker, the woowoo voice, the data layer, and
-the eval gate.
+3–7) lands the picker, the woowoo voice, the data layer, and the
+UI. (An earlier ticket 8 — adversarial-citation eval gate — was
+rewound; see the note at the top.)
 
 **Status:** ticket 1 shipped in PR #67 (merge `c66bee9`). Remaining
 work runs against the now-live CORE_RULES content; subsequent
@@ -168,8 +175,8 @@ file:  src/lib/prompt.ts
 **Scope.** Add a second voice to `VOICE_OVERLAY` — the woowoo
 register from the conversation that produced the BRD. The voice
 exists in code but is **not yet user-selectable** (no schema, no API,
-no UI). This lets us pair it with CORE_RULES end-to-end and feed it
-to the eval gate (ticket 8) before exposing it to users.
+no UI). This lets us pair it with CORE_RULES end-to-end and smoke-
+test it before exposing it to users.
 
 The overlay text is its own authoring task. The draft starting point
 is the prompt the operator drafted earlier in conversation ("You are
@@ -403,62 +410,17 @@ existing model picker pattern. BRD §7.6.
 
 **Operator action post-merge.** None.
 
-**Depends on:** tickets 3, 6. **Blocked by ticket 8** — do not
-expose a voice in the picker until it has passed the eval gate.
+**Depends on:** tickets 3, 6.
 
----
-
-## 8. Eval gate — adversarial citation behavior
-
-```
-type:  chore
-tags:  eval, citations, voice, qa
-file:  scripts/eval-voices.ts
-```
-
-**Scope.** The eval gate from BRD §8.4. The risk: a more lyrical
-voice (woowoo) sits in the exact register where models start
-inventing supporting quotes. CORE_RULES is meant to hold the line,
-but we need empirical proof before exposing the voice in the picker.
-
-**Files:**
-
-- `scripts/eval-voices.ts` (new) — small script that:
-  - Loads a fixture of N (suggest N=15) adversarial query/passages
-    pairs where the retrieved passages **don't** support the
-    obvious answer.
-  - Runs each query under each shipped voice via the same prompt
-    assembly the production route uses.
-  - Scores each response on three axes: (1) any quoted material
-    attributed to a non-retrieved text? (2) any tradition-content
-    claim ungrounded in the passages? (3) was a register-shift
-    phrase used when going beyond the passages?
-  - Outputs a pass/fail summary per voice.
-- `docs/chat-voice/EVAL-fixtures.md` (new) — the fixture set in
-  readable form (the queries + expected register-shift phrasing).
-  Source of truth; the eval script reads from it (or from a JSON
-  sibling).
-- Run output committed as a one-time note for the launch (e.g., a
-  short section appended to `BRD-chat-voice.md` §8 or a separate
-  EVAL-results.md).
-
-**Done when:**
-
-- Eval script runs locally against OpenRouter (or a mocked LLM if
-  cost is a concern for CI — but the real LLM is the actual
-  check).
-- All shipped voices pass: 0 fabricated quotes, 0 ungrounded
-  tradition-content claims, register shifts signaled on
-  beyond-passages claims.
-- A failing voice blocks ticket 7 from exposing it.
-
-**Tests:** the eval IS the test. No unit-test surface.
-
-**Operator action post-merge.** Run the eval script once before
-ticket 7 ships; re-run any time `CORE_RULES` or a voice overlay
-changes.
-
-**Depends on:** tickets 2, 3. Can run in parallel with tickets 4–6.
+**Pre-merge smoke (replaces the rewound eval gate).** Before this
+ticket merges, open the chat UI as a pro user and run a handful of
+adversarial queries in each voice — questions that ask about a
+tradition, figure, or claim the retrieved passages don't fully
+support (e.g. "what does Meister Eckhart say about the divine
+spark?" when Eckhart isn't in scope; cross-tradition synthesis
+between currents that don't actually converge). Confirm woowoo
+signals register-shifts and doesn't fabricate citations. If it
+does, iterate on the overlay copy before this ticket lands.
 
 ---
 
@@ -497,8 +459,9 @@ Listed for visibility, not in scope for this feature:
   change their profile default to start a new session in a
   different voice. If usage shows demand, add a per-session picker.
 - **Additional voices.** Each new overlay is a PR adding a slug + a
-  text + a snapshot test + a pass through the eval gate (ticket 8).
-  Plausible candidates listed in BRD §4.3 (terse, socratic).
+  text + a snapshot test, with a chat-UI smoke test against
+  adversarial queries before exposing it in the picker. Plausible
+  candidates listed in BRD §4.3 (terse, socratic).
 - **Mid-thread voice swap.** Forks to a new session rather than
   mutating `sessions.voice`. Same coherence argument as the
   snapshot rule.
