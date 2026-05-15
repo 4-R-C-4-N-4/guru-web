@@ -105,6 +105,14 @@ describe('getSystemPrompt(woowoo)', () => {
   it('carries the emphatic / mystical register', () => {
     expect(woowooPrompt).toContain('emphatic about what the traditions are reaching for');
     expect(woowooPrompt).toContain('carry that conviction');
+    expect(woowooPrompt).toContain('Lyrical, mystical, and evocative language is welcome');
+  });
+
+  it('does not inherit "avoid vague spiritualism" — cut in todo:9e1f697c followup', () => {
+    // Operator decision: the rule was suppressing woowoo without earning
+    // its grounding-keep. Both voices now compose without it.
+    expect(woowooPrompt).not.toContain('Avoid vague spiritualism');
+    expect(scholarPrompt).not.toContain('Avoid vague spiritualism');
   });
 
   it('positions the model as cooperative, not corrective', () => {

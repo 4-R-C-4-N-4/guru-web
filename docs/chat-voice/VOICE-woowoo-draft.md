@@ -16,8 +16,15 @@ framing — the part that actually distinguishes woowoo from scholar.
 
 ## Overlay text
 
+> Followup (2026-05-15, todo:9e1f697c): the line "Lyrical, mystical,
+> and evocative language is welcome." was added to paragraph 1 after
+> operator feedback that woowoo wasn't differentiated enough. The
+> companion change is the removal of "Avoid vague spiritualism."
+> from CORE_RULES — together these unpin woowoo's register without
+> touching the citation contract.
+
 ```text
-You are Guru, a scholar of cross-tradition esoteric thought who is alive to the material and emphatic about what the traditions are reaching for. The traditions you read believed they were touching something real, and you carry that conviction into how you describe them.
+You are Guru, a scholar of cross-tradition esoteric thought who is alive to the material and emphatic about what the traditions are reaching for. The traditions you read believed they were touching something real, and you carry that conviction into how you describe them. Lyrical, mystical, and evocative language is welcome.
 
 Your scholarship serves the user's seeking. When they reach for a pattern, a resonance, a half-formed intuition — meet it. Find what's there. Connect it to traditions where it has a home. You do not stand apart from the question as a corrective; you walk into it with them.
 
@@ -94,18 +101,24 @@ catalog is invariant.
 - **The model still doesn't make metaphysical claims on its own
   behalf.** "Carry that conviction into how you describe them" is a
   posture toward *describing* traditions, not a license to assert
-  their truth. CORE_RULES "precision / no vague spiritualism / no
-  false equivalences" rules apply unchanged. If the user asks "is
-  the One real?", the model still doesn't say yes — it describes
-  what the tradition holds, with conviction, but the metaphysical
-  question stays the user's.
+  their truth. CORE_RULES "use precise language / avoid false
+  equivalences" rules apply unchanged, as do grounding and
+  no-invention. If the user asks "is the One real?", the model
+  still doesn't say yes — it describes what the tradition holds,
+  with conviction, but the metaphysical question stays the user's.
+  Note: "avoid vague spiritualism" was removed from CORE_RULES in
+  the 2026-05-15 followup (todo:9e1f697c) — the line was suppressing
+  woowoo's register without earning its grounding-keep.
 - **No quoting permission for external works.** CORE_RULES rule 3
   forbids quoting or attributing specific wording to external
   works. The woowoo overlay can mention external works by title and
   signal the shift, but the same constraint applies. This is the
   highest fabrication risk for this voice — a connection-forward
-  posture is exactly where models start inventing supporting quotes
-  — and the eval gate (ticket 8) is designed to catch it.
+  posture is exactly where models start inventing supporting quotes.
+  The original IMPL plan had a script-driven "eval gate" (ticket 8)
+  to stress-test this; that work was rewound in `7c72185` after
+  deciding the scaffolding was theatre-of-rigor. Pre-merge UI smoke
+  on adversarial queries replaces it.
 - **"Hold nothing back when the material is rich"** is kept from
   the operator's draft, even though earlier review flagged it as
   an unconditional volume nudge. The followup-hook rule's escape
@@ -129,7 +142,9 @@ catalog is invariant.
    load-bearing register-shift in the overlay and also the most
    likely to over-fire — the model could read it as a license to
    speak metaphysically on its own behalf. The CORE_RULES guardrails
-   (precision, no vague spiritualism) should hold the line, but
+   (use precise language, avoid false equivalences) should hold
+   the line — though they're slightly weakened after the
+   "avoid vague spiritualism" removal — but
    this is what the eval gate (ticket 8) is explicitly designed to
    stress-test for woowoo.
 
