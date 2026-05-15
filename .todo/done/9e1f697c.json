@@ -1,0 +1,37 @@
+{
+  "id": "9e1f697c",
+  "type": "chore",
+  "state": "done",
+  "summary": "Loosen woowoo voice: cut vague-spiritualism from CORE_RULES + grant evocative-language permission",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-15T16:34:03.933Z",
+  "updated_at": "2026-05-15T16:36:58.435Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "prompt",
+    "voice",
+    "copy",
+    "followup"
+  ],
+  "description": "Operator feedback (2026-05-15) after picker shipped: 'the woowoo voice is not differentiated enough.' Two-part loosening: (1) remove 'Avoid vague spiritualism.' from CORE_RULES precision rule — the line was conflated with grounding work that no-invention + register-signaling already handle; in practice it was suppressing woowoo's character without earning its keep. (2) Add an explicit permission line to the woowoo overlay granting lyrical/mystical/evocative register. Both voices' citation contract is unchanged (Avoid false equivalences stays in CORE_RULES; grounding + no-invention + register-shift untouched). Small diff, easy to revert if outputs slide. See conversation 2026-05-15 for full reasoning.",
+  "work": {
+    "branch": "todo/9e1f697c",
+    "base_branch": "main",
+    "started_at": "2026-05-15T16:34:14.283Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "d71a905ad5169855fa41a9ced7551cffa5f20026",
+    "resolved_at": "2026-05-15T16:36:58.435Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/prompt.test.ts",
+    "test_function": "does not inherit \"avoid vague spiritualism\" — cut in todo:9e1f697c followup",
+    "note": "Cut 'Avoid vague spiritualism.' from CORE_RULES precision rule. Added 'Lyrical, mystical, and evocative language is welcome.' to woowoo overlay paragraph 1. Other CORE_RULES (use precise language, avoid false equivalences, grounding, no-invention, register-signaling, citation) unchanged. Scholar voice's 'rigorous academic care' framing covers the precision posture the removed line redundantly enforced. 338 tests pass; tsc + lint clean. Easy revert if outputs slide."
+  }
+}
