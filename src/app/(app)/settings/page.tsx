@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 // doesn't pull in the OpenAI SDK that model.ts initialises.
 import { CURATED_MODELS, type CuratedSlug } from '@/lib/curated-models';
 import { PROVIDER_DISPLAY } from '@/lib/provider-display';
+import type { VoiceSlug } from '@/lib/types';
 
 // Catalog comes from /api/corpus (DISTINCT tradition/text from chunks).
 // Empty/error states are rendered as-is — no hardcoded fallback. If this UI
@@ -22,6 +23,23 @@ type LoadStatus = 'loading' | 'ready' | 'error';
 // tradeoff is visible at a glance.
 const PICKER_ORDER: CuratedSlug[] = ['deepseek', 'xai', 'anthropic', 'openai'];
 
+// Voice picker order + display copy. The slug → overlay mapping lives in
+// src/lib/prompt.ts; the user-facing name + one-line description live
+// here because they're UI-layer copy that shouldn't ride in the LLM
+// prompt. Spec: BRD-chat-voice.md §7, IMPL §7.
+const VOICE_ORDER: VoiceSlug[] = ['scholar', 'woowoo'];
+
+const VOICE_DISPLAY: Record<VoiceSlug, { name: string; description: string }> = {
+  scholar: {
+    name:        'Scholar',
+    description: 'Rigorous, grounded, precise prose.',
+  },
+  woowoo: {
+    name:        'Woowoo',
+    description: 'Energetic and connection-forward. Alive to the material.',
+  },
+};
+
 export default function SettingsPage() {
   const mobile = useIsMobile();
   const [traditions, setTraditions] = useState<TraditionsState>({});
@@ -32,6 +50,8 @@ export default function SettingsPage() {
   const [tier,      setTier]        = useState<'free' | 'pro' | null>(null);
   const [preferredModel, setPreferredModel] = useState<CuratedSlug | null>(null);
   const [modelSaving, setModelSaving] = useState(false);
+  const [preferredVoice, setPreferredVoice] = useState<VoiceSlug>('scholar');
+  const [voiceSaving, setVoiceSaving] = useState(false);
 
   // Fetch the corpus catalog + the user's blocked-tradition prefs together,
   // so we can mark blocked entries inactive in a single setState. Also pull
@@ -44,7 +64,12 @@ export default function SettingsPage() {
       }),
       fetch('/api/preferences').then(r => {
         if (!r.ok) throw new Error(`preferences ${r.status}`);
-        return r.json() as Promise<{ scopeMode: string; blockedTraditions: string[]; preferredModel: string | null }>;
+        return r.json() as Promise<{
+          scopeMode: string;
+          blockedTraditions: string[];
+          preferredModel: string | null;
+          preferredVoice: VoiceSlug;
+        }>;
       }),
       fetch('/api/quota').then(r => {
         if (!r.ok) throw new Error(`quota ${r.status}`);
@@ -70,6 +95,12 @@ export default function SettingsPage() {
             ? (prefs.preferredModel as CuratedSlug)
             : null,
         );
+        // Defensive: trust the API value but fall back to scholar if it's
+        // an unknown slug somehow (drift, future-removed voice). Matches
+        // the same belt-and-braces pattern as preferredModel above.
+        setPreferredVoice(
+          prefs.preferredVoice in VOICE_DISPLAY ? prefs.preferredVoice : 'scholar',
+        );
         setStatus('ready');
       })
       .catch(() => setStatus('error'));
@@ -88,6 +119,24 @@ export default function SettingsPage() {
     if (!res || !res.ok) {
       // Roll back on failure — surface state to the user.
       setPreferredModel(preferredModel);
+    }
+  };
+
+  const handleVoiceChange = async (slug: VoiceSlug) => {
+    if (slug === preferredVoice) return;
+    const prior = preferredVoice;
+    setVoiceSaving(true);
+    setPreferredVoice(slug);  // optimistic
+    const res = await fetch('/api/preferences', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ preferredVoice: slug }),
+    }).catch(() => null);
+    setVoiceSaving(false);
+    if (!res || !res.ok) {
+      // Roll back on failure. Includes the 403 server-side pro-gate
+      // case (free user trying a non-default voice via direct edit).
+      setPreferredVoice(prior);
     }
   };
 
@@ -202,6 +251,73 @@ export default function SettingsPage() {
                 {isDefault && <span style={{ color: tokens.text.secondary, marginRight: 8 }}>Default</span>}
                 ~{display.questionsPerDay} questions per day
               </span>
+            </label>
+          );
+        })}
+      </div>
+
+      {/* Voice section — pro picker, free disabled. Spec: BRD-chat-voice §7, IMPL §7. */}
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>
+        Voice
+        {tier === 'free' && (
+          <span style={{ marginLeft: 8, color: tokens.text.accent, fontSize: 9 }}>PRO ONLY</span>
+        )}
+      </div>
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 12 }}>
+        {tier === 'free'
+          ? <>Default voice. <a href="/account" style={{ color: tokens.text.link }}>Upgrade to Pro</a> to choose another.</>
+          : voiceSaving
+            ? 'saving…'
+            : 'How Guru speaks. Source-grounding and citation rules apply to every voice.'}
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        {VOICE_ORDER.map((slug) => {
+          const display = VOICE_DISPLAY[slug];
+          const isActive = preferredVoice === slug;
+          const disabled = tier !== 'pro';
+          return (
+            <label
+              key={slug}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                padding: mobile ? '12px 12px' : '10px 14px',
+                background: tokens.bg.surface,
+                border: `1px solid ${isActive ? tokens.text.accent + '88' : tokens.border.subtle}`,
+                borderRadius: 4,
+                marginBottom: 5,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  type="radio"
+                  name="preferredVoice"
+                  value={slug}
+                  checked={isActive}
+                  disabled={disabled}
+                  onChange={() => handleVoiceChange(slug)}
+                  style={{ accentColor: tokens.text.accent }}
+                />
+                <span style={{
+                  fontFamily: tokens.font.display,
+                  fontSize: mobile ? 16 : 15,
+                  color: isActive ? tokens.text.accent : tokens.text.primary,
+                }}>
+                  {display.name}
+                </span>
+              </div>
+              <div style={{
+                marginLeft: 24,
+                fontFamily: tokens.font.mono,
+                fontSize: 11,
+                color: tokens.text.muted,
+              }}>
+                {display.description}
+              </div>
             </label>
           );
         })}
