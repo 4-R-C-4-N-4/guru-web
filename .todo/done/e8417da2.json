@@ -1,0 +1,41 @@
+{
+  "id": "e8417da2",
+  "type": "feature",
+  "state": "done",
+  "summary": "feat: chat voice picker + engagement hook",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:04:10.945Z",
+  "updated_at": "2026-05-15T12:38:17.858Z",
+  "files": [
+    {
+      "path": "docs/chat-voice/BRD-chat-voice.md"
+    }
+  ],
+  "tags": [
+    "chat",
+    "prompt",
+    "pro",
+    "ux",
+    "engagement"
+  ],
+  "relationships": {
+    "children": [
+      "4e5d6198",
+      "59b0af90",
+      "5bae5b0b",
+      "1a6e4137",
+      "2f14b5d6",
+      "e66c39c9",
+      "dc356e81",
+      "6f728fc3"
+    ]
+  },
+  "resolution": {
+    "commit": "76ce189ba55f7586aadce3835dfdc476a8b57801",
+    "resolved_at": "2026-05-15T12:38:17.858Z",
+    "resolved_by": "unknown",
+    "note": "Chat voice picker + engagement hook complete across 7 children (8 originally; ticket 8 rewound in 7c72185). Shipped: engagement-fix CORE_RULES with followup-hook rule (PR #67), layered prompt architecture + woowoo overlay + schema (PR #68), runtime voice resolution + preferences API pro gate + settings UI picker (PR #69). Pro users can now pick scholar or woowoo from /settings; selection snapshots onto sessions.voice at creation and is immutable for the session's life. Free users locked to scholar at both UI and server-side gate. The pre-merge smoke step in IMPL §7 (open chat UI as pro, run a handful of adversarial queries in each voice) is the operator's last check before merge of PR #69."
+  }
+}

@@ -45,12 +45,17 @@ vi.mock('@/lib/retriever', () => ({
   retrieve: vi.fn(),
 }));
 
-vi.mock('@/lib/prompt', () => ({
-  buildPrompt: vi.fn(),
-  getSystemPrompt: vi.fn(() => 'mock system prompt'),
-  DEFAULT_VOICE: 'scholar' as const,
-  isVoiceSlug: vi.fn((v: string) => v === 'scholar'),
-}));
+vi.mock('@/lib/prompt', async () => {
+  // Use the real isVoiceSlug + DEFAULT_VOICE so the route's tier-gated
+  // voice resolution exercises production logic. Only buildPrompt
+  // (network-adjacent) and getSystemPrompt (large string) are stubbed.
+  const actual = await vi.importActual<typeof import('@/lib/prompt')>('@/lib/prompt');
+  return {
+    ...actual,
+    buildPrompt: vi.fn(),
+    getSystemPrompt: vi.fn(() => 'mock system prompt'),
+  };
+});
 
 vi.mock('@/lib/model', async () => {
   // Use real CURATED_MODELS / resolveCuratedModel so the route's
@@ -92,6 +97,7 @@ const mockFinalizeBudget = spend.finalizeBudget as MockedFunction<typeof spend.f
 const mockComputeCost    = cost.computeCost     as MockedFunction<typeof cost.computeCost>;
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
+const mockGetSystemPrompt = prompt.getSystemPrompt as MockedFunction<typeof prompt.getSystemPrompt>;
 const mockStream = model.completeStream   as MockedFunction<typeof model.completeStream>;
 const mockRateLimit = rl.rateLimit         as MockedFunction<typeof rl.rateLimit>;
 
@@ -172,10 +178,34 @@ describe('POST /api/sessions', () => {
 
   it('creates a session and returns 201', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
     mockOne.mockResolvedValueOnce({ id: 's2', title: 'New session', created_at: '', updated_at: '' });
 
     const res = await sessionsPOST(req('POST', '/api/sessions', { title: 'New session' }));
     expect(res.status).toBe(201);
+  });
+
+  it('snapshots pro user preferredVoice=woowoo onto the new session', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+    mockOne.mockResolvedValueOnce({ id: 's3', title: null, created_at: '', updated_at: '' });
+
+    const res = await sessionsPOST(req('POST', '/api/sessions', {}));
+    expect(res.status).toBe(201);
+    const [insertSql, insertParams] = mockOne.mock.calls[0]!;
+    expect(insertSql).toMatch(/INSERT INTO sessions/i);
+    expect(insertSql).toMatch(/voice/);
+    expect(insertParams![2]).toBe('woowoo');
+  });
+
+  it('free user with preferredVoice=woowoo still snapshots scholar (pro gate)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+    mockOne.mockResolvedValueOnce({ id: 's4', title: null, created_at: '', updated_at: '' });
+
+    await sessionsPOST(req('POST', '/api/sessions', {}));
+    const [, insertParams] = mockOne.mock.calls[0]!;
+    expect(insertParams![2]).toBe('scholar');
   });
 });
 
@@ -266,6 +296,16 @@ describe('GET /api/preferences', () => {
     const body = await res.json() as typeof DEFAULT_PREFS;
     expect(res.status).toBe(200);
     expect(body.scopeMode).toBe('all');
+    expect(body.preferredVoice).toBe('scholar');
+  });
+
+  it('returns preferredVoice from storage', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+
+    const res = await prefsGET();
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(body.preferredVoice).toBe('woowoo');
   });
 });
 
@@ -342,6 +382,85 @@ describe('PUT /api/preferences — preferredModel', () => {
     const res = await prefsPUT(req('PUT', '/api/preferences', { preferredModel: 'frontier-bogus' }));
     expect(res.status).toBe(400);
     expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+});
+
+// ── preferredVoice validation + pro gate (BRD-chat-voice §6, IMPL §6, todo:e66c39c9) ──
+describe('PUT /api/preferences — preferredVoice', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('pro user can write preferredVoice=woowoo', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'woowoo' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredVoice).toBe('woowoo');
+    const [, savedPrefs] = mockSavePrefs.mock.calls[0]!;
+    expect(savedPrefs.preferredVoice).toBe('woowoo');
+  });
+
+  it('pro user can write preferredVoice=scholar (revert to default)', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'scholar' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(res.status).toBe(200);
+    expect(body.preferredVoice).toBe('scholar');
+  });
+
+  it('free user may write preferredVoice=scholar (no-op write allowed)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'scholar' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('free user attempting preferredVoice=woowoo is rejected with 403', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'woowoo' }));
+    expect(res.status).toBe(403);
+    const body = await res.json() as { error: string };
+    expect(body.error).toMatch(/Pro/i);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it('rejects unknown voice slug with 400 for any tier', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: 'sage-of-atlantis' }));
+    expect(res.status).toBe(400);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it('rejects null preferredVoice with 400 (not a known slug)', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { preferredVoice: null }));
+    expect(res.status).toBe(400);
+    expect(mockSavePrefs).not.toHaveBeenCalled();
+  });
+
+  it('keeps existing preferredVoice when field absent from body', async () => {
+    mockAuth.mockResolvedValueOnce(PRO_USER);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice: 'woowoo' });
+    mockSavePrefs.mockResolvedValueOnce(undefined);
+
+    const res = await prefsPUT(req('PUT', '/api/preferences', { scopeMode: 'all' }));
+    const body = await res.json() as typeof DEFAULT_PREFS;
+    expect(body.preferredVoice).toBe('woowoo');
   });
 });
 
@@ -886,5 +1005,121 @@ describe('POST /api/query — curated slug resolution', () => {
     const [, modelId, slug] = mockStream.mock.calls[0]!;
     expect(modelId).toBe('deepseek/deepseek-v4-pro');
     expect(slug).toBe('deepseek');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Voice resolution (BRD-chat-voice §5, IMPL §5, todo:2f14b5d6)
+// ---------------------------------------------------------------------------
+// Two distinct paths:
+//   (a) Auto-create (no sessionId): the route snapshots the resolved
+//       voice onto the new sessions.voice row, gated by tier.
+//   (b) Existing session: the route reads sessions.voice from the
+//       ownership SELECT and passes it to getSystemPrompt regardless
+//       of the user's *current* profile voice. Thread coherence wins.
+
+describe('POST /api/query — voice resolution (auto-create path)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRateLimit.mockResolvedValue({ allowed: true });
+    mockQuery.mockResolvedValue([]);
+  });
+
+  async function runAutoCreate(
+    user: typeof FREE_USER | typeof PRO_USER,
+    preferredVoice: 'scholar' | 'woowoo',
+  ) {
+    mockAuth.mockResolvedValueOnce(user);
+    // No ownership SELECT (no sessionId). The INSERT INTO sessions is
+    // the first (and only) `one` call.
+    mockOne.mockResolvedValueOnce({ id: 'new-session' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice });
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('p');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q' }));
+    await res.text();
+  }
+
+  it('pro user with preferredVoice=woowoo snapshots woowoo onto the new session', async () => {
+    await runAutoCreate(PRO_USER, 'woowoo');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('woowoo');
+    const [insertSql, insertParams] = mockOne.mock.calls[0]!;
+    expect(insertSql).toMatch(/INSERT INTO sessions/i);
+    expect(insertSql).toMatch(/voice/);
+    expect(insertParams).toEqual(['user_2', 'q', 'woowoo']);
+  });
+
+  it('pro user with preferredVoice=scholar snapshots scholar', async () => {
+    await runAutoCreate(PRO_USER, 'scholar');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('scholar');
+    const [, insertParams] = mockOne.mock.calls[0]!;
+    expect(insertParams![2]).toBe('scholar');
+  });
+
+  it('free user with preferredVoice=woowoo still snapshots scholar (pro gate)', async () => {
+    await runAutoCreate(FREE_USER, 'woowoo');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('scholar');
+    const [, insertParams] = mockOne.mock.calls[0]!;
+    expect(insertParams![2]).toBe('scholar');
+  });
+});
+
+describe('POST /api/query — voice resolution (existing session path)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRateLimit.mockResolvedValue({ allowed: true });
+    mockQuery.mockResolvedValue([]);
+  });
+
+  async function runWithSession(
+    user: typeof FREE_USER | typeof PRO_USER,
+    sessionVoice: string,
+    preferredVoice: 'scholar' | 'woowoo' = 'scholar',
+  ) {
+    mockAuth.mockResolvedValueOnce(user);
+    // Ownership SELECT returns the session row including its voice.
+    mockOne.mockResolvedValueOnce({ id: 's1', voice: sessionVoice });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce({ ...DEFAULT_PREFS, preferredVoice });
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('p');
+    mockExec.mockResolvedValue(undefined);
+    async function* s() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(s() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    await res.text();
+  }
+
+  it('uses the session-snapshotted voice over the current profile pref', async () => {
+    // Profile says scholar; session says woowoo. Session wins.
+    await runWithSession(PRO_USER, 'woowoo', 'scholar');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('woowoo');
+  });
+
+  it('honors session.voice=scholar even when profile is now woowoo', async () => {
+    await runWithSession(PRO_USER, 'scholar', 'woowoo');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('scholar');
+  });
+
+  it('preserves an old woowoo session for a now-downgraded free user', async () => {
+    // Thread coherence: the prior turns were generated under woowoo,
+    // continuing under scholar would mix registers within the thread.
+    await runWithSession(FREE_USER, 'woowoo', 'scholar');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('woowoo');
+  });
+
+  it('falls back to DEFAULT_VOICE when storage somehow has an unknown slug', async () => {
+    // Defensive: should never happen given the migration default, but
+    // shouldn't crash getSystemPrompt() if it does.
+    await runWithSession(PRO_USER, 'sage-of-atlantis', 'scholar');
+    expect(mockGetSystemPrompt).toHaveBeenCalledWith('scholar');
   });
 });

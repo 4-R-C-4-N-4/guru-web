@@ -8,6 +8,7 @@
 import { requireUser } from '@/lib/auth';
 import { loadPreferences, savePreferences } from '@/lib/prefs';
 import { isCuratedSlug } from '@/lib/curated-models';
+import { isVoiceSlug, DEFAULT_VOICE } from '@/lib/prompt';
 import type { UserPreferences } from '@/lib/types';
 
 export async function GET() {
@@ -55,6 +56,28 @@ export async function PUT(req: Request) {
     );
   }
 
+  // Validate preferredVoice: must be a known voice slug. The server-
+  // side pro gate is strict: only pro users may write a non-default
+  // voice. Free users may write 'scholar' (no-op) but a 'woowoo'
+  // attempt is rejected with 403 — the query route also re-checks
+  // tier at session-create time, but rejecting the write here keeps
+  // stored prefs honest. UI gating alone is not sufficient.
+  // Spec: BRD-chat-voice.md §6, IMPL §6.
+  if (body.preferredVoice !== undefined) {
+    if (!isVoiceSlug(body.preferredVoice)) {
+      return Response.json(
+        { error: `preferredVoice must be a known voice slug` },
+        { status: 400 }
+      );
+    }
+    if (body.preferredVoice !== DEFAULT_VOICE && user.tier !== 'pro') {
+      return Response.json(
+        { error: 'Pro subscription required to change voice' },
+        { status: 403 }
+      );
+    }
+  }
+
   // Merge with existing prefs so partial updates are safe
   const existing = await loadPreferences(user.id);
   const updated: UserPreferences = {
@@ -66,10 +89,7 @@ export async function PUT(req: Request) {
     preferredModel:        body.preferredModel !== undefined
                              ? body.preferredModel
                              : existing.preferredModel,
-    // Ticket 4 wires the schema + type only; ticket 6 (preferences API)
-    // adds validation + pro gating for preferredVoice writes. For now
-    // the field passes through unchanged from storage on every PUT.
-    preferredVoice:        existing.preferredVoice,
+    preferredVoice:        body.preferredVoice ?? existing.preferredVoice,
   };
 
   await savePreferences(user.id, updated);

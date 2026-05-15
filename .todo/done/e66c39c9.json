@@ -1,0 +1,38 @@
+{
+  "id": "e66c39c9",
+  "type": "feature",
+  "state": "done",
+  "summary": "Preferences API — preferredVoice round-trip + pro gate",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:18.902Z",
+  "updated_at": "2026-05-14T22:47:21.058Z",
+  "files": [
+    {
+      "path": "src/app/api/preferences/route.ts"
+    }
+  ],
+  "tags": [
+    "api",
+    "settings",
+    "voice",
+    "pro"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90",
+      "1a6e4137"
+    ]
+  },
+  "description": "IMPL §6. Extend GET to include preferredVoice. Extend PUT body validation to accept preferredVoice, validate via isVoiceSlug (400 for unknown). Server-side pro gate: non-pro PUTting preferredVoice !== 'scholar' rejected with 403 (UI gate alone is not sufficient). Round-trip + reject tests in src/__tests__/preferences.test.ts. See IMPL §6.",
+  "resolution": {
+    "commit": "bb5f0ad7e6ba22add9424805376550ae543650fd",
+    "resolved_at": "2026-05-14T22:47:21.058Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "free user attempting preferredVoice=woowoo is rejected with 403",
+    "note": "PUT /api/preferences validates preferredVoice via isVoiceSlug (400 unknown) + server-side pro gate (403 non-pro non-default). GET returns preferredVoice via the existing full-shape passthrough. 8 new tests cover pro write, free no-op, free 403, unknown 400, null 400, absent-field merge, GET extension. 337 total tests pass."
+  }
+}
