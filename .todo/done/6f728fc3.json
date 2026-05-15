@@ -1,0 +1,37 @@
+{
+  "id": "6f728fc3",
+  "type": "chore",
+  "state": "done",
+  "summary": "Eval gate — adversarial citation behavior",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-14T17:05:19.207Z",
+  "updated_at": "2026-05-15T01:05:03.023Z",
+  "files": [
+    {
+      "path": "scripts/eval-voices.ts"
+    }
+  ],
+  "tags": [
+    "eval",
+    "citations",
+    "voice",
+    "qa"
+  ],
+  "relationships": {
+    "parent": "e8417da2",
+    "depends_on": [
+      "59b0af90",
+      "5bae5b0b"
+    ]
+  },
+  "description": "IMPL §8. New scripts/eval-voices.ts script: load adversarial query/passages fixtures (suggest N=15) from docs/chat-voice/EVAL-fixtures.md where retrieved passages do NOT support the obvious answer. Run each query under each shipped voice. Score on (1) any quote attributed to non-retrieved text, (2) any tradition-content claim ungrounded in passages, (3) was register-shift signaled. Pass/fail per voice. A failing voice blocks §7 from exposing it. See IMPL §8.",
+  "resolution": {
+    "commit": "73560dd90b1354c65e2048643749e157d6a94735",
+    "resolved_at": "2026-05-15T01:05:03.023Z",
+    "resolved_by": "unknown",
+    "test_file": "scripts/eval-voices.ts (operator-run; --dry-run smoke-verified)",
+    "note": "Eval script + 5 adversarial fixtures (cross-tradition glue, quantum frame, Sufism-not-in-scope, Eckhart-not-in-scope, no-source-history). Heuristic scoring for register-shift markers + quoted-phrase grounding; ungrounded-claims dimension printed for manual review. Operator runs once before ticket 7, on-demand after any CORE_RULES or overlay change. Per IMPL §8 the eval is the test — no unit-test surface added. --dry-run smoke-verified (all 10 fixture × voice pairs compose prompts cleanly). 337 tests still pass."
+  }
+}
