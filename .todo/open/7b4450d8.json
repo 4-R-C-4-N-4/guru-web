@@ -1,0 +1,22 @@
+{
+  "id": "7b4450d8",
+  "type": "bug",
+  "state": "open",
+  "summary": "Chat autoscroll jitters and traps user at bottom during streaming",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-17T23:17:59.513Z",
+  "updated_at": "2026-05-17T23:18:25.754Z",
+  "files": [
+    {
+      "path": "src/components/chat-view.tsx"
+    }
+  ],
+  "tags": [
+    "chat",
+    "ux",
+    "streaming"
+  ],
+  "description": "Symptom: on the chat page, streamed assistant responses trigger smooth-scroll to the bottom on every token. The viewport jitters and the user is forced to watch the stream — they can't scroll up to re-read earlier content while the LLM is still responding.\n\nRoot cause: src/components/chat-view.tsx:143 — useEffect calls bottomRef.current?.scrollIntoView({behavior:'smooth'}) on every [messages, loading] change. No detection of whether the user has scrolled up; smooth-scroll on every streamed chunk compounds the jitter.\n\nProposed fix: stick-to-bottom pattern.\n- Track whether the messages scroll container is near bottom (~80px threshold).\n- Autoscroll only when sticky.\n- User scrolling up flips sticky off immediately; scrolling back near bottom flips it on.\n- Use instant scroll (behavior:'auto') during streaming to eliminate the per-token jitter even when autoscroll is wanted."
+}
