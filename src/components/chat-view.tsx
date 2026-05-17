@@ -137,10 +137,29 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   // a pure compute (useMemo below) — keeps us out of the
   // react-hooks/set-state-in-effect rule.
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
+  // Stick-to-bottom is a ref, not state: scroll events fire on every
+  // pixel and React state would re-render the whole tree per tick.
+  // The autoscroll effect just reads .current.
+  const stickToBottomRef = useRef(true);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < 80;
+  }, []);
+
+  // Autoscroll only when the user is already near the bottom. Uses
+  // instant scrollTop assignment (not scrollIntoView smooth) — smooth
+  // scroll on every streamed token compounds into viewport jitter.
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, loading]);
 
   // Auto-grow the textarea up to a max height (then it scrolls). Reset to
   // 'auto' first so shrinking works when the user deletes content.
@@ -192,6 +211,9 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
 
     const queryText = input.trim();
     setInput('');
+    // Sending a new message is an explicit intent to see the response —
+    // re-engage autoscroll even if the user had scrolled up to re-read.
+    stickToBottomRef.current = true;
     setMessages(prev => [...prev, { role: 'user', content: queryText }]);
     setLoading(true);
 
@@ -338,7 +360,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
       )}
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: mobile ? '16px 0' : '24px 0', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+      <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: mobile ? '16px 0' : '24px 0', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {messages.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.6, padding: mobile ? '0 16px' : 0 }}>
             <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 24 : 32, color: tokens.text.accent, letterSpacing: 8, marginBottom: 12 }}>GURU</div>
@@ -420,7 +442,6 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
             </div>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input bar */}
