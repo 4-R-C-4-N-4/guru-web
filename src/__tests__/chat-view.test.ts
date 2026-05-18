@@ -252,6 +252,59 @@ describe('chat-view UX simplification (todo:e8105324)', () => {
   });
 });
 
+describe('chat-view autoscroll stick-to-bottom (todo:7b4450d8)', () => {
+  // Source-level guards. The bug: smooth-scrollIntoView fired on every
+  // streamed token, jittering the viewport and trapping the user at the
+  // bottom — they couldn't scroll up to re-read while the LLM streamed.
+  // Fix: stick-to-bottom pattern with instant scroll.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('does not smooth-scroll on every message update', () => {
+    // The old behaviour: scrollIntoView({ behavior: 'smooth' }) on every
+    // [messages, loading] change. Smooth scroll per streamed token is
+    // the jitter source — even when autoscroll is wanted.
+    expect(SRC).not.toMatch(/scrollIntoView\(\s*\{\s*behavior:\s*['"]smooth['"]/);
+  });
+
+  it('tracks stick-to-bottom via a ref (not state — scroll fires per pixel)', () => {
+    expect(SRC).toMatch(/stickToBottomRef\s*=\s*useRef\(true\)/);
+  });
+
+  it('handleScroll flips sticky off when the user scrolls away from bottom', () => {
+    // Distance-from-bottom threshold. The actual number is a tuning
+    // knob; the contract is that sticky is derived from scroll position.
+    expect(SRC).toMatch(/scrollHeight\s*-\s*el\.scrollTop\s*-\s*el\.clientHeight/);
+    expect(SRC).toMatch(/stickToBottomRef\.current\s*=\s*distanceFromBottom\s*<\s*\d+/);
+  });
+
+  it('autoscroll effect short-circuits when not sticky', () => {
+    // The useEffect that fires on [messages, loading] must early-return
+    // when the user has scrolled up. Otherwise we'd yank them back to
+    // the bottom on every streamed token.
+    expect(SRC).toMatch(/if\s*\(!stickToBottomRef\.current\)\s*return/);
+  });
+
+  it('uses instant scrollTop assignment, not scrollIntoView', () => {
+    // Direct scrollTop = scrollHeight is instant and reliable; avoids
+    // browser-level smooth interpolation that compounds per-token.
+    expect(SRC).toMatch(/el\.scrollTop\s*=\s*el\.scrollHeight/);
+  });
+
+  it('wires onScroll + ref to the messages container', () => {
+    expect(SRC).toMatch(/ref=\{scrollContainerRef\}\s+onScroll=\{handleScroll\}/);
+  });
+
+  it('handleSend re-engages sticky (user sending a question wants the response)', () => {
+    // Otherwise: user scrolls up to re-read, types a question, hits
+    // send — their question scrolls off-screen below the viewport.
+    expect(SRC).toMatch(/stickToBottomRef\.current\s*=\s*true/);
+  });
+});
+
 describe('chat-view URL-update contract', () => {
   // Source-level guards. The chat UI is React + DOM-heavy; we don't have
   // a DOM test harness configured. These string checks are blunt but
