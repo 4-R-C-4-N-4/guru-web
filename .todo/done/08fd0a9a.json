@@ -1,0 +1,38 @@
+{
+  "id": "08fd0a9a",
+  "type": "bug",
+  "state": "done",
+  "summary": "LandingPage calls router.replace() during render — move into useEffect",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-20T16:44:03.581Z",
+  "updated_at": "2026-05-20T17:21:19.692Z",
+  "files": [
+    {
+      "path": "src/app/page.tsx",
+      "lines": [
+        16,
+        19
+      ]
+    }
+  ],
+  "tags": [
+    "react",
+    "landing-page"
+  ],
+  "work": {
+    "branch": "todo/08fd0a9a",
+    "base_branch": "main",
+    "started_at": "2026-05-20T16:44:06.339Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "bdef0d037467d8cef8731d560600cc31fc888011",
+    "resolved_at": "2026-05-20T17:21:19.692Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/landing-page-redirect.test.ts",
+    "test_function": "LandingPage signed-in redirect",
+    "note": "Moved router.replace('/chat') into useEffect — eliminates React 19 'setState during render' warning. Source-pinned regression test added."
+  }
+}
