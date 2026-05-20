@@ -22,6 +22,7 @@
  * is best-effort via OpenRouter.
  */
 
+import 'dotenv/config';
 import { Pool, type PoolClient } from 'pg';
 import { FALLBACK_PRICING, type ModelPrice } from '../src/lib/fallback-pricing';
 import { CURATED_MODELS } from '../src/lib/curated-models';
