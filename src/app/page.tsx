@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
@@ -13,10 +14,15 @@ export default function LandingPage() {
   const router = useRouter();
   const traditionKeys = Object.keys(tokens.tradition) as (keyof typeof tokens.tradition)[];
 
-  if (isLoaded && isSignedIn) {
-    router.replace('/chat');
-    return null;
-  }
+  // Redirect signed-in users to /chat. Must run from an effect, not
+  // during render — calling router.replace() inline triggers React's
+  // "Cannot update a component while rendering a different component"
+  // warning under React 19 / Next 16.
+  useEffect(() => {
+    if (isLoaded && isSignedIn) router.replace('/chat');
+  }, [isLoaded, isSignedIn, router]);
+
+  if (isLoaded && isSignedIn) return null;
 
   return (
     <div style={{
