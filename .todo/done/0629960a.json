@@ -1,0 +1,28 @@
+{
+  "id": "0629960a",
+  "type": "chore",
+  "state": "done",
+  "summary": "One-command local dev: predev hook + idempotent dev-setup.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-20T15:50:41.348Z",
+  "updated_at": "2026-05-20T15:51:00.263Z",
+  "tags": [
+    "devx",
+    "local-dev",
+    "setup"
+  ],
+  "work": {
+    "branch": "todo/0629960a",
+    "base_branch": "main",
+    "started_at": "2026-05-20T15:50:44.901Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "e7b90cfd03335d93ce11be7ddbda652638135584",
+    "resolved_at": "2026-05-20T15:51:00.263Z",
+    "resolved_by": "unknown",
+    "note": "scripts/dev-setup.ts + predev hook collapses local setup to a single `npm run dev` invocation. Idempotent and fast (~425ms when fully set up). Verified manually."
+  }
+}
