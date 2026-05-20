@@ -1,0 +1,32 @@
+{
+  "id": "9dc2f674",
+  "type": "bug",
+  "state": "done",
+  "summary": "AppLayout calls router.replace() during render — same bug as 08fd0a9a, sibling fix",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-20T19:34:25.262Z",
+  "updated_at": "2026-05-20T19:35:20.360Z",
+  "files": [
+    {
+      "path": "src/app/(app)/layout.tsx",
+      "lines": [
+        11,
+        15
+      ]
+    }
+  ],
+  "tags": [
+    "react",
+    "layout"
+  ],
+  "resolution": {
+    "commit": "dd631207c0e578c22dbcabe310132935dfbba80f",
+    "resolved_at": "2026-05-20T19:35:20.360Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/landing-page-redirect.test.ts",
+    "test_function": "client-component redirects run in useEffect, not during render",
+    "note": "Same fix pattern as 08fd0a9a, applied to (app)/layout.tsx. Test extended to cover both files via parameterized cases."
+  }
+}
