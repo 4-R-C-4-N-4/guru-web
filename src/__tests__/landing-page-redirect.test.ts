@@ -1,19 +1,23 @@
 /**
  * src/__tests__/landing-page-redirect.test.ts
  *
- * Source-level guard for the landing-page redirect (todo:08fd0a9a).
+ * Source-level guard against the "router.replace() during render"
+ * anti-pattern in client components (todo:08fd0a9a, todo:9dc2f674).
  *
- * Bug: LandingPage called `router.replace('/chat')` directly in the
- * component body when the user was signed-in. Under React 19 / Next 16
- * this triggers a "Cannot update a component (Router) while rendering
- * a different component (LandingPage)" warning, because router state
- * is being mutated synchronously during render.
+ * Bug class: calling `router.replace(...)` directly in a component
+ * body mutates router state during render. React 19 / Next 16 warns:
+ *   "Cannot update a component (Router) while rendering a different
+ *    component."
  *
  * Fix: the redirect lives in a useEffect; the render-time branch only
  * returns null.
  *
+ * Covered:
+ *   - src/app/page.tsx               — signed-in → /chat
+ *   - src/app/(app)/layout.tsx       — signed-out → /sign-in
+ *
  * Behaviour test isn't possible without spinning up Clerk + Next's
- * client runtime. Pinning the source is the contract this PR can
+ * client runtime. Pinning the source is the contract these PRs can
  * defend — mirrors the pattern in sign-in-redirect-prop.test.ts.
  */
 import { describe, it, expect } from 'vitest';
@@ -22,25 +26,30 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PAGE_SRC = readFileSync(resolve(__dirname, '../app/page.tsx'), 'utf8');
 
-describe('LandingPage signed-in redirect', () => {
-  it('imports useEffect', () => {
-    expect(PAGE_SRC).toMatch(/import\s*\{[^}]*\buseEffect\b[^}]*\}\s*from\s*['"]react['"]/);
+const TARGETS: Array<{ label: string; relPath: string; destination: string }> = [
+  { label: 'LandingPage (signed-in)', relPath: '../app/page.tsx',         destination: '/chat' },
+  { label: 'AppLayout (signed-out)',  relPath: '../app/(app)/layout.tsx', destination: '/sign-in' },
+];
+
+describe('client-component redirects run in useEffect, not during render', () => {
+  it.each(TARGETS)('$label imports useEffect', ({ relPath }) => {
+    const src = readFileSync(resolve(__dirname, relPath), 'utf8');
+    expect(src).toMatch(/import\s*\{[^}]*\buseEffect\b[^}]*\}\s*from\s*['"]react['"]/);
   });
 
-  it('calls router.replace inside a useEffect', () => {
-    // useEffect( ... router.replace('/chat') ... )
-    expect(PAGE_SRC).toMatch(
-      /useEffect\s*\(\s*\(\s*\)\s*=>\s*\{[\s\S]*?router\.replace\(\s*['"]\/chat['"]\s*\)/
+  it.each(TARGETS)('$label calls router.replace inside a useEffect', ({ relPath, destination }) => {
+    const src = readFileSync(resolve(__dirname, relPath), 'utf8');
+    const pattern = new RegExp(
+      String.raw`useEffect\s*\(\s*\(\s*\)\s*=>\s*\{[\s\S]*?router\.replace\(\s*['"]${destination}['"]\s*\)`,
     );
+    expect(src).toMatch(pattern);
   });
 
-  it('does NOT call router.replace inline during render', () => {
-    // Regression pattern: bare `if (...isSignedIn) { router.replace(...) }`
-    // sitting at the top level of the component body.
-    expect(PAGE_SRC).not.toMatch(
-      /^\s*if\s*\([^)]*isSignedIn[^)]*\)\s*\{\s*\n\s*router\.replace/m
-    );
+  it.each(TARGETS)('$label does NOT call router.replace inline during render', ({ relPath }) => {
+    const src = readFileSync(resolve(__dirname, relPath), 'utf8');
+    // Regression pattern: bare `if (...) { router.replace(...) }` at the top
+    // of the component body, not nested inside a useEffect callback.
+    expect(src).not.toMatch(/^\s*if\s*\([^)]*isSignedIn[^)]*\)\s*\{\s*\n\s*router\.replace/m);
   });
 });
