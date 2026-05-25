@@ -1,0 +1,36 @@
+{
+  "id": "3251a8d6",
+  "type": "bug",
+  "state": "open",
+  "summary": "Vector results carry no tier so they're silently scored 0.4; tier is an edges column not a chunks column, so the fix is a scoring redesign not a SELECT change",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-25T22:32:57.135Z",
+  "updated_at": "2026-05-25T22:33:04.818Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        95,
+        98
+      ]
+    },
+    {
+      "path": "docs/retriever-hitlist.md",
+      "commit": "68417308ad85cc7d7bb1f68b8ef5f1bcfc0805cf",
+      "note": "detailed write-up + verification"
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring",
+    "tier"
+  ],
+  "relationships": {
+    "related": [
+      "0a771923",
+      "ce844add"
+    ]
+  }
+}
