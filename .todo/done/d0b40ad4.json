@@ -1,0 +1,54 @@
+{
+  "id": "d0b40ad4",
+  "type": "bug",
+  "state": "done",
+  "summary": "walkGraph docstring claims 1-2 hop reachability but only walks 1 hop; also EXPRESSES in the first query pollutes the reachable set with chunk IDs that can never match the second query",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-25T22:32:57.241Z",
+  "updated_at": "2026-05-25T23:34:37.366Z",
+  "files": [
+    {
+      "path": "src/lib/graph.ts",
+      "lines": [
+        48,
+        68
+      ]
+    },
+    {
+      "path": "docs/retriever-hitlist.md",
+      "commit": "68417308ad85cc7d7bb1f68b8ef5f1bcfc0805cf",
+      "note": "detailed write-up + verification"
+    }
+  ],
+  "tags": [
+    "retriever",
+    "graph",
+    "walkgraph"
+  ],
+  "relationships": {},
+  "work": {
+    "branch": "todo/d0b40ad4",
+    "base_branch": "main",
+    "started_at": "2026-05-25T23:32:58.852Z",
+    "started_by": "Backend Engineer"
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-25T23:33:12.566Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Keeping 1-hop behaviour deliberately, not adding a 2nd hop. One PARALLELS/DERIVES_FROM hop already crosses traditions, and widening to 2 materially grows the candidate set + latency with no eval harness yet to validate quality (harness is a precondition flagged in docs/retriever-hitlist.md). Fix: (1) extract HOP_DEPTH=1 constant + loop so depth is a single named knob, (2) remove EXPRESSES from the reachability query — it's chunk->concept, pollutes reachable with chunk IDs that never match the 2nd query, and removing it is verified zero-retrieval-loss since seed conceptIds are already in reachable, (3) align docstring with reality.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "273ac8ed3eb0a06e9ac12b83a1c9f1b37efff3e5",
+    "resolved_at": "2026-05-25T23:34:37.366Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/graph.test.ts",
+    "test_function": "walkGraph — reachability expansion (todo:d0b40ad4)",
+    "note": "Extracted HOP_DEPTH=1 + frontier loop so walk depth is a single named knob; removed EXPRESSES from the reachability query (chunk→concept, polluted reachable with chunk IDs — verified zero retrieval loss since seed concepts already seeded into reachable); docstring now says 'within HOP_DEPTH hops (currently 1)'."
+  }
+}
