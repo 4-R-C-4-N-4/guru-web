@@ -132,3 +132,48 @@ describe('walkGraph — chunks-query param alignment', () => {
     expect(params).toEqual([['chunk-1'], ['neoplatonism'], ['enneads'], 25]);
   });
 });
+
+describe('walkGraph — reachability expansion (todo:d0b40ad4)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const prefs: UserPreferences = {
+    scopeMode: 'all',
+    blockedTraditions: [],
+    blockedTexts: [],
+    whitelistedTraditions: [],
+    whitelistedTexts: [],
+    preferredModel: null,
+    preferredVoice: 'scholar',
+  };
+
+  it('reachability query uses concept→concept edge types only — EXPRESSES excluded', async () => {
+    mockQuery.mockResolvedValueOnce([{ source: 'concept-a', target: 'concept-b' }]); // hop 1
+    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);       // EXPRESSES
+    mockQuery.mockResolvedValueOnce([]);                                              // chunks
+
+    await walkGraph(['concept-a'], prefs, 25);
+
+    // First query is the reachability hop. It must not pull EXPRESSES
+    // (chunk→concept) edges into concept-graph traversal — that polluted
+    // `reachable` with chunk IDs that never match the EXPRESSES lookup.
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).not.toMatch(/EXPRESSES/);
+    expect(params).toEqual([['concept-a'], ['PARALLELS', 'DERIVES_FROM']]);
+  });
+
+  it('walks exactly one concept hop (HOP_DEPTH=1) before the EXPRESSES lookup', async () => {
+    mockQuery.mockResolvedValueOnce([{ source: 'concept-a', target: 'concept-b' }]); // hop 1 finds new neighbour
+    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);       // EXPRESSES
+    mockQuery.mockResolvedValueOnce([]);                                              // chunks
+
+    await walkGraph(['concept-a'], prefs, 25);
+
+    // Even though hop 1 discovered a brand-new neighbour (concept-b), the
+    // query that immediately follows is the EXPRESSES lookup — proving no
+    // second reachability hop ran. Bumping HOP_DEPTH must break this.
+    const secondSql = mockQuery.mock.calls[1][0];
+    expect(secondSql).toMatch(/edge_type = 'EXPRESSES'/);
+    // The 1-hop neighbour is included in the EXPRESSES lookup's reachable set.
+    expect(mockQuery.mock.calls[1][1]).toEqual([['concept-a', 'concept-b']]);
+  });
+});
