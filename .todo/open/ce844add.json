@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-05-25T22:32:57.206Z",
-  "updated_at": "2026-05-25T22:33:04.715Z",
+  "updated_at": "2026-05-26T01:35:38.215Z",
   "files": [
     {
       "path": "src/lib/retriever.ts",
@@ -27,5 +27,9 @@
     "scoring",
     "diversity"
   ],
-  "relationships": {}
+  "relationships": {
+    "depends_on": [
+      "faedd67a"
+    ]
+  }
 }

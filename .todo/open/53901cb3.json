@@ -1,0 +1,26 @@
+{
+  "id": "53901cb3",
+  "type": "chore",
+  "state": "open",
+  "summary": "Retrieval eval harness: a handful of canonical comparative-religion queries (the One, non-dual awareness, divine names) with expected top-K cross-tradition coverage, so 'did the scoring change help?' is answerable",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:22.979Z",
+  "updated_at": "2026-05-26T01:35:38.120Z",
+  "files": [
+    {
+      "path": "src/__tests__"
+    }
+  ],
+  "tags": [
+    "retriever",
+    "eval"
+  ],
+  "relationships": {
+    "parent": "69022947",
+    "depends_on": [
+      "fbf4652f"
+    ]
+  }
+}

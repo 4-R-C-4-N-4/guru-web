@@ -1,0 +1,27 @@
+{
+  "id": "fbf4652f",
+  "type": "refactor",
+  "state": "open",
+  "summary": "Replace multiplicative mergeAndRerank with canonical additive scorer: score = 0.7*sim + 0.3*max(tierW, graphScore) + diversity; vector hits tagged 'inferred' explicitly, graph leg contributes an independent weighted term (no fake distance); tier weights 1.0/0.7/0.4 hardcoded to pipeline defaults",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:22.877Z",
+  "updated_at": "2026-05-26T01:35:22.877Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        74,
+        108
+      ]
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring"
+  ],
+  "relationships": {
+    "parent": "69022947"
+  }
+}

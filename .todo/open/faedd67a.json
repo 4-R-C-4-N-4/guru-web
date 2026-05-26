@@ -1,0 +1,28 @@
+{
+  "id": "faedd67a",
+  "type": "refactor",
+  "state": "open",
+  "summary": "Diversity rework: add hard max_per_tradition output cap (default 3, matching pipeline) plus rarity-aware boost computed in a first pass over all merged chunks, replacing the order-dependent in-map binary boost",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:22.911Z",
+  "updated_at": "2026-05-26T01:35:22.911Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        88,
+        107
+      ]
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring",
+    "diversity"
+  ],
+  "relationships": {
+    "parent": "69022947"
+  }
+}
