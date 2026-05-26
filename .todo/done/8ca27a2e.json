@@ -1,0 +1,32 @@
+{
+  "id": "8ca27a2e",
+  "type": "chore",
+  "state": "done",
+  "summary": "Bump nav-bar version badge v2 → v3",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-26T12:06:02.228Z",
+  "updated_at": "2026-05-26T12:06:27.532Z",
+  "files": [
+    {
+      "path": "src/components/nav-bar.tsx",
+      "lines": [
+        140,
+        140
+      ]
+    }
+  ],
+  "work": {
+    "branch": "todo/8ca27a2e",
+    "base_branch": "main",
+    "started_at": "2026-05-26T12:06:02.277Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "b45c7bfbbaf91381e235852adde2a96b2e67191e",
+    "resolved_at": "2026-05-26T12:06:27.532Z",
+    "resolved_by": "unknown",
+    "note": "Changed the decorative version badge next to the GURU logo (nav-bar.tsx) from v2 to v3. Display-only; not wired to corpus schema_version (boot.ts handles that). No test asserts the badge text."
+  }
+}
