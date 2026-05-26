@@ -1,0 +1,52 @@
+{
+  "id": "69022947",
+  "type": "feature",
+  "state": "done",
+  "summary": "Port canonical additive retrieval scoring to web; end web/pipeline scoring divergence",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:08.414Z",
+  "updated_at": "2026-05-26T11:51:38.250Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring",
+    "redesign"
+  ],
+  "relationships": {
+    "children": [
+      "fbf4652f",
+      "faedd67a",
+      "d1a94167",
+      "53901cb3",
+      "c6cd0050"
+    ]
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-26T01:35:53.599Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Grounded in guru/retriever.py (canonical pipeline retriever) + export.py. Decision: port the pipeline's additive model rather than invent RRF or a calibrated multiplicative formula. Formula: score = 0.7*sim + 0.3*max(tierW, graphScore) + diversity. Weights HARDCODED to pipeline defaults (user decision): vector_weight=0.7, graph_weight=0.3, tier verified/proposed/inferred = 1.0/0.7/0.4, diversity_boost=0.1, max_per_tradition=3. Vector hits get explicit tier='inferred' (fixes 3251a8d6 silent-0.4). Graph leg contributes via graph_weight*max(tierW,graphScore), an independent additive term — no fake 0.5 distance (fixes 0a771923). Diversity gets a hard per-tradition cap + a rarity-aware first-pass boost, going beyond canonical which is still first-seen (fixes ce844add). No edge weights used: corpus has none.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-05-26T02:36:34.425Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "BASELINE from eval harness (current multiplicative scoring, live corpus) CORRECTS the earlier 'graph leg is structurally suppressed' framing. Reality: Bug1 and Bug2 INTERACT so the graph leg DOMINATES. Vector tier silently=0.4 (Bug1) makes a vector chunk score ~0.65*0.4=0.26, while a graph chunk scores 0.5(flat dist)*0.7(real proposed tier)=0.35 — so graph OUTSCORES vector. Result: graph-sourced = 144/180 = 80% of top-K slots, and 7/12 queries fall BELOW the 3-tradition coverage target (graph floods single traditions: 'union with God'=1 trad, 'logos'=1 trad). The 2 queries where graph stayed dark (vector-only) had the BEST coverage (4 and 7 traditions). Predictions to verify post-fbf4652f: additive 0.7*sim/0.3*graph rebalances toward vector; max_per_tradition=3 cap should push 'below coverage target' from 7/12 toward ~0-2 and drop graph share from 80% to ~30-50%. Re-run scripts/eval-retrieval.ts to confirm.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "695b4690029b210979dad4d4f1c199fc71df4509",
+    "resolved_at": "2026-05-26T11:51:38.250Z",
+    "resolved_by": "unknown",
+    "note": "Retrieval scoring redesign shipped. Ported guru/retriever.py additive model to mergeAndRerank (0.7/0.3 weights, explicit inferred tier on vector, independent graph term, per-tradition cap), added rarity-aware diversity, an eval harness, opt-in score trace, and unit tests. Harness before/after on 12 canonical queries: avg distinct traditions/top-K 3.58->6.17, queries below 3-tradition target 7/12->0/12, graph-sourced share 80%->14% (rebalanced; cross-tradition coverage now from the cap, not a scoring bug). Closes 3251a8d6, 0a771923, ce844add. Deferred: edges.weight (9f401f76), concept-extraction (53480da1)."
+  }
+}

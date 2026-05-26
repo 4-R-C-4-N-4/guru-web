@@ -1,13 +1,13 @@
 {
   "id": "0a771923",
   "type": "bug",
-  "state": "open",
+  "state": "done",
   "summary": "Graph results get a flat 0.5 distance fallback in mergeAndRerank and structurally lose to vector hits (0.6-0.8), suppressing cross-tradition parallels",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-25T22:32:57.171Z",
-  "updated_at": "2026-05-25T22:33:04.848Z",
+  "updated_at": "2026-05-26T11:51:15.860Z",
   "files": [
     {
       "path": "src/lib/retriever.ts",
@@ -30,6 +30,17 @@
   "relationships": {
     "related": [
       "ce844add"
+    ],
+    "depends_on": [
+      "fbf4652f"
     ]
+  },
+  "resolution": {
+    "commit": "b48e7220fc76801d87df6eb55ebf3f8f24a69b26",
+    "resolved_at": "2026-05-26T11:51:15.860Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "scores graph-only hits on their edge tier (verified outranks inferred)",
+    "note": "Fixed by additive scorer port (fbf4652f): graph leg scores via independent 0.3*max(tierW,graphScore) term, no fake 0.5 distance."
   }
 }

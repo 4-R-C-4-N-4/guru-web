@@ -1,13 +1,13 @@
 {
   "id": "3251a8d6",
   "type": "bug",
-  "state": "open",
+  "state": "done",
   "summary": "Vector results carry no tier so they're silently scored 0.4; tier is an edges column not a chunks column, so the fix is a scoring redesign not a SELECT change",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-25T22:32:57.135Z",
-  "updated_at": "2026-05-25T22:33:04.818Z",
+  "updated_at": "2026-05-26T11:51:15.823Z",
   "files": [
     {
       "path": "src/lib/retriever.ts",
@@ -31,6 +31,17 @@
     "related": [
       "0a771923",
       "ce844add"
+    ],
+    "depends_on": [
+      "fbf4652f"
     ]
+  },
+  "resolution": {
+    "commit": "b48e7220fc76801d87df6eb55ebf3f8f24a69b26",
+    "resolved_at": "2026-05-26T11:51:15.823Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "tags vector-only hits with an explicit inferred tier, not undefined",
+    "note": "Fixed by additive scorer port (fbf4652f): vector hits tagged explicit 'inferred', scored 0.7*sim not silent 0.4."
   }
 }

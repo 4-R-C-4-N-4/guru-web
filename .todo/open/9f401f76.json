@@ -1,0 +1,33 @@
+{
+  "id": "9f401f76",
+  "type": "feature",
+  "state": "open",
+  "summary": "Populate edges.weight from staging confidence (staged_tags/staged_edges) through promotion + export, and rank the graph leg on the continuous score instead of 3 tier buckets. Cross-repo: SQLite migration + auto_promote.py/auto_promote_edges.py + export.py + SCHEMA_VERSION bump. Eval-gated: only if the harness shows tier granularity is the bottleneck.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:38.012Z",
+  "updated_at": "2026-05-26T01:35:53.635Z",
+  "tags": [
+    "retriever",
+    "scoring",
+    "pipeline",
+    "cross-repo",
+    "deferred",
+    "eval-gated"
+  ],
+  "relationships": {
+    "related": [
+      "69022947"
+    ]
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-26T01:35:53.635Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Deferred, not part of the redesign. Confidence DOES exist upstream (staged_tags for EXPRESSES, staged_edges for PARALLELS/CONTRASTS) but is dropped at every promotion into edges (auto_promote.py:151, auto_promote_edges.py:155, review_tags.py:94, review_edges.py:76, graph_bootstrap.py:78) and again at export.py:287 (weight=None). SQLite edges table has no confidence column. Reasons to defer: (1) the mature pipeline retriever had confidence available and deliberately uses 3 tier buckets instead; (2) no eval harness yet to prove continuous weight beats buckets — see child 53901cb3; (3) it's a cross-repo schema-contract change (hash-checked CI) and should be measured, not speculative; (4) purely additive — porting tier-based now keeps this open as a later 'weight ?? tierW' read with no redesign.",
+      "confidence": "high"
+    }
+  ]
+}

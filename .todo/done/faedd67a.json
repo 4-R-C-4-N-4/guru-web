@@ -1,0 +1,43 @@
+{
+  "id": "faedd67a",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Diversity rework: add hard max_per_tradition output cap (default 3, matching pipeline) plus rarity-aware boost computed in a first pass over all merged chunks, replacing the order-dependent in-map binary boost",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:22.911Z",
+  "updated_at": "2026-05-26T11:47:24.595Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        88,
+        107
+      ]
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring",
+    "diversity"
+  ],
+  "relationships": {
+    "parent": "69022947"
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-26T02:39:16.058Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Scope narrowed: the max_per_tradition cap is being pulled into fbf4652f as part of the faithful canonical port (it's one function in guru/retriever.py). faedd67a's remaining work is just replacing the canonical first-seen +0.1 diversity boost with a rarity-aware two-pass boost (count traditions across all merged chunks first, then weight rarer traditions higher), which is the part that goes BEYOND canonical and fully closes ce844add.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "42f2e88a6c5c356b5547e451a866f1a3f14888a3",
+    "resolved_at": "2026-05-26T11:47:24.595Z",
+    "resolved_by": "unknown",
+    "note": "Replaced canonical first-seen +0.1 boost with a two-pass rarity-weighted boost: count traditions across the merged set, then diversity = DIVERSITY_BOOST / count. Order-independent; rewards rare traditions (the [Plotinus*6, Vedanta, Sufi] case). Harness unchanged at the aggregate (cap already maxes coverage: 6.17 traditions, 0/12 below target) — the win is correctness/order-independence, pinned by d1a94167."
+  }
+}

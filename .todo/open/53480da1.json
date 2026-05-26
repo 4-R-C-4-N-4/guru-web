@@ -1,0 +1,31 @@
+{
+  "id": "53480da1",
+  "type": "debt",
+  "state": "open",
+  "summary": "extractConcepts is a Phase-1 LIKE match on concept labels; abstract queries with no lexical overlap extract 0 concepts and the graph leg goes fully dark. Measured: 'non-dual awareness' and 'ego death' returned 0 concepts / 0 graph candidates (2/12 canonical queries) despite the corpus having 11k EXPRESSES edges. Consider matching against concept definitions/synonyms or embedding-based concept selection.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T02:34:35.456Z",
+  "updated_at": "2026-05-26T02:34:35.529Z",
+  "files": [
+    {
+      "path": "src/lib/graph.ts",
+      "lines": [
+        16,
+        34
+      ]
+    }
+  ],
+  "tags": [
+    "retriever",
+    "graph",
+    "concept-extraction"
+  ],
+  "relationships": {
+    "related": [
+      "69022947",
+      "53901cb3"
+    ]
+  }
+}

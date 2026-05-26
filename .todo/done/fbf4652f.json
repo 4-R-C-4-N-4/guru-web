@@ -1,0 +1,42 @@
+{
+  "id": "fbf4652f",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Replace multiplicative mergeAndRerank with canonical additive scorer: score = 0.7*sim + 0.3*max(tierW, graphScore) + diversity; vector hits tagged 'inferred' explicitly, graph leg contributes an independent weighted term (no fake distance); tier weights 1.0/0.7/0.4 hardcoded to pipeline defaults",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:22.877Z",
+  "updated_at": "2026-05-26T02:40:50.656Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        74,
+        108
+      ]
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring"
+  ],
+  "relationships": {
+    "parent": "69022947"
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-26T02:39:16.022Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Porting the FULL canonical _merge_and_rank, which includes the max_per_tradition=3 output cap (it lives in the same function in guru/retriever.py). So this ticket lands: additive score 0.7*sim + 0.3*max(tierW,graphScore) + 0.1 first-seen diversity, explicit 'inferred' tier on vector hits, per-chunk leg merge (overlap chunks adopt the higher tier + graphScore), AND the per-tradition cap. Closes 3251a8d6 (Bug1) and 0a771923 (Bug2). The cap partially addresses ce844add too, but the boost stays canonical first-seen here — the rarity-aware two-pass refinement is left to faedd67a.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "b48e7220fc76801d87df6eb55ebf3f8f24a69b26",
+    "resolved_at": "2026-05-26T02:40:50.656Z",
+    "resolved_by": "unknown",
+    "note": "Ported guru/retriever.py additive model. Harness before/after (12 canonical queries, live corpus): avg distinct traditions/top-K 3.58 -> 6.33; queries below 3-tradition target 7/12 -> 0/12; graph-sourced share of slots 80% -> 14%. Rebalancing (vector no longer crushed to x0.4) + per-tradition cap fixed the single-tradition flooding. Note: graph-only share now low by design of the 0.7/0.3 split (and the harness undercounts graph influence on overlap chunks); cap also shortens top-K for narrow queries (e.g. 'divine spark' -> 8). Both are tunable knobs the harness now measures."
+  }
+}
