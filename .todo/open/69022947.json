@@ -1,0 +1,21 @@
+{
+  "id": "69022947",
+  "type": "feature",
+  "state": "open",
+  "summary": "Port canonical additive retrieval scoring to web; end web/pipeline scoring divergence",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:08.414Z",
+  "updated_at": "2026-05-26T01:35:08.414Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "retriever",
+    "scoring",
+    "redesign"
+  ]
+}
