@@ -1,0 +1,47 @@
+{
+  "id": "53901cb3",
+  "type": "chore",
+  "state": "done",
+  "summary": "Retrieval eval harness: a handful of canonical comparative-religion queries (the One, non-dual awareness, divine names) with expected top-K cross-tradition coverage, so 'did the scoring change help?' is answerable",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-26T01:35:22.979Z",
+  "updated_at": "2026-05-26T02:36:24.856Z",
+  "files": [
+    {
+      "path": "src/__tests__"
+    }
+  ],
+  "tags": [
+    "retriever",
+    "eval"
+  ],
+  "relationships": {
+    "parent": "69022947",
+    "depends_on": [
+      "fbf4652f"
+    ]
+  },
+  "work": {
+    "branch": "todo/69022947",
+    "base_branch": "main",
+    "started_at": "2026-05-26T02:34:46.311Z",
+    "started_by": "Backend Engineer"
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-26T02:35:00.516Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Building the harness FIRST as a pre-redesign baseline, ahead of fbf4652f (relaxing the depends_on I originally wired) — you want the baseline captured before scoring changes so the before/after is real. Seeded from a live local run against the real corpus (2852 chunks, 11k EXPRESSES edges). Key metrics the harness tracks: top-K distinct-tradition coverage and graph-vs-vector source mix in top-K (the redesign's success signal — under current Bug-2 scoring, graph-only candidates get flat 0.5 distance and rarely survive). Local baseline that motivated this: graph leg fires 10/12 canonical queries with ~12.5 graph-only candidates each, but the 0.5 similarity floor is a no-op on this thematically-tight corpus (max chunk-to-chunk distance 0.56), so the floor was dropped from scope.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "666534c5cd735e4a4184455efcab992b3eb622c2",
+    "resolved_at": "2026-05-26T02:36:24.856Z",
+    "resolved_by": "unknown",
+    "note": "Eval harness at scripts/eval-retrieval.ts runs canonical queries through retrieve() and reports top-K distinct-tradition coverage, graph/vector source mix, and per-leg diagnostics. Baseline captured (current scoring): avg 3.58 traditions/top-K, 7/12 below the 3-tradition target, graph-sourced=80% of slots, graph fired 10/12, 2/12 zero-concept. Re-run after fbf4652f to diff. Surfaced that Bug1xBug2 makes graph DOMINATE (not suppressed) — see parent 69022947 note."
+  }
+}
