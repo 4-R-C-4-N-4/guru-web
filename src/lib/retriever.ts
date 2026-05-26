@@ -93,7 +93,9 @@ interface MergedEntry {
   graphScore: number; // tier weight of the originating graph edge; 0 for vector-only
 }
 
-function mergeAndRerank(
+// Exported for unit testing (todo:d1a94167); not part of the public API —
+// callers should use retrieve().
+export function mergeAndRerank(
   vectorResults: RetrievedChunk[],
   graphResults: RetrievedChunk[],
   topK: number
