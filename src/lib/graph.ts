@@ -10,6 +10,26 @@ import { query } from './db';
 import type { RetrievedChunk, UserPreferences } from './types';
 
 /**
+ * Number of concept→concept hops to expand out from the seed concepts
+ * before collecting the chunks that express them. The single knob for
+ * graph-walk breadth.
+ *
+ * Kept at 1 deliberately (todo:d0b40ad4): a single PARALLELS/DERIVES_FROM
+ * hop already crosses traditions, and widening to 2 materially grows the
+ * candidate set and latency. Bump this only alongside the retrieval eval
+ * harness that can confirm the extra breadth improves quality rather than
+ * adding noise — see docs/retriever-hitlist.md.
+ */
+const HOP_DEPTH = 1;
+
+/**
+ * Concept-graph edge types — concept↔concept only. EXPRESSES is a
+ * chunk→concept edge and is intentionally excluded here; it is handled by
+ * the expressing-chunk lookup in walkGraph, not by reachability expansion.
+ */
+const CONCEPT_EDGE_TYPES = ['PARALLELS', 'DERIVES_FROM'];
+
+/**
  * Extract concept IDs from free text by keyword-matching concept labels.
  * Phase 1 implementation: simple LIKE match against each word in the query.
  */
@@ -35,7 +55,8 @@ export async function extractConcepts(queryText: string): Promise<string[]> {
 
 /**
  * Walk the concept graph starting from the given concept IDs.
- * Fetches chunks that EXPRESSES any concept reachable within 1–2 hops.
+ * Fetches chunks that EXPRESSES any concept reachable within HOP_DEPTH
+ * concept→concept hops (currently 1).
  * Respects user tradition/text scope preferences.
  */
 export async function walkGraph(
@@ -45,18 +66,26 @@ export async function walkGraph(
 ): Promise<RetrievedChunk[]> {
   if (conceptIds.length === 0) return [];
 
-  // Collect concept IDs reachable within 1 hop (direct neighbours)
-  const neighbourRows = await query<{ source: string; target: string; tier: string }>(
-    `SELECT source, target, tier FROM edges
-     WHERE (source = ANY($1::text[]) OR target = ANY($1::text[]))
-       AND edge_type IN ('PARALLELS', 'DERIVES_FROM', 'EXPRESSES')`,
-    [conceptIds]
-  );
-
+  // Expand the reachable concept set outward HOP_DEPTH concept→concept
+  // hops. Each hop only queries the newly-discovered frontier, so depth > 1
+  // doesn't re-scan concepts already reached.
   const reachable = new Set<string>(conceptIds);
-  for (const r of neighbourRows) {
-    reachable.add(r.source);
-    reachable.add(r.target);
+  let frontier = conceptIds;
+  for (let hop = 0; hop < HOP_DEPTH; hop++) {
+    const neighbourRows = await query<{ source: string; target: string }>(
+      `SELECT source, target FROM edges
+       WHERE (source = ANY($1::text[]) OR target = ANY($1::text[]))
+         AND edge_type = ANY($2::text[])`,
+      [frontier, CONCEPT_EDGE_TYPES]
+    );
+
+    const next: string[] = [];
+    for (const r of neighbourRows) {
+      if (!reachable.has(r.source)) { reachable.add(r.source); next.push(r.source); }
+      if (!reachable.has(r.target)) { reachable.add(r.target); next.push(r.target); }
+    }
+    if (next.length === 0) break; // no new concepts — further hops are no-ops
+    frontier = next;
   }
 
   // Find chunks that EXPRESSES any reachable concept
