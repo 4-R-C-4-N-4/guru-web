@@ -1,0 +1,28 @@
+{
+  "id": "d0f56a51",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add workflow_dispatch to deploy.yml (manual deploy escape hatch, optional SHA input)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-26T12:24:10.488Z",
+  "updated_at": "2026-05-26T12:24:49.609Z",
+  "files": [
+    {
+      "path": ".github/workflows/deploy.yml"
+    }
+  ],
+  "work": {
+    "branch": "todo/d0f56a51",
+    "base_branch": "main",
+    "started_at": "2026-05-26T12:24:10.540Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "c2c8dfa70cb2bc8ecefd2790420c785c625c7d36",
+    "resolved_at": "2026-05-26T12:24:49.609Z",
+    "resolved_by": "unknown",
+    "note": "Added workflow_dispatch trigger with optional 'sha' input; checkout and deploy.sh now use ${{ github.event.inputs.sha || github.sha }} so push deploys the pushed commit and a manual dispatch deploys the chosen SHA (or ref HEAD). Gives a manual deploy path for outages where the push event is lost. YAML validated."
+  }
+}

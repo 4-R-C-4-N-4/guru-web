@@ -3,6 +3,14 @@ name: Deploy
 on:
   push:
     branches: [main]
+  # Manual escape hatch: lets us deploy from the Actions tab when a push
+  # event was lost (e.g. a GitHub Actions outage during a merge) or to
+  # redeploy a specific past commit. Optional SHA defaults to the ref's HEAD.
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA to deploy (defaults to the triggering ref's HEAD)
+        required: false
 
 # A given SHA only needs to deploy once; if multiple commits land fast,
 # cancel earlier in-flight deploys for the same ref.
@@ -21,6 +29,10 @@ jobs:
       # we run. Bump these intentionally — Dependabot or `git ls-remote --tags`
       # against each repo will surface newer releases.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          # Build/test/deploy the dispatched SHA when given; otherwise the
+          # pushed commit (push) or the ref HEAD (dispatch with no input).
+          ref: ${{ github.event.inputs.sha || github.sha }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
@@ -57,4 +69,4 @@ jobs:
           host: guru-web-prod
           username: deploy
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: /srv/guru-web/deploy.sh ${{ github.sha }}
+          script: /srv/guru-web/deploy.sh ${{ github.event.inputs.sha || github.sha }}
