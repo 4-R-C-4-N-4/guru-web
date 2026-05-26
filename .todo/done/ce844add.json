@@ -1,13 +1,13 @@
 {
   "id": "ce844add",
   "type": "bug",
-  "state": "open",
+  "state": "done",
   "summary": "Diversity boost is order-dependent: traditionCounts is mutated inside the same .map that reads it, so the first chunk per tradition wins 1.3x rather than rarity being rewarded",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-25T22:32:57.206Z",
-  "updated_at": "2026-05-26T01:35:38.215Z",
+  "updated_at": "2026-05-26T11:51:15.893Z",
   "files": [
     {
       "path": "src/lib/retriever.ts",
@@ -31,5 +31,13 @@
     "depends_on": [
       "faedd67a"
     ]
+  },
+  "resolution": {
+    "commit": "42f2e88a6c5c356b5547e451a866f1a3f14888a3",
+    "resolved_at": "2026-05-26T11:51:15.893Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "ranks rare traditions above an over-represented one at equal similarity/tier, and caps per tradition",
+    "note": "Fixed by rarity-aware two-pass diversity (faedd67a) + per-tradition cap (fbf4652f). Order-independent."
   }
 }

@@ -1,13 +1,13 @@
 {
   "id": "d1a94167",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "Unit tests for mergeAndRerank pinning the trio's intended behavior: vector hit gets explicit inferred weight not silent 0.4, graph-only result is not structurally beaten by vector at equal tier, and [Plotinus*6, Vedanta*1, Sufi*1] ranks the rare traditions above surplus Plotinus at equal sim/tier",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-26T01:35:22.943Z",
-  "updated_at": "2026-05-26T01:35:38.085Z",
+  "updated_at": "2026-05-26T11:51:02.805Z",
   "files": [
     {
       "path": "src/__tests__"
@@ -24,5 +24,11 @@
       "fbf4652f",
       "faedd67a"
     ]
+  },
+  "resolution": {
+    "commit": "695b4690029b210979dad4d4f1c199fc71df4509",
+    "resolved_at": "2026-05-26T11:51:02.805Z",
+    "resolved_by": "unknown",
+    "note": "Added src/__tests__/rerank.test.ts — 6 pure-function tests pinning vector inferred tier, vector similarity ordering, graph tier scoring, both-legs merge, rarity ranking, per-tradition cap, and order-independence. Exported mergeAndRerank for testing."
   }
 }
