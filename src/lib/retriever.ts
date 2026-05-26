@@ -145,17 +145,31 @@ function mergeAndRerank(
   }
 
   // Additive score: weighted vector similarity + weighted graph signal +
-  // rarity-weighted diversity bump.
+  // rarity-weighted diversity bump. Components are retained so the optional
+  // RETRIEVAL_TRACE breakdown below is the real scoring, not a re-derivation.
   const scored = entries.map(entry => {
+    const tierW = tierWeight(entry.tier);
+    const graphTerm = Math.max(tierW, entry.graphScore);
     const diversity = DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
-    const score =
-      VECTOR_WEIGHT * entry.similarity +
-      GRAPH_WEIGHT * Math.max(tierWeight(entry.tier), entry.graphScore) +
-      diversity;
-    return { entry, score };
+    const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + diversity;
+    return { entry, score, tierW, diversity };
   });
 
   scored.sort((a, b) => b.score - a.score);
+
+  // Opt-in score trace (set RETRIEVAL_TRACE=1). Off by default — no prod cost.
+  if (process.env.RETRIEVAL_TRACE) {
+    console.log(
+      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${GRAPH_WEIGHT} cap=${MAX_PER_TRADITION}):`,
+    );
+    for (const s of scored.slice(0, topK)) {
+      console.log(
+        `  ${s.score.toFixed(3)}  ${s.entry.chunk.source.padEnd(6)} ${s.entry.chunk.tradition.padEnd(20)}` +
+          ` sim=${s.entry.similarity.toFixed(3)} tierW=${s.tierW.toFixed(2)}(${s.entry.tier})` +
+          ` graphS=${s.entry.graphScore.toFixed(2)} div=${s.diversity.toFixed(3)}  ${s.entry.chunk.id}`,
+      );
+    }
+  }
 
   // Emit top-K, capping how many slots any one tradition can take so a
   // single well-connected tradition can't flood the results.
