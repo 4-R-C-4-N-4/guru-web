@@ -133,12 +133,21 @@ function mergeAndRerank(
     }
   }
 
+  // Diversity: count each tradition across the whole merged candidate set
+  // first, then boost rarer traditions more. This is continuous and
+  // order-independent — a tradition with a single candidate gets the full
+  // bump, while an over-represented tradition's bump is divided across its
+  // many candidates, so rarity is rewarded rather than first-appearance.
+  const entries = Array.from(merged.values());
+  const traditionCounts = new Map<string, number>();
+  for (const e of entries) {
+    traditionCounts.set(e.chunk.tradition, (traditionCounts.get(e.chunk.tradition) ?? 0) + 1);
+  }
+
   // Additive score: weighted vector similarity + weighted graph signal +
-  // a one-off diversity bump for the first chunk seen from each tradition.
-  const traditionsSeen = new Set<string>();
-  const scored = Array.from(merged.values()).map(entry => {
-    const diversity = traditionsSeen.has(entry.chunk.tradition) ? 0 : DIVERSITY_BOOST;
-    traditionsSeen.add(entry.chunk.tradition);
+  // rarity-weighted diversity bump.
+  const scored = entries.map(entry => {
+    const diversity = DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
     const score =
       VECTOR_WEIGHT * entry.similarity +
       GRAPH_WEIGHT * Math.max(tierWeight(entry.tier), entry.graphScore) +
