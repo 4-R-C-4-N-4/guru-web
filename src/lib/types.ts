@@ -29,6 +29,18 @@ export interface ConceptMatch {
   matchTier: MatchTier;
 }
 
+/**
+ * One family/domain match that fanned a query out into multiple concepts
+ * (todo:9d2ad427 §8) — the query-expansion transparency signal shown to the
+ * user ("matched Cosmology → 7 concepts"). Concept-tier matches are 1:1 and
+ * intentionally excluded; only genuine expansions are surfaced.
+ */
+export interface QueryExpansion {
+  tier: 'family' | 'domain';
+  label: string;
+  conceptCount: number;
+}
+
 export interface RetrievedChunk extends Chunk {
   distance?: number;
   source: 'vector' | 'graph';

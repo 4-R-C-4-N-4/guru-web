@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({
 import * as db from '@/lib/db';
 const mockQuery = db.query as MockedFunction<typeof db.query>;
 
-import { extractConcepts, walkGraph } from '@/lib/graph';
+import { extractConcepts, walkGraph, summarizeExpansion } from '@/lib/graph';
 import type { UserPreferences } from '@/lib/types';
 
 describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
@@ -102,6 +102,39 @@ describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
     mockQuery.mockResolvedValueOnce([]);
     const result = await extractConcepts('the cosmos');
     expect(result).toEqual([]);
+  });
+});
+
+describe('summarizeExpansion — query-expansion transparency (todo:9d2ad427)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns [] for queries with no usable words (no DB call)', async () => {
+    const result = await summarizeExpansion('% _ a');
+    expect(result).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('maps family/domain rows to {tier,label,conceptCount}', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { tier: 'domain', label: 'Cosmology', n: 7 },
+      { tier: 'family', label: 'Cosmic Agents', n: 3 },
+    ]);
+
+    const result = await summarizeExpansion('cosmology cosmic agents');
+    expect(result).toEqual([
+      { tier: 'domain', label: 'Cosmology', conceptCount: 7 },
+      { tier: 'family', label: 'Cosmic Agents', conceptCount: 3 },
+    ]);
+  });
+
+  it('collapses duplicate label/alias rows for the same family', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { tier: 'family', label: 'Liberation', n: 4 },
+      { tier: 'family', label: 'Liberation', n: 4 }, // matched again via an alias
+    ]);
+
+    const result = await summarizeExpansion('liberation');
+    expect(result).toEqual([{ tier: 'family', label: 'Liberation', conceptCount: 4 }]);
   });
 });
 

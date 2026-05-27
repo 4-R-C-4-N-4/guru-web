@@ -7,7 +7,7 @@
  */
 
 import { query } from './db';
-import type { ConceptMatch, MatchTier, RetrievedChunk, UserPreferences } from './types';
+import type { ConceptMatch, MatchTier, QueryExpansion, RetrievedChunk, UserPreferences } from './types';
 
 /**
  * Number of concept→concept hops to expand out from the seed concepts
@@ -120,6 +120,68 @@ export async function extractConcepts(queryText: string): Promise<ConceptMatch[]
     }
   }
   return Array.from(best, ([conceptId, matchTier]) => ({ conceptId, matchTier }));
+}
+
+/**
+ * Summarise how a query fanned out, for query-expansion transparency
+ * (todo:9d2ad427 §8): the family/domain labels a query matched and how many
+ * concepts each pulled in. Concept-tier (1:1) matches are excluded — only
+ * genuine expansions are interesting to show. A transparency-only sibling of
+ * extractConcepts (same tokenisation), run on the chat path alongside retrieve;
+ * it returns [] when nothing expanded, so the UI shows a chip only when there's
+ * a real fan-out. Alias legs are inert until the alias tables fill.
+ */
+export async function summarizeExpansion(queryText: string): Promise<QueryExpansion[]> {
+  const words = queryText
+    .toLowerCase()
+    .replace(/[%_]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+
+  if (words.length === 0) return [];
+
+  const params = words.map(w => `%${w}%`);
+  const anyWord = (expr: string) => words.map((_, i) => `${expr} LIKE $${i + 1}`).join(' OR ');
+
+  const rows = await query<{ tier: 'family' | 'domain'; label: string; n: number }>(
+    `SELECT 'family' AS tier, f.label, COUNT(DISTINCT m.concept_id)::int AS n
+       FROM concept_families f
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE f.parent_id IS NOT NULL AND (${anyWord('LOWER(f.label)')})
+      GROUP BY f.id, f.label
+     UNION ALL
+     SELECT 'family', f.label, COUNT(DISTINCT m.concept_id)::int
+       FROM family_aliases fa
+       JOIN concept_families f ON f.id = fa.family_id
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE f.parent_id IS NOT NULL AND (${anyWord('fa.alias')})
+      GROUP BY f.id, f.label
+     UNION ALL
+     SELECT 'domain', d.label, COUNT(DISTINCT m.concept_id)::int
+       FROM concept_families d
+       JOIN concept_families f ON f.parent_id = d.id
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE d.parent_id IS NULL AND (${anyWord('LOWER(d.label)')})
+      GROUP BY d.id, d.label
+     UNION ALL
+     SELECT 'domain', d.label, COUNT(DISTINCT m.concept_id)::int
+       FROM family_aliases da
+       JOIN concept_families d ON d.id = da.family_id AND d.parent_id IS NULL
+       JOIN concept_families f ON f.parent_id = d.id
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE ${anyWord('da.alias')}
+      GROUP BY d.id, d.label`,
+    params
+  );
+
+  // A family/domain matched by both its label and an alias yields duplicate
+  // rows — collapse on tier+label (the count is identical per family).
+  const seen = new Map<string, QueryExpansion>();
+  for (const r of rows) {
+    const key = `${r.tier}:${r.label}`;
+    if (!seen.has(key)) seen.set(key, { tier: r.tier, label: r.label, conceptCount: r.n });
+  }
+  return Array.from(seen.values());
 }
 
 /**

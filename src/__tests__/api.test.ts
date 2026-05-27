@@ -71,6 +71,11 @@ vi.mock('@/lib/model', async () => {
 vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn(),
 }));
+// summarizeExpansion runs on the query path; default to no expansion so existing
+// query tests are unaffected, override per-test for the transparency header.
+vi.mock('@/lib/graph', () => ({
+  summarizeExpansion: vi.fn().mockResolvedValue([]),
+}));
 
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
@@ -82,6 +87,7 @@ import * as prefs   from '@/lib/prefs';
 import * as spend   from '@/lib/spend';
 import * as cost    from '@/lib/cost';
 import * as retriever from '@/lib/retriever';
+import * as graph   from '@/lib/graph';
 import * as prompt  from '@/lib/prompt';
 import * as model   from '@/lib/model';
 import * as rl      from '@/lib/rate-limit';
@@ -90,6 +96,7 @@ const mockQuery  = db.query      as MockedFunction<typeof db.query>;
 const mockOne    = db.one        as MockedFunction<typeof db.one>;
 const mockExec   = db.exec       as MockedFunction<typeof db.exec>;
 const mockAuth   = auth.requireUser       as MockedFunction<typeof auth.requireUser>;
+const mockSummarize = graph.summarizeExpansion as MockedFunction<typeof graph.summarizeExpansion>;
 const mockPrefs  = prefs.loadPreferences  as MockedFunction<typeof prefs.loadPreferences>;
 const mockSavePrefs = prefs.savePreferences as MockedFunction<typeof prefs.savePreferences>;
 const mockReserveBudget  = spend.reserveBudget  as MockedFunction<typeof spend.reserveBudget>;
@@ -514,6 +521,9 @@ describe('POST /api/query', () => {
     // Default: no prior turns — loadSessionHistory reads via db.query.
     // Multi-turn tests override per-test.
     mockQuery.mockResolvedValue([]);
+    // Default: query didn't expand (no transparency header). The expansion test
+    // overrides this.
+    mockSummarize.mockResolvedValue([]);
   });
 
   it('returns 429 with Retry-After when rate-limited', async () => {
@@ -665,6 +675,49 @@ describe('POST /api/query', () => {
 
     const text = await res.text();
     expect(text).toBe('Hello world');
+  });
+
+  it('surfaces query expansion in the X-Query-Expansion header when a family/domain matched (todo:9d2ad427)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+    mockSummarize.mockResolvedValueOnce([{ tier: 'domain', label: 'Cosmology', conceptCount: 7 }]);
+
+    async function* fakeStream() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(fakeStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'cosmology', sessionId: 's1' }));
+    expect(res.status).toBe(200);
+    const header = res.headers.get('X-Query-Expansion');
+    expect(header).toBeTruthy();
+    expect(JSON.parse(decodeURIComponent(header!))).toEqual([
+      { tier: 'domain', label: 'Cosmology', conceptCount: 7 },
+    ]);
+    await res.text(); // drain the stream
+  });
+
+  it('omits the X-Query-Expansion header when nothing expanded', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+    // mockSummarize defaults to [] (beforeEach)
+
+    async function* fakeStream() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(fakeStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'qqq', sessionId: 's1' }));
+    expect(res.headers.get('X-Query-Expansion')).toBeNull();
+    await res.text();
   });
 
   it('persists token counts + cost_usd from final usage chunk', async () => {
@@ -953,6 +1006,7 @@ describe('POST /api/query — curated slug resolution', () => {
     vi.resetAllMocks();
     mockRateLimit.mockResolvedValue({ allowed: true });
     mockQuery.mockResolvedValue([]);   // loadSessionHistory: no prior turns
+    mockSummarize.mockResolvedValue([]);
   });
 
   async function runQueryWithPrefs(user: typeof FREE_USER | typeof PRO_USER, preferredModel: string | null) {
@@ -1024,6 +1078,7 @@ describe('POST /api/query — voice resolution (auto-create path)', () => {
     vi.resetAllMocks();
     mockRateLimit.mockResolvedValue({ allowed: true });
     mockQuery.mockResolvedValue([]);
+    mockSummarize.mockResolvedValue([]);
   });
 
   async function runAutoCreate(
@@ -1076,6 +1131,7 @@ describe('POST /api/query — voice resolution (existing session path)', () => {
     vi.resetAllMocks();
     mockRateLimit.mockResolvedValue({ allowed: true });
     mockQuery.mockResolvedValue([]);
+    mockSummarize.mockResolvedValue([]);
   });
 
   async function runWithSession(
