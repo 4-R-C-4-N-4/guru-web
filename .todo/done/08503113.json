@@ -1,0 +1,34 @@
+{
+  "id": "08503113",
+  "type": "feature",
+  "state": "done",
+  "summary": "Ranking: MATCH_TIER_WEIGHTS scale graph term only, preserve additive scorer; add matchW to RETRIEVAL_TRACE; rerank.test cases",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.453Z",
+  "updated_at": "2026-05-27T21:30:56.620Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "ranking",
+    "retrieval"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "522f389a"
+    ]
+  },
+  "resolution": {
+    "commit": "fb93db61485f3fd3e49ccc90e7b99286ced614bd",
+    "resolved_at": "2026-05-27T21:30:56.620Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "mergeAndRerank — match-tier weight",
+    "note": "Graph term now = max(tierW, graphScore) * matchWeight; vector leg + additive combination untouched (matchWeight defaults 1.0 for vector-only). MATCH_TIER_WEIGHTS lives in graph.ts where the tier→weight resolution happens (chunk carries conceptMatchWeight); retriever consumes the number. matchW added to RETRIEVAL_TRACE. rerank.test 9/9, full suite green."
+  }
+}
