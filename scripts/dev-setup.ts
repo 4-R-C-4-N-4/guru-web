@@ -18,9 +18,12 @@ import { Pool } from 'pg';
 import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
+// Single source of truth for the expected corpus schema version — imported from
+// boot.ts (the runtime gate) so the two can never drift (todo:980e80d5). boot.ts
+// has no import-time side effects, so pulling the constant into a script is safe.
+import { EXPECTED_SCHEMA_VERSION } from '../src/lib/boot';
 
 const CORPUS_DUMP = join(process.cwd(), '..', 'guru', 'export', 'guru-corpus.sql.gz');
-const EXPECTED_SCHEMA_VERSION = '2';
 
 function run(cmd: string, args: string[], opts: { stdio?: 'inherit' | 'pipe'; input?: string } = {}): { code: number; stdout: string } {
   const res = spawnSync(cmd, args, {

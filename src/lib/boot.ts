@@ -42,7 +42,10 @@ const EXPECTED_EMBED_DIM = 768;
 
 // MUST match SCHEMA_VERSION in scripts/export.py (guru repo). Bump in
 // the same deploy as schema/corpus-schema.sql changes.
-export const EXPECTED_SCHEMA_VERSION = '2';
+// v3 (2026-05-27): concept hierarchy — domains → families → concepts + alias
+// tables (todo:30dca55e; handoff §1, §5.2). Lockstep: the export raises if the
+// corpus's schema_version != 3, so this must advance in the same deploy.
+export const EXPECTED_SCHEMA_VERSION = '3';
 
 export class BootError extends Error {
   constructor(message: string) {
