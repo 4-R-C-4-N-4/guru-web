@@ -14,10 +14,62 @@ export interface Chunk {
   token_count: number;
 }
 
+/**
+ * Query-expansion match tier (todo:30dca55e §5). A query token can match a
+ * concept directly, a family (→ all its concepts), or a domain (→ all concepts
+ * under it). This is a SEPARATE axis from the EXPRESSES edge tier
+ * (verified/proposed/inferred): match tier weights *how a concept was reached
+ * from the query*, edge tier weights confidence in the chunk→concept link.
+ */
+export type MatchTier = 'concept' | 'family' | 'domain';
+
+/** One concept surfaced by extractConcepts, tagged with how it was matched. */
+export interface ConceptMatch {
+  conceptId: string;
+  matchTier: MatchTier;
+}
+
 export interface RetrievedChunk extends Chunk {
   distance?: number;
   source: 'vector' | 'graph';
   tier?: 'verified' | 'proposed' | 'inferred';
+  /**
+   * Query-expansion match weight carried by graph-leg chunks (todo:30dca55e §6):
+   * the MATCH_TIER_WEIGHTS value of the strongest tier any reachable concept
+   * expressing this chunk was matched at. Undefined on vector-leg chunks, where
+   * ranking treats it as 1.0 (no expansion). Internal scoring signal — not
+   * serialised by existing routes.
+   */
+  conceptMatchWeight?: number;
+}
+
+/**
+ * Read-only hierarchy view shapes for the browse / query-expansion UI
+ * (todo:30dca55e §7, §8). Family/domain fields are optional so existing
+ * concept-free DTOs and older clients are unaffected.
+ */
+export interface ConceptView {
+  id: string;
+  label: string;
+  definition: string | null;
+  family_id?: string | null;
+  family_label?: string | null;
+  domain?: string | null;
+}
+
+export interface FamilyView {
+  id: string;
+  label: string;
+  definition: string;
+  domain: string; // parent domain id
+  concepts: ConceptView[];
+}
+
+export interface DomainView {
+  id: string;
+  label: string;
+  definition: string;
+  families: FamilyView[];
 }
 
 export interface Citation {
