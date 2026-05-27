@@ -1,0 +1,15 @@
+{
+  "id": "30dca55e",
+  "type": "feature",
+  "state": "open",
+  "summary": "Concept-hierarchy alignment: consume pipeline v3 corpus, domains/families/concepts, end-to-end",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-27T21:10:24.090Z",
+  "updated_at": "2026-05-27T21:10:24.090Z",
+  "tags": [
+    "concept-hierarchy",
+    "epic"
+  ]
+}
