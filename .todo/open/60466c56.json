@@ -1,0 +1,32 @@
+{
+  "id": "60466c56",
+  "type": "chore",
+  "state": "open",
+  "summary": "Experiment with retrieval ranking levers now that we have a baseline (golden gate b22586bc + eval harness) and write up the findings. Levers: stratified/per-tradition candidate generation (root-cause fix — the vector pool is corpus-size-biased, so small but fully-tagged traditions like mesopotamian (15 chunks / 103 EXPRESSES) never enter the top-30 candidate set), VECTOR_WEIGHT vs GRAPH_WEIGHT, DIVERSITY_BOOST / rarity weighting, MAX_PER_TRADITION, MATCH_TIER_WEIGHTS, HOP_DEPTH. Principle (agreed): this is about FAIR candidate consideration = good content retrieval, NOT injecting under-showing content regardless of relevance. MUST add a precision counterpart to the golden gate (recall/breadth-only today) so recall tuning cannot mask precision loss; measure each lever against golden recall + the new precision check + eval breadth/latency, and diff top-K vs docs/concept-hierarchy/eval-topk-v3.json. Deliverable: a written report of lever effects at minimum; weight changes ship only if the data supports them.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T23:42:01.108Z",
+  "updated_at": "2026-05-27T23:42:01.192Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        78,
+        82
+      ]
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "tuning",
+    "eval",
+    "report"
+  ],
+  "relationships": {
+    "related": [
+      "31a7fe76",
+      "b22586bc"
+    ]
+  }
+}
