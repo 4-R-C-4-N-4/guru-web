@@ -46,11 +46,38 @@ CREATE TABLE IF NOT EXISTS chunks (
   embedding   vector(768)
 );
 
+CREATE TABLE IF NOT EXISTS concept_families (
+  id          TEXT PRIMARY KEY,
+  parent_id   TEXT REFERENCES concept_families(id),
+  label       TEXT NOT NULL,
+  definition  TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS concepts (
   id         TEXT PRIMARY KEY,
   label      TEXT NOT NULL,
   domain     TEXT,
-  definition TEXT
+  definition TEXT,
+  family_id  TEXT REFERENCES concept_families(id)
+);
+
+CREATE TABLE IF NOT EXISTS concept_family_membership (
+  concept_id  TEXT NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
+  family_id   TEXT NOT NULL REFERENCES concept_families(id),
+  is_primary  BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (concept_id, family_id)
+);
+
+CREATE TABLE IF NOT EXISTS concept_aliases (
+  concept_id  TEXT NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
+  alias       TEXT NOT NULL CHECK(alias = LOWER(alias)),
+  PRIMARY KEY (concept_id, alias)
+);
+
+CREATE TABLE IF NOT EXISTS family_aliases (
+  family_id   TEXT NOT NULL REFERENCES concept_families(id) ON DELETE CASCADE,
+  alias       TEXT NOT NULL CHECK(alias = LOWER(alias)),
+  PRIMARY KEY (family_id, alias)
 );
 
 CREATE TABLE IF NOT EXISTS edges (
@@ -99,11 +126,33 @@ const CHUNKS = [
   { id: 'mu-1-7', text_id: 'mandukya',          tradition: 'vedanta',     text_name: 'Mandukya Upanishad',  section: 'Verse 7',      body: 'The Fourth is thought of as that which is not conscious of the internal world, nor conscious of the external world, nor conscious of both the worlds, not a mass of consciousness.' },
 ];
 
+// Concept hierarchy (v3). Domains have parent_id = null; families point at their
+// domain. IDs are dotted for families, bare for domains — mirrors the export
+// contract (handoff §2). Aliases ship empty here, as they do in prod.
+const CONCEPT_FAMILIES = [
+  { id: 'metaphysics',  parent_id: null, label: 'Metaphysics',  definition: 'The nature of reality, being, and first principles.' },
+  { id: 'soteriology',  parent_id: null, label: 'Soteriology',  definition: 'Doctrines of salvation, liberation, and the destiny of the soul.' },
+  { id: 'epistemology', parent_id: null, label: 'Epistemology', definition: 'The nature and means of knowledge of the divine.' },
+  { id: 'metaphysics.first_principles',  parent_id: 'metaphysics',  label: 'First Principles', definition: 'The ultimate ground and originating principles of reality.' },
+  { id: 'soteriology.liberation',        parent_id: 'soteriology',  label: 'Liberation',       definition: 'Release or awakening of the self from bondage or ignorance.' },
+  { id: 'epistemology.direct_knowledge', parent_id: 'epistemology', label: 'Direct Knowledge', definition: 'Immediate, non-discursive apprehension of the divine.' },
+];
+
 const CONCEPTS = [
-  { id: 'divine-spark', label: 'Divine Spark', domain: 'soteriology', definition: 'A fragment of divine light or consciousness embedded within the human being, requiring liberation or recognition.' },
-  { id: 'gnosis',       label: 'Gnosis',       domain: 'epistemology', definition: 'Direct experiential knowledge of the divine, distinct from discursive or rational knowledge.' },
-  { id: 'atman',        label: 'Atman',        domain: 'metaphysics',  definition: 'The individual self or soul in Hindu philosophy, held to be identical with Brahman in Advaita Vedanta.' },
-  { id: 'nous',         label: 'Nous',         domain: 'metaphysics',  definition: 'Divine Mind or Intellect; in Hermetic thought, the luminous principle within the human being.' },
+  { id: 'divine-spark', label: 'Divine Spark', domain: 'soteriology', family_id: 'soteriology.liberation',        definition: 'A fragment of divine light or consciousness embedded within the human being, requiring liberation or recognition.' },
+  { id: 'gnosis',       label: 'Gnosis',       domain: 'epistemology', family_id: 'epistemology.direct_knowledge', definition: 'Direct experiential knowledge of the divine, distinct from discursive or rational knowledge.' },
+  { id: 'atman',        label: 'Atman',        domain: 'metaphysics',  family_id: 'metaphysics.first_principles',  definition: 'The individual self or soul in Hindu philosophy, held to be identical with Brahman in Advaita Vedanta.' },
+  { id: 'nous',         label: 'Nous',         domain: 'metaphysics',  family_id: 'metaphysics.first_principles',  definition: 'Divine Mind or Intellect; in Hermetic thought, the luminous principle within the human being.' },
+];
+
+// Exactly one primary membership per concept (mirrors the partial unique index
+// the export builds post-load). Secondary memberships are populated via review
+// over time; none here.
+const MEMBERSHIPS = [
+  { concept_id: 'divine-spark', family_id: 'soteriology.liberation',        is_primary: true },
+  { concept_id: 'gnosis',       family_id: 'epistemology.direct_knowledge', is_primary: true },
+  { concept_id: 'atman',        family_id: 'metaphysics.first_principles',  is_primary: true },
+  { concept_id: 'nous',         family_id: 'metaphysics.first_principles',  is_primary: true },
 ];
 
 const EDGES = [
@@ -156,11 +205,27 @@ async function seed() {
       );
     }
 
+    console.log('Seeding concept families…');
+    for (const f of CONCEPT_FAMILIES) {
+      await client.query(
+        `INSERT INTO concept_families (id, parent_id, label, definition) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING`,
+        [f.id, f.parent_id, f.label, f.definition]
+      );
+    }
+
     console.log('Seeding concepts…');
     for (const c of CONCEPTS) {
       await client.query(
-        `INSERT INTO concepts (id, label, domain, definition) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING`,
-        [c.id, c.label, c.domain, c.definition]
+        `INSERT INTO concepts (id, label, domain, definition, family_id) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
+        [c.id, c.label, c.domain, c.definition, c.family_id]
+      );
+    }
+
+    console.log('Seeding family memberships…');
+    for (const m of MEMBERSHIPS) {
+      await client.query(
+        `INSERT INTO concept_family_membership (concept_id, family_id, is_primary) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+        [m.concept_id, m.family_id, m.is_primary]
       );
     }
 
@@ -173,7 +238,7 @@ async function seed() {
     }
 
     await client.query('COMMIT');
-    console.log(`Seed complete — ${TRADITIONS.length} traditions, ${TEXTS.length} texts, ${CHUNKS.length} chunks, ${CONCEPTS.length} concepts, ${EDGES.length} edges.`);
+    console.log(`Seed complete — ${TRADITIONS.length} traditions, ${TEXTS.length} texts, ${CHUNKS.length} chunks, ${CONCEPT_FAMILIES.length} families, ${CONCEPTS.length} concepts, ${MEMBERSHIPS.length} memberships, ${EDGES.length} edges.`);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
