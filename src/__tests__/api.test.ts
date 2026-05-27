@@ -142,6 +142,7 @@ const { GET: sessionGET } = await import('@/app/api/sessions/[id]/route');
 const { GET: prefsGET, PUT: prefsPUT } = await import('@/app/api/preferences/route');
 const { POST: queryPOST } = await import('@/app/api/query/route');
 const { GET: corpusGET } = await import('@/app/api/corpus/route');
+const { GET: hierarchyGET } = await import('@/app/api/hierarchy/route');
 
 function req(method: string, url: string, body?: object) {
   return new Request(`http://localhost${url}`, {
@@ -1121,5 +1122,53 @@ describe('POST /api/query — voice resolution (existing session path)', () => {
     // shouldn't crash getSystemPrompt() if it does.
     await runWithSession(PRO_USER, 'sage-of-atlantis', 'scholar');
     expect(mockGetSystemPrompt).toHaveBeenCalledWith('scholar');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// /api/hierarchy (todo:60bd563f)
+// ---------------------------------------------------------------------------
+
+describe('GET /api/hierarchy', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 401 if not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce(Response.json({ error: 'Unauthorized' }, { status: 401 }));
+    const res = await hierarchyGET();
+    expect(res.status).toBe(401);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('assembles a domain → family → concept tree from the real tables', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    // 1st query: families (domains have parent_id null). 2nd: concepts.
+    mockQuery.mockResolvedValueOnce([
+      { id: 'metaphysics', parent_id: null, label: 'Metaphysics', definition: 'd1' },
+      { id: 'metaphysics.first_principles', parent_id: 'metaphysics', label: 'First Principles', definition: 'd2' },
+    ]);
+    mockQuery.mockResolvedValueOnce([
+      { id: 'atman', label: 'Atman', definition: 'a', family_id: 'metaphysics.first_principles' },
+      { id: 'nous', label: 'Nous', definition: 'n', family_id: 'metaphysics.first_principles' },
+    ]);
+
+    const res = await hierarchyGET();
+    const body = await res.json() as { domains: Array<{ id: string; families: Array<{ id: string; concepts: Array<{ id: string }> }> }> };
+    expect(res.status).toBe(200);
+    expect(body.domains).toHaveLength(1);
+    expect(body.domains[0].id).toBe('metaphysics');
+    expect(body.domains[0].families).toHaveLength(1);
+    expect(body.domains[0].families[0].id).toBe('metaphysics.first_principles');
+    expect(body.domains[0].families[0].concepts.map(c => c.id)).toEqual(['atman', 'nous']);
+  });
+
+  it('returns an empty tree when the hierarchy tables are empty (no fallback)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockQuery.mockResolvedValueOnce([]); // families
+    mockQuery.mockResolvedValueOnce([]); // concepts
+
+    const res = await hierarchyGET();
+    const body = await res.json() as { domains: unknown[] };
+    expect(res.status).toBe(200);
+    expect(body.domains).toEqual([]);
   });
 });
