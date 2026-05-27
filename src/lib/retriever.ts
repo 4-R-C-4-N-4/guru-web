@@ -64,7 +64,9 @@ async function graphSearch(
 ): Promise<RetrievedChunk[]> {
   const concepts = await extractConcepts(queryText);
   if (concepts.length === 0) return [];
-  return walkGraph(concepts, prefs, limit);
+  // T8 (todo:522f389a) threads match_tier into walkGraph; until then the graph
+  // leg consumes the bare concept ids and ranking is unchanged.
+  return walkGraph(concepts.map(c => c.conceptId), prefs, limit);
 }
 
 // ---------------------------------------------------------------------------

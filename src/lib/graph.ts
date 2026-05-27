@@ -7,7 +7,7 @@
  */
 
 import { query } from './db';
-import type { RetrievedChunk, UserPreferences } from './types';
+import type { ConceptMatch, MatchTier, RetrievedChunk, UserPreferences } from './types';
 
 /**
  * Number of concept→concept hops to expand out from the seed concepts
@@ -29,11 +29,26 @@ const HOP_DEPTH = 1;
  */
 const CONCEPT_EDGE_TYPES = ['PARALLELS', 'DERIVES_FROM'];
 
+/** Strongest-wins ranking when one concept is matched at several tiers. */
+const MATCH_TIER_RANK: Record<MatchTier, number> = { concept: 3, family: 2, domain: 1 };
+
 /**
- * Extract concept IDs from free text by keyword-matching concept labels.
- * Phase 1 implementation: simple LIKE match against each word in the query.
+ * Extract concepts from free text, matching query words **simultaneously across
+ * three namespaces** (todo:30dca55e §5.1; handoff §3.1) — not priority-ordered:
+ *
+ *   1. concept — concepts.label + concept_aliases.alias            → tier 'concept'
+ *   2. family  — concept_families.label + family_aliases.alias     → tier 'family'
+ *                (expands to every concept with a membership in that family)
+ *   3. domain  — domain-row label + its family_aliases             → tier 'domain'
+ *                (every concept whose family's parent is that domain)
+ *
+ * Read-side ignores is_primary — primary and secondary memberships are co-equal
+ * for expansion. A concept matched at multiple tiers is returned once at its
+ * strongest tier. Substring LIKE on lowercased values throughout. Alias legs are
+ * correct but inert until the alias tables are populated (handoff §4), so they
+ * simply contribute no rows today.
  */
-export async function extractConcepts(queryText: string): Promise<string[]> {
+export async function extractConcepts(queryText: string): Promise<ConceptMatch[]> {
   const words = queryText
     .toLowerCase()
     .replace(/[%_]/g, '')       // strip LIKE wildcards before matching
@@ -42,15 +57,55 @@ export async function extractConcepts(queryText: string): Promise<string[]> {
 
   if (words.length === 0) return [];
 
-  const conditions = words.map((_, i) => `LOWER(label) LIKE $${i + 1}`).join(' OR ');
   const params = words.map(w => `%${w}%`);
+  // Each leg ORs the same $1..$N word patterns against its own column.
+  const anyWord = (expr: string) => words.map((_, i) => `${expr} LIKE $${i + 1}`).join(' OR ');
 
-  const rows = await query<{ id: string }>(
-    `SELECT id FROM concepts WHERE ${conditions}`,
+  const rows = await query<{ concept_id: string; match_tier: MatchTier }>(
+    `SELECT c.id AS concept_id, 'concept' AS match_tier
+       FROM concepts c
+      WHERE ${anyWord('LOWER(c.label)')}
+     UNION ALL
+     SELECT ca.concept_id, 'concept'
+       FROM concept_aliases ca
+      WHERE ${anyWord('ca.alias')}
+     UNION ALL
+     SELECT m.concept_id, 'family'
+       FROM concept_families f
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE f.parent_id IS NOT NULL AND (${anyWord('LOWER(f.label)')})
+     UNION ALL
+     SELECT m.concept_id, 'family'
+       FROM family_aliases fa
+       JOIN concept_families f ON f.id = fa.family_id
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE f.parent_id IS NOT NULL AND (${anyWord('fa.alias')})
+     UNION ALL
+     SELECT m.concept_id, 'domain'
+       FROM concept_families d
+       JOIN concept_families f ON f.parent_id = d.id
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE d.parent_id IS NULL AND (${anyWord('LOWER(d.label)')})
+     UNION ALL
+     SELECT m.concept_id, 'domain'
+       FROM family_aliases da
+       JOIN concept_families d ON d.id = da.family_id AND d.parent_id IS NULL
+       JOIN concept_families f ON f.parent_id = d.id
+       JOIN concept_family_membership m ON m.family_id = f.id
+      WHERE ${anyWord('da.alias')}`,
     params
   );
 
-  return rows.map(r => r.id);
+  // Dedupe by concept, keeping the strongest tier. Map preserves first-seen
+  // order, so the concept namespace (first leg) anchors a stable order.
+  const best = new Map<string, MatchTier>();
+  for (const r of rows) {
+    const cur = best.get(r.concept_id);
+    if (!cur || MATCH_TIER_RANK[r.match_tier] > MATCH_TIER_RANK[cur]) {
+      best.set(r.concept_id, r.match_tier);
+    }
+  }
+  return Array.from(best, ([conceptId, matchTier]) => ({ conceptId, matchTier }));
 }
 
 /**

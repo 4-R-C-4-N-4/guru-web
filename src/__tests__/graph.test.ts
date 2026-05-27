@@ -19,7 +19,7 @@ const mockQuery = db.query as MockedFunction<typeof db.query>;
 import { extractConcepts, walkGraph } from '@/lib/graph';
 import type { UserPreferences } from '@/lib/types';
 
-describe('extractConcepts', () => {
+describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('strips LIKE wildcards from query text before building patterns', async () => {
@@ -28,9 +28,14 @@ describe('extractConcepts', () => {
     await extractConcepts('100% divine spark_bad');
 
     expect(mockQuery).toHaveBeenCalledOnce();
-    const [, params] = mockQuery.mock.calls[0];
-    // '%' and '_' removed: '100 divine sparkbad' → three words
+    const [sql, params] = mockQuery.mock.calls[0];
+    // '%' and '_' removed: '100 divine sparkbad' → three words, one $N each.
     expect(params).toEqual(['%100%', '%divine%', '%sparkbad%']);
+    // Single UNION ALL query spanning all three namespaces.
+    expect(sql).toMatch(/FROM concepts c/);
+    expect(sql).toMatch(/FROM concept_families f/);
+    expect(sql).toMatch(/concept_aliases/);
+    expect(sql).toMatch(/family_aliases/);
   });
 
   it('returns empty array for queries with no words > 2 chars after sanitisation', async () => {
@@ -39,11 +44,64 @@ describe('extractConcepts', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('returns concept IDs from matched rows', async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 'divine-spark' }, { id: 'gnosis' }]);
+  it('returns ConceptMatch[] with the matched tier from concept-namespace rows', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'divine-spark', match_tier: 'concept' },
+      { concept_id: 'gnosis', match_tier: 'concept' },
+    ]);
 
     const result = await extractConcepts('divine spark gnosis');
-    expect(result).toEqual(['divine-spark', 'gnosis']);
+    expect(result).toEqual([
+      { conceptId: 'divine-spark', matchTier: 'concept' },
+      { conceptId: 'gnosis', matchTier: 'concept' },
+    ]);
+  });
+
+  it('expands a family match to every member concept at family tier', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'atman', match_tier: 'family' },
+      { concept_id: 'nous', match_tier: 'family' },
+    ]);
+
+    const result = await extractConcepts('first principles');
+    expect(result).toEqual([
+      { conceptId: 'atman', matchTier: 'family' },
+      { conceptId: 'nous', matchTier: 'family' },
+    ]);
+  });
+
+  it('tags domain-namespace expansions at domain tier', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'atman', match_tier: 'domain' },
+      { concept_id: 'nous', match_tier: 'domain' },
+    ]);
+
+    const result = await extractConcepts('metaphysics');
+    expect(result).toEqual([
+      { conceptId: 'atman', matchTier: 'domain' },
+      { conceptId: 'nous', matchTier: 'domain' },
+    ]);
+  });
+
+  it('dedupes a concept matched at several tiers, keeping the strongest', async () => {
+    // Same concept arrives via the domain leg (weak) and the concept leg (strong).
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'atman', match_tier: 'domain' },
+      { concept_id: 'atman', match_tier: 'concept' },
+      { concept_id: 'nous', match_tier: 'domain' },
+    ]);
+
+    const result = await extractConcepts('metaphysics atman');
+    expect(result).toEqual([
+      { conceptId: 'atman', matchTier: 'concept' },
+      { conceptId: 'nous', matchTier: 'domain' },
+    ]);
+  });
+
+  it('returns [] when no namespace matches (e.g. alias tables empty today)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    const result = await extractConcepts('the cosmos');
+    expect(result).toEqual([]);
   });
 });
 

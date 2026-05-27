@@ -85,7 +85,9 @@ async function main() {
     const ms = Date.now() - t0;
     const concepts = await extractConcepts(q);
     if (concepts.length === 0) zeroConcept++;
-    const graphCand = concepts.length ? (await walkGraph(concepts, PREFS, TOPK * 2)).length : 0;
+    const graphCand = concepts.length
+      ? (await walkGraph(concepts.map(c => c.conceptId), PREFS, TOPK * 2)).length
+      : 0;
     if (graphCand > 0) graphFired++;
 
     const trads = [...new Set(top.map(c => c.tradition))];
