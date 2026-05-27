@@ -1,0 +1,26 @@
+{
+  "id": "97094b63",
+  "type": "chore",
+  "state": "open",
+  "summary": "CI guard: fail if corpus-schema.sql diverges from pipeline published hash, or documented diff gate in deploy runbook",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.788Z",
+  "updated_at": "2026-05-27T21:10:25.493Z",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml"
+    }
+  ],
+  "tags": [
+    "ci",
+    "schema"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "ac83fd8b"
+    ]
+  }
+}

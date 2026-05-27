@@ -1,0 +1,26 @@
+{
+  "id": "2152ea81",
+  "type": "chore",
+  "state": "open",
+  "summary": "retrieval.integration.test: high-level query tripwires, graph leg fires on cosmology/the One/salvation; note zeroed-embedding caveat",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.524Z",
+  "updated_at": "2026-05-27T21:10:25.171Z",
+  "files": [
+    {
+      "path": "src/__tests__/retrieval.integration.test.ts"
+    }
+  ],
+  "tags": [
+    "test",
+    "retrieval"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "a72128b2"
+    ]
+  }
+}

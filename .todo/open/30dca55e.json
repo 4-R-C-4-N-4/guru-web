@@ -7,9 +7,32 @@
     "type": "agent"
   },
   "created_at": "2026-05-27T21:10:24.090Z",
-  "updated_at": "2026-05-27T21:10:24.090Z",
+  "updated_at": "2026-05-27T21:10:24.788Z",
   "tags": [
     "concept-hierarchy",
     "epic"
-  ]
+  ],
+  "relationships": {
+    "children": [
+      "6c00d0b5",
+      "6676f02b",
+      "ac83fd8b",
+      "980e80d5",
+      "24371bff",
+      "cfbf0554",
+      "fa67ceaf",
+      "a72128b2",
+      "522f389a",
+      "08503113",
+      "b22586bc",
+      "2152ea81",
+      "970c6d01",
+      "ee601330",
+      "60bd563f",
+      "e3d8bc55",
+      "b044e7c3",
+      "9d2ad427",
+      "97094b63"
+    ]
+  }
 }

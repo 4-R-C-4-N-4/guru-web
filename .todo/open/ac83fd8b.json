@@ -1,0 +1,23 @@
+{
+  "id": "ac83fd8b",
+  "type": "chore",
+  "state": "open",
+  "summary": "Mirror corpus-schema.sql v3 verbatim from guru repo; cp + diff byte-identical verify",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.206Z",
+  "updated_at": "2026-05-27T21:10:24.206Z",
+  "files": [
+    {
+      "path": "schema/corpus-schema.sql"
+    }
+  ],
+  "tags": [
+    "schema",
+    "lockstep"
+  ],
+  "relationships": {
+    "parent": "30dca55e"
+  }
+}

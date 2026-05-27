@@ -1,0 +1,23 @@
+{
+  "id": "980e80d5",
+  "type": "chore",
+  "state": "open",
+  "summary": "Bump EXPECTED_SCHEMA_VERSION 2 to 3 in boot.ts; dedupe dev-setup.ts copy via import; confirm boot.test green",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.239Z",
+  "updated_at": "2026-05-27T21:10:24.239Z",
+  "files": [
+    {
+      "path": "src/lib/boot.ts"
+    }
+  ],
+  "tags": [
+    "schema",
+    "lockstep"
+  ],
+  "relationships": {
+    "parent": "30dca55e"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "970c6d01",
+  "type": "chore",
+  "state": "open",
+  "summary": "GATE B cell-2 to cell-3: run harness + golden set on v3 staging, tune match weights against golden agreement, confirm graphCand/latency bounded, record verdict",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.562Z",
+  "updated_at": "2026-05-27T21:10:25.280Z",
+  "tags": [
+    "benchmark",
+    "gate"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "08503113",
+      "b22586bc",
+      "6c00d0b5"
+    ]
+  }
+}

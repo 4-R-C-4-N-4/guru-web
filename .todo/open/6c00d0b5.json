@@ -1,0 +1,22 @@
+{
+  "id": "6c00d0b5",
+  "type": "feature",
+  "state": "open",
+  "summary": "eval-retrieval.ts: add high-level queries, graphCand and latency columns, EVAL_DUMP_TOPK top-K dump; one code-agnostic binary for cells 1/2/3",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.134Z",
+  "updated_at": "2026-05-27T21:10:24.134Z",
+  "files": [
+    {
+      "path": "scripts/eval-retrieval.ts"
+    }
+  ],
+  "tags": [
+    "benchmark"
+  ],
+  "relationships": {
+    "parent": "30dca55e"
+  }
+}

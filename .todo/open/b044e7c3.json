@@ -1,0 +1,20 @@
+{
+  "id": "b044e7c3",
+  "type": "feature",
+  "state": "open",
+  "summary": "Family context on concept/chunk views, Monad Cosmology Divine Structure, from family_id path",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.714Z",
+  "updated_at": "2026-05-27T21:10:25.423Z",
+  "tags": [
+    "ui"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "60bd563f"
+    ]
+  }
+}
