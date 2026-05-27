@@ -91,6 +91,11 @@ interface MergedEntry {
   similarity: number; // 1 - cosine distance; 0 for graph-only hits
   tier: Tier;
   graphScore: number; // tier weight of the originating graph edge; 0 for vector-only
+  // Query-expansion match weight scaling the graph term (todo:08503113 §6). The
+  // value is MATCH_TIER_WEIGHTS (graph.ts) resolved at walk time and carried on
+  // the chunk as conceptMatchWeight. 1.0 for vector-only hits (no expansion), so
+  // their score is unchanged.
+  matchWeight: number;
 }
 
 // Exported for unit testing (todo:d1a94167); not part of the public API —
@@ -113,6 +118,7 @@ export function mergeAndRerank(
       similarity,
       tier: 'inferred',
       graphScore: 0,
+      matchWeight: 1.0, // vector hit, no query expansion
     });
   }
 
@@ -123,6 +129,9 @@ export function mergeAndRerank(
   for (const chunk of graphResults) {
     const gTier = (chunk.tier ?? 'inferred') as Tier;
     const gWeight = tierWeight(gTier);
+    // How strongly the query reached this chunk's concept (concept/family/domain).
+    // Graph chunks always carry it; fall back to 1.0 defensively.
+    const gMatchW = chunk.conceptMatchWeight ?? 1.0;
     const existing = merged.get(chunk.id);
     if (existing) {
       if (gWeight > tierWeight(existing.tier)) {
@@ -130,8 +139,9 @@ export function mergeAndRerank(
         existing.chunk = { ...existing.chunk, tier: gTier };
       }
       existing.graphScore = Math.max(existing.graphScore, gWeight);
+      existing.matchWeight = gMatchW; // graph-derived scaler for the graph term
     } else {
-      merged.set(chunk.id, { chunk, similarity: 0, tier: gTier, graphScore: gWeight });
+      merged.set(chunk.id, { chunk, similarity: 0, tier: gTier, graphScore: gWeight, matchWeight: gMatchW });
     }
   }
 
@@ -151,7 +161,10 @@ export function mergeAndRerank(
   // RETRIEVAL_TRACE breakdown below is the real scoring, not a re-derivation.
   const scored = entries.map(entry => {
     const tierW = tierWeight(entry.tier);
-    const graphTerm = Math.max(tierW, entry.graphScore);
+    // Scale ONLY the graph term by the query-expansion match weight — the vector
+    // leg and the additive combination are untouched (todo:08503113 §6). A
+    // domain-tier graph hit thus contributes ¼ of a concept-tier hit's graph term.
+    const graphTerm = Math.max(tierW, entry.graphScore) * entry.matchWeight;
     const diversity = DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
     const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + diversity;
     return { entry, score, tierW, diversity };
@@ -168,7 +181,8 @@ export function mergeAndRerank(
       console.log(
         `  ${s.score.toFixed(3)}  ${s.entry.chunk.source.padEnd(6)} ${s.entry.chunk.tradition.padEnd(20)}` +
           ` sim=${s.entry.similarity.toFixed(3)} tierW=${s.tierW.toFixed(2)}(${s.entry.tier})` +
-          ` graphS=${s.entry.graphScore.toFixed(2)} div=${s.diversity.toFixed(3)}  ${s.entry.chunk.id}`,
+          ` graphS=${s.entry.graphScore.toFixed(2)} matchW=${s.entry.matchWeight.toFixed(2)}` +
+          ` div=${s.diversity.toFixed(3)}  ${s.entry.chunk.id}`,
       );
     }
   }

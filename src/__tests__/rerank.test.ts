@@ -15,12 +15,18 @@ import type { RetrievedChunk } from '@/lib/types';
 function chunk(
   id: string,
   tradition: string,
-  opts: { source: 'vector' | 'graph'; distance?: number; tier?: RetrievedChunk['tier'] },
+  opts: {
+    source: 'vector' | 'graph';
+    distance?: number;
+    tier?: RetrievedChunk['tier'];
+    conceptMatchWeight?: number;
+  },
 ): RetrievedChunk {
   return {
     id, text_id: 't', tradition, text_name: 'tn', section: 's',
     translator: null, body: 'b', token_count: 1,
     source: opts.source, distance: opts.distance, tier: opts.tier,
+    conceptMatchWeight: opts.conceptMatchWeight,
   };
 }
 
@@ -63,6 +69,41 @@ describe('mergeAndRerank — graph leg (0a771923)', () => {
     );
     expect(out[0].id).toBe('both');
     expect(out.find(c => c.id === 'both')!.tier).toBe('verified');
+  });
+});
+
+describe('mergeAndRerank — match-tier weight (todo:08503113)', () => {
+  it('a concept-tier graph hit outranks an otherwise-identical domain-tier hit', () => {
+    // Same edge tier, same (zero) similarity, distinct traditions so the
+    // diversity bump is equal — only the match weight differs.
+    const out = mergeAndRerank([], [
+      chunk('domain', 'x', { source: 'graph', tier: 'verified', conceptMatchWeight: 0.25 }),
+      chunk('concept', 'y', { source: 'graph', tier: 'verified', conceptMatchWeight: 1.0 }),
+    ], 5);
+    expect(out.map(c => c.id)).toEqual(['concept', 'domain']);
+  });
+
+  it('orders graph hits concept > family > domain at equal tier/similarity/diversity', () => {
+    // Distinct traditions → equal diversity bump; identical edge tier and zero
+    // similarity → match weight is the only differentiator.
+    const out = mergeAndRerank([], [
+      chunk('dom', 'a', { source: 'graph', tier: 'verified', conceptMatchWeight: 0.25 }),
+      chunk('fam', 'b', { source: 'graph', tier: 'verified', conceptMatchWeight: 0.5 }),
+      chunk('con', 'c', { source: 'graph', tier: 'verified', conceptMatchWeight: 1.0 }),
+    ], 5);
+    expect(out.map(c => c.id)).toEqual(['con', 'fam', 'dom']);
+  });
+
+  it('vector-only hits (no conceptMatchWeight) are unchanged — weight defaults to 1.0', () => {
+    // A vector hit and a concept-tier graph hit with identical inputs; the vector
+    // hit must not be penalised for lacking a match weight.
+    const out = mergeAndRerank(
+      [chunk('vec', 'x', { source: 'vector', distance: 0.1 })],
+      [],
+      5,
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('vec');
   });
 });
 
