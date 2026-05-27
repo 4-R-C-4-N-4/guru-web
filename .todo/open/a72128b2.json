@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-05-27T21:10:24.382Z",
-  "updated_at": "2026-05-27T21:10:25.029Z",
+  "updated_at": "2026-05-27T21:10:34.835Z",
   "files": [
     {
       "path": "src/lib/graph.ts"
@@ -21,6 +21,9 @@
     "parent": "30dca55e",
     "depends_on": [
       "cfbf0554"
+    ],
+    "related": [
+      "53480da1"
     ]
   }
 }
