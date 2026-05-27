@@ -1,0 +1,32 @@
+{
+  "id": "24371bff",
+  "type": "chore",
+  "state": "done",
+  "summary": "Extend seed-dev.ts: v3 hierarchy tables + concepts.family_id + sample domain/family/concept tree, one is_primary per concept",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.275Z",
+  "updated_at": "2026-05-27T21:22:49.214Z",
+  "files": [
+    {
+      "path": "scripts/seed-dev.ts"
+    }
+  ],
+  "tags": [
+    "schema",
+    "dx"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "980e80d5"
+    ]
+  },
+  "resolution": {
+    "commit": "fc0d1660d2436746d83ef67767cc2aab0049b92e",
+    "resolved_at": "2026-05-27T21:22:49.214Z",
+    "resolved_by": "unknown",
+    "note": "Added concept_families/concept_family_membership/concept_aliases/family_aliases to the inline SCHEMA (mirrors the byte-identical v3 DDL, with IF NOT EXISTS) + family_id on concepts; seeds a 3-domain/3-family tree with one is_primary membership per concept (aliases empty, as in prod). Verified by type-check; not run against a live DB here (fresh-DB path; an existing v2 dev DB needs a re-seed)."
+  }
+}
