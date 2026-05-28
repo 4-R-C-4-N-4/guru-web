@@ -1,0 +1,34 @@
+{
+  "id": "35c5da28",
+  "type": "chore",
+  "state": "done",
+  "summary": "Unit-test the quality filter: apparatus chunks dropped (Next:/Errata/nav-only), boilerplate prefix + {p. N} stripped, and real short content (9-token Gospel of Thomas logion) preserved.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-28T14:35:22.514Z",
+  "updated_at": "2026-05-28T15:00:33.598Z",
+  "files": [
+    {
+      "path": "src/__tests__/"
+    }
+  ],
+  "tags": [
+    "test",
+    "quality-filter"
+  ],
+  "relationships": {
+    "parent": "0748677d",
+    "depends_on": [
+      "9e31302a"
+    ]
+  },
+  "resolution": {
+    "commit": "54cade8ba1fd5264ced5e458306dea84401cd74f",
+    "resolved_at": "2026-05-28T15:00:33.598Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/quality-filter.test.ts",
+    "test_function": "applyQualityFilter — drop apparatus, keep content",
+    "note": "5 tests: nav/TOC/errata dropped, nav-only-after-strip dropped, Sacred Texts prefix + {p. N} stripped, 9-token Thomas logion preserved verbatim (length-safe), clean chunks pass by reference. Full suite 384 green."
+  }
+}
