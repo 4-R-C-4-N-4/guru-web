@@ -1,0 +1,17 @@
+{
+  "id": "a2fbaf58",
+  "type": "chore",
+  "state": "open",
+  "summary": "Unit tests for hybrid merge: lexScore normalization bounds, additive combination, no-op when RETRIEVAL_LEXICAL unset, lexical-only and vector-lexical overlap cases, scope filter respected",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:41.394Z",
+  "updated_at": "2026-05-28T20:55:41.511Z",
+  "relationships": {
+    "parent": "353756f2",
+    "depends_on": [
+      "0c38a006"
+    ]
+  }
+}

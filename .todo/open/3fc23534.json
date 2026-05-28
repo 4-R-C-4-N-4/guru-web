@@ -1,0 +1,17 @@
+{
+  "id": "3fc23534",
+  "type": "chore",
+  "state": "open",
+  "summary": "Tune LEXICAL_WEIGHT + measure: run eval-precision with RETRIEVAL_LEXICAL=1 across the 3 configs on corpus v29, confirm entity queries (Tiamat/Ahura Mazda) lift off 0.00, golden-retrieval gate green, write Round 4 into tuning-experiment.md",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:41.432Z",
+  "updated_at": "2026-05-28T20:55:41.541Z",
+  "relationships": {
+    "parent": "353756f2",
+    "depends_on": [
+      "0c38a006"
+    ]
+  }
+}

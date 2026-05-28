@@ -1,0 +1,17 @@
+{
+  "id": "0c38a006",
+  "type": "chore",
+  "state": "open",
+  "summary": "Integrate lexical leg into retrieve() + mergeAndRerank: add as third Promise.all leg (gated), additive LEXICAL_WEIGHT term with ts_rank normalized to [0,1] so weights are comparable to cosine; thread lexScore on MergedEntry; extend RETRIEVAL_TRACE — default-off behavior stays identical",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:41.354Z",
+  "updated_at": "2026-05-28T20:55:41.472Z",
+  "relationships": {
+    "parent": "353756f2",
+    "depends_on": [
+      "af69f5e5"
+    ]
+  }
+}
