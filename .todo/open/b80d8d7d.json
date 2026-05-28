@@ -1,0 +1,24 @@
+{
+  "id": "b80d8d7d",
+  "type": "bug",
+  "state": "open",
+  "summary": "~32% of corpus chunks (994/3089, v27) are retrievable but are apparatus/boilerplate, not content: site nav ('Sacred Texts... Previous Next'), tables of contents ('Next: Chapter IV', 'Next: Book XI'), and editorial/manuscript footnotes ('the word aidum stood... in his MS'). Found via the tuning experiment (59060e24): LLM-judged precision@10 is ~0.2 corpus-wide and ~0.00 for distinctive small-tradition queries because the surfaced chunks are this junk (Zoroastrian Gathas results are philological footnotes, not doctrine). This — not ranking weights (which moved precision <0.06) — is the dominant retrieval-precision lever. FIX IS UPSTREAM in the guru pipeline chunker: filter/strip apparatus at ingestion + re-export. Cross-repo. Evidence: docs/concept-hierarchy/tuning-experiment.md Round 2.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T13:42:34.960Z",
+  "updated_at": "2026-05-28T13:42:35.049Z",
+  "tags": [
+    "corpus",
+    "retrieval",
+    "precision",
+    "pipeline",
+    "cross-repo"
+  ],
+  "relationships": {
+    "related": [
+      "59060e24",
+      "31a7fe76"
+    ]
+  }
+}
