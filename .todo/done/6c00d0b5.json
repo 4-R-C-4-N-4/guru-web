@@ -1,0 +1,28 @@
+{
+  "id": "6c00d0b5",
+  "type": "feature",
+  "state": "done",
+  "summary": "eval-retrieval.ts: add high-level queries, graphCand and latency columns, EVAL_DUMP_TOPK top-K dump; one code-agnostic binary for cells 1/2/3",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.134Z",
+  "updated_at": "2026-05-27T21:20:39.433Z",
+  "files": [
+    {
+      "path": "scripts/eval-retrieval.ts"
+    }
+  ],
+  "tags": [
+    "benchmark"
+  ],
+  "relationships": {
+    "parent": "30dca55e"
+  },
+  "resolution": {
+    "commit": "491f458fa07d42cd3ee90138734b8103ed202225",
+    "resolved_at": "2026-05-27T21:20:39.433Z",
+    "resolved_by": "unknown",
+    "note": "Added concept-hierarchy high-level queries (cosmology/the cosmos/cosmic agents/salvation), per-query latency + max-graph-candidate aggregates, and EVAL_DUMP_TOPK top-K dump for mechanical cell-②/③ diffing. Harness stays code-agnostic — same binary produces ①/②/③."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "b22586bc",
+  "type": "feature",
+  "state": "done",
+  "summary": "Build golden retrieval test set: fixture pinned to v3 snapshot with corpus_version + precision/recall scorer; 15-25 queries, semi-auto-labeled, human-ratified",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.490Z",
+  "updated_at": "2026-05-27T23:17:55.758Z",
+  "tags": [
+    "golden-tests",
+    "benchmark"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "cfbf0554"
+    ]
+  },
+  "resolution": {
+    "commit": "38ff853c59a3eec5bedc993f23b6582f171fb5f6",
+    "resolved_at": "2026-05-27T23:17:55.758Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/golden-retrieval.test.ts",
+    "test_function": "Golden retrieval gate",
+    "note": "Corpus-pinned golden gate (corpus_version 27): 14 asserted queries — tradition-anchored (distinctive term -> certain tradition: taoism/jewish_mysticism/neoplatonism/hermeticism/egyptian/gnosticism/sufism) + hierarchy/breadth (minConcepts/minTraditions). Labels are domain-knowledge, not system output (non-circular). Calibrated live: 14/14 pass. 2 cases (Ahura Mazda->zoroastrianism, Tiamat->mesopotamian) surfaced a real gap, moved to documented knownGaps + filed as debt 31a7fe76 (not asserted, would be a red baseline). INTEGRATION_TEST-gated, skips in CI. This is the relevance gate for weight-tuning + future big retrieval changes."
+  }
+}

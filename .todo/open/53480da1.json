@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-05-26T02:34:35.456Z",
-  "updated_at": "2026-05-26T02:34:35.529Z",
+  "updated_at": "2026-05-27T22:43:50.503Z",
   "files": [
     {
       "path": "src/lib/graph.ts",
@@ -27,5 +27,13 @@
       "69022947",
       "53901cb3"
     ]
-  }
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-05-27T22:43:50.503Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "v3 benchmark on local corpus (3089 chunks, 25820 EXPRESSES, corpus_version 27): three-namespace extractConcepts fixed the lexical-overlap cases — cosmology now extracts 27 concepts (domain 'Cosmology'→27 + family 'Soul Cosmology'→3), the One 16, divine names 25, the cosmos 17, cosmic agents 13, ego death 2 (was dark). Graph leg fires 14/16, avg 6.06 traditions in top-K, 0/16 below coverage target, latency ~75ms avg. STILL DARK: 'non-dual awareness' and 'salvation' (0 concepts) — no concept/family/domain label lexically contains them (the domain is 'Soteriology', not 'Salvation'); these need the alias tables, which ship empty. So the debt is substantially reduced but its tail (pure-synonym queries) remains until concept_aliases/family_aliases are populated."
+    }
+  ]
 }

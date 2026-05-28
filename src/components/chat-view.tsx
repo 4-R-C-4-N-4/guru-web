@@ -22,6 +22,7 @@ import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
 import { displayForModelId } from '@/lib/provider-display';
+import type { QueryExpansion } from '@/lib/types';
 
 interface CitationData {
   tradition: string;
@@ -37,6 +38,10 @@ export interface Message {
   text?: string;
   citations?: CitationData[];
   meta?: { chunks: number; traditions: number; verified: number; proposed: number };
+  /** Query-expansion transparency (todo:9d2ad427): family/domain matches that
+   *  fanned the query out. Live-only — arrives via the X-Query-Expansion header
+   *  on /api/query; not persisted, so resumed sessions don't show it. */
+  expansion?: QueryExpansion[];
   /** Per-response attribution surface (model-selection BRD §7.4). Only
    *  present on persisted assistant messages; live-streaming responses
    *  populate these fields after the stream completes and the row is
@@ -263,6 +268,16 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
       // finalizeBudget complete). Spec: model-selection BRD §7.4.
       const modelUsedHeader = res.headers.get('X-Model-Used');
 
+      // Query-expansion transparency (todo:9d2ad427) — present only when a
+      // family/domain match fanned the query out. Parse defensively; a malformed
+      // header must never break the stream render.
+      let expansion: QueryExpansion[] | undefined;
+      const expansionHeader = res.headers.get('X-Query-Expansion');
+      if (expansionHeader) {
+        try { expansion = JSON.parse(decodeURIComponent(expansionHeader)) as QueryExpansion[]; }
+        catch { /* ignore a malformed header */ }
+      }
+
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
 
@@ -275,6 +290,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
           role: 'assistant',
           text: '',
           ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
+          ...(expansion && expansion.length > 0 && { expansion }),
         },
       ]);
 
@@ -288,6 +304,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
             role: 'assistant',
             text: fullText,
             ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
+            ...(expansion && expansion.length > 0 && { expansion }),
           };
           return next;
         });
@@ -392,6 +409,19 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
               </div>
             ) : (
               <div>
+                {msg.expansion && msg.expansion.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 0.5 }}>
+                    {msg.expansion.map((e, k) => (
+                      <span
+                        key={k}
+                        title={`Your query matched the ${e.tier} "${e.label}", expanding the search to ${e.conceptCount} related concepts`}
+                        style={{ padding: '2px 8px', border: `1px solid ${tokens.border.subtle}`, borderRadius: 3, whiteSpace: 'nowrap' }}
+                      >
+                        ↳ {e.label} → {e.conceptCount} concepts
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="md" style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 15, color: tokens.text.primary, lineHeight: 1.7, marginBottom: msg.citations?.length ? 14 : 0, overflowWrap: 'anywhere' }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
                     {msg.text ?? ''}

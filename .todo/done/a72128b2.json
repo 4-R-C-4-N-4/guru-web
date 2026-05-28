@@ -1,0 +1,37 @@
+{
+  "id": "a72128b2",
+  "type": "feature",
+  "state": "done",
+  "summary": "extractConcepts: three-namespace match concept/family/domain + alias to ConceptMatch[], dedupe strongest tier; rewrite graph.test + family/domain/dedupe/alias-zero cases",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.382Z",
+  "updated_at": "2026-05-27T21:25:32.771Z",
+  "files": [
+    {
+      "path": "src/lib/graph.ts"
+    }
+  ],
+  "tags": [
+    "query-plane",
+    "retrieval"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "cfbf0554"
+    ],
+    "related": [
+      "53480da1"
+    ]
+  },
+  "resolution": {
+    "commit": "3b8bf7d27b4729566dfa2141ff3dcab0e6e0c45d",
+    "resolved_at": "2026-05-27T21:25:32.771Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/graph.test.ts",
+    "test_function": "extractConcepts — three-namespace match",
+    "note": "Single UNION-ALL query across concept/family/domain namespaces (+ alias legs, inert until populated); returns ConceptMatch[] deduped to strongest tier per concept. Call sites (graphSearch, eval) map to ids for now; T8 threads match_tier through walkGraph. Closes 53480da1 (abstract queries no longer go dark via family/domain expansion). graph.test 12/12."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "b044e7c3",
+  "type": "feature",
+  "state": "done",
+  "summary": "Family context on concept/chunk views, Monad Cosmology Divine Structure, from family_id path",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.714Z",
+  "updated_at": "2026-05-27T22:15:33.053Z",
+  "tags": [
+    "ui"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "60bd563f"
+    ],
+    "related": [
+      "e3d8bc55"
+    ]
+  },
+  "resolution": {
+    "commit": "271767a0469fffb379b872201540d5f38b9b98e6",
+    "resolved_at": "2026-05-27T22:15:33.053Z",
+    "resolved_by": "unknown",
+    "note": "Won't ship standalone — folded into T14 (e3d8bc55). Family-context breadcrumbs have no UI surface until the browse view exists; they belong in that followup PR."
+  }
+}

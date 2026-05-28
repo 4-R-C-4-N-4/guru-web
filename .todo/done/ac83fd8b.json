@@ -1,0 +1,32 @@
+{
+  "id": "ac83fd8b",
+  "type": "chore",
+  "state": "done",
+  "summary": "Mirror corpus-schema.sql v3 verbatim from guru repo; cp + diff byte-identical verify",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.206Z",
+  "updated_at": "2026-05-27T21:20:47.271Z",
+  "files": [
+    {
+      "path": "schema/corpus-schema.sql"
+    }
+  ],
+  "tags": [
+    "schema",
+    "lockstep"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "related": [
+      "6157e231"
+    ]
+  },
+  "resolution": {
+    "commit": "f272c3ccd45b005ecb3406179459ec2e185831be",
+    "resolved_at": "2026-05-27T21:20:47.271Z",
+    "resolved_by": "unknown",
+    "note": "cp'd guru repo's v3 corpus-schema.sql; diff against source is empty (byte-identical, per handoff §1). Adds concept_families/concept_family_membership/concept_aliases/family_aliases + ALTER concepts ADD family_id + two COMMENTs."
+  }
+}

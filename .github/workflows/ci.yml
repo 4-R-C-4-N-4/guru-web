@@ -12,6 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # corpus-schema.sql is the cross-repo integration contract and MUST stay
+      # byte-identical with guru-pipeline's copy (handoff §1). This pins its hash
+      # so an accidental local edit fails CI. When the pipeline bumps the schema,
+      # re-mirror the file AND regenerate this checksum in the same change:
+      #   sha256sum schema/corpus-schema.sql > schema/corpus-schema.sql.sha256
+      - name: Corpus schema integrity (byte-identical with pipeline)
+        run: sha256sum -c schema/corpus-schema.sql.sha256
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
