@@ -207,3 +207,77 @@ The quality filter ships as a dormant, default-off **safety net** (drops pure
 apparatus, cheap), but it's not a substitute for the re-embed. After the clean
 re-embed lands, re-run this harness — *that's* when the tuning levers get their
 real test.
+
+---
+
+# Round 3 — the clean re-embed landed, and it did NOT move precision (corpus 29)
+
+The upstream repair shipped: corpus **v29** (was v27), re-chunked + **re-embedded
+on cleaned text**, apparatus collapsed from ~994 chunks (32%) to **2**. Loaded
+local, re-ran `eval-precision` (filter **off** — this is the honest test of the
+repair itself, not the band-aid).
+
+| query | live ×2 | live ×10 | fixed ×10 |
+|---|---|---|---|
+| **mean (v29 clean)** | **0.21** | **0.23** | **0.23** |
+| mean (v27 dirty, R2b) | 0.20 | 0.24 | 0.26 |
+| `cosmology` | 0.60 | 0.90 | 0.90 |
+| `union with the divine` | 0.50 | 0.40 | 0.40 |
+| `Tiamat …` | 0.00 | 0.00 | 0.00 |
+| `Ahura Mazda …` | 0.00 | 0.00 | 0.00 |
+| `the One … Nous` | 0.10 | 0.10 | 0.20 |
+| `tao / wu wei` | 0.20 | 0.10 | 0.00 |
+
+**The mean is flat.** Cleaning the corpus AND re-embedding on clean text moved
+precision by noise (≤0.03). The Round-2/2b hypothesis — "the fix must re-embed on
+cleaned text" — is **falsified**. Apparatus was never the precision ceiling.
+
+## Root cause (traced, not inferred)
+
+Three unrelated queries (`Ahura Mazda`, `Tiamat`, `tao/wu wei`) return *nearly the
+same* chunks — Plotinus *Enneads*, Chuang Tzu, *Book of Enoch*, the Mandaean
+"Seven Rulers". `Ahura Mazda and the Gathas` returns **zero** zoroastrian chunks
+**despite 152 in the corpus**; `Tiamat` returns zero mesopotamian despite the
+Enuma Elish (Marduk, Tablets of Destiny, "the neck of Tiamat") sitting right
+there. This is **dense-retrieval hubness**, ruled down to the model:
+
+- **Not a model mismatch.** `nomic-embed-text:v1.5` and `:latest` share one digest;
+  pipeline and web embed with identical weights, 768-dim, both **raw (no task
+  prefix)** — so cosine is at least comparable.
+- **Not a prefix fix.** Probed `search_query:`/`search_document:` prefixing on a
+  query↔relevant↔hub triple: the junk footnote chunk *still* out-scores the
+  on-topic chunk, by **more** with prefixes. Prefixes are not the lever here.
+- **The model barely discriminates.** Every cosine — query↔relevant and
+  query↔random-footnote alike — sits in ~0.55–0.62. The relevance margin is inside
+  the noise, so apparatus density / chunk length decide the ranking, not topicality.
+  That is *why* cleaning didn't help: it removed a few junk chunks but didn't widen
+  a margin that was never there.
+- **Lexical search trivially nails the 0.00 queries.** `ILIKE '%ahura mazda%'` →
+  the Yasna/Gatha chunks; `ILIKE '%tiamat%'` → the Enuma Elish. The right content
+  is one substring match away — the dense leg just can't see it.
+
+## Verdict (revised — the lever is the retrieval *method*, in guru-web)
+
+The original question — *"is there value in modifying the algorithm, or must we
+repair first?"* — is now answered by data: **repair was not the lever; modifying
+the retrieval algorithm is.** Specifically:
+
+1. **Add a lexical leg (hybrid retrieval).** Highest ROI, lands *here* in guru-web.
+   A Postgres FTS / `pg_trgm` leg merged into the existing vector+graph rerank
+   would rescue exactly the proper-noun/entity queries (`Tiamat`, `Ahura Mazda`,
+   `Diamond Sutra`, `tao`) that drag the mean to ~0.2 — the dense leg already
+   handles broad conceptual queries (`cosmology` 0.9). Dense + lexical is the
+   textbook fix for rare-term washout.
+2. **Populate concept aliases (upstream).** Aliases still ship **empty**, so the
+   graph leg is dark for entities — `Tiamat`→mesopotamian never fires. Filling
+   them gives the entity queries a *second* non-dense path. (debt `31a7fe76`.)
+3. **A stronger embedding model** is the deeper fix but the biggest lift (re-embed
+   corpus + match in web); revisit only if hybrid+aliases plateau.
+4. **Finish the apparatus clean.** Footnotes (`1 That is, dies. 2 …`), bare `p. 14`
+   page markers, and inline `Next: FIRST TRACTATE` still leak into v29 — the clean
+   was partial. Lower priority now that we know junk isn't the ceiling.
+
+`b80d8d7d` (re-embed) is **closed out as done-but-insufficient**: the re-embed
+happened and proved the embedding *content* was never the bottleneck — the
+embedding *model's discrimination* is. The actionable next ticket is the hybrid
+lexical leg.
