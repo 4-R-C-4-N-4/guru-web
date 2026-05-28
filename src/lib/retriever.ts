@@ -19,8 +19,16 @@ export async function retrieve(
   prefs: UserPreferences,
   topK: number = 15
 ): Promise<RetrievedChunk[]> {
+  // Vector candidate-pool multiplier (todo:60466c56). The vector leg is biased
+  // at candidate generation: large traditions get far more chances to land in a
+  // narrow top-N, so small/under-represented traditions are filtered out before
+  // reranking ever runs. Widening the pool lets the long tail reach the
+  // rarity-aware reranker. Env-tunable (read per call) so it can be swept without
+  // a redeploy; default 2 preserves historical behavior. The graph leg is not
+  // corpus-size-biased, so its pool stays fixed.
+  const poolMult = Number(process.env.RETRIEVAL_POOL_MULT) || 2;
   const [vectorResults, graphResults] = await Promise.all([
-    vectorSearch(queryText, prefs, topK * 2),
+    vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
   ]);
 
