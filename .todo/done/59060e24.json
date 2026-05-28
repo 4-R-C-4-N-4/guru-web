@@ -1,13 +1,13 @@
 {
   "id": "59060e24",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "Decouple candidate fairness from rarity scoring in the retriever so widening the vector pool surfaces under-showing traditions WITHOUT churning the trusted head. Tuning experiment (60466c56) found pool-width works for recall but churns ~60% of top-5 and evicted an anchored tradition at x15, because diversity = DIVERSITY_BOOST/traditionCount is computed over the live candidate pool. Options: fixed-reference diversity distribution; cap diversity's share of the score; or split a stratified candidate floor (fair consideration) from the rarity rerank so they don't compound. Also add a relevance-labeled precision sample to the gate (golden measures churn, not correctness). Then re-sweep. See docs/concept-hierarchy/tuning-experiment.md.",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-28T01:00:16.449Z",
-  "updated_at": "2026-05-28T01:00:16.561Z",
+  "updated_at": "2026-05-28T13:42:34.911Z",
   "files": [
     {
       "path": "src/lib/retriever.ts",
@@ -28,5 +28,11 @@
       "31a7fe76",
       "b22586bc"
     ]
+  },
+  "resolution": {
+    "commit": "254b7716140f287273ef3d76a8cf32595c5614e9",
+    "resolved_at": "2026-05-28T13:42:34.911Z",
+    "resolved_by": "unknown",
+    "note": "Built fixed-reference diversity (RETRIEVAL_DIVERSITY=fixed, pool-independent corpus rarity) + LLM-judged precision@10 harness (eval-precision.ts) + diversity×pool cross-sweep. Findings: (1) headStable over-warned — widening is ~precision-neutral (judged 0.20->0.24), round-1's churn alarm was largely benign; (2) fixed diversity NOT a clear win — evicts an anchored tradition (over-promotes rare globally); (3) diversity/pool move precision <0.06 = noise, NOT the quality lever; (4) the dominant lever is CORPUS QUALITY — ~32% of chunks are apparatus junk (nav/TOC/manuscript footnotes), which is why small-tradition recall is hollow (precision ~0.00). Verdict: stop tuning weights, clean the corpus. Knobs stay dormant (defaults unchanged). Report: docs/concept-hierarchy/tuning-experiment.md Round 2. Real finding captured separately."
   }
 }
