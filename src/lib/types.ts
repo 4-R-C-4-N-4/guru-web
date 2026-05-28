@@ -43,8 +43,16 @@ export interface QueryExpansion {
 
 export interface RetrievedChunk extends Chunk {
   distance?: number;
-  source: 'vector' | 'graph';
+  source: 'vector' | 'graph' | 'lexical';
   tier?: 'verified' | 'proposed' | 'inferred';
+  /**
+   * Raw Postgres `ts_rank` carried by lexical-leg chunks (todo:af69f5e5): the
+   * full-text relevance of this chunk's body against the query. Unbounded and
+   * corpus-relative, so the reranker normalises it to [0,1] before applying
+   * LEXICAL_WEIGHT. Undefined on vector/graph chunks. Internal scoring signal —
+   * not serialised by existing routes.
+   */
+  lexRank?: number;
   /**
    * Query-expansion match weight carried by graph-leg chunks (todo:30dca55e §6):
    * the MATCH_TIER_WEIGHTS value of the strongest tier any reachable concept

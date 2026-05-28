@@ -139,6 +139,43 @@ async function graphSearch(
 }
 
 // ---------------------------------------------------------------------------
+// Lexical search (todo:af69f5e5)
+// ---------------------------------------------------------------------------
+
+// Postgres full-text leg. The dense vector leg barely discriminates on this
+// corpus — every cosine sits in ~0.55-0.62, so proper-noun / entity queries
+// wash out entirely (tuning-experiment.md Round 3: "Ahura Mazda" returned 0 of
+// 152 zoroastrian chunks). FTS catches exactly those: `plainto_tsquery` matches
+// the terms and `ts_rank` orders by textual relevance. No index is required at
+// this scale (~3k rows seq-scan to_tsvector in <50ms); a GIN index belongs in
+// the pipeline-owned corpus export, not the byte-identical schema mirror.
+//
+// Exported for unit testing (todo:af69f5e5); not part of the public API —
+// callers use retrieve(), which runs this leg only when RETRIEVAL_LEXICAL is set.
+export async function lexicalSearch(
+  queryText: string,
+  prefs: UserPreferences,
+  limit: number
+): Promise<RetrievedChunk[]> {
+  const { where, params, paramIndex } = buildScopeFilter(prefs, 2); // $1 = query text
+
+  const rows = await query<RetrievedChunk & { lex_rank: number }>(
+    `SELECT id, text_id, tradition, text_name, section, translator, body, token_count,
+            ts_rank(to_tsvector('english', body), plainto_tsquery('english', $1)) AS lex_rank,
+            'lexical' AS source
+     FROM chunks
+     WHERE to_tsvector('english', body) @@ plainto_tsquery('english', $1)
+       AND ${where}
+     ORDER BY lex_rank DESC
+     LIMIT $${paramIndex}`,
+    [queryText, ...params, limit]
+  );
+
+  // Carry the raw ts_rank as lexRank; mergeAndRerank normalises it (todo:0c38a006).
+  return rows.map(({ lex_rank, ...r }) => ({ ...r, lexRank: lex_rank }));
+}
+
+// ---------------------------------------------------------------------------
 // Merge and rerank
 // ---------------------------------------------------------------------------
 
