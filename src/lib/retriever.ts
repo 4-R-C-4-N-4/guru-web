@@ -27,10 +27,21 @@ export async function retrieve(
   // a redeploy; default 2 preserves historical behavior. The graph leg is not
   // corpus-size-biased, so its pool stays fixed.
   const poolMult = Number(process.env.RETRIEVAL_POOL_MULT) || 2;
-  const [vectorResults, graphResults] = await Promise.all([
+  let [vectorResults, graphResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
   ]);
+
+  // Quality filter (todo:9e31302a) — drop corpus apparatus (nav/TOC/errata) and
+  // strip boilerplate prefixes from bodies so junk doesn't take top-K slots or
+  // pollute display. Env-gated (default off). NOTE: this can't fix the embedding
+  // ranking — vectors were computed on the polluted text — so the proper fix is
+  // upstream re-embed on clean chunks (todo:b80d8d7d); this is the bridge + a
+  // permanent safety net.
+  if (process.env.RETRIEVAL_QUALITY_FILTER) {
+    vectorResults = applyQualityFilter(vectorResults);
+    graphResults = applyQualityFilter(graphResults);
+  }
 
   // Diversity mode (todo:59060e24). 'live' (default) divides the bump by a
   // tradition's count *in the candidate pool*, which couples ranking to pool
@@ -42,6 +53,33 @@ export async function retrieve(
     : undefined;
 
   return mergeAndRerank(vectorResults, graphResults, topK, { traditionRarity });
+}
+
+// Corpus-apparatus patterns (todo:9e31302a; mined in tuning-experiment.md Round 2).
+// DROP: chunks that are pure navigation/TOC/errata. STRIP: boilerplate baked into
+// otherwise-real chunks (the sacred-texts nav prefix is ~32% of the corpus; the
+// {p. N} brace form is a scan page-marker). Deliberately NOT length-based — the
+// 9-token Gospel of Thomas logion is real content.
+const APPARATUS_DROP = /^\s*(?:next|previous)\s*:|^\s*errata\b/i;
+const NAV_PREFIX = /^\s*Sacred Texts\b.*?\bPrevious\s+Next\b\s*/i;
+const PAGE_MARKER = /\{\s*p\.\s*\d+\s*\}/gi;
+
+/** Strip baked-in boilerplate from a chunk body. */
+export function cleanBody(body: string): string {
+  return body.replace(NAV_PREFIX, '').replace(PAGE_MARKER, '').trim();
+}
+
+/** Drop pure-apparatus chunks and strip boilerplate from the rest. Exported for
+ *  unit testing; applied in retrieve() only when RETRIEVAL_QUALITY_FILTER is set. */
+export function applyQualityFilter(chunks: RetrievedChunk[]): RetrievedChunk[] {
+  const out: RetrievedChunk[] = [];
+  for (const c of chunks) {
+    if (APPARATUS_DROP.test(c.body)) continue; // pure nav/TOC/errata
+    const cleaned = cleanBody(c.body);
+    if (cleaned.replace(/\W/g, '').length < 3) continue; // nav-only once stripped
+    out.push(cleaned === c.body ? c : { ...c, body: cleaned });
+  }
+  return out;
 }
 
 // Corpus-wide tradition sizes → pool-independent rarity in [0,1] (rarest = 1,
