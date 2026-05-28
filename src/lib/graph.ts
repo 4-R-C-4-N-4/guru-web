@@ -47,6 +47,38 @@ export const MATCH_TIER_WEIGHTS: Record<MatchTier, number> = {
 const MATCH_TIER_RANK: Record<MatchTier, number> = { concept: 3, family: 2, domain: 1 };
 
 /**
+ * Query function-word stopwords (todo:597d86a4). Concept/family/domain matching
+ * is substring LIKE, so common short function words leak in — e.g. "the"
+ * substring-matched "Theology" and pulled the whole domain into nearly every
+ * query, with a spurious transparency chip. A length filter alone can't fix this
+ * without also dropping meaningful short terms, so we drop function words
+ * explicitly. INTENTIONALLY CONSERVATIVE — function words only; content terms
+ * like "one" (the One), "all" (the All), "way" (the Way), "being", "self",
+ * "god" are deliberately NOT listed. Grow with care (see todo:59060e24).
+ */
+const STOPWORDS = new Set([
+  'the', 'and', 'are', 'but', 'for', 'not', 'you', 'your', 'our', 'their', 'them',
+  'they', 'with', 'that', 'this', 'these', 'those', 'from', 'into', 'what', 'which',
+  'who', 'whom', 'whose', 'why', 'how', 'where', 'when', 'than', 'then', 'there',
+  'here', 'such', 'also', 'been', 'does', 'did', 'has', 'have', 'had', 'was', 'were',
+  'about', 'would', 'could', 'should', 'can', 'may', 'might', 'must', 'very', 'just',
+  'only', 'more', 'most', 'some', 'any', 'each', 'both', 'few', 'own',
+]);
+
+/**
+ * Tokenize a query for concept matching: lowercase, strip LIKE wildcards, split
+ * on whitespace, drop tokens ≤2 chars and function-word stopwords. Shared by
+ * extractConcepts and summarizeExpansion so the two can never diverge.
+ */
+function tokenizeQuery(queryText: string): string[] {
+  return queryText
+    .toLowerCase()
+    .replace(/[%_]/g, '') // strip LIKE wildcards before matching
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOPWORDS.has(w));
+}
+
+/**
  * Extract concepts from free text, matching query words **simultaneously across
  * three namespaces** (todo:30dca55e §5.1; handoff §3.1) — not priority-ordered:
  *
@@ -63,12 +95,7 @@ const MATCH_TIER_RANK: Record<MatchTier, number> = { concept: 3, family: 2, doma
  * simply contribute no rows today.
  */
 export async function extractConcepts(queryText: string): Promise<ConceptMatch[]> {
-  const words = queryText
-    .toLowerCase()
-    .replace(/[%_]/g, '')       // strip LIKE wildcards before matching
-    .split(/\s+/)
-    .filter(w => w.length > 2); // skip short stop-words
-
+  const words = tokenizeQuery(queryText);
   if (words.length === 0) return [];
 
   const params = words.map(w => `%${w}%`);
@@ -132,12 +159,7 @@ export async function extractConcepts(queryText: string): Promise<ConceptMatch[]
  * a real fan-out. Alias legs are inert until the alias tables fill.
  */
 export async function summarizeExpansion(queryText: string): Promise<QueryExpansion[]> {
-  const words = queryText
-    .toLowerCase()
-    .replace(/[%_]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2);
-
+  const words = tokenizeQuery(queryText);
   if (words.length === 0) return [];
 
   const params = words.map(w => `%${w}%`);
