@@ -1,0 +1,37 @@
+{
+  "id": "cfbf0554",
+  "type": "chore",
+  "state": "done",
+  "summary": "Generate v3 export, apply to staging Postgres, integration-test the load on real VPS PG",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.310Z",
+  "updated_at": "2026-05-28T13:22:02.566Z",
+  "tags": [
+    "ops",
+    "staging"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "ac83fd8b",
+      "980e80d5"
+    ],
+    "related": [
+      "9dedc4cb"
+    ]
+  },
+  "work": {
+    "branch": "todo/cfbf0554",
+    "base_branch": "main",
+    "started_at": "2026-05-28T13:22:02.517Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "a86c0e6",
+    "resolved_at": "2026-05-28T13:22:02.566Z",
+    "resolved_by": "unknown",
+    "note": "VPS prod apply complete: v3 corpus loaded + guru-web deployed 2026-05-28, boot clean ([boot] Corpus OK schema_version=3, all checks passed), smoke query verified (cosmology expansion live in chat). Lockstep held on first try."
+  }
+}
