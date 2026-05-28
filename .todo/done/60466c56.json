@@ -1,13 +1,13 @@
 {
   "id": "60466c56",
   "type": "chore",
-  "state": "open",
+  "state": "done",
   "summary": "Experiment with retrieval ranking levers now that we have a baseline (golden gate b22586bc + eval harness) and write up the findings. Levers: stratified/per-tradition candidate generation (root-cause fix — the vector pool is corpus-size-biased, so small but fully-tagged traditions like mesopotamian (15 chunks / 103 EXPRESSES) never enter the top-30 candidate set), VECTOR_WEIGHT vs GRAPH_WEIGHT, DIVERSITY_BOOST / rarity weighting, MAX_PER_TRADITION, MATCH_TIER_WEIGHTS, HOP_DEPTH. Principle (agreed): this is about FAIR candidate consideration = good content retrieval, NOT injecting under-showing content regardless of relevance. MUST add a precision counterpart to the golden gate (recall/breadth-only today) so recall tuning cannot mask precision loss; measure each lever against golden recall + the new precision check + eval breadth/latency, and diff top-K vs docs/concept-hierarchy/eval-topk-v3.json. Deliverable: a written report of lever effects at minimum; weight changes ship only if the data supports them.",
   "source": {
     "type": "human"
   },
   "created_at": "2026-05-27T23:42:01.108Z",
-  "updated_at": "2026-05-27T23:42:01.192Z",
+  "updated_at": "2026-05-28T01:00:16.405Z",
   "files": [
     {
       "path": "src/lib/retriever.ts",
@@ -28,5 +28,11 @@
       "31a7fe76",
       "b22586bc"
     ]
+  },
+  "resolution": {
+    "commit": "5ecb0fb48ba23d936a1a305fca63255726a1e809",
+    "resolved_at": "2026-05-28T01:00:16.405Z",
+    "resolved_by": "unknown",
+    "note": "Report delivered: docs/concept-hierarchy/tuning-experiment.md. Swept RETRIEVAL_POOL_MULT {2,6,10,15,20} vs golden recall + anchored no-eviction + top-5 head-stability (precision proxy) + latency. Finding: wider pool DOES surface gap traditions (x15+ = 2/2) and latency is flat (~18-20ms), BUT head-stability collapses to ~0.36 and x15 evicted an anchored tradition — widening churns ~60% of the trusted head because diversity (DIVERSITY_BOOST/traditionCount) is computed over the live pool. Verdict: do NOT ship pool-width alone. Knob (default 2) + scripts/eval-tuning.ts committed for the next round. No change folded into #79."
   }
 }
