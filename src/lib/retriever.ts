@@ -32,7 +32,32 @@ export async function retrieve(
     graphSearch(queryText, prefs, topK * 2),
   ]);
 
-  return mergeAndRerank(vectorResults, graphResults, topK);
+  // Diversity mode (todo:59060e24). 'live' (default) divides the bump by a
+  // tradition's count *in the candidate pool*, which couples ranking to pool
+  // composition — so widening the pool churns the head (tuning-experiment.md §4).
+  // 'fixed' derives a pool-independent rarity from corpus-wide tradition sizes,
+  // so widening intake no longer distorts the rerank. Env-tunable per call.
+  const traditionRarity = process.env.RETRIEVAL_DIVERSITY === 'fixed'
+    ? await corpusRarity()
+    : undefined;
+
+  return mergeAndRerank(vectorResults, graphResults, topK, { traditionRarity });
+}
+
+// Corpus-wide tradition sizes → pool-independent rarity in [0,1] (rarest = 1,
+// largest = 0), log-scaled so the 841-vs-15 chunk spread doesn't blow up.
+// Cached: the corpus is static between deploys. (todo:59060e24 fixed-diversity.)
+let _rarity: Map<string, number> | null = null;
+async function corpusRarity(): Promise<Map<string, number>> {
+  if (_rarity) return _rarity;
+  const rows = await query<{ tradition: string; n: number }>(
+    `SELECT tradition, count(*)::int AS n FROM chunks GROUP BY tradition`,
+  );
+  const logs = rows.map(r => Math.log(r.n));
+  const lo = Math.min(...logs);
+  const span = (Math.max(...logs) - lo) || 1;
+  _rarity = new Map(rows.map(r => [r.tradition, (Math.max(...logs) - Math.log(r.n)) / span]));
+  return _rarity;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +136,8 @@ interface MergedEntry {
 export function mergeAndRerank(
   vectorResults: RetrievedChunk[],
   graphResults: RetrievedChunk[],
-  topK: number
+  topK: number,
+  opts: { traditionRarity?: Map<string, number> } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
 
@@ -173,7 +199,11 @@ export function mergeAndRerank(
     // leg and the additive combination are untouched (todo:08503113 §6). A
     // domain-tier graph hit thus contributes ¼ of a concept-tier hit's graph term.
     const graphTerm = Math.max(tierW, entry.graphScore) * entry.matchWeight;
-    const diversity = DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
+    // 'fixed': pool-independent corpus rarity (todo:59060e24). 'live' (legacy):
+    // divide the bump by the tradition's count in this pool.
+    const diversity = opts.traditionRarity
+      ? DIVERSITY_BOOST * (opts.traditionRarity.get(entry.chunk.tradition) ?? 0)
+      : DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
     const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + diversity;
     return { entry, score, tierW, diversity };
   });

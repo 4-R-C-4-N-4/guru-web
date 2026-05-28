@@ -81,3 +81,80 @@ This vindicates keeping tuning out of the migration PR (#79).
 Nothing shipped. The `RETRIEVAL_POOL_MULT` knob (default 2 — behavior unchanged)
 and `scripts/eval-tuning.ts` are committed on `todo/60466c56` as the tuning
 apparatus for the next round.
+
+---
+
+# Round 2 (todo:59060e24): fixed-reference diversity + LLM-judged precision
+
+_Run on `todo/59060e24` (= round-1 apparatus + merged stopword fix #81, so the
+`the`→Theology noise no longer confounds). Added: a `RETRIEVAL_DIVERSITY=fixed`
+variant (pool-independent corpus rarity, in `retrieve()`), the diversity×pool
+cross-sweep, and `scripts/eval-precision.ts` (LLM-judged precision@K)._
+
+## What was built
+
+- **Fixed-reference diversity** — `diversity = DIVERSITY_BOOST × rarity(t)`, where
+  `rarity` is log-scaled inverse corpus size in [0,1] (rarest = 1, largest = 0),
+  computed once from corpus-wide tradition counts and **independent of the live
+  pool**. Env-gated (`RETRIEVAL_DIVERSITY=live|fixed`, default `live`).
+- **Precision metric** — `eval-precision.ts`: per query × config, retrieve top-10
+  and have an LLM (deepseek-v4-pro, temp 0) label each passage relevant/not →
+  precision@10. The real relevance signal `headStable` only proxied.
+
+## Results
+
+Cross-sweep (diversity × pool):
+
+| config | tailRecall | anchored | headStable |
+|--------|-----------|----------|-----------|
+| live ×2 (prod) | 0/2 | 7/7 | 1.00 |
+| live ×10 | 2/2 | 7/7 | 0.35 |
+| fixed ×2 | 0/2 | 6/7 | 0.61 |
+| fixed ×10 | 2/2 | 6/7 | 0.44 |
+| fixed ×20 | 2/2 | 6/7 | 0.39 |
+
+LLM-judged precision@10 (mean over 7 queries):
+
+| | live ×2 | live ×10 | fixed ×10 |
+|---|---|---|---|
+| mean precision@10 | 0.20 | 0.24 | 0.26 |
+| `cosmology` | 0.60 | 0.80 | 0.70 |
+| `union with the divine` | 0.50 | 0.80 | 0.60 |
+| gap queries (Tiamat / Ahura Mazda / Diamond) | ~0.00 | ~0.00 | ~0.07 |
+
+## Findings — three of them overturn round 1
+
+1. **`headStable` over-warned.** It screamed at live ×10 (0.35 = ~60% head churn),
+   but the LLM judge says precision actually went *up* (0.20 → 0.24). The churn was
+   largely **benign** — the head changed to similarly-or-more relevant content.
+   Round 1's "don't ship, it churns 60%" was overly conservative on precision.
+2. **Fixed diversity is not a clear win.** ≈ live on precision (0.26 vs 0.24, within
+   noise) but it **evicts an anchored tradition even at ×2** — a constant rare-boost
+   over-promotes small traditions globally. The decoupling hypothesis is *not*
+   validated; it trades one problem for another.
+3. **Diversity/pool tuning is not the quality lever.** Across the whole sweep,
+   precision moves only ~0.02–0.06 — noise. These knobs are not where retrieval
+   quality lives.
+4. **The recall "win" is hollow, and the real lever is corpus quality.** Surfacing
+   mesopotamian/zoroastrian for their queries yields **precision ~0.00** — the
+   chunks that surface aren't relevant. Eyeballing confirmed why: retrieval returns
+   **apparatus junk** as content — site boilerplate ("Sacred Texts… Previous Next"),
+   tables of contents ("Next: Chapter IV"), and **editorial/manuscript footnotes**
+   ("the word 'âidûm' stood… in his MS"). A crude scan flags **~994 / 3089 chunks
+   (~32%)** carrying such markers. That junk is the precision ceiling — no ranking
+   weight can fix it.
+
+## Verdict
+
+**Stop tuning ranking weights.** Pool-width and diversity are roughly
+precision-neutral; the dominant, highest-leverage precision problem is **upstream
+chunk quality** (~⅓ of the corpus is polluted with navigation/TOC/editorial
+apparatus). The fix is a **pipeline chunk-cleaning / filtering pass** (guru repo),
+not a guru-web knob. Captured as a follow-up. The `RETRIEVAL_DIVERSITY` /
+`RETRIEVAL_POOL_MULT` knobs stay dormant (defaults preserve current behavior) as
+tooling, should we revisit ranking *after* the corpus is cleaned.
+
+> Methodological note: `headStable` (churn vs baseline) is a *cheap proxy* that
+> proved misleading on its own — it flagged benign churn as damage. The LLM judge,
+> calibrated by eyeballing (good results scored 0.6–0.8; junk scored 0.1), was the
+> signal that mattered. Keep the judge in the loop for any future ranking change.

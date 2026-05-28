@@ -31,7 +31,17 @@ const PREFS: UserPreferences = {
   whitelistedTraditions: [], whitelistedTexts: [], preferredModel: null, preferredVoice: 'scholar',
 };
 
-const CONFIGS = [2, 6, 10, 15, 20];
+// Cross diversity mode × pool width (todo:59060e24). 'live' x2 = current prod
+// behavior (the head-stability baseline). The question: does 'fixed' (pool-
+// independent corpus rarity) let us widen the pool without churning the head?
+interface Config { div: 'live' | 'fixed'; mult: number }
+const CONFIGS: Config[] = [
+  { div: 'live', mult: 2 },   // baseline = prod
+  { div: 'live', mult: 10 },  // round-1 churn case
+  { div: 'fixed', mult: 2 },
+  { div: 'fixed', mult: 10 },
+  { div: 'fixed', mult: 20 },
+];
 const TOPK = 15;
 
 interface GQ { query: string; mustIncludeTraditions?: string[] }
@@ -41,8 +51,9 @@ const gaps = (golden as { knownGaps: { cases: { query: string; expectedTradition
   .knownGaps.cases;
 const allQueries = [...new Set([...gq.map(q => q.query), ...gaps.map(g => g.query)])];
 
-async function runConfig(mult: number) {
-  process.env.RETRIEVAL_POOL_MULT = String(mult);
+async function runConfig(cfg: Config) {
+  process.env.RETRIEVAL_POOL_MULT = String(cfg.mult);
+  process.env.RETRIEVAL_DIVERSITY = cfg.div;
   const top5: Record<string, string[]> = {};
   const trads: Record<string, string[]> = {};
   let totalMs = 0;
@@ -63,8 +74,8 @@ async function main() {
   let baseTop5: Record<string, string[]> | null = null;
   const rows: Record<string, string>[] = [];
 
-  for (const mult of CONFIGS) {
-    const r = await runConfig(mult);
+  for (const cfg of CONFIGS) {
+    const r = await runConfig(cfg);
     if (!baseTop5) baseTop5 = r.top5;
 
     const tail = gaps.filter(g => r.trads[g.query]?.includes(g.expectedTradition)).length;
@@ -78,7 +89,7 @@ async function main() {
     const headStable = overlap / allQueries.length;
 
     rows.push({
-      poolMult: `x${mult}`,
+      config: `${cfg.div} x${cfg.mult}`,
       tailRecall: `${tail}/${gaps.length}`,
       anchored: `${anch}/${anchored.length}`,
       headStable: headStable.toFixed(2),
