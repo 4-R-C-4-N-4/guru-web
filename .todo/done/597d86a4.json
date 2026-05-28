@@ -1,0 +1,39 @@
+{
+  "id": "597d86a4",
+  "type": "bug",
+  "state": "done",
+  "summary": "extractConcepts + summarizeExpansion tokenize with only a length>2 filter (graph.ts:70,139), so 3-letter function words leak into concept/family/domain label matching. Confirmed live in prod 2026-05-28 (corpus v27): the article 'the' substring-matches 'Theology', pulling the whole Theology domain (14 concepts) into nearly every query at domain tier and rendering a spurious 'Theology -> 14 concepts' transparency chip. Answer quality is unharmed (domain tier x0.25 + vector dominance) but it erodes the T16 transparency feature's credibility and adds constant low-grade graph noise. Fix: add a stopword list to a SHARED tokenizer (both call sites duplicate the filter) — do NOT just raise min length, since meaningful 3-letter terms (tao, one, god, sin, ego) must survive. Test: extractConcepts('what is the tao') matches tao, not theology.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T12:18:30.796Z",
+  "updated_at": "2026-05-28T12:57:19.609Z",
+  "files": [
+    {
+      "path": "src/lib/graph.ts",
+      "lines": [
+        70,
+        139
+      ]
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "query-plane",
+    "precision",
+    "transparency"
+  ],
+  "relationships": {
+    "related": [
+      "9d2ad427"
+    ]
+  },
+  "resolution": {
+    "commit": "03b4e1d5de38756bc8af295239993e6f58fb0c6e",
+    "resolved_at": "2026-05-28T12:57:19.609Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/graph.test.ts",
+    "test_function": "drops function-word stopwords so they cannot substring-match labels",
+    "note": "Extracted shared tokenizeQuery() + conservative STOPWORDS (function words only; one/all/way/being/self/god deliberately kept) used by both extractConcepts and summarizeExpansion. Fixes the prod 'the'->Theology leak + spurious chip. 3 new tests (stopword drop in both call sites; content-word retention). Full suite 379 green, lint+type-check clean."
+  }
+}

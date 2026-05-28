@@ -44,6 +44,23 @@ describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
+  it('drops function-word stopwords so they cannot substring-match labels (todo:597d86a4)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('what is the tao');
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [, params] = mockQuery.mock.calls[0];
+    // 'what'/'the' are stopwords, 'is' is ≤2 chars — only 'tao' survives, so
+    // 'the' can no longer match 'Theology'.
+    expect(params).toEqual(['%tao%']);
+  });
+
+  it('keeps meaningful short content words — the One, the All (todo:597d86a4)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('the One and the All');
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['%one%', '%all%']);
+  });
+
   it('returns ConceptMatch[] with the matched tier from concept-namespace rows', async () => {
     mockQuery.mockResolvedValueOnce([
       { concept_id: 'divine-spark', match_tier: 'concept' },
@@ -125,6 +142,13 @@ describe('summarizeExpansion — query-expansion transparency (todo:9d2ad427)', 
       { tier: 'domain', label: 'Cosmology', conceptCount: 7 },
       { tier: 'family', label: 'Cosmic Agents', conceptCount: 3 },
     ]);
+  });
+
+  it('shares the stopword tokenizer — drops function words too (todo:597d86a4)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await summarizeExpansion('what is the tao');
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['%tao%']);
   });
 
   it('collapses duplicate label/alias rows for the same family', async () => {
