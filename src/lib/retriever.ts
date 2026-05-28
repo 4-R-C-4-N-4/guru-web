@@ -27,9 +27,16 @@ export async function retrieve(
   // a redeploy; default 2 preserves historical behavior. The graph leg is not
   // corpus-size-biased, so its pool stays fixed.
   const poolMult = Number(process.env.RETRIEVAL_POOL_MULT) || 2;
-  let [vectorResults, graphResults] = await Promise.all([
+  // Lexical leg (todo:0c38a006) — env-gated (default off), so this PR ships
+  // behaviour-neutral. When off, the third leg is an empty array and the
+  // additive score below is byte-identical to the vector+graph path. The lexical
+  // pool is fixed at topK*2 (like graph): FTS is not corpus-size-biased the way
+  // the vector leg is, so it doesn't need poolMult.
+  const runLexical = !!process.env.RETRIEVAL_LEXICAL;
+  let [vectorResults, graphResults, lexicalResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
+    runLexical ? lexicalSearch(queryText, prefs, topK * 2) : Promise.resolve([] as RetrievedChunk[]),
   ]);
 
   // Quality filter (todo:9e31302a) — drop corpus apparatus (nav/TOC/errata) and
@@ -41,6 +48,7 @@ export async function retrieve(
   if (process.env.RETRIEVAL_QUALITY_FILTER) {
     vectorResults = applyQualityFilter(vectorResults);
     graphResults = applyQualityFilter(graphResults);
+    lexicalResults = applyQualityFilter(lexicalResults);
   }
 
   // Diversity mode (todo:59060e24). 'live' (default) divides the bump by a
@@ -52,7 +60,15 @@ export async function retrieve(
     ? await corpusRarity()
     : undefined;
 
-  return mergeAndRerank(vectorResults, graphResults, topK, { traditionRarity });
+  // LEXICAL_WEIGHT is env-tunable per call (swept in C4 todo:3fc23534 without a
+  // redeploy); default 0.3 mirrors GRAPH_WEIGHT as a complementary signal.
+  const lexicalWeight = Number(process.env.RETRIEVAL_LEXICAL_WEIGHT) || LEXICAL_WEIGHT;
+
+  return mergeAndRerank(vectorResults, graphResults, topK, {
+    traditionRarity,
+    lexicalResults,
+    lexicalWeight,
+  });
 }
 
 // Corpus-apparatus patterns (todo:9e31302a; mined in tuning-experiment.md Round 2).
@@ -159,12 +175,21 @@ export async function lexicalSearch(
 ): Promise<RetrievedChunk[]> {
   const { where, params, paramIndex } = buildScopeFilter(prefs, 2); // $1 = query text
 
+  // plainto_tsquery ANDs every lexeme ('ahura' & 'mazda' & 'gatha'), which
+  // matches ~nothing for multi-term entity queries — exactly the queries this
+  // leg exists to rescue (0 matches for "Ahura Mazda and the Gathas"; 109 under
+  // OR). So flip the sanitised query to OR semantics (& → |) and let ts_rank do
+  // the discrimination: a chunk matching more terms ranks higher. plainto_tsquery
+  // still does the parsing/sanitisation, so $1 is never interpolated raw.
   const rows = await query<RetrievedChunk & { lex_rank: number }>(
-    `SELECT id, text_id, tradition, text_name, section, translator, body, token_count,
-            ts_rank(to_tsvector('english', body), plainto_tsquery('english', $1)) AS lex_rank,
+    `WITH q AS (
+       SELECT replace(plainto_tsquery('english', $1)::text, ' & ', ' | ')::tsquery AS tsq
+     )
+     SELECT id, text_id, tradition, text_name, section, translator, body, token_count,
+            ts_rank(to_tsvector('english', body), q.tsq) AS lex_rank,
             'lexical' AS source
-     FROM chunks
-     WHERE to_tsvector('english', body) @@ plainto_tsquery('english', $1)
+     FROM chunks, q
+     WHERE to_tsvector('english', body) @@ q.tsq
        AND ${where}
      ORDER BY lex_rank DESC
      LIMIT $${paramIndex}`,
@@ -185,6 +210,7 @@ export async function lexicalSearch(
 // multiplicative formula. See docs/retriever-hitlist.md and todo:fbf4652f.
 const VECTOR_WEIGHT = 0.7;
 const GRAPH_WEIGHT = 0.3;
+const LEXICAL_WEIGHT = 0.3; // default for the lexical leg (todo:0c38a006); env-overridable, swept in C4
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
 const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4 };
@@ -204,6 +230,11 @@ interface MergedEntry {
   // the chunk as conceptMatchWeight. 1.0 for vector-only hits (no expansion), so
   // their score is unchanged.
   matchWeight: number;
+  // Raw Postgres ts_rank from the lexical leg (todo:0c38a006); 0 for chunks no
+  // lexical hit reached. Normalised to [0,1] across the candidate set at scoring
+  // time before LEXICAL_WEIGHT is applied — ts_rank is unbounded, so an absolute
+  // value isn't comparable to the [0,1] cosine similarity.
+  lexScore: number;
 }
 
 // Exported for unit testing (todo:d1a94167); not part of the public API —
@@ -212,9 +243,15 @@ export function mergeAndRerank(
   vectorResults: RetrievedChunk[],
   graphResults: RetrievedChunk[],
   topK: number,
-  opts: { traditionRarity?: Map<string, number> } = {},
+  opts: {
+    traditionRarity?: Map<string, number>;
+    lexicalResults?: RetrievedChunk[];
+    lexicalWeight?: number;
+  } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
+  const lexicalResults = opts.lexicalResults ?? [];
+  const lexicalWeight = opts.lexicalWeight ?? LEXICAL_WEIGHT;
 
   // Vector leg. Vector search has no tier signal, so each hit is tagged
   // 'inferred' explicitly (not left undefined and silently floored). Its
@@ -228,6 +265,7 @@ export function mergeAndRerank(
       tier: 'inferred',
       graphScore: 0,
       matchWeight: 1.0, // vector hit, no query expansion
+      lexScore: 0,
     });
   }
 
@@ -250,7 +288,29 @@ export function mergeAndRerank(
       existing.graphScore = Math.max(existing.graphScore, gWeight);
       existing.matchWeight = gMatchW; // graph-derived scaler for the graph term
     } else {
-      merged.set(chunk.id, { chunk, similarity: 0, tier: gTier, graphScore: gWeight, matchWeight: gMatchW });
+      merged.set(chunk.id, { chunk, similarity: 0, tier: gTier, graphScore: gWeight, matchWeight: gMatchW, lexScore: 0 });
+    }
+  }
+
+  // Lexical leg (todo:0c38a006). Each FTS hit contributes its raw ts_rank as an
+  // independent additive signal (normalised below). When a chunk also came from
+  // the vector/graph legs, keep their similarity/tier and just record lexScore;
+  // a lexical-only hit enters as a fresh inferred candidate. This is what
+  // rescues proper-noun / entity queries the dense leg washes out.
+  for (const chunk of lexicalResults) {
+    const rank = chunk.lexRank ?? 0;
+    const existing = merged.get(chunk.id);
+    if (existing) {
+      existing.lexScore = Math.max(existing.lexScore, rank);
+    } else {
+      merged.set(chunk.id, {
+        chunk: { ...chunk, tier: 'inferred' },
+        similarity: 0,
+        tier: 'inferred',
+        graphScore: 0,
+        matchWeight: 1.0,
+        lexScore: rank,
+      });
     }
   }
 
@@ -264,6 +324,13 @@ export function mergeAndRerank(
   for (const e of entries) {
     traditionCounts.set(e.chunk.tradition, (traditionCounts.get(e.chunk.tradition) ?? 0) + 1);
   }
+
+  // ts_rank is unbounded and corpus-relative, so it isn't comparable to the
+  // [0,1] cosine similarity until normalised. Max-normalise across the candidate
+  // set (todo:0c38a006): the strongest lexical hit scores 1.0 × LEXICAL_WEIGHT,
+  // the rest scale down proportionally. Pool-relative, like the 'live' diversity
+  // term — fine here because lexical is a complementary ranker, not the spine.
+  const maxLex = Math.max(0, ...entries.map(e => e.lexScore));
 
   // Additive score: weighted vector similarity + weighted graph signal +
   // rarity-weighted diversity bump. Components are retained so the optional
@@ -279,8 +346,11 @@ export function mergeAndRerank(
     const diversity = opts.traditionRarity
       ? DIVERSITY_BOOST * (opts.traditionRarity.get(entry.chunk.tradition) ?? 0)
       : DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
-    const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + diversity;
-    return { entry, score, tierW, diversity };
+    // Normalised lexical term — 0 when there are no lexical hits (leg off), so
+    // the score reduces exactly to the vector+graph+diversity sum.
+    const lexTerm = maxLex > 0 ? lexicalWeight * (entry.lexScore / maxLex) : 0;
+    const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + lexTerm + diversity;
+    return { entry, score, tierW, diversity, lexTerm };
   });
 
   scored.sort((a, b) => b.score - a.score);
@@ -288,14 +358,14 @@ export function mergeAndRerank(
   // Opt-in score trace (set RETRIEVAL_TRACE=1). Off by default — no prod cost.
   if (process.env.RETRIEVAL_TRACE) {
     console.log(
-      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${GRAPH_WEIGHT} cap=${MAX_PER_TRADITION}):`,
+      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${GRAPH_WEIGHT} lex_w=${lexicalWeight} cap=${MAX_PER_TRADITION}):`,
     );
     for (const s of scored.slice(0, topK)) {
       console.log(
-        `  ${s.score.toFixed(3)}  ${s.entry.chunk.source.padEnd(6)} ${s.entry.chunk.tradition.padEnd(20)}` +
+        `  ${s.score.toFixed(3)}  ${s.entry.chunk.source.padEnd(7)} ${s.entry.chunk.tradition.padEnd(20)}` +
           ` sim=${s.entry.similarity.toFixed(3)} tierW=${s.tierW.toFixed(2)}(${s.entry.tier})` +
           ` graphS=${s.entry.graphScore.toFixed(2)} matchW=${s.entry.matchWeight.toFixed(2)}` +
-          ` div=${s.diversity.toFixed(3)}  ${s.entry.chunk.id}`,
+          ` lex=${s.lexTerm.toFixed(3)} div=${s.diversity.toFixed(3)}  ${s.entry.chunk.id}`,
       );
     }
   }

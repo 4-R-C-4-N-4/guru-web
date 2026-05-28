@@ -26,13 +26,17 @@ const row = (id: string, lex_rank: number) => ({
 beforeEach(() => (query as Mock).mockReset());
 
 describe('lexicalSearch — Postgres FTS leg (todo:af69f5e5)', () => {
-  it('issues a plainto_tsquery / ts_rank full-text query ordered by rank', async () => {
+  it('issues an OR-semantics ts_rank full-text query ordered by rank', async () => {
     (query as Mock).mockResolvedValue([]);
     await lexicalSearch('Ahura Mazda and the Gathas', ALL, 20);
 
     const [sql, params] = (query as Mock).mock.calls[0];
-    expect(sql).toMatch(/to_tsvector\('english', body\)\s*@@\s*plainto_tsquery\('english', \$1\)/);
-    expect(sql).toMatch(/ts_rank\(.*\)\s+AS lex_rank/);
+    // plainto_tsquery still sanitises $1, but its AND output is flipped to OR
+    // (& → |) so multi-term entity queries match (AND yields 0 rows here).
+    expect(sql).toMatch(/plainto_tsquery\('english', \$1\)/);
+    expect(sql).toMatch(/replace\([\s\S]*::text, ' & ', ' \| '\)::tsquery/);
+    expect(sql).toMatch(/to_tsvector\('english', body\)\s*@@\s*q\.tsq/);
+    expect(sql).toMatch(/ts_rank\(.*q\.tsq\)\s+AS lex_rank/);
     expect(sql).toMatch(/ORDER BY lex_rank DESC/);
     // $1 = query text, last param = limit (scope 'all' adds none in between).
     expect(params[0]).toBe('Ahura Mazda and the Gathas');
