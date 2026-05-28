@@ -158,3 +158,52 @@ tooling, should we revisit ranking *after* the corpus is cleaned.
 > proved misleading on its own — it flagged benign churn as damage. The LLM judge,
 > calibrated by eyeballing (good results scored 0.6–0.8; junk scored 0.1), was the
 > signal that mattered. Keep the judge in the loop for any future ranking change.
+
+---
+
+# Round 2b (todo:0748677d): retrieval-side quality filter
+
+_Built `RETRIEVAL_QUALITY_FILTER` (env-gated, default off): at query time, **drop**
+pure-apparatus chunks (`^Next:`/`^Previous:`/`^Errata`, nav-only-after-strip) and
+**strip** the `Sacred Texts … Previous Next` prefix + `{p. N}` markers from bodies.
+The bridge to test "tune vs repair" without waiting on the upstream re-export._
+
+LLM-judged precision@10, **filter ON** (vs OFF in parens):
+
+| | live ×2 | live ×10 | fixed ×10 |
+|---|---|---|---|
+| mean precision@10 | 0.24 (0.20) | 0.24 (0.24) | 0.23 (0.26) |
+| `cosmology` | 0.70 (0.60) | **0.90** (0.80) | 0.70 (0.70) |
+| `the One … Nous` | 0.20 (0.10) | 0.10 | 0.10 |
+| gap queries | ~0.00 | ~0.00 | ~0.03 |
+
+## Findings — the filter is a modest win, not the unlock
+
+1. **It helps where junk took slots, marginally.** Baseline mean 0.20 → 0.24;
+   `cosmology` ×10 0.80 → 0.90; `the One` 0.10 → 0.20 (its Egyptian-TOC and
+   Chuang-Tzu nav chunks are now dropped). Real, worth keeping as a safety net.
+2. **But it is NOT the precision unlock** (hypothesised 0.2 → 0.5; got 0.2 → 0.24).
+   Two reasons, both decisive:
+   - **It can't re-rank.** The vectors were computed on the polluted text, so the
+     *same* chunks are retrieved; stripping their bodies cleans what the judge
+     reads but doesn't change *which* chunks surface.
+   - **The retrieved chunks are often genuinely off-topic, not merely
+     boilerplate-laden.** Gap queries stay ~0.00 because the surfaced
+     mesopotamian/zoroastrian chunks are real-but-irrelevant, not nav junk.
+3. **Config gaps did NOT widen on the cleaner pool** (still ~0.23–0.24 across
+   configs) — so tuning levers *still* show no signal. Confirms again: diversity/
+   pool isn't the lever.
+
+## Verdict (tune vs repair — settled)
+
+Neither query-time **tuning** nor query-time **filtering** unlocks precision. The
+ceiling is set by **retrieval relevance** — embedding quality + corpus coverage —
+which only the upstream fix moves. Critically, that fix must **re-embed on cleaned
+text**, not just strip strings: stripping boilerplate from display does ~nothing
+for ranking while the vectors still carry it. So `b80d8d7d` is sharpened: **clean
+the chunks AND regenerate embeddings**, then re-export.
+
+The quality filter ships as a dormant, default-off **safety net** (drops pure
+apparatus, cheap), but it's not a substitute for the re-embed. After the clean
+re-embed lands, re-run this harness — *that's* when the tuning levers get their
+real test.
