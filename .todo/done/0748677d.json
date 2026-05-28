@@ -1,13 +1,13 @@
 {
   "id": "0748677d",
   "type": "feature",
-  "state": "open",
+  "state": "done",
   "summary": "Retrieval-side quality filter (env-gated): drop/strip corpus apparatus at query time + measure the precision lift on a clean pool. The bridge that un-confounds tuning while the corpus is repaired upstream (todo:b80d8d7d); also a permanent safety net. Stacks on the eval-precision harness from #83.",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-28T14:35:22.435Z",
-  "updated_at": "2026-05-28T14:35:22.659Z",
+  "updated_at": "2026-05-28T15:09:07.312Z",
   "tags": [
     "retrieval",
     "quality-filter",
@@ -22,5 +22,11 @@
     "related": [
       "b80d8d7d"
     ]
+  },
+  "resolution": {
+    "commit": "be84a5500093abc4006964555956a36775b108ac",
+    "resolved_at": "2026-05-28T15:09:07.312Z",
+    "resolved_by": "unknown",
+    "note": "Quality filter built (9e31302a), tested (35c5da28, 5 tests), and measured (e9fdc338). Outcome: modest precision lift (0.20->0.24) + a permanent default-off safety net, but NOT the unlock — and it settled tune-vs-repair: neither query-time tuning nor filtering moves the ceiling; the fix is upstream re-embed on clean text (b80d8d7d, sharpened). Knobs/filter ship dormant."
   }
 }
