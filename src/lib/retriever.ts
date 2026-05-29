@@ -148,6 +148,10 @@ async function graphSearch(
   prefs: UserPreferences,
   limit: number
 ): Promise<RetrievedChunk[]> {
+  // Measurement toggle (todo:72f1334e): GRAPH_LEG=off isolates the graph leg's
+  // contribution to precision so we can tell whether matcher quality even moves
+  // the metric. Default on — behaviour-neutral.
+  if (process.env.GRAPH_LEG === 'off') return [];
   const concepts = await extractConcepts(queryText);
   if (concepts.length === 0) return [];
   return walkGraph(concepts, prefs, limit);

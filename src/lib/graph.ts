@@ -78,6 +78,13 @@ function tokenizeQuery(queryText: string): string[] {
     .filter(w => w.length > 2 && !STOPWORDS.has(w));
 }
 
+// Escape regex metacharacters in a query token before embedding it in a ~*
+// word-boundary pattern (todo:72f1334e). Hyphen and apostrophe aren't special,
+// so 'wu-wei' / "fana'" pass through and still match their stored forms.
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Extract concepts from free text, matching query words **simultaneously across
  * three namespaces** (todo:30dca55e §5.1; handoff §3.1) — not priority-ordered:
@@ -98,9 +105,22 @@ export async function extractConcepts(queryText: string): Promise<ConceptMatch[]
   const words = tokenizeQuery(queryText);
   if (words.length === 0) return [];
 
-  const params = words.map(w => `%${w}%`);
+  // Matcher mode (todo:72f1334e). 'regex' (default) matches each token as a whole
+  // word — flanked by non-letters or the string ends — case-insensitively (~*).
+  // 'like' (opt-out: GRAPH_MATCH_MODE=like) does substring matching, which bleeds
+  // across word boundaries: 'man' matches label 'eMANation', 'art' matches
+  // 'tripARTite', 'the' matched 'Theology' (the bug the stopword list masks).
+  // Measured strictly worse (todo:72f1334e: mean p@10 0.33 like vs 0.37 regex,
+  // no query regressed) — its spurious expansions displace relevant chunks — so
+  // regex is the default. ~* ignoring case also matches alias rows not stored
+  // lowercased, which matters once concept_aliases is populated.
+  const regexMode = process.env.GRAPH_MATCH_MODE !== 'like';
+  const params = words.map(w =>
+    regexMode ? `(^|[^[:alpha:]])${escapeRe(w)}([^[:alpha:]]|$)` : `%${w}%`,
+  );
   // Each leg ORs the same $1..$N word patterns against its own column.
-  const anyWord = (expr: string) => words.map((_, i) => `${expr} LIKE $${i + 1}`).join(' OR ');
+  const op = regexMode ? '~*' : 'LIKE';
+  const anyWord = (expr: string) => words.map((_, i) => `${expr} ${op} $${i + 1}`).join(' OR ');
 
   const rows = await query<{ concept_id: string; match_tier: MatchTier }>(
     `SELECT c.id AS concept_id, 'concept' AS match_tier
