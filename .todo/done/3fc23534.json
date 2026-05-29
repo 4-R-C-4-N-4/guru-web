@@ -1,0 +1,24 @@
+{
+  "id": "3fc23534",
+  "type": "chore",
+  "state": "done",
+  "summary": "Tune LEXICAL_WEIGHT + measure: run eval-precision with RETRIEVAL_LEXICAL=1 across the 3 configs on corpus v29, confirm entity queries (Tiamat/Ahura Mazda) lift off 0.00, golden-retrieval gate green, write Round 4 into tuning-experiment.md",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:41.432Z",
+  "updated_at": "2026-05-29T00:03:48.283Z",
+  "relationships": {
+    "parent": "353756f2",
+    "depends_on": [
+      "0c38a006"
+    ]
+  },
+  "resolution": {
+    "commit": "6d38707c874b755102e49115f4acbfa21b7b4862",
+    "resolved_at": "2026-05-29T00:03:48.283Z",
+    "resolved_by": "unknown",
+    "test_file": "scripts/eval-lexical.ts",
+    "note": "LEXICAL_WEIGHT swept 0→2.5, peak mean p@10 0.36 at w=1.0 (baseline 0.21, +71%); default set to 1.0. Holds across 3 configs (0.30/0.37/0.37) and stacks with pool/diversity. Entity queries 0.00→0.30. Golden gate 13/14 — the 1 fail is v29 corpus drift (gate runs lexical-off → identical scoring), captured as debt 8673c77e."
+  }
+}
