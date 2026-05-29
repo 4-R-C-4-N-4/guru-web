@@ -1,0 +1,22 @@
+{
+  "id": "af69f5e5",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add lexicalSearch() leg: Postgres FTS (plainto_tsquery + ts_rank) over corpus.chunks.body, scope-filtered, env-gated RETRIEVAL_LEXICAL (default off), returns chunks carrying raw ts_rank",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:24.191Z",
+  "updated_at": "2026-05-28T23:33:51.355Z",
+  "relationships": {
+    "parent": "353756f2"
+  },
+  "resolution": {
+    "commit": "abd9ed5b6521a61dc4230ad52093cf6dc4fdd325",
+    "resolved_at": "2026-05-28T23:33:51.355Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/lexical-leg.test.ts",
+    "test_function": "lexicalSearch",
+    "note": "FTS leg: plainto_tsquery+ts_rank over chunks.body, scope-filtered, maps lex_rank→lexRank, source='lexical'. No index (inline to_tsvector, <50ms at 3k rows). Not yet wired into retrieve()/rerank (C2)."
+  }
+}

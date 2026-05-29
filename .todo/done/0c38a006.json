@@ -1,0 +1,25 @@
+{
+  "id": "0c38a006",
+  "type": "chore",
+  "state": "done",
+  "summary": "Integrate lexical leg into retrieve() + mergeAndRerank: add as third Promise.all leg (gated), additive LEXICAL_WEIGHT term with ts_rank normalized to [0,1] so weights are comparable to cosine; thread lexScore on MergedEntry; extend RETRIEVAL_TRACE — default-off behavior stays identical",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:41.354Z",
+  "updated_at": "2026-05-28T23:38:25.538Z",
+  "relationships": {
+    "parent": "353756f2",
+    "depends_on": [
+      "af69f5e5"
+    ]
+  },
+  "resolution": {
+    "commit": "427b3f43aa5a092bf618981a7db9752bd23e506f",
+    "resolved_at": "2026-05-28T23:38:25.538Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/lexical-leg.test.ts",
+    "test_function": "lexicalSearch",
+    "note": "Lexical leg merged additively (LEXICAL_WEIGHT, env-tunable). OR-semantics FTS (plainto AND→0). Default-off behavior-neutral (verified: 3-arg rerank tests unchanged). Live smoke: weight≥1.5 surfaces zoroastrianism:3 for 'Ahura Mazda', mesopotamian:3 for 'Tiamat' (both 0 before). Default weight 0.3 too low vs nomic's uniform ~0.6 cosine → C4 tunes."
+  }
+}

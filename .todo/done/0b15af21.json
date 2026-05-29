@@ -1,0 +1,17 @@
+{
+  "id": "0b15af21",
+  "type": "refactor",
+  "state": "done",
+  "summary": "Ship decided retrieval config as code defaults: lexical leg ON + pool×10 by default, env demoted to optional override/kill-switch",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-29T19:12:48.190Z",
+  "updated_at": "2026-05-29T19:14:22.184Z",
+  "resolution": {
+    "commit": "4aaab9f69b341897ab84a098677516af3ff8cbec",
+    "resolved_at": "2026-05-29T19:14:22.184Z",
+    "resolved_by": "unknown",
+    "note": "Lexical leg default-ON (RETRIEVAL_LEXICAL=off opts out); RETRIEVAL_POOL_MULT default 2→10 (measured-best cell, latency flat). Env demoted to optional override/kill-switch — the proven config now ships by default, so merging the PR IS go-live (no SSH env step). Verified: clean env → 3 zoroastrian chunks for 'Ahura Mazda'; RETRIEVAL_LEXICAL=off → 0. Full suite 391 pass."
+  }
+}
