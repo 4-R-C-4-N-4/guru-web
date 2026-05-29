@@ -19,12 +19,83 @@ export async function retrieve(
   prefs: UserPreferences,
   topK: number = 15
 ): Promise<RetrievedChunk[]> {
-  const [vectorResults, graphResults] = await Promise.all([
-    vectorSearch(queryText, prefs, topK * 2),
+  // Vector candidate-pool multiplier (todo:60466c56). The vector leg is biased
+  // at candidate generation: large traditions get far more chances to land in a
+  // narrow top-N, so small/under-represented traditions are filtered out before
+  // reranking ever runs. Widening the pool lets the long tail reach the
+  // rarity-aware reranker. Env-tunable (read per call) so it can be swept without
+  // a redeploy; default 2 preserves historical behavior. The graph leg is not
+  // corpus-size-biased, so its pool stays fixed.
+  const poolMult = Number(process.env.RETRIEVAL_POOL_MULT) || 2;
+  let [vectorResults, graphResults] = await Promise.all([
+    vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
   ]);
 
-  return mergeAndRerank(vectorResults, graphResults, topK);
+  // Quality filter (todo:9e31302a) — drop corpus apparatus (nav/TOC/errata) and
+  // strip boilerplate prefixes from bodies so junk doesn't take top-K slots or
+  // pollute display. Env-gated (default off). NOTE: this can't fix the embedding
+  // ranking — vectors were computed on the polluted text — so the proper fix is
+  // upstream re-embed on clean chunks (todo:b80d8d7d); this is the bridge + a
+  // permanent safety net.
+  if (process.env.RETRIEVAL_QUALITY_FILTER) {
+    vectorResults = applyQualityFilter(vectorResults);
+    graphResults = applyQualityFilter(graphResults);
+  }
+
+  // Diversity mode (todo:59060e24). 'live' (default) divides the bump by a
+  // tradition's count *in the candidate pool*, which couples ranking to pool
+  // composition — so widening the pool churns the head (tuning-experiment.md §4).
+  // 'fixed' derives a pool-independent rarity from corpus-wide tradition sizes,
+  // so widening intake no longer distorts the rerank. Env-tunable per call.
+  const traditionRarity = process.env.RETRIEVAL_DIVERSITY === 'fixed'
+    ? await corpusRarity()
+    : undefined;
+
+  return mergeAndRerank(vectorResults, graphResults, topK, { traditionRarity });
+}
+
+// Corpus-apparatus patterns (todo:9e31302a; mined in tuning-experiment.md Round 2).
+// DROP: chunks that are pure navigation/TOC/errata. STRIP: boilerplate baked into
+// otherwise-real chunks (the sacred-texts nav prefix is ~32% of the corpus; the
+// {p. N} brace form is a scan page-marker). Deliberately NOT length-based — the
+// 9-token Gospel of Thomas logion is real content.
+const APPARATUS_DROP = /^\s*(?:next|previous)\s*:|^\s*errata\b/i;
+const NAV_PREFIX = /^\s*Sacred Texts\b.*?\bPrevious\s+Next\b\s*/i;
+const PAGE_MARKER = /\{\s*p\.\s*\d+\s*\}/gi;
+
+/** Strip baked-in boilerplate from a chunk body. */
+export function cleanBody(body: string): string {
+  return body.replace(NAV_PREFIX, '').replace(PAGE_MARKER, '').trim();
+}
+
+/** Drop pure-apparatus chunks and strip boilerplate from the rest. Exported for
+ *  unit testing; applied in retrieve() only when RETRIEVAL_QUALITY_FILTER is set. */
+export function applyQualityFilter(chunks: RetrievedChunk[]): RetrievedChunk[] {
+  const out: RetrievedChunk[] = [];
+  for (const c of chunks) {
+    if (APPARATUS_DROP.test(c.body)) continue; // pure nav/TOC/errata
+    const cleaned = cleanBody(c.body);
+    if (cleaned.replace(/\W/g, '').length < 3) continue; // nav-only once stripped
+    out.push(cleaned === c.body ? c : { ...c, body: cleaned });
+  }
+  return out;
+}
+
+// Corpus-wide tradition sizes → pool-independent rarity in [0,1] (rarest = 1,
+// largest = 0), log-scaled so the 841-vs-15 chunk spread doesn't blow up.
+// Cached: the corpus is static between deploys. (todo:59060e24 fixed-diversity.)
+let _rarity: Map<string, number> | null = null;
+async function corpusRarity(): Promise<Map<string, number>> {
+  if (_rarity) return _rarity;
+  const rows = await query<{ tradition: string; n: number }>(
+    `SELECT tradition, count(*)::int AS n FROM chunks GROUP BY tradition`,
+  );
+  const logs = rows.map(r => Math.log(r.n));
+  const lo = Math.min(...logs);
+  const span = (Math.max(...logs) - lo) || 1;
+  _rarity = new Map(rows.map(r => [r.tradition, (Math.max(...logs) - Math.log(r.n)) / span]));
+  return _rarity;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +174,8 @@ interface MergedEntry {
 export function mergeAndRerank(
   vectorResults: RetrievedChunk[],
   graphResults: RetrievedChunk[],
-  topK: number
+  topK: number,
+  opts: { traditionRarity?: Map<string, number> } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
 
@@ -165,7 +237,11 @@ export function mergeAndRerank(
     // leg and the additive combination are untouched (todo:08503113 §6). A
     // domain-tier graph hit thus contributes ¼ of a concept-tier hit's graph term.
     const graphTerm = Math.max(tierW, entry.graphScore) * entry.matchWeight;
-    const diversity = DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
+    // 'fixed': pool-independent corpus rarity (todo:59060e24). 'live' (legacy):
+    // divide the bump by the tradition's count in this pool.
+    const diversity = opts.traditionRarity
+      ? DIVERSITY_BOOST * (opts.traditionRarity.get(entry.chunk.tradition) ?? 0)
+      : DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
     const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + diversity;
     return { entry, score, tierW, diversity };
   });

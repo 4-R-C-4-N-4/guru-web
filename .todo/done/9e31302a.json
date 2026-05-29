@@ -1,0 +1,29 @@
+{
+  "id": "9e31302a",
+  "type": "feature",
+  "state": "done",
+  "summary": "Build env-gated quality filter (RETRIEVAL_QUALITY_FILTER, default off) applied to candidate chunks in retrieve(): DROP pure-apparatus chunks (^Next:/^Previous:/^Errata, or nav-only after strip) and STRIP boilerplate from bodies before scoring/judging ('Sacred Texts ... Previous Next' prefix ~984 chunks, '{p. N}' page markers). Do NOT drop by length alone (the 9-token Thomas logion is real). Patterns per docs/concept-hierarchy/tuning-experiment.md Round 2 + the mined list.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-28T14:35:22.477Z",
+  "updated_at": "2026-05-28T14:59:37.997Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "quality-filter"
+  ],
+  "relationships": {
+    "parent": "0748677d"
+  },
+  "resolution": {
+    "commit": "026f944023422e6f719016790de6c10118cd1040",
+    "resolved_at": "2026-05-28T14:59:37.997Z",
+    "resolved_by": "unknown",
+    "note": "applyQualityFilter() in retrieve() (gated on RETRIEVAL_QUALITY_FILTER): drops pure nav/TOC/errata chunks (^Next:/^Previous:/^Errata, or nav-only after strip) and strips the 'Sacred Texts … Previous Next' prefix + {p. N} markers from bodies. Not length-based. Default off → behavior unchanged (suite green). Tests in child 35c5da28. Can't fix embedding ranking (vectors are on polluted text) — bridge for the upstream re-embed b80d8d7d."
+  }
+}
