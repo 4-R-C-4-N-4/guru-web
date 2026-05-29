@@ -210,7 +210,7 @@ export async function lexicalSearch(
 // multiplicative formula. See docs/retriever-hitlist.md and todo:fbf4652f.
 const VECTOR_WEIGHT = 0.7;
 const GRAPH_WEIGHT = 0.3;
-const LEXICAL_WEIGHT = 0.3; // default for the lexical leg (todo:0c38a006); env-overridable, swept in C4
+const LEXICAL_WEIGHT = 1.0; // tuned default (todo:3fc23534): swept 0→2.5, peak mean p@10 0.36 at 1.0 (baseline 0.21); env-overridable
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
 const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4 };

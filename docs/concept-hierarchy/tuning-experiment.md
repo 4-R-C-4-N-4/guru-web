@@ -281,3 +281,63 @@ the retrieval algorithm is.** Specifically:
 happened and proved the embedding *content* was never the bottleneck — the
 embedding *model's discrimination* is. The actionable next ticket is the hybrid
 lexical leg.
+
+---
+
+# Round 4 — the hybrid lexical leg breaks the ceiling (parent 353756f2)
+
+Built the Round-3 recommendation: a Postgres FTS leg (`RETRIEVAL_LEXICAL`,
+default off) merged into the additive rerank as a max-normalised `LEXICAL_WEIGHT`
+term (`src/lib/retriever.ts` `lexicalSearch` + `mergeAndRerank`). One gotcha worth
+recording: `plainto_tsquery` **ANDs** every lexeme, so `'ahura' & 'mazda' &
+'gatha'` matched **0** chunks — the leg has to flip to OR semantics
+(`replace(… ' & ', ' | ')`) and let `ts_rank` discriminate, or it does nothing.
+
+## Weight sweep (config live ×2, the production default)
+
+| query | w=0 | w=0.5 | **w=1.0** | w=1.5 | w=2.5 |
+|---|---|---|---|---|---|
+| `Tiamat …` | 0.00 | 0.20 | **0.30** | 0.30 | 0.30 |
+| `Ahura Mazda …` | 0.00 | 0.20 | **0.30** | 0.30 | 0.30 |
+| `the One … Nous` | 0.10 | 0.30 | **0.30** | 0.20 | 0.20 |
+| `cosmology` | 0.70 | 0.60 | **0.60** | 0.70 | 0.60 |
+| **MEAN p@10** | **0.21** | **0.30** | **0.36** | **0.31** | **0.31** |
+| on-target chunks ↑ | 0 | 2 | **3** | 3 | 3 |
+
+A clean inverted-U: **peak mean 0.36 at w=1.0**, +0.15 / +71 % over the 0.21
+baseline. Above 1.0 the leg over-promotes marginal lexical hits and the mean
+slips back to 0.31. The two entity queries the dense leg scored **0.00** on go to
+**0.30**, with the on-target tradition (mesopotamian / zoroastrianism) filling its
+full 3-slot cap (was 0). Default set to **`LEXICAL_WEIGHT = 1.0`** (env-overridable
+via `RETRIEVAL_LEXICAL_WEIGHT`).
+
+## Holds across all three configs (w=1.0)
+
+| config | lex off | **lex@1.0** |
+|---|---|---|
+| live ×2 | 0.21 | **0.30** |
+| live ×10 | 0.23 | **0.37** |
+| fixed ×10 | 0.23 | **0.37** |
+
+The lift is consistent everywhere and **stacks** with the Round-2 levers: pool
+width and fixed diversity were precision-neutral on their own, but combined with
+lexical they reach **0.37** — the wider pool feeds the dense leg while lexical
+owns the entity queries. (`the Diamond Sutra` stays ~0.0–0.09 — its query terms
+don't lexically hit the corpus text; a separate gap, not a leg failure.)
+
+## Verdict (settled, with the receipt)
+
+Across four rounds: **diversity/pool tuning ≈ noise; corpus clean + re-embed ≈
+noise; the hybrid lexical leg = the lever** (0.21 → 0.30–0.37). The whole arc
+answers the original question — *modify the algorithm, don't just repair the
+data*. The leg ships **env-gated default-off** (PR is behaviour-neutral); the data
+recommends enabling it in prod: set `RETRIEVAL_LEXICAL=1` (weight defaults to the
+tuned 1.0), ideally with `RETRIEVAL_POOL_MULT=10` for the 0.37 cell.
+
+**Caveats / follow-ups:**
+- **Golden gate drifted on v29, not on this leg.** `'the One … Nous'` no longer
+  recalls neoplatonism (13/14). The gate runs with lexical **off**, so the
+  scoring path is byte-identical to pre-feature — this is corpus v27→v29 drift.
+  Re-baseline the gate to v29 (separate debt).
+- Aliases still empty (`31a7fe76`) — the graph leg remains a *second* dormant
+  entity path; lexical doesn't make it redundant.
