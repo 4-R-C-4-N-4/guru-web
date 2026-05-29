@@ -19,20 +19,19 @@ export async function retrieve(
   prefs: UserPreferences,
   topK: number = 15
 ): Promise<RetrievedChunk[]> {
-  // Vector candidate-pool multiplier (todo:60466c56). The vector leg is biased
-  // at candidate generation: large traditions get far more chances to land in a
-  // narrow top-N, so small/under-represented traditions are filtered out before
-  // reranking ever runs. Widening the pool lets the long tail reach the
-  // rarity-aware reranker. Env-tunable (read per call) so it can be swept without
-  // a redeploy; default 2 preserves historical behavior. The graph leg is not
-  // corpus-size-biased, so its pool stays fixed.
-  const poolMult = Number(process.env.RETRIEVAL_POOL_MULT) || 2;
-  // Lexical leg (todo:0c38a006) — env-gated (default off), so this PR ships
-  // behaviour-neutral. When off, the third leg is an empty array and the
-  // additive score below is byte-identical to the vector+graph path. The lexical
-  // pool is fixed at topK*2 (like graph): FTS is not corpus-size-biased the way
-  // the vector leg is, so it doesn't need poolMult.
-  const runLexical = !!process.env.RETRIEVAL_LEXICAL;
+  // Vector candidate-pool multiplier. Widening the pool lets the long tail reach
+  // the rarity-aware reranker; alone it churns the head (tuning-experiment.md §1),
+  // but PAIRED WITH the lexical leg it's the measured-best cell (Round 4: lexical
+  // ×2 → 0.30, ×10 → 0.37). So ×10 is the code DEFAULT, not 2 — the decided config
+  // ships by default, no env required. RETRIEVAL_POOL_MULT is an optional override
+  // (sweeps without a redeploy). Latency is flat ~18–20ms across widths (Round 1).
+  const poolMult = Number(process.env.RETRIEVAL_POOL_MULT) || 10;
+  // Lexical leg (todo:0c38a006, defaulted on todo:0b15af21). ON by default — it's
+  // the measured precision lever (0.21→0.37), so the good config is the default,
+  // not a must-set env flag. RETRIEVAL_LEXICAL=off is an optional kill-switch
+  // (revert without a redeploy). The lexical pool is fixed at topK*2 (like graph):
+  // FTS is not corpus-size-biased the way the vector leg is, so it skips poolMult.
+  const runLexical = process.env.RETRIEVAL_LEXICAL !== 'off';
   let [vectorResults, graphResults, lexicalResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
@@ -60,8 +59,8 @@ export async function retrieve(
     ? await corpusRarity()
     : undefined;
 
-  // LEXICAL_WEIGHT is env-tunable per call (swept in C4 todo:3fc23534 without a
-  // redeploy); default 0.3 mirrors GRAPH_WEIGHT as a complementary signal.
+  // Lexical weight: tuned default 1.0 (LEXICAL_WEIGHT const, sweep peak Round 4);
+  // RETRIEVAL_LEXICAL_WEIGHT is an optional override for re-sweeping without a redeploy.
   const lexicalWeight = Number(process.env.RETRIEVAL_LEXICAL_WEIGHT) || LEXICAL_WEIGHT;
 
   return mergeAndRerank(vectorResults, graphResults, topK, {
@@ -167,7 +166,7 @@ async function graphSearch(
 // the pipeline-owned corpus export, not the byte-identical schema mirror.
 //
 // Exported for unit testing (todo:af69f5e5); not part of the public API —
-// callers use retrieve(), which runs this leg only when RETRIEVAL_LEXICAL is set.
+// callers use retrieve(), which runs this leg by default (RETRIEVAL_LEXICAL=off disables).
 export async function lexicalSearch(
   queryText: string,
   prefs: UserPreferences,
