@@ -385,3 +385,45 @@ strict win + correctness fix, not a tuning knob — so unlike the other RETRIEVA
 knobs it ships as the default, not gated-off. `~*` ignoring case also fixes the
 "aliases must be stored lowercase" trap (the alias legs lacked `LOWER()`). Golden
 gate unchanged at 13/14 (the one fail is the same v29 drift, `8673c77e`).
+
+---
+
+# Round 6 — graph-leg weight: a weak lever, default stays 0.3 (todo:dafd05d2)
+
+With `concept_aliases` populated (corpus v30), the graph leg finally surfaces
+transliteration content nothing else reaches (`ohrmazd`/`ayn sof`/`yaldabaoth`:
+0.00 → 0.10 vs graph-off) — but at the default weight those chunks lose top-K
+slots to vector hubs. Hypothesis: raising `GRAPH_WEIGHT` (made env-tunable,
+`RETRIEVAL_GRAPH_WEIGHT`) converts that surfacing into precision, the way the
+lexical weight tune did. Swept on two sets in the shipped cell (lexical w=1.0,
+pool ×10, regex): ALIAS (graph is the only way in) and STANDARD (the guard rail).
+
+| set | w=0.3 | w=0.5 | w=0.7 | w=1.0 | w=1.5 |
+|---|---|---|---|---|---|
+| ALIAS | 0.13 | 0.13 | 0.13 | **0.17** | 0.10 |
+| STANDARD | 0.42 | 0.40 | **0.46** | 0.44 | 0.38 |
+
+**The hypothesis fails the noise test.** ALIAS moves 0.13→0.17 at best (≈2 extra
+relevant chunks across 4 queries — single-run judge noise is ±1–2); STANDARD
+wobbles within ±0.04. This is the same <0.06 band Round 2 ruled *noise, not a
+lever*. The only real signal is the **ceiling**: w=1.5 regresses both (alias 0.10,
+standard 0.38) because the graph term's 0.4 floor starts to co-dominate the
+vector term.
+
+**Decision: keep the default at 0.3 — no prod behavior change.** Re-weighting the
+graph leg does not reliably convert alias surfacing into precision; the alias
+discovery value is already captured by regex + aliases existing at the current
+weight. Unlike the lexical weight (a true 0.15 lever), graph weight is back in the
+noise regime, so shipping a global default bump for it would contradict the
+discipline this whole experiment established. The `RETRIEVAL_GRAPH_WEIGHT` knob
+ships **behaviour-neutral** (default 0.3), kept for a future re-sweep — e.g. once
+corpus→concept tagging improves or family/domain aliases land, the graph leg may
+earn a heavier weight. Stay under ~1.0; 1.5 is past the cliff.
+
+**Whole-arc verdict (rounds 1–6):** the only lever that moved precision was the
+**hybrid lexical leg** (0.21→0.37). Diversity/pool tuning, corpus clean+re-embed,
+quality filter, and graph-weight tuning were all noise. The regex matcher was a
+correctness fix (0.33→0.37, removing harm). Aliases add real but small
+transliteration discovery (0.00→0.10) the lexical leg can't reach. Net: *one
+algorithmic addition (lexical) carried the result; everything else was hygiene or
+noise* — measured, not assumed.
