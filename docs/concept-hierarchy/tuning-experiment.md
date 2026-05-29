@@ -341,3 +341,47 @@ tuned 1.0), ideally with `RETRIEVAL_POOL_MULT=10` for the 0.37 cell.
   Re-baseline the gate to v29 (separate debt).
 - Aliases still empty (`31a7fe76`) — the graph leg remains a *second* dormant
   entity path; lexical doesn't make it redundant.
+
+---
+
+# Round 5 — graph-leg matcher: regex word-boundary beats LIKE (todo:72f1334e)
+
+Prompted by an upstream alias-curation pass. `extractConcepts` matched query
+tokens with `col LIKE '%token%'` — substring, so it bleeds across word
+boundaries: `art`⊂tri**part**ite, `man`⊂e**man**ation / hu**man**ity,
+`age`⊂marri**age** (and the original `the`⊂**The**ology the stopword list masks).
+Built an env-gated word-boundary alternative (`GRAPH_MATCH_MODE`): match each
+token flanked by non-letters via case-insensitive `~*`.
+
+**Structural (no LLM) — spurious expansions LIKE drops under regex:**
+
+| query | LIKE concepts | regex | dropped |
+|---|---|---|---|
+| `the art of meditation` | 3 | 2 | 1 |
+| `the nature of man` | 11 | 6 | 5 |
+| `coming of age` | 6 | **0** | 6 |
+
+**Precision@10 — three graph-leg variants, recommended cell (lexical w=1.0, pool ×10):**
+
+| query | graph LIKE | graph regex | graph OFF |
+|---|---|---|---|
+| `the One … Nous` | 0.10 | 0.30 | 0.30 |
+| `tao / wu wei` | 0.20 | 0.30 | 0.30 |
+| **MEAN** | **0.33** | **0.37** | **0.37** |
+
+Three reads:
+1. **LIKE actively *hurts* precision** (0.33 vs 0.37) — its bleed injects spurious
+   graph chunks that displace relevant ones. No query regressed under regex.
+2. **regex == graph-OFF, exactly.** With `concept_aliases` **empty**, the regex
+   graph leg matches only labels — which vector+lexical already cover — so it adds
+   no precision over no graph leg. Its value is **latent, unlocked by aliases**
+   (transliterations the dense/lexical legs can't reach). Not "kill the leg":
+   "the leg has no job yet, and the bad matcher made it a liability."
+3. **Sequencing:** loading aliases onto the LIKE matcher would *amplify* the
+   bleed, so regex must land **before** the alias load.
+
+**Decision: regex is the default** (`GRAPH_MATCH_MODE=like` opts back out). A
+strict win + correctness fix, not a tuning knob — so unlike the other RETRIEVAL_*
+knobs it ships as the default, not gated-off. `~*` ignoring case also fixes the
+"aliases must be stored lowercase" trap (the alias legs lacked `LOWER()`). Golden
+gate unchanged at 13/14 (the one fail is the same v29 drift, `8673c77e`).

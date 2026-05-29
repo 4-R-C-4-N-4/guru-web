@@ -1,0 +1,19 @@
+{
+  "id": "72f1334e",
+  "type": "investigation",
+  "state": "done",
+  "summary": "Word-boundary regex matcher for extractConcepts (replace LIKE substring) + measure graph-leg precision contribution",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-29T13:00:28.239Z",
+  "updated_at": "2026-05-29T13:14:02.129Z",
+  "resolution": {
+    "commit": "dc12a16f2cd2f88ccdb008cb5ce571a049fb03d4",
+    "resolved_at": "2026-05-29T13:14:02.129Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/graph.test.ts",
+    "test_function": "extractConcepts",
+    "note": "Regex word-boundary matcher now default (GRAPH_MATCH_MODE=like opts out). Measured: mean p@10 0.33(LIKE)→0.37(regex)==0.37(graph-off), 0 regressions; LIKE was injecting bleed that displaced relevant chunks. With aliases empty, regex graph leg == graph-off (no precision job yet) — value unlocks with the alias load, which MUST land on regex not LIKE (LIKE amplifies bleed). ~* also fixes alias-lowercase trap. Golden 13/14 (same v29 drift 8673c77e). Round 5 in tuning-experiment.md."
+  }
+}

@@ -5,7 +5,7 @@
  * DB query is mocked.
  */
 
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from 'vitest';
 
 vi.mock('@/lib/db', () => ({
   query:  vi.fn(),
@@ -20,7 +20,11 @@ import { extractConcepts, walkGraph, summarizeExpansion } from '@/lib/graph';
 import type { UserPreferences } from '@/lib/types';
 
 describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  // These assert LIKE-format params (the original substring matcher). Pin the
+  // mode so they keep testing tokenisation against the stable %word% vehicle;
+  // the matcher default flipped to regex in todo:72f1334e.
+  beforeEach(() => { vi.clearAllMocks(); process.env.GRAPH_MATCH_MODE = 'like'; });
+  afterEach(() => { delete process.env.GRAPH_MATCH_MODE; });
 
   it('strips LIKE wildcards from query text before building patterns', async () => {
     mockQuery.mockResolvedValueOnce([]);
@@ -337,5 +341,41 @@ describe('walkGraph — match-tier weight propagation (todo:522f389a)', () => {
     const result = await walkGraph([{ conceptId: 'concept-a', matchTier: 'family' }], prefs, 25);
 
     expect(result[0].conceptMatchWeight).toBe(0.5);
+  });
+});
+
+describe('extractConcepts — matcher mode (todo:72f1334e)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => { delete process.env.GRAPH_MATCH_MODE; });
+
+  it('defaults to regex whole-word matching via ~* word-boundary patterns', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('man wu-wei');
+    const [sql, params] = mockQuery.mock.calls[0];
+    // whole-word, letter-flanked patterns — 'man' will NOT match inside 'eMANation'.
+    expect(params).toEqual([
+      '(^|[^[:alpha:]])man([^[:alpha:]]|$)',
+      '(^|[^[:alpha:]])wu-wei([^[:alpha:]]|$)', // hyphen passes through unescaped
+    ]);
+    expect(sql).toMatch(/~\* \$1/);
+    expect(sql).not.toMatch(/LIKE \$/);
+  });
+
+  it('GRAPH_MATCH_MODE=like opts back into LIKE substring matching', async () => {
+    process.env.GRAPH_MATCH_MODE = 'like';
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('mania');
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['%mania%']);
+    expect(sql).toMatch(/LIKE \$1/);
+    expect(sql).not.toMatch(/~\*/);
+  });
+
+  it('escapes regex metacharacters in tokens', async () => {
+    process.env.GRAPH_MATCH_MODE = 'regex';
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('a.b(c'); // one token after tokenisation
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['(^|[^[:alpha:]])a\\.b\\(c([^[:alpha:]]|$)']);
   });
 });
