@@ -1,0 +1,11 @@
+{
+  "id": "72f1334e",
+  "type": "investigation",
+  "state": "open",
+  "summary": "Word-boundary regex matcher for extractConcepts (replace LIKE substring) + measure graph-leg precision contribution",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-29T13:00:28.239Z",
+  "updated_at": "2026-05-29T13:00:28.239Z"
+}
