@@ -13,6 +13,23 @@ ships from a `todo/<id>` branch for the operator to open.
 
 ## Corrections to the BRD discovered during file review
 
+> **Re-anchored against current `main` (2026-05-30).** This doc was first
+> written ~84 commits behind `main`. The branch has since been merged up;
+> all `file:line` references below and in the tickets were re-verified
+> against the merged tree. Line numbers, helper locations
+> (`makeBudget`/`CONTEXT_WINDOWS` live in `budget.ts`, `compressChunks` in
+> `compress.ts`), and the route path (`api/query/route.ts`, not `route.ts`)
+> are corrected throughout. **One substantive change since first draft:**
+> `retrieve()` is now a *three-leg* hybrid (vector + graph + **lexical
+> FTS**, lexical ON by default), and `RetrievedChunk` gained a **required
+> `source: 'vector' | 'graph' | 'lexical'`** field plus optional `lexRank` /
+> `conceptMatchWeight`. The generator (T3) is unaffected at the call site —
+> `retrieve(queryText, prefs)` is unchanged and still returns chunks
+> carrying `id/tradition/text_name/section/tier` — but the `chunks_used`
+> mapper must tolerate the wider chunk shape (it already only reads the five
+> fields it stores). The candidate-drop decision (§4) is unchanged:
+> `edges.weight` is still `NULL` on `main`.
+
 The BRD was written before reading every touched file. Four of its
 claims need adjusting; this doc is authoritative where they conflict:
 
@@ -30,7 +47,7 @@ claims need adjusting; this doc is authoritative where they conflict:
    server-side instead of via `/api/corpus`.
 
 3. **`MD_COMPONENTS` is local to `chat-view.tsx`** (`src/components/
-   chat-view.tsx:74`), not exported — and it is a **static** module-level
+   chat-view.tsx:79`), not exported — and it is a **static** module-level
    const that does **not** vary on `mobile` (the `mobile`-conditional
    sizing lives in chat-view's surrounding layout JSX, not in the
    component map). T5 extracts it as a plain const so both chat and the
@@ -218,11 +235,13 @@ blog voice is internal and never user-selectable (BRD §1.5, §3).
     column is reserved for future variants).
   - Export `buildBlogPrompt(conceptLabels: [string, string], definitions:
     string[], angle: string | null, chunks: RetrievedChunk[]): string`.
-    Reuse the internal `formatChunk` (`prompt.ts:101-108`), `makeBudget`,
-    and `compressChunks` exactly as `buildPrompt` (`prompt.ts:122-146`)
-    does, but the trailing instruction replaces `QUERY: ...` with an essay
-    brief naming the two concepts (+ angle if present). Budget against the
-    `'pro'` tier (largest `CONTEXT_WINDOWS` entry) — there is no user tier.
+    Reuse the internal `formatChunk` (`prompt.ts:101-108`), `makeBudget`
+    (imported from `./budget`), and `compressChunks` (imported from
+    `./compress`) exactly as `buildPrompt` (`prompt.ts:122-146`) does, but
+    the trailing instruction replaces `QUERY: ...` with an essay brief
+    naming the two concepts (+ angle if present). Budget against the
+    `'pro'` tier — `CONTEXT_WINDOWS` lives in `budget.ts` (`free: 8_192`,
+    `pro: 32_768`; `'pro'` is the largest), and there is no user tier.
 
 **Done when:**
 
@@ -304,7 +323,7 @@ trigger knowledge.
         { role: 'user',   content: buildBlogPrompt(/* labels, defs, angle */, chunks) },
       ];
 
-      // 5. collect the stream to completion (no UI; mirrors route.ts:234-262)
+      // 5. collect the stream to completion (no UI; mirrors api/query/route.ts:253-268)
       const stream = await completeStream(messages, modelId, slug);
       let raw = '', inTok: number | null = null, outTok: number | null = null, cachedTok = 0;
       for await (const chunk of stream) {
@@ -318,7 +337,7 @@ trigger knowledge.
       const { title, dek, body } = parseGenerated(raw, concepts);
       const slugStr = await uniqueSlug(title);
 
-      // 7. cost (best-effort; never fails the draft — mirrors route.ts:289-291)
+      // 7. cost (best-effort; never fails the draft — mirrors api/query/route.ts:284-290)
       let cost: number | null = null;
       if (inTok !== null && outTok !== null) {
         try { cost = (await computeCost({ modelId, inputTokens: inTok, outputTokens: outTok, cachedInputTokens: cachedTok })).cost_usd; }
@@ -340,7 +359,7 @@ trigger knowledge.
 
   Helpers in the same file: `seedToPrefs(seed): UserPreferences` (map the
   seed's `scope_mode` + `blocked_*`/`whitelisted_*` arrays into the
-  `UserPreferences` shape from `types.ts:37-58`; `preferredModel`/
+  `UserPreferences` shape from `types.ts:109-130`; `preferredModel`/
   `preferredVoice` are unused by `retrieve` so set placeholders),
   `buildQueryText(concepts, angle)`, `parseGenerated(raw, concepts)`
   (pull `TITLE:`/`DEK:` from the head, strip the `CITATIONS:` block from
@@ -351,7 +370,7 @@ trigger knowledge.
   error_note=$2`).
 
   **`chunks_used` divergence (intentional).** `queries.chunks_used` stores
-  bare IDs (`route.ts:321` — `chunks.map(c => c.id)`). Blog posts store the
+  bare IDs (`api/query/route.ts:328` — `chunks.map(c => c.id)`). Blog posts store the
   richer `{id, tradition, text_name, section, tier}` objects so the public
   page's Sources block and the draft grounding-review render without a
   corpus join, and survive a corpus re-import. Note this in a comment.
@@ -461,14 +480,14 @@ blog page renders identically. Behaviour-preserving refactor.
 **Files:**
 
 - `src/lib/markdown.tsx` (new) — export the markdown component map
-  currently at `chat-view.tsx:74-114` as a plain const:
+  currently at `chat-view.tsx:79-119` as a plain const:
   `export const MD_COMPONENTS: Components = { … }`. That object is a
   *static* module-level const — it does **not** vary on `mobile` (all the
   `mobile`-conditional sizing is in chat-view's surrounding layout JSX, not
   the component map), so there is no `mobile` param and no factory.
 - `src/components/chat-view.tsx` — delete the local `MD_COMPONENTS`
-  (`:74-114`) and import the shared const instead; the `ReactMarkdown`
-  usage at `:395-399` is unchanged. `remark-gfm` stays wired by the caller.
+  (`:79-119`) and import the shared const instead; the `ReactMarkdown`
+  usage at `:426-428` is unchanged. `remark-gfm` stays wired by the caller.
 
 **Done when:**
 
@@ -523,10 +542,10 @@ re-wire settings to pass data in as props.
   (the `/api/corpus` shape) and `value` is the `scope_mode` +
   blocked/whitelisted arrays. Lift the tradition→text tree JSX from
   `settings/page.tsx` (the scope section the explorer located at
-  ~`:326-393`).
+  ~`:333-376`).
 - `src/components/model-picker.tsx` (new) — `<ModelPicker value onChange
   disabled? />` over `CURATED_MODELS` (`curated-models.ts:21-26`), lifting
-  the radio group from `settings/page.tsx` (~`:189-257`).
+  the radio group from `settings/page.tsx` (~`:205-256`).
 - `src/app/(app)/settings/page.tsx` — replace the inline blocks with the
   new components; it keeps fetching `/api/corpus` and passes the result in
   as `catalog`. Net behaviour identical.
