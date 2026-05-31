@@ -79,8 +79,18 @@ const makeStream = (chunks: unknown[]) => ({
   },
 });
 
+// A realistic essay body — long enough to clear the MIN_BODY_CHARS generation
+// floor (a real grounded essay is thousands of chars; the floor only rejects
+// empty/near-empty completions).
+const ESSAY_BODY =
+  'The essay body develops the parallel at length. It opens by naming the ' +
+  'cross-tradition tension, then traces how each source passage bears on the ' +
+  'resonance, holding genuine divergence open rather than flattening it into a ' +
+  'false equivalence, and closes on a thought that lands rather than a teaser ' +
+  'for the next instalment.';
+
 // A completion stream that yields a well-formed essay plus a usage chunk.
-const goodStream = (body = 'TITLE: Two Names for One Source\nDEK: A resonance.\n\nThe essay body develops the parallel.\n\nCITATIONS:\n[NEOPLATONISM | Enneads | V.1 | TIER: verified]') =>
+const goodStream = (body = `TITLE: Two Names for One Source\nDEK: A resonance.\n\n${ESSAY_BODY}\n\nCITATIONS:\n[NEOPLATONISM | Enneads | V.1 | TIER: verified]`) =>
   makeStream([
     { choices: [{ delta: { content: body } }] },
     { choices: [], usage: { prompt_tokens: 100, completion_tokens: 200 } },
@@ -177,7 +187,7 @@ describe('generateDraft — head-parse fallback', () => {
   it('falls back to concept labels when TITLE/DEK are missing, still a draft', async () => {
     wireOne(SEED);
     mRetrieve.mockResolvedValue([makeChunk('a'), makeChunk('b'), makeChunk('c'), makeChunk('d')]);
-    mComplete.mockResolvedValue(goodStream('Just a body with no structured head at all.') as never);
+    mComplete.mockResolvedValue(goodStream(`Just a body with no structured head at all. ${ESSAY_BODY}`) as never);
 
     await generateDraft('seed-1');
 
