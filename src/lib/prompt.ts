@@ -82,6 +82,77 @@ export function getSystemPrompt(voice: VoiceSlug): string {
 }
 
 // ---------------------------------------------------------------------------
+// Blog essayist (grounded blog pipeline)
+// ---------------------------------------------------------------------------
+//
+// The blog generator (src/lib/blog-generate.ts) is a second caller of the
+// RAG chain: it turns a cross-tradition concept pair into a long-form
+// grounded essay rather than a chat turn. It uses its own overlay + rules
+// so the *grounding* contract is shared verbatim with CORE_RULES, but the
+// *shape* is an essay (title, dek, development, close, citations) instead
+// of a single conversational turn that "opens the next turn".
+//
+// The voice is internal and never user-selectable — one blog voice this
+// phase (BRD §1.5, §3). VoiceSlug is deliberately untouched.
+
+// BLOG_OVERLAY: the essayist identity that precedes BLOG_RULES.
+const BLOG_OVERLAY = `You are a comparative-religion essayist writing for a thoughtful general
+reader. You take a single resonance between two traditions and trace it with
+rigor and grace — at home in primary texts, precise about where traditions
+genuinely converge and where the likeness breaks. Your register is literary
+but exact: an essay, not a lecture, and never a sermon.`;
+
+// BLOG_RULES carries the same invariant grounding contract as CORE_RULES
+// (grounding / no-invented-quotes / notice-vs-report / family-resemblance
+// are reproduced verbatim in substance), but replaces the chat closer —
+// which assumes a single turn that "opens the next turn" — with essay shape
+// and a parseable structured head/tail the generator can split on.
+const BLOG_RULES = `Your sources are the SOURCE PASSAGES below — primary religious texts retrieved
+from a curated corpus. Treat them as your only authority.
+
+GROUNDING:
+  - Every substantive claim about a tradition's content must be grounded in the
+  provided source passages. Do not put words in a tradition's mouth that the
+  passages do not support.
+  - Do not invent quotations. Do not attribute specific wording or claims to
+  texts that are not in the retrieved passages.
+  - Mark the difference between what the passages directly say and what you are
+  noticing or inferring. When you reach beyond the passages to an external work,
+  name it by title and signal the shift, but do not quote it.
+  - When you map a term across traditions, treat it as a *family resemblance*,
+  not an equation — note where the overlap holds and where it breaks. Avoid
+  false equivalences between traditions.
+  - These are contemplative and philosophical texts, not medical, legal, or
+  psychiatric advice.
+
+ESSAY SHAPE:
+  - Open by naming the cross-tradition tension or resonance directly — what is
+  surprising or hard about putting these two side by side.
+  - Develop it through the passages: let them lead, quote sparingly and
+  purposefully, and hold genuine divergence open rather than flattening it.
+  - Close with a thought that lands, not a teaser for a next instalment.
+  - Write in markdown prose. Use paragraphs for the argument; lists only when
+  genuinely enumerating.
+
+Emit EXACTLY this structure so it can be parsed:
+
+TITLE: <a specific, evocative title>
+DEK: <one sentence that frames the parallel>
+
+<the essay, in markdown prose>
+
+CITATIONS:
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+(one line per source passage you actually drew on)`;
+
+// getBlogSystemPrompt composes the blog overlay + blog rules. No voice
+// param — a single internal blog voice this phase (the blog_posts.voice
+// column is reserved for future variants).
+export function getBlogSystemPrompt(): string {
+  return `${BLOG_OVERLAY}\n\n${BLOG_RULES}`;
+}
+
+// ---------------------------------------------------------------------------
 // Chunk formatting
 // ---------------------------------------------------------------------------
 
@@ -143,4 +214,53 @@ export function buildPrompt(
       : "No source passages were found for this query.";
 
   return `${passagesBlock}\n\n---\n\nQUERY: ${queryText}`;
+}
+
+/**
+ * Build the blog essay user-prompt from retrieved chunks and a concept pair.
+ *
+ * Mirrors buildPrompt's budget handling exactly (compress over-long chunks,
+ * then fit to the window), but always budgets against the 'pro' tier (the
+ * largest CONTEXT_WINDOWS entry — there is no user tier in the blog path)
+ * and replaces the trailing QUERY with an essay brief naming the two
+ * concepts (+ angle if present).
+ */
+export function buildBlogPrompt(
+  conceptLabels: [string, string],
+  definitions: string[],
+  angle: string | null,
+  chunks: RetrievedChunk[],
+): string {
+  const budget = makeBudget("pro");
+
+  // Drive compression with the concept labels + angle so the kept sentences
+  // are the ones most relevant to the parallel being essayed.
+  const compressionQuery = [...conceptLabels, angle ?? ""].join(" ");
+  const targetPerChunk = Math.floor(
+    budget.available / Math.max(chunks.length, 1),
+  );
+  const compressed = compressChunks(chunks, compressionQuery, targetPerChunk);
+  const fitted = budget.fitChunks(compressed);
+
+  const passagesBlock =
+    fitted.length > 0
+      ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
+      : "No source passages were found for this parallel.";
+
+  const [a, b] = conceptLabels;
+  const defLines = definitions
+    .map((d, i) =>
+      d ? `- ${conceptLabels[i] ?? `concept ${i + 1}`}: ${d}` : null,
+    )
+    .filter(Boolean)
+    .join("\n");
+  const brief = [
+    `ESSAY BRIEF: Trace the cross-tradition resonance between ${a} and ${b}.`,
+    defLines ? `\nWorking definitions:\n${defLines}` : "",
+    angle ? `\nAngle to pursue: ${angle}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return `${passagesBlock}\n\n---\n\n${brief}`;
 }

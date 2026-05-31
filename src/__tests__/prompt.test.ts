@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
+import { buildPrompt, buildBlogPrompt, getBlogSystemPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { RetrievedChunk, UserPreferences } from '@/lib/types';
 
 const DEFAULT_PREFS: UserPreferences = {
@@ -216,5 +216,77 @@ describe('buildPrompt', () => {
     const baselineCount = (baseline.match(/^\[\d+\]/gm) ?? []).length;
     const squeezedCount = (squeezed.match(/^\[\d+\]/gm) ?? []).length;
     expect(squeezedCount).toBeLessThan(baselineCount);
+  });
+});
+
+describe('getBlogSystemPrompt', () => {
+  const blogPrompt = getBlogSystemPrompt();
+
+  it('keeps the grounding contract from CORE_RULES', () => {
+    expect(blogPrompt).toContain('Every substantive claim about a tradition');
+    expect(blogPrompt).toContain('Do not invent quotations');
+    expect(blogPrompt).toContain('family resemblance');
+  });
+
+  it('carries the parseable TITLE / DEK / CITATIONS contract', () => {
+    expect(blogPrompt).toContain('TITLE:');
+    expect(blogPrompt).toContain('DEK:');
+    expect(blogPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]/);
+  });
+
+  it('uses essay shape, not the chat single-turn closer', () => {
+    // The blog rules must NOT inherit the chat closer that "opens the next turn".
+    expect(blogPrompt).not.toContain('opens the next turn');
+    expect(blogPrompt).toContain('Close with a thought that lands');
+  });
+
+  it('is the essayist voice, not a chat voice', () => {
+    expect(blogPrompt).toContain('comparative-religion essayist');
+    expect(blogPrompt).not.toContain('You are Guru');
+  });
+});
+
+describe('buildBlogPrompt', () => {
+  it('names both concepts and the angle in the essay brief', () => {
+    const chunks = [makeChunk('c1', 'hermeticism'), makeChunk('c2', 'taoism')];
+    const result = buildBlogPrompt(
+      ['emanation', 'the uncarved block'],
+      ['flowing-forth of the One', 'undifferentiated potential'],
+      'both resist the idea of a made world',
+      chunks,
+    );
+    expect(result).toContain('emanation');
+    expect(result).toContain('the uncarved block');
+    expect(result).toContain('both resist the idea of a made world');
+    expect(result).toContain('SOURCE PASSAGES');
+  });
+
+  it('omits the angle line when no angle is given', () => {
+    const chunks = [makeChunk('c1', 'gnosticism')];
+    const result = buildBlogPrompt(['logos', 'tao'], [], null, chunks);
+    expect(result).not.toContain('Angle to pursue');
+    expect(result).toContain('logos');
+    expect(result).toContain('tao');
+  });
+
+  it('drops chunks when the budget is tight', () => {
+    // Each chunk is one long, period-free sentence (~1000 tokens) that
+    // compression cannot shrink below itself, so 100 of them (~100k
+    // tokens) must overflow the pro window (~30k) and the budget binds.
+    const bigBody = 'the One overflows into being without diminishing '.repeat(80).trim();
+    const many = Array.from({ length: 100 }, (_, i) => ({
+      ...makeChunk(`c${i}`, 'neoplatonism', 'verified'),
+      body: bigBody,
+      token_count: Math.ceil(bigBody.length / 4),
+    }));
+    const result = buildBlogPrompt(['nous', 'tao'], [], null, many);
+    const count = (result.match(/^\[\d+\]/gm) ?? []).length;
+    expect(count).toBeLessThan(many.length);
+  });
+
+  it('falls back gracefully with no chunks', () => {
+    const result = buildBlogPrompt(['a', 'b'], [], null, []);
+    expect(result).toContain('No source passages');
+    expect(result).toContain('ESSAY BRIEF');
   });
 });
