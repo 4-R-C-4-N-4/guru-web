@@ -1,0 +1,29 @@
+{
+  "id": "ee601330",
+  "type": "feature",
+  "state": "done",
+  "summary": "Types: Concept/Family/Domain view types + optional family_id/family_label/domain DTO fields, additive back-compat",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.602Z",
+  "updated_at": "2026-05-27T21:23:22.505Z",
+  "files": [
+    {
+      "path": "src/lib/types.ts"
+    }
+  ],
+  "tags": [
+    "api",
+    "types"
+  ],
+  "relationships": {
+    "parent": "30dca55e"
+  },
+  "resolution": {
+    "commit": "0ed55212a040f8f374dfc7a575523a8e384dddc4",
+    "resolved_at": "2026-05-27T21:23:22.505Z",
+    "resolved_by": "unknown",
+    "note": "Added MatchTier + ConceptMatch (query-plane boundary), optional conceptMatchWeight on RetrievedChunk (graph-leg scoring signal), and ConceptView/FamilyView/DomainView for the browse + expansion UI. All additive — existing DTOs unchanged, type-check green."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "353756f2",
+  "type": "feature",
+  "state": "done",
+  "summary": "Hybrid retrieval: add a lexical (Postgres FTS) leg to the vector+graph rerank",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:14.253Z",
+  "updated_at": "2026-05-29T00:03:56.287Z",
+  "relationships": {
+    "children": [
+      "af69f5e5",
+      "0c38a006",
+      "a2fbaf58",
+      "3fc23534"
+    ]
+  },
+  "resolution": {
+    "commit": "931e8c1d6ea557510163fe38ef1a8f2c11e41c33",
+    "resolved_at": "2026-05-29T00:03:56.287Z",
+    "resolved_by": "unknown",
+    "note": "Hybrid retrieval shipped: lexical FTS leg (env-gated RETRIEVAL_LEXICAL, default off) merged additively at tuned LEXICAL_WEIGHT=1.0. Breaks the precision ceiling 4 rounds of tuning+repair couldn't: mean p@10 0.21→0.30 (live×2), 0.37 (×10/fixed); entity queries 0.00→0.30. Behavior-neutral PR. tuning-experiment.md Round 4."
+  }
+}

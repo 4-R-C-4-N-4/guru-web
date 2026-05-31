@@ -19,6 +19,7 @@
 
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
+import { summarizeExpansion } from '@/lib/graph';
 import { buildPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { VoiceSlug } from '@/lib/types';
 import { completeStream } from '@/lib/model';
@@ -110,7 +111,13 @@ export async function POST(req: Request) {
   const historyChars  = history.reduce((n, m) => n + m.content.length, 0);
   const historyTokens = Math.ceil(historyChars / 4);
 
-  const chunks = await retrieve(queryText, prefs);
+  // Retrieve and summarise the query expansion in parallel — the expansion
+  // summary feeds the X-Query-Expansion transparency header (todo:9d2ad427) and
+  // is independent of the chunk fetch, so it adds no latency.
+  const [chunks, expansion] = await Promise.all([
+    retrieve(queryText, prefs),
+    summarizeExpansion(queryText),
+  ]);
   // Reserve room for history in the chunk-fitting budget so long sessions
   // retrieve fewer chunks rather than blowing the context window.
   const prompt = buildPrompt(queryText, chunks, prefs, user.tier, historyTokens);
@@ -351,6 +358,11 @@ export async function POST(req: Request) {
       // in-session, since it's known up-front and is the most useful
       // bit ("which model wrote this answer").
       'X-Model-Used':  modelId,
+      // Query-expansion transparency (todo:9d2ad427): the family/domain matches
+      // that fanned this query out, so the client can show "matched X → N
+      // concepts". URI-encoded JSON keeps the header ASCII-safe; omitted when
+      // nothing expanded (concept-only / no match) so no chip renders.
+      ...(expansion.length > 0 && { 'X-Query-Expansion': encodeURIComponent(JSON.stringify(expansion)) }),
       ...(streamError ? { 'X-Stream-Error': 'truncated' } : {}),
     },
   });

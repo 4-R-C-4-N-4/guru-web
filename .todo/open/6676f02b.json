@@ -1,0 +1,20 @@
+{
+  "id": "6676f02b",
+  "type": "chore",
+  "state": "open",
+  "summary": "Capture retrieval baseline cell-1 on v2 corpus: aggregates + per-query top-K dump committed before v3 export lands",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.170Z",
+  "updated_at": "2026-05-27T21:10:24.823Z",
+  "tags": [
+    "benchmark"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "6c00d0b5"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "97094b63",
+  "type": "chore",
+  "state": "done",
+  "summary": "CI guard: fail if corpus-schema.sql diverges from pipeline published hash, or documented diff gate in deploy runbook",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.788Z",
+  "updated_at": "2026-05-27T21:32:38.582Z",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml"
+    }
+  ],
+  "tags": [
+    "ci",
+    "schema"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "ac83fd8b"
+    ]
+  },
+  "resolution": {
+    "commit": "94f3d077739eaeae5f6a3388dab39af91b263776",
+    "resolved_at": "2026-05-27T21:32:38.582Z",
+    "resolved_by": "unknown",
+    "note": "Committed schema/corpus-schema.sql.sha256 (the v3/pipeline hash) + a CI step 'Corpus schema integrity' running sha256sum -c, failing fast on any local drift. Header documents the lockstep: re-mirror + regenerate the checksum together when the pipeline bumps the schema. Verified sha256sum -c passes locally."
+  }
+}

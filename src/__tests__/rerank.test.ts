@@ -7,6 +7,7 @@
  *   - 3251a8d6  vector hits get an explicit 'inferred' tier (not silent 0.4)
  *   - 0a771923  graph results score on an independent term (not a fake distance)
  *   - ce844add  diversity rewards rare traditions, order-independent
+ *   - 0c38a006  lexical leg merged as a max-normalised additive term
  */
 import { describe, it, expect } from 'vitest';
 import { mergeAndRerank } from '@/lib/retriever';
@@ -15,12 +16,18 @@ import type { RetrievedChunk } from '@/lib/types';
 function chunk(
   id: string,
   tradition: string,
-  opts: { source: 'vector' | 'graph'; distance?: number; tier?: RetrievedChunk['tier'] },
+  opts: {
+    source: 'vector' | 'graph';
+    distance?: number;
+    tier?: RetrievedChunk['tier'];
+    conceptMatchWeight?: number;
+  },
 ): RetrievedChunk {
   return {
     id, text_id: 't', tradition, text_name: 'tn', section: 's',
     translator: null, body: 'b', token_count: 1,
     source: opts.source, distance: opts.distance, tier: opts.tier,
+    conceptMatchWeight: opts.conceptMatchWeight,
   };
 }
 
@@ -66,6 +73,41 @@ describe('mergeAndRerank — graph leg (0a771923)', () => {
   });
 });
 
+describe('mergeAndRerank — match-tier weight (todo:08503113)', () => {
+  it('a concept-tier graph hit outranks an otherwise-identical domain-tier hit', () => {
+    // Same edge tier, same (zero) similarity, distinct traditions so the
+    // diversity bump is equal — only the match weight differs.
+    const out = mergeAndRerank([], [
+      chunk('domain', 'x', { source: 'graph', tier: 'verified', conceptMatchWeight: 0.25 }),
+      chunk('concept', 'y', { source: 'graph', tier: 'verified', conceptMatchWeight: 1.0 }),
+    ], 5);
+    expect(out.map(c => c.id)).toEqual(['concept', 'domain']);
+  });
+
+  it('orders graph hits concept > family > domain at equal tier/similarity/diversity', () => {
+    // Distinct traditions → equal diversity bump; identical edge tier and zero
+    // similarity → match weight is the only differentiator.
+    const out = mergeAndRerank([], [
+      chunk('dom', 'a', { source: 'graph', tier: 'verified', conceptMatchWeight: 0.25 }),
+      chunk('fam', 'b', { source: 'graph', tier: 'verified', conceptMatchWeight: 0.5 }),
+      chunk('con', 'c', { source: 'graph', tier: 'verified', conceptMatchWeight: 1.0 }),
+    ], 5);
+    expect(out.map(c => c.id)).toEqual(['con', 'fam', 'dom']);
+  });
+
+  it('vector-only hits (no conceptMatchWeight) are unchanged — weight defaults to 1.0', () => {
+    // A vector hit and a concept-tier graph hit with identical inputs; the vector
+    // hit must not be penalised for lacking a match weight.
+    const out = mergeAndRerank(
+      [chunk('vec', 'x', { source: 'vector', distance: 0.1 })],
+      [],
+      5,
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('vec');
+  });
+});
+
 describe('mergeAndRerank — diversity + cap (ce844add)', () => {
   it('ranks rare traditions above an over-represented one at equal similarity/tier, and caps per tradition', () => {
     const vec = [
@@ -93,5 +135,64 @@ describe('mergeAndRerank — diversity + cap (ce844add)', () => {
     // vedanta (rare) leads in both orderings
     expect(ordered[0]).toBe('ved');
     expect(shuffled[0]).toBe('ved');
+  });
+});
+
+// Lexical leg as a max-normalised additive term (todo:0c38a006). A lexical hit
+// carries a raw ts_rank (lexRank); the reranker normalises it against the
+// strongest lexical hit in the candidate set and adds lexicalWeight × that.
+function lex(id: string, tradition: string, lexRank: number): RetrievedChunk {
+  return {
+    id, text_id: 't', tradition, text_name: 'tn', section: 's',
+    translator: null, body: 'b', token_count: 1, source: 'lexical', lexRank,
+  };
+}
+
+describe('mergeAndRerank — lexical leg (todo:0c38a006)', () => {
+  it('is a no-op when no lexical results are supplied (default-off neutrality)', () => {
+    const vec = [
+      chunk('hi', 'x', { source: 'vector', distance: 0.1 }),
+      chunk('lo', 'y', { source: 'vector', distance: 0.6 }),
+    ];
+    const base = mergeAndRerank(vec, [], 5).map(c => c.id);
+    const empty = mergeAndRerank(vec, [], 5, { lexicalResults: [] }).map(c => c.id);
+    expect(empty).toEqual(base); // identical ranking, no divide-by-zero on maxLex=0
+  });
+
+  it('surfaces a lexical-only hit the vector leg never returned, given enough weight', () => {
+    const out = mergeAndRerank(
+      [chunk('v', 'x', { source: 'vector', distance: 0.4 })], // similarity 0.6
+      [],
+      5,
+      { lexicalResults: [lex('L', 'y', 0.2)], lexicalWeight: 2.0 },
+    );
+    expect(out.map(c => c.id)).toContain('L');
+    expect(out[0].id).toBe('L'); // 0.12 floor + 2.0×1.0 normLex beats 0.7×0.6 + 0.12
+  });
+
+  it('normalises ts_rank against the max, not its absolute value', () => {
+    // A single tiny ts_rank still normalises to 1.0 → full weight.
+    const tiny = mergeAndRerank([], [], 5, { lexicalResults: [lex('t', 'x', 0.0001)], lexicalWeight: 1.0 });
+    expect(tiny[0].id).toBe('t');
+    // Relative magnitude is preserved: 0.20 → normLex 1.0, 0.05 → normLex 0.25.
+    const ranked = mergeAndRerank([], [], 5, {
+      lexicalResults: [lex('hi', 'x', 0.20), lex('lo', 'y', 0.05)],
+      lexicalWeight: 1.0,
+    });
+    expect(ranked.map(c => c.id)).toEqual(['hi', 'lo']);
+  });
+
+  it('adds the lexical term on top of vector similarity for a chunk in both legs', () => {
+    const out = mergeAndRerank(
+      [
+        chunk('both', 'x', { source: 'vector', distance: 0.4 }),
+        chunk('vonly', 'y', { source: 'vector', distance: 0.4 }), // equal similarity
+      ],
+      [],
+      5,
+      { lexicalResults: [lex('both', 'x', 0.2)], lexicalWeight: 1.0 },
+    );
+    expect(out[0].id).toBe('both'); // additive: vector sim + lexical term > vector sim alone
+    expect(out.find(c => c.id === 'both')!.source).toBe('vector'); // overlap keeps original leg/source
   });
 });

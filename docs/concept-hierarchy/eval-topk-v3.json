@@ -1,0 +1,1203 @@
+{
+  "topK": 15,
+  "queries": [
+    {
+      "query": "the One",
+      "ms": 872,
+      "concepts": 16,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "taoism.zhuangzi-inner-chapters-index.237",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.033",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.042",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.068",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.053",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.018",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.110",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.209",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.004",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.005",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.006",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.002",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.003",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.004",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "non-dual awareness",
+      "ms": 41,
+      "concepts": 0,
+      "graphCand": 0,
+      "topK": [
+        {
+          "id": "sufism.masnavi-book-1.014",
+          "source": "vector",
+          "tradition": "sufism"
+        },
+        {
+          "id": "taoism.tao-te-ching-legge.071",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.136",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.003",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.026",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.017",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.186",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.458",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.562",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.005",
+          "source": "vector",
+          "tradition": "gnosticism"
+        }
+      ]
+    },
+    {
+      "query": "divine names",
+      "ms": 33,
+      "concepts": 25,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "gnosticism.gospel-of-philip.002",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "hermeticism.corpus-hermeticum-02.004",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "jewish_mysticism.book-of-concealed-mystery.003",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "jewish_mysticism.sefer-yetzirah.007",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.135",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.041",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.107",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.333",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.055",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.068",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.001",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.003",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.004",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.001",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.003",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "divine spark",
+      "ms": 16,
+      "concepts": 25,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "neoplatonism.plotinus-select-works-index.529",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.120",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.110",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.020",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.029",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.041",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.075",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.003",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.004",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.014",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "emanation",
+      "ms": 24,
+      "concepts": 1,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.197",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "zoroastrianism.yasna-28.008",
+          "source": "vector",
+          "tradition": "zoroastrianism"
+        },
+        {
+          "id": "mesopotamian.enuma-elish.004",
+          "source": "vector",
+          "tradition": "mesopotamian"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.056",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.132",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.084",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.067",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.135",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.539",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.026",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.088",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.283",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.377",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.016",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.003",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        }
+      ]
+    },
+    {
+      "query": "the soul's ascent",
+      "ms": 22,
+      "concepts": 19,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "western_esoteric.tertium-organum.156",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "renaissance_hermeticism.heroic-enthusiasts-pt1.043",
+          "source": "vector",
+          "tradition": "renaissance_hermeticism"
+        },
+        {
+          "id": "renaissance_hermeticism.heroic-enthusiasts-pt1.011",
+          "source": "vector",
+          "tradition": "renaissance_hermeticism"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.192",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.289",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.362",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.591",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.382",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.093",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.007",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.084",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.002",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.003",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.004",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "union with God",
+      "ms": 15,
+      "concepts": 7,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "taoism.zhuangzi-inner-chapters-index.237",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "greek_mystery.pythagorean-golden-verses.107",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.087",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.033",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.022",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.135",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.209",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-on-the-good-or-the-one.001",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.110",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.068",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.053",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "buddhism.diamond-sutra.014",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.005",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.006",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.008",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        }
+      ]
+    },
+    {
+      "query": "ego death",
+      "ms": 15,
+      "concepts": 2,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "western_esoteric.tertium-organum.213",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.342",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.005",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "renaissance_hermeticism.heroic-enthusiasts-pt1.032",
+          "source": "vector",
+          "tradition": "renaissance_hermeticism"
+        },
+        {
+          "id": "renaissance_hermeticism.heroic-enthusiasts-pt1.011",
+          "source": "vector",
+          "tradition": "renaissance_hermeticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.127",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.148",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.126",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.266",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.028",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "taoism.zhuangzi-inner-chapters-index.028",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "taoism.zhuangzi-inner-chapters-index.151",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.040",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "taoism.zhuangzi-inner-chapters-index.096",
+          "source": "vector",
+          "tradition": "taoism"
+        }
+      ]
+    },
+    {
+      "query": "logos",
+      "ms": 38,
+      "concepts": 1,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "jewish_mysticism.sefer-yetzirah.004",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "sufism.masnavi-book-1.027",
+          "source": "vector",
+          "tradition": "sufism"
+        },
+        {
+          "id": "hermeticism.corpus-hermeticum-13.004",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.083",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.084",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.077",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.110",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-on-the-good-or-the-one.001",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.343",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.135",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "hermeticism.corpus-hermeticum-15.001",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "hermeticism.corpus-hermeticum-12.001",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.048",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.131",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.323",
+          "source": "vector",
+          "tradition": "egyptian"
+        }
+      ]
+    },
+    {
+      "query": "void and emptiness",
+      "ms": 16,
+      "concepts": 20,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "hermeticism.corpus-hermeticum-02.003",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.040",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "taoism.tao-te-ching-legge.016",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "taoism.zhuangzi-inner-chapters-index.049",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "taoism.tao-te-ching-legge.004",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "hermeticism.corpus-hermeticum-11.002",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.005",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.011",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.701",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.560",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.043",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.743",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.165",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.166",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "buddhism.diamond-sutra.001",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "the ground of being",
+      "ms": 15,
+      "concepts": 16,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "western_esoteric.tertium-organum.131",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "taoism.tao-te-ching-legge.005",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "taoism.tao-te-ching-legge.076",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.418",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.754",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.476",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.015",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.056",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.006",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.002",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.003",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.004",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "sacred fire",
+      "ms": 19,
+      "concepts": 2,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.096",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.042",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "sufism.masnavi-book-1.009",
+          "source": "vector",
+          "tradition": "sufism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.104",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.103",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "renaissance_hermeticism.heroic-enthusiasts-pt2.006",
+          "source": "vector",
+          "tradition": "renaissance_hermeticism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.132",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.117",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.115",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.082",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "gnosticism.gospel-of-thomas.010",
+          "source": "vector",
+          "tradition": "gnosticism"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.041",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "greek_mystery.orphic-hymns.015",
+          "source": "vector",
+          "tradition": "greek_mystery"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.085",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.230",
+          "source": "vector",
+          "tradition": "egyptian"
+        }
+      ]
+    },
+    {
+      "query": "cosmology",
+      "ms": 20,
+      "concepts": 27,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.125",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.401",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.086",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.363",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.076",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.215",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.217",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.054",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.117",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.002",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.011",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.001",
+          "source": "graph",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.006",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "the cosmos",
+      "ms": 16,
+      "concepts": 17,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "hermeticism.corpus-hermeticum-02.001",
+          "source": "vector",
+          "tradition": "hermeticism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.076",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.209",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.122",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.582",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.580",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.597",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.054",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.080",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.076",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.002",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.003",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.004",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "cosmic agents",
+      "ms": 16,
+      "concepts": 13,
+      "graphCand": 30,
+      "topK": [
+        {
+          "id": "taoism.tao-te-ching-legge.021",
+          "source": "vector",
+          "tradition": "taoism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.215",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.433",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.706",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.216",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "western_esoteric.tertium-organum.084",
+          "source": "vector",
+          "tradition": "western_esoteric"
+        },
+        {
+          "id": "neoplatonism.plotinus-select-works-index.582",
+          "source": "vector",
+          "tradition": "neoplatonism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.059",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.054",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.080",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.006",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.008",
+          "source": "graph",
+          "tradition": "buddhism"
+        },
+        {
+          "id": "buddhism.diamond-sutra.009",
+          "source": "graph",
+          "tradition": "buddhism"
+        }
+      ]
+    },
+    {
+      "query": "salvation",
+      "ms": 15,
+      "concepts": 0,
+      "graphCand": 0,
+      "topK": [
+        {
+          "id": "zoroastrianism.yasna-46.005",
+          "source": "vector",
+          "tradition": "zoroastrianism"
+        },
+        {
+          "id": "egyptian.egyptian-book-of-the-dead-index.045",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "egyptian.egyptian-heaven-and-hell.091",
+          "source": "vector",
+          "tradition": "egyptian"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.156",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.057",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "christian_mysticism.life-and-doctrines-boehme.102",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "zoroastrianism.yasna-34.003",
+          "source": "vector",
+          "tradition": "zoroastrianism"
+        },
+        {
+          "id": "zoroastrianism.yasna-50.004",
+          "source": "vector",
+          "tradition": "zoroastrianism"
+        },
+        {
+          "id": "christian_mysticism.eckhart-sermons-field.006",
+          "source": "vector",
+          "tradition": "christian_mysticism"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.077",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        },
+        {
+          "id": "jewish_mysticism.enoch-charles-1917.123",
+          "source": "vector",
+          "tradition": "jewish_mysticism"
+        }
+      ]
+    }
+  ]
+}

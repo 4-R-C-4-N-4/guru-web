@@ -1,0 +1,27 @@
+{
+  "id": "e9fdc338",
+  "type": "chore",
+  "state": "done",
+  "summary": "Re-run eval-precision with RETRIEVAL_QUALITY_FILTER=on across the 3 configs (live x2 / live x10 / fixed x10); record the precision lift in tuning-experiment.md and conclude whether the tuning levers show real signal on a clean pool (does mean precision jump from ~0.20, and do config gaps widen?).",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-28T14:35:22.548Z",
+  "updated_at": "2026-05-28T15:09:07.203Z",
+  "tags": [
+    "benchmark",
+    "precision"
+  ],
+  "relationships": {
+    "parent": "0748677d",
+    "depends_on": [
+      "9e31302a"
+    ]
+  },
+  "resolution": {
+    "commit": "d63071092cd04787252b72a0ed542cfe15944440",
+    "resolved_at": "2026-05-28T15:09:07.203Z",
+    "resolved_by": "unknown",
+    "note": "Re-ran eval-precision with RETRIEVAL_QUALITY_FILTER=1 across the 3 configs. Mean precision@10: live x2 0.24 (was 0.20), live x10 0.24, fixed x10 0.23. Modest lift where junk took slots (cosmology x10 0.80->0.90, the One 0.10->0.20) but NOT the unlock (hypothesised 0.5). Config gaps did not widen → tuning still not the lever. Reason: the filter can't re-rank (vectors carry the boilerplate) and the retrieved chunks are often genuinely off-topic, not just boilerplate-laden. Settles tune-vs-repair: the fix is upstream re-embed on clean text. Report: tuning-experiment.md Round 2b."
+  }
+}

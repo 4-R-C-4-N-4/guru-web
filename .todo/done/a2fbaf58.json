@@ -1,0 +1,25 @@
+{
+  "id": "a2fbaf58",
+  "type": "chore",
+  "state": "done",
+  "summary": "Unit tests for hybrid merge: lexScore normalization bounds, additive combination, no-op when RETRIEVAL_LEXICAL unset, lexical-only and vector-lexical overlap cases, scope filter respected",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-28T20:55:41.394Z",
+  "updated_at": "2026-05-28T23:40:00.471Z",
+  "relationships": {
+    "parent": "353756f2",
+    "depends_on": [
+      "0c38a006"
+    ]
+  },
+  "resolution": {
+    "commit": "1d68b0d6f7a3fe6b90f0910e8c39d54ac2a0ce62",
+    "resolved_at": "2026-05-28T23:40:00.471Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "mergeAndRerank",
+    "note": "4 hybrid-merge tests: no-op when off, lexical-only surfaces w/ weight, max-norm (tiny rank→1.0, relative ordering), overlap additivity+source preserved. Scope-filter coverage lives in lexical-leg.test.ts (C1). 13/13 rerank green."
+  }
+}

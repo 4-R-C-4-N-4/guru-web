@@ -5,7 +5,7 @@
  * DB query is mocked.
  */
 
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from 'vitest';
 
 vi.mock('@/lib/db', () => ({
   query:  vi.fn(),
@@ -16,11 +16,15 @@ vi.mock('@/lib/db', () => ({
 import * as db from '@/lib/db';
 const mockQuery = db.query as MockedFunction<typeof db.query>;
 
-import { extractConcepts, walkGraph } from '@/lib/graph';
+import { extractConcepts, walkGraph, summarizeExpansion } from '@/lib/graph';
 import type { UserPreferences } from '@/lib/types';
 
-describe('extractConcepts', () => {
-  beforeEach(() => vi.clearAllMocks());
+describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
+  // These assert LIKE-format params (the original substring matcher). Pin the
+  // mode so they keep testing tokenisation against the stable %word% vehicle;
+  // the matcher default flipped to regex in todo:72f1334e.
+  beforeEach(() => { vi.clearAllMocks(); process.env.GRAPH_MATCH_MODE = 'like'; });
+  afterEach(() => { delete process.env.GRAPH_MATCH_MODE; });
 
   it('strips LIKE wildcards from query text before building patterns', async () => {
     mockQuery.mockResolvedValueOnce([]);
@@ -28,9 +32,14 @@ describe('extractConcepts', () => {
     await extractConcepts('100% divine spark_bad');
 
     expect(mockQuery).toHaveBeenCalledOnce();
-    const [, params] = mockQuery.mock.calls[0];
-    // '%' and '_' removed: '100 divine sparkbad' → three words
+    const [sql, params] = mockQuery.mock.calls[0];
+    // '%' and '_' removed: '100 divine sparkbad' → three words, one $N each.
     expect(params).toEqual(['%100%', '%divine%', '%sparkbad%']);
+    // Single UNION ALL query spanning all three namespaces.
+    expect(sql).toMatch(/FROM concepts c/);
+    expect(sql).toMatch(/FROM concept_families f/);
+    expect(sql).toMatch(/concept_aliases/);
+    expect(sql).toMatch(/family_aliases/);
   });
 
   it('returns empty array for queries with no words > 2 chars after sanitisation', async () => {
@@ -39,11 +48,121 @@ describe('extractConcepts', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('returns concept IDs from matched rows', async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 'divine-spark' }, { id: 'gnosis' }]);
+  it('drops function-word stopwords so they cannot substring-match labels (todo:597d86a4)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('what is the tao');
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [, params] = mockQuery.mock.calls[0];
+    // 'what'/'the' are stopwords, 'is' is ≤2 chars — only 'tao' survives, so
+    // 'the' can no longer match 'Theology'.
+    expect(params).toEqual(['%tao%']);
+  });
+
+  it('keeps meaningful short content words — the One, the All (todo:597d86a4)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('the One and the All');
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['%one%', '%all%']);
+  });
+
+  it('returns ConceptMatch[] with the matched tier from concept-namespace rows', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'divine-spark', match_tier: 'concept' },
+      { concept_id: 'gnosis', match_tier: 'concept' },
+    ]);
 
     const result = await extractConcepts('divine spark gnosis');
-    expect(result).toEqual(['divine-spark', 'gnosis']);
+    expect(result).toEqual([
+      { conceptId: 'divine-spark', matchTier: 'concept' },
+      { conceptId: 'gnosis', matchTier: 'concept' },
+    ]);
+  });
+
+  it('expands a family match to every member concept at family tier', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'atman', match_tier: 'family' },
+      { concept_id: 'nous', match_tier: 'family' },
+    ]);
+
+    const result = await extractConcepts('first principles');
+    expect(result).toEqual([
+      { conceptId: 'atman', matchTier: 'family' },
+      { conceptId: 'nous', matchTier: 'family' },
+    ]);
+  });
+
+  it('tags domain-namespace expansions at domain tier', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'atman', match_tier: 'domain' },
+      { concept_id: 'nous', match_tier: 'domain' },
+    ]);
+
+    const result = await extractConcepts('metaphysics');
+    expect(result).toEqual([
+      { conceptId: 'atman', matchTier: 'domain' },
+      { conceptId: 'nous', matchTier: 'domain' },
+    ]);
+  });
+
+  it('dedupes a concept matched at several tiers, keeping the strongest', async () => {
+    // Same concept arrives via the domain leg (weak) and the concept leg (strong).
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'atman', match_tier: 'domain' },
+      { concept_id: 'atman', match_tier: 'concept' },
+      { concept_id: 'nous', match_tier: 'domain' },
+    ]);
+
+    const result = await extractConcepts('metaphysics atman');
+    expect(result).toEqual([
+      { conceptId: 'atman', matchTier: 'concept' },
+      { conceptId: 'nous', matchTier: 'domain' },
+    ]);
+  });
+
+  it('returns [] when no namespace matches (e.g. alias tables empty today)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    const result = await extractConcepts('the cosmos');
+    expect(result).toEqual([]);
+  });
+});
+
+describe('summarizeExpansion — query-expansion transparency (todo:9d2ad427)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns [] for queries with no usable words (no DB call)', async () => {
+    const result = await summarizeExpansion('% _ a');
+    expect(result).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('maps family/domain rows to {tier,label,conceptCount}', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { tier: 'domain', label: 'Cosmology', n: 7 },
+      { tier: 'family', label: 'Cosmic Agents', n: 3 },
+    ]);
+
+    const result = await summarizeExpansion('cosmology cosmic agents');
+    expect(result).toEqual([
+      { tier: 'domain', label: 'Cosmology', conceptCount: 7 },
+      { tier: 'family', label: 'Cosmic Agents', conceptCount: 3 },
+    ]);
+  });
+
+  it('shares the stopword tokenizer — drops function words too (todo:597d86a4)', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await summarizeExpansion('what is the tao');
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['%tao%']);
+  });
+
+  it('collapses duplicate label/alias rows for the same family', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { tier: 'family', label: 'Liberation', n: 4 },
+      { tier: 'family', label: 'Liberation', n: 4 }, // matched again via an alias
+    ]);
+
+    const result = await summarizeExpansion('liberation');
+    expect(result).toEqual([{ tier: 'family', label: 'Liberation', conceptCount: 4 }]);
   });
 });
 
@@ -58,8 +177,8 @@ describe('walkGraph — chunks-query param alignment', () => {
   function mockUpToChunksQuery() {
     // 1st call: 1-hop neighbour edges — return empty
     mockQuery.mockResolvedValueOnce([]);
-    // 2nd call: EXPRESSES edges — one chunk
-    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);
+    // 2nd call: EXPRESSES edges — one chunk expressing the seed concept
+    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', target: 'concept-a', tier: 'verified' }]);
     // 3rd call: chunks fetch — returned shape doesn't matter for slot assertions
     mockQuery.mockResolvedValueOnce([]);
   }
@@ -82,7 +201,7 @@ describe('walkGraph — chunks-query param alignment', () => {
       preferredVoice: 'scholar',
     };
 
-    await walkGraph(['concept-a'], prefs, 25);
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/LIMIT \$2\b/);
@@ -102,7 +221,7 @@ describe('walkGraph — chunks-query param alignment', () => {
       preferredVoice: 'scholar',
     };
 
-    await walkGraph(['concept-a'], prefs, 25);
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/tradition <> ALL\(\$2::text\[\]\)/);
@@ -123,7 +242,7 @@ describe('walkGraph — chunks-query param alignment', () => {
       preferredVoice: 'scholar',
     };
 
-    await walkGraph(['concept-a'], prefs, 25);
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/tradition = ANY\(\$2::text\[\]\)/);
@@ -151,7 +270,7 @@ describe('walkGraph — reachability expansion (todo:d0b40ad4)', () => {
     mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);       // EXPRESSES
     mockQuery.mockResolvedValueOnce([]);                                              // chunks
 
-    await walkGraph(['concept-a'], prefs, 25);
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
     // First query is the reachability hop. It must not pull EXPRESSES
     // (chunk→concept) edges into concept-graph traversal — that polluted
@@ -166,7 +285,7 @@ describe('walkGraph — reachability expansion (todo:d0b40ad4)', () => {
     mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);       // EXPRESSES
     mockQuery.mockResolvedValueOnce([]);                                              // chunks
 
-    await walkGraph(['concept-a'], prefs, 25);
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
     // Even though hop 1 discovered a brand-new neighbour (concept-b), the
     // query that immediately follows is the EXPRESSES lookup — proving no
@@ -175,5 +294,88 @@ describe('walkGraph — reachability expansion (todo:d0b40ad4)', () => {
     expect(secondSql).toMatch(/edge_type = 'EXPRESSES'/);
     // The 1-hop neighbour is included in the EXPRESSES lookup's reachable set.
     expect(mockQuery.mock.calls[1][1]).toEqual([['concept-a', 'concept-b']]);
+  });
+});
+
+describe('walkGraph — match-tier weight propagation (todo:522f389a)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const prefs: UserPreferences = {
+    scopeMode: 'all',
+    blockedTraditions: [],
+    blockedTexts: [],
+    whitelistedTraditions: [],
+    whitelistedTexts: [],
+    preferredModel: null,
+    preferredVoice: 'scholar',
+  };
+
+  it('stamps conceptMatchWeight = max match weight over the concepts a chunk expresses', async () => {
+    mockQuery.mockResolvedValueOnce([]); // hop: no neighbours
+    // chunk-1 expresses concept-a (domain → 0.25) and concept-b (concept → 1.0).
+    mockQuery.mockResolvedValueOnce([
+      { source: 'chunk-1', target: 'concept-a', tier: 'inferred' },
+      { source: 'chunk-1', target: 'concept-b', tier: 'verified' },
+    ]);
+    mockQuery.mockResolvedValueOnce([{ id: 'chunk-1', tradition: 'gnosticism' }]);
+
+    const result = await walkGraph(
+      [
+        { conceptId: 'concept-a', matchTier: 'domain' },
+        { conceptId: 'concept-b', matchTier: 'concept' },
+      ],
+      prefs,
+      25,
+    );
+
+    expect(result[0].conceptMatchWeight).toBe(1.0); // max(0.25, 1.0)
+  });
+
+  it('hop-discovered concepts inherit the reaching seed match weight', async () => {
+    // seed concept-a matched at family tier (0.5); hop discovers concept-b.
+    mockQuery.mockResolvedValueOnce([{ source: 'concept-a', target: 'concept-b' }]);
+    // a chunk expresses only the hop-discovered concept-b → inherits 0.5.
+    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', target: 'concept-b', tier: 'proposed' }]);
+    mockQuery.mockResolvedValueOnce([{ id: 'chunk-1', tradition: 'vedanta' }]);
+
+    const result = await walkGraph([{ conceptId: 'concept-a', matchTier: 'family' }], prefs, 25);
+
+    expect(result[0].conceptMatchWeight).toBe(0.5);
+  });
+});
+
+describe('extractConcepts — matcher mode (todo:72f1334e)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => { delete process.env.GRAPH_MATCH_MODE; });
+
+  it('defaults to regex whole-word matching via ~* word-boundary patterns', async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('man wu-wei');
+    const [sql, params] = mockQuery.mock.calls[0];
+    // whole-word, letter-flanked patterns — 'man' will NOT match inside 'eMANation'.
+    expect(params).toEqual([
+      '(^|[^[:alpha:]])man([^[:alpha:]]|$)',
+      '(^|[^[:alpha:]])wu-wei([^[:alpha:]]|$)', // hyphen passes through unescaped
+    ]);
+    expect(sql).toMatch(/~\* \$1/);
+    expect(sql).not.toMatch(/LIKE \$/);
+  });
+
+  it('GRAPH_MATCH_MODE=like opts back into LIKE substring matching', async () => {
+    process.env.GRAPH_MATCH_MODE = 'like';
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('mania');
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['%mania%']);
+    expect(sql).toMatch(/LIKE \$1/);
+    expect(sql).not.toMatch(/~\*/);
+  });
+
+  it('escapes regex metacharacters in tokens', async () => {
+    process.env.GRAPH_MATCH_MODE = 'regex';
+    mockQuery.mockResolvedValueOnce([]);
+    await extractConcepts('a.b(c'); // one token after tokenisation
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toEqual(['(^|[^[:alpha:]])a\\.b\\(c([^[:alpha:]]|$)']);
   });
 });

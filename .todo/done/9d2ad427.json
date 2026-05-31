@@ -1,0 +1,28 @@
+{
+  "id": "9d2ad427",
+  "type": "feature",
+  "state": "done",
+  "summary": "Query-expansion transparency: surface matched family/domain to N concepts using match_tier",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-27T21:10:24.753Z",
+  "updated_at": "2026-05-27T22:22:39.628Z",
+  "tags": [
+    "ui"
+  ],
+  "relationships": {
+    "parent": "30dca55e",
+    "depends_on": [
+      "08503113"
+    ]
+  },
+  "resolution": {
+    "commit": "1789fecb5dff3da95fb3444d215a577406eb98eb",
+    "resolved_at": "2026-05-27T22:22:39.628Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "POST /api/query — surfaces query expansion in the X-Query-Expansion header",
+    "note": "New summarizeExpansion() (graph.ts) returns family/domain matches + concept counts; /api/query runs it in parallel with retrieve and emits a URI-encoded X-Query-Expansion header (omitted when nothing expanded); chat-view parses it and renders a chip per match ('↳ Cosmology → 7 concepts'). Concept-tier 1:1 matches excluded. Tests: graph.test (3) + api.test (2) added; full suite 376 pass, lint+type-check green. Visible behaviour lights up once the v3 corpus is loaded (validated at GATE-A/B), like the rest of the query change."
+  }
+}
