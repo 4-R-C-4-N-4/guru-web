@@ -23,7 +23,7 @@
 
 import { query, one, exec } from './db';
 import { retrieve } from './retriever';
-import { getBlogSystemPrompt, buildBlogPrompt } from './prompt';
+import { getBlogSystemPrompt, buildBlogPrompt, buildBlogPromptFromTopic } from './prompt';
 import { completeStream } from './model';
 import {
   resolveCuratedModel,
@@ -49,7 +49,8 @@ const MIN_BODY_CHARS = 200;
 interface SeedRow {
   id: string;
   status: string;
-  concept_ids: string[];
+  topic: string | null;
+  concept_ids: string[] | null;
   angle: string | null;
   model: string;
   scope_mode: string;
@@ -72,7 +73,7 @@ interface ConceptRow {
  */
 export async function generateDraft(seedId: string): Promise<void> {
   const seed = await one<SeedRow>(
-    `SELECT id, status, concept_ids, angle, model, scope_mode,
+    `SELECT id, status, topic, concept_ids, angle, model, scope_mode,
             blocked_traditions, blocked_texts,
             whitelisted_traditions, whitelisted_texts
        FROM blog_posts WHERE id = $1`,
@@ -86,25 +87,45 @@ export async function generateDraft(seedId: string): Promise<void> {
   );
 
   try {
-    // 1. Concept labels/definitions for the pair. Order the result to match
-    //    seed.concept_ids so the [a, b] pairing the essay brief uses is stable.
-    const conceptRows = await query<ConceptRow>(
-      `SELECT id, label, definition FROM concepts WHERE id = ANY($1)`,
-      [seed.concept_ids],
-    );
-    const concepts = seed.concept_ids
-      .map(id => conceptRows.find(c => c.id === id))
-      .filter((c): c is ConceptRow => Boolean(c));
-    if (concepts.length < 2) {
-      await fail(seedId, `concept pair not found: ${seed.concept_ids.join(', ')}`);
-      return;
+    // 1. Resolve the seeding mode into a retrieval queryText, a deferred
+    //    user-prompt builder (needs the retrieved chunks), and a fallback
+    //    title. Mode A = free-text topic; Mode B = cross-tradition concept
+    //    pair. The XOR between topic and concept_ids is enforced at the seed
+    //    route; here, a present topic wins.
+    const prefs = seedToPrefs(seed);
+    let queryText: string;
+    let fallbackTitle: string;
+    let buildUserPrompt: (chunks: RetrievedChunk[]) => string;
+
+    if (seed.topic && seed.topic.trim()) {
+      // Mode A — free-text topic.
+      const topic = seed.topic.trim();
+      queryText = topic;
+      fallbackTitle = topic.slice(0, 80);
+      buildUserPrompt = chunks => buildBlogPromptFromTopic(topic, chunks);
+    } else {
+      // Mode B — concept pair. Load labels/definitions, ordered to match
+      //   seed.concept_ids so the [a, b] pairing the brief uses is stable.
+      const ids = seed.concept_ids ?? [];
+      const conceptRows = await query<ConceptRow>(
+        `SELECT id, label, definition FROM concepts WHERE id = ANY($1)`,
+        [ids],
+      );
+      const concepts = ids
+        .map(id => conceptRows.find(c => c.id === id))
+        .filter((c): c is ConceptRow => Boolean(c));
+      if (concepts.length < 2) {
+        await fail(seedId, `concept pair not found: ${ids.join(', ')}`);
+        return;
+      }
+      const labels: [string, string] = [concepts[0].label, concepts[1].label];
+      const definitions = concepts.map(c => c.definition ?? '');
+      queryText = buildQueryText(concepts, seed.angle);
+      fallbackTitle = concepts.map(c => c.label).join(' & ');
+      buildUserPrompt = chunks => buildBlogPrompt(labels, definitions, seed.angle, chunks);
     }
 
-    // 2. Scope prefs straight off the seed row (retrieve only reads scope).
-    const prefs = seedToPrefs(seed);
-    const queryText = buildQueryText(concepts, seed.angle);
-
-    // 3. Retrieve + GROUNDING GUARD (HARD RULE 2: before any LLM call).
+    // 2. Retrieve + GROUNDING GUARD (HARD RULE 2: before any LLM call).
     const chunks = await retrieve(queryText, prefs);
     if (chunks.length < MIN_CHUNKS) {
       await fail(
@@ -114,19 +135,17 @@ export async function generateDraft(seedId: string): Promise<void> {
       return;
     }
 
-    // 4. Resolve the model from the seed slug (fall back to default for a
+    // 3. Resolve the model from the seed slug (fall back to default for a
     //    stale/invalid slug rather than throwing).
     const slug = isCuratedSlug(seed.model) ? seed.model : DEFAULT_CURATED_SLUG;
     const modelId = resolveCuratedModel(slug);
 
-    const labels: [string, string] = [concepts[0].label, concepts[1].label];
-    const definitions = concepts.map(c => c.definition ?? '');
     const messages: ChatMessage[] = [
       { role: 'system', content: getBlogSystemPrompt() },
-      { role: 'user', content: buildBlogPrompt(labels, definitions, seed.angle, chunks) },
+      { role: 'user', content: buildUserPrompt(chunks) },
     ];
 
-    // 5. Collect the stream to completion — no UI to stream to. Mirrors the
+    // 4. Collect the stream to completion — no UI to stream to. Mirrors the
     //    usage/cached-token handling in api/query/route.ts.
     const stream = await completeStream(messages, modelId, slug);
     let raw = '';
@@ -149,8 +168,8 @@ export async function generateDraft(seedId: string): Promise<void> {
       }
     }
 
-    // 6. Parse the structured head, strip the CITATIONS tail, derive a slug.
-    const { title, body } = parseGenerated(raw, concepts);
+    // 5. Parse the structured head, strip the CITATIONS tail, derive a slug.
+    const { title, body } = parseGenerated(raw, fallbackTitle);
 
     // Thin-GENERATION guard (companion to the thin-retrieval guard at step 3).
     // A reasoning model can return finish=stop with an empty content body (all
@@ -165,7 +184,7 @@ export async function generateDraft(seedId: string): Promise<void> {
 
     const slugStr = await uniqueSlug(title);
 
-    // 7. Cost is best-effort: observability only (HARD RULE 3), never fails
+    // 6. Cost is best-effort: observability only (HARD RULE 3), never fails
     //    the draft. Mirrors api/query/route.ts.
     let cost: number | null = null;
     if (inTok !== null && outTok !== null) {
@@ -183,7 +202,7 @@ export async function generateDraft(seedId: string): Promise<void> {
       }
     }
 
-    // 8. Store the RICHER chunks_used shape. queries.chunks_used stores bare
+    // 7. Store the RICHER chunks_used shape. queries.chunks_used stores bare
     //    IDs (api/query/route.ts); blog posts store {id, tradition, text_name,
     //    section, tier} so the public Sources block and the draft grounding
     //    review render without a corpus join and survive a corpus re-import.
@@ -245,12 +264,13 @@ export function buildQueryText(
 /**
  * Pull TITLE:/DEK: from the structured head and strip the CITATIONS: block
  * from the body. A missing head never blocks a draft: title falls back to the
- * concept labels, dek to the first paragraph. The CITATIONS block is dropped
- * from the stored body (it's reconstructed from chunks_used on render).
+ * caller-supplied `fallbackTitle` (concept labels for a pair seed, the topic
+ * text for a free-text seed), dek to the first paragraph. The CITATIONS block
+ * is dropped from the stored body (it's reconstructed from chunks_used on render).
  */
 export function parseGenerated(
   raw: string,
-  concepts: ConceptRow[],
+  fallbackTitle: string,
 ): { title: string; dek: string; body: string } {
   const text = raw.trim();
 
@@ -264,7 +284,6 @@ export function parseGenerated(
   // Strip the CITATIONS block (from the CITATIONS: marker to end).
   body = body.replace(/\n*CITATIONS:[\s\S]*$/m, '').trim();
 
-  const fallbackTitle = concepts.map(c => c.label).join(' & ');
   const title = (titleMatch?.[1] ?? fallbackTitle).trim() || fallbackTitle;
 
   const firstPara = body.split(/\n\s*\n/)[0]?.trim() ?? '';

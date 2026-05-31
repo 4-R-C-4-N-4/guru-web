@@ -264,3 +264,28 @@ export function buildBlogPrompt(
 
   return `${passagesBlock}\n\n---\n\n${brief}`;
 }
+
+// buildBlogPromptFromTopic is the free-text seeding path (todo:bf1c07fb): the
+// operator supplies a topic/prompt instead of a concept pair. Same SOURCE
+// PASSAGES + budget handling as buildBlogPrompt; the trailing brief is the
+// operator's topic verbatim rather than a named parallel.
+export function buildBlogPromptFromTopic(
+  topic: string,
+  chunks: RetrievedChunk[],
+): string {
+  const budget = makeBudget("pro");
+  const targetPerChunk = Math.floor(
+    budget.available / Math.max(chunks.length, 1),
+  );
+  const compressed = compressChunks(chunks, topic, targetPerChunk);
+  const fitted = budget.fitChunks(compressed);
+
+  const passagesBlock =
+    fitted.length > 0
+      ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
+      : "No source passages were found for this topic.";
+
+  const brief = `ESSAY BRIEF: Write a grounded essay on: ${topic.trim()}`;
+
+  return `${passagesBlock}\n\n---\n\n${brief}`;
+}

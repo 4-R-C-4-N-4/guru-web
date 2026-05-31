@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildPrompt, buildBlogPrompt, getBlogSystemPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
+import { buildPrompt, buildBlogPrompt, buildBlogPromptFromTopic, getBlogSystemPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { RetrievedChunk, UserPreferences } from '@/lib/types';
 
 const DEFAULT_PREFS: UserPreferences = {
@@ -288,5 +288,34 @@ describe('buildBlogPrompt', () => {
     const result = buildBlogPrompt(['a', 'b'], [], null, []);
     expect(result).toContain('No source passages');
     expect(result).toContain('ESSAY BRIEF');
+  });
+});
+
+describe('buildBlogPromptFromTopic', () => {
+  it('includes the topic verbatim in the essay brief, after SOURCE PASSAGES', () => {
+    const chunks = [makeChunk('c1', 'hermeticism'), makeChunk('c2', 'taoism')];
+    const result = buildBlogPromptFromTopic('the role of silence in mystical union', chunks);
+    expect(result).toContain('SOURCE PASSAGES');
+    expect(result).toContain('ESSAY BRIEF: Write a grounded essay on: the role of silence in mystical union');
+    // the passages block precedes the brief
+    expect(result.indexOf('SOURCE PASSAGES')).toBeLessThan(result.indexOf('ESSAY BRIEF'));
+  });
+
+  it('trims the topic and falls back gracefully with no chunks', () => {
+    const result = buildBlogPromptFromTopic('  apophatic silence  ', []);
+    expect(result).toContain('No source passages');
+    expect(result).toContain('ESSAY BRIEF: Write a grounded essay on: apophatic silence');
+  });
+
+  it('drops chunks when the budget is tight', () => {
+    const bigBody = 'the One overflows into being without diminishing '.repeat(80).trim();
+    const many = Array.from({ length: 100 }, (_, i) => ({
+      ...makeChunk(`c${i}`, 'neoplatonism', 'verified'),
+      body: bigBody,
+      token_count: Math.ceil(bigBody.length / 4),
+    }));
+    const result = buildBlogPromptFromTopic('emanation and silence', many);
+    const count = (result.match(/^\[\d+\]/gm) ?? []).length;
+    expect(count).toBeLessThan(many.length);
   });
 });

@@ -2,10 +2,12 @@
  * POST /api/admin/blog/seed — queue a custom (operator-authored) blog seed.
  *
  * First MUTATING /api/admin/* endpoint (IMPL Hard rule 4): gates on
- * requireAdmin(), 404 on failure (never 401/403). Validates the pair +
- * model + scope, then inserts a 'queued' row with seed_kind='custom'.
+ * requireAdmin(), 404 on failure (never 401/403). Accepts EITHER a free-text
+ * `topic` (mode A) OR a two-element `concept_ids` pair (mode B) — exactly one,
+ * enforced here — plus model + scope, then inserts a 'queued' seed_kind='custom'
+ * row.
  *
- * Spec: docs/blog-pipeline/BRD-blog-pipeline.md §5.4, IMPL T4.
+ * Spec: docs/blog-pipeline/BRD-blog-pipeline.md §5.4, IMPL T4, todo:bf1c07fb.
  */
 
 import { requireAdmin } from '@/lib/admin';
@@ -30,9 +32,20 @@ export async function POST(req: Request) {
   }
   const b = (body ?? {}) as Record<string, unknown>;
 
-  // concept_ids must be exactly two non-empty strings — the parallel.
-  const conceptIds = strArray(b.concept_ids);
-  if (conceptIds.length !== 2 || conceptIds.some(id => !id.trim())) {
+  // Seeding mode: exactly one of topic (free text) or a two-element concept
+  // pair. Topic wins if both are somehow present.
+  const topic =
+    typeof b.topic === 'string' && b.topic.trim() ? b.topic.trim() : null;
+  const conceptIds = strArray(b.concept_ids).filter(id => id.trim());
+  const hasPair = conceptIds.length === 2;
+
+  if (!topic && !hasPair) {
+    return Response.json(
+      { error: 'provide either a non-empty topic or exactly two concept_ids' },
+      { status: 400 },
+    );
+  }
+  if (!topic && conceptIds.length !== 2) {
     return Response.json(
       { error: 'concept_ids must be exactly two concept ids' },
       { status: 400 },
@@ -54,7 +67,8 @@ export async function POST(req: Request) {
     typeof b.angle === 'string' && b.angle.trim() ? b.angle.trim() : null;
 
   const row = await insertSeed({
-    concept_ids: conceptIds,
+    topic,
+    concept_ids: topic ? null : conceptIds,
     angle,
     model: b.model,
     scope_mode: scopeMode,

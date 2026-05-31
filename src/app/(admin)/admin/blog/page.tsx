@@ -111,7 +111,7 @@ function PostCard({ row, tab }: { row: BlogPostRow; tab: Tab }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: tokens.font.display, fontSize: 18, color: tokens.text.primary }}>
-            {row.title ?? row.concept_ids.join('  ×  ')}
+            {row.title ?? row.topic ?? (row.concept_ids ?? []).join('  ×  ')}
           </div>
           <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, marginTop: 4, letterSpacing: 0.5 }}>
             {row.status.toUpperCase()} · {row.model}

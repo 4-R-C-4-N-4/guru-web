@@ -21,7 +21,8 @@ export interface BlogPostRow {
   id: string;
   status: string;
   seed_kind: string;
-  concept_ids: string[];
+  topic: string | null;
+  concept_ids: string[] | null;
   edge_ref: string | null;
   angle: string | null;
   model: string;
@@ -43,9 +44,14 @@ export interface BlogPostRow {
   published_at: string | null;
 }
 
-/** The fields the seed form supplies when queueing a custom seed. */
+/**
+ * The fields the seed form supplies when queueing a custom seed. Exactly one
+ * of `topic` (free-text mode) or `concept_ids` (concept-pair mode) is
+ * populated; the seed route enforces the XOR.
+ */
 export interface SeedInput {
-  concept_ids: string[];
+  topic: string | null;
+  concept_ids: string[] | null;
   angle: string | null;
   model: string;
   scope_mode: string;
@@ -56,7 +62,7 @@ export interface SeedInput {
   created_by: string | null;
 }
 
-const POST_COLUMNS = `id, status, seed_kind, concept_ids, edge_ref, angle, model,
+const POST_COLUMNS = `id, status, seed_kind, topic, concept_ids, edge_ref, angle, model,
   scope_mode, blocked_traditions, blocked_texts,
   whitelisted_traditions, whitelisted_texts,
   priority, created_by, title, slug, content, chunks_used,
@@ -115,12 +121,13 @@ export async function listCorpusCatalog(): Promise<Record<string, { texts: strin
 export async function insertSeed(seed: SeedInput): Promise<BlogPostRow> {
   const row = await one<BlogPostRow>(
     `INSERT INTO blog_posts
-       (status, seed_kind, concept_ids, angle, model, scope_mode,
+       (status, seed_kind, topic, concept_ids, angle, model, scope_mode,
         blocked_traditions, blocked_texts,
         whitelisted_traditions, whitelisted_texts, created_by)
-     VALUES ('queued', 'custom', $1, $2, $3, $4, $5, $6, $7, $8, $9)
+     VALUES ('queued', 'custom', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING ${POST_COLUMNS}`,
     [
+      seed.topic,
       seed.concept_ids,
       seed.angle,
       seed.model,

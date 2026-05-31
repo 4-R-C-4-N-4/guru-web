@@ -48,6 +48,10 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
   const router = useRouter();
   const traditions = Object.keys(catalog);
 
+  // Seeding mode: 'topic' (free-text prompt, the general/default path) or
+  // 'concepts' (the cross-tradition pair).
+  const [mode, setMode] = useState<'topic' | 'concepts'>('topic');
+  const [topic, setTopic] = useState('');
   const [conceptA, setConceptA] = useState('');
   const [conceptB, setConceptB] = useState('');
   const [angle, setAngle] = useState('');
@@ -71,23 +75,39 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!conceptA.trim() || !conceptB.trim()) {
-      setErr('both concept ids are required');
-      return;
+
+    const blockedTraditions = [...blocked];
+    const common = {
+      model,
+      scope_mode: blockedTraditions.length ? 'blacklist' : 'all',
+      blocked_traditions: blockedTraditions,
+    };
+
+    let payload: Record<string, unknown>;
+    if (mode === 'topic') {
+      if (!topic.trim()) {
+        setErr('a prompt is required');
+        return;
+      }
+      payload = { ...common, topic: topic.trim() };
+    } else {
+      if (!conceptA.trim() || !conceptB.trim()) {
+        setErr('both concept ids are required');
+        return;
+      }
+      payload = {
+        ...common,
+        concept_ids: [conceptA.trim(), conceptB.trim()],
+        angle: angle.trim() || null,
+      };
     }
+
     setBusy(true);
     try {
-      const blockedTraditions = [...blocked];
       const res = await fetch('/api/admin/blog/seed', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          concept_ids: [conceptA.trim(), conceptB.trim()],
-          angle: angle.trim() || null,
-          model,
-          scope_mode: blockedTraditions.length ? 'blacklist' : 'all',
-          blocked_traditions: blockedTraditions,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -95,6 +115,7 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
         return;
       }
       // Reset and refresh the queue.
+      setTopic('');
       setConceptA('');
       setConceptB('');
       setAngle('');
@@ -145,21 +166,45 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
         maxWidth: 560,
       }}
     >
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Concept A (id)</label>
-          <input value={conceptA} onChange={e => setConceptA(e.target.value)} style={inputStyle} placeholder="e.g. emanation" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Concept B (id)</label>
-          <input value={conceptB} onChange={e => setConceptB(e.target.value)} style={inputStyle} placeholder="e.g. the-tao" />
-        </div>
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+        {(['topic', 'concepts'] as const).map(m => (
+          <label key={m} style={{ fontFamily: tokens.font.mono, fontSize: 12, color: mode === m ? tokens.text.accent : tokens.text.secondary, cursor: 'pointer' }}>
+            <input type="radio" name="mode" checked={mode === m} onChange={() => setMode(m)} style={{ marginRight: 4 }} />
+            {m === 'topic' ? 'From a prompt' : 'From concepts'}
+          </label>
+        ))}
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label style={labelStyle}>Angle (optional)</label>
-        <input value={angle} onChange={e => setAngle(e.target.value)} style={inputStyle} placeholder="the thread to pursue" />
-      </div>
+      {mode === 'topic' ? (
+        <div style={{ marginBottom: 12 }}>
+          <label style={labelStyle}>Prompt / topic</label>
+          <textarea
+            value={topic}
+            onChange={e => setTopic(e.target.value)}
+            style={{ ...inputStyle, minHeight: 72, resize: 'vertical', fontFamily: tokens.font.display, fontSize: 14 }}
+            placeholder="e.g. the role of silence in mystical union across traditions"
+          />
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Concept A (id)</label>
+              <input value={conceptA} onChange={e => setConceptA(e.target.value)} style={inputStyle} placeholder="e.g. concept.emanation" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Concept B (id)</label>
+              <input value={conceptB} onChange={e => setConceptB(e.target.value)} style={inputStyle} placeholder="e.g. concept.logos" />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={labelStyle}>Angle (optional)</label>
+            <input value={angle} onChange={e => setAngle(e.target.value)} style={inputStyle} placeholder="the thread to pursue" />
+          </div>
+        </>
+      )}
 
       <div style={{ marginBottom: 12 }}>
         <label style={labelStyle}>Model</label>

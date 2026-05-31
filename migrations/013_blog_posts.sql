@@ -20,7 +20,11 @@
 --     a migration.
 --   edge_ref — reserved companion to seed_kind: "<source>|<target>|<edge_type>"
 --     for a candidate's originating PARALLELS edge. NULL for custom seeds.
---   concept_ids — exactly two concept IDs: the parallel being essayed.
+--   topic / concept_ids — the two seeding modes. A 'topic' seed carries a
+--     free-text prompt the operator wants an essay on (the general path); a
+--     concept-pair seed carries exactly two concept IDs (the cross-tradition
+--     parallel path). Exactly one is populated per row; both are nullable at
+--     the DB level and the XOR is enforced in app code (the seed route).
 --   created_by — operator email, NOT a FK to users. Admin runs behind the
 --     tailnet Caddy listener and requireAdmin() returns a synthetic
 --     operator (src/lib/admin.ts) with no users row.
@@ -44,7 +48,8 @@ CREATE TABLE IF NOT EXISTS blog_posts (
 
     status        TEXT NOT NULL DEFAULT 'queued',
     seed_kind     TEXT NOT NULL,            -- 'candidate' | 'custom'
-    concept_ids   TEXT[] NOT NULL,          -- exactly two: the parallel
+    topic         TEXT,                      -- free-text prompt seed (mode A); NULL for concept-pair seeds
+    concept_ids   TEXT[],                    -- exactly two for a concept-pair seed (mode B); NULL for topic seeds
     edge_ref      TEXT,                      -- "<source>|<target>|<edge_type>"
     angle         TEXT,
     voice         TEXT,                      -- reserved; one blog voice in this phase

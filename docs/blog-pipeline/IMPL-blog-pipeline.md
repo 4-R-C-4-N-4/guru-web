@@ -417,6 +417,18 @@ file:  src/lib/admin-blog.ts
 **Scope.** The data layer + the admin HTTP surface. First mutating
 `/api/admin/*` routes (Hard rule 4).
 
+> **Dual-mode seeding (todo:bf1c07fb, 2026-05-31).** Post-T9 operator feedback:
+> the original pair-only seed form forced unguessable raw concept ids. A seed
+> now carries EITHER a free-text `topic` (the primary, general path) OR a
+> two-element `concept_ids` pair (the cross-tradition-parallel path) — exactly
+> one, XOR enforced at the seed route. Migration 013 gained a nullable `topic`
+> column and `concept_ids` became nullable (idempotent ALTERs, since 013 was
+> still unmerged). `generateDraft` branches: a topic seed retrieves on the
+> topic text and uses `buildBlogPromptFromTopic`; a concept seed keeps the
+> `buildBlogPrompt` parallel path. The concept path is retained (a searchable
+> label picker can replace the raw-id inputs later — "concepts can come
+> later"). The cross-tradition thesis is now one mode, not the only mode.
+
 **Files:**
 
 - `src/lib/admin-blog.ts` (new) — server query helpers (mirror

@@ -73,6 +73,23 @@ describe('POST /api/admin/blog/seed — validation', () => {
     expect(mInsert).not.toHaveBeenCalled();
   });
 
+  it('accepts a free-text topic seed (201) and passes topic, null concept_ids', async () => {
+    mInsert.mockResolvedValue({ id: 'pt', status: 'queued' } as never);
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ topic: 'the role of silence in mystical union', model: 'deepseek' }));
+    expect(res.status).toBe(201);
+    const arg = mInsert.mock.calls[0][0];
+    expect(arg.topic).toBe('the role of silence in mystical union');
+    expect(arg.concept_ids).toBeNull();
+  });
+
+  it('rejects a seed with neither topic nor a concept pair (400)', async () => {
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ model: 'deepseek' }));
+    expect(res.status).toBe(400);
+    expect(mInsert).not.toHaveBeenCalled();
+  });
+
   it('inserts a queued seed on the happy path (201) with operator email', async () => {
     mInsert.mockResolvedValue({ id: 'p1', status: 'queued' } as never);
     const { POST } = await import('@/app/api/admin/blog/seed/route');

@@ -170,6 +170,37 @@ describe('generateDraft — happy path', () => {
   });
 });
 
+describe('generateDraft — free-text topic mode (todo:bf1c07fb)', () => {
+  it('generates a draft from a topic seed without loading concepts', async () => {
+    // A topic seed has no concept_ids; the generator must NOT query concepts,
+    // must retrieve on the topic text, and must still produce a draft.
+    wireOne({ ...SEED, topic: 'the role of silence in mystical union', concept_ids: null });
+    mRetrieve.mockResolvedValue([makeChunk('a'), makeChunk('b'), makeChunk('c'), makeChunk('d')]);
+    mComplete.mockResolvedValue(goodStream() as never);
+
+    await generateDraft('seed-1');
+
+    // concept lookup must not happen in topic mode
+    expect(mQuery).not.toHaveBeenCalled();
+    // retrieval is driven by the topic text
+    expect(mRetrieve).toHaveBeenCalledWith('the role of silence in mystical union', expect.anything());
+    const upd = lastUpdate()!;
+    expect(upd.sql).toContain("status='draft'");
+  });
+
+  it('falls back to the topic as the title when the model omits TITLE', async () => {
+    wireOne({ ...SEED, topic: 'apophatic silence and the word', concept_ids: null });
+    mRetrieve.mockResolvedValue([makeChunk('a'), makeChunk('b'), makeChunk('c'), makeChunk('d')]);
+    mComplete.mockResolvedValue(goodStream(`No structured head here. ${ESSAY_BODY}`) as never);
+
+    await generateDraft('seed-1');
+
+    const upd = lastUpdate()!;
+    expect(upd.sql).toContain("status='draft'");
+    expect(upd.params[1]).toBe('apophatic silence and the word'); // topic as fallback title
+  });
+});
+
 describe('generateDraft — slug collision', () => {
   it('suffixes the slug when the base is taken', async () => {
     wireOne(SEED, [{ id: 'other' }]); // first slug check: taken; second: free
