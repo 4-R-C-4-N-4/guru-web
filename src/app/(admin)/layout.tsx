@@ -67,6 +67,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           <NavItem href="/admin">Overview</NavItem>
           <NavItem href="/admin/users">Users</NavItem>
+          <NavItem href="/admin/blog">Blog</NavItem>
           <SectionLabel>Sessions</SectionLabel>
           <JumpById prefix="/admin/sessions/" placeholder="session id" />
           <SectionLabel>Queries</SectionLabel>
