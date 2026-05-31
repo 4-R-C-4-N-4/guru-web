@@ -1,0 +1,24 @@
+{
+  "id": "843321e3",
+  "type": "feature",
+  "state": "open",
+  "summary": "T8 — public pages: /blog and /blog/[slug]",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.343Z",
+  "updated_at": "2026-05-31T03:49:22.343Z",
+  "files": [
+    {
+      "path": "src/app/blog/page.tsx"
+    }
+  ],
+  "tags": [
+    "blog",
+    "public",
+    "seo"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "918e50b4",
+  "type": "chore",
+  "state": "open",
+  "summary": "T5 — extract MD_COMPONENTS to shared module",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.199Z",
+  "updated_at": "2026-05-31T03:49:22.199Z",
+  "files": [
+    {
+      "path": "src/lib/markdown.tsx"
+    }
+  ],
+  "tags": [
+    "blog",
+    "markdown",
+    "refactor"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  }
+}

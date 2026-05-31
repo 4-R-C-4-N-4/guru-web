@@ -1,0 +1,24 @@
+{
+  "id": "3436c394",
+  "type": "feature",
+  "state": "open",
+  "summary": "T3 — generator core: generateDraft(seedId)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.103Z",
+  "updated_at": "2026-05-31T03:49:22.103Z",
+  "files": [
+    {
+      "path": "src/lib/blog-generate.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "rag",
+    "generation"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  }
+}
