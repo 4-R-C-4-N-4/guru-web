@@ -38,6 +38,11 @@ import type { RetrievedChunk, UserPreferences } from './types';
 // essay (HARD RULE 2). 4 mirrors the spec; tune via the eval harness later.
 const MIN_CHUNKS = 4;
 
+// Generation floor — a parsed essay body shorter than this is treated as an
+// empty/failed completion (a reasoning model can return finish=stop with no
+// content). Such a row is parked in needs_attention, never saved as a draft.
+const MIN_BODY_CHARS = 200;
+
 // The seed row as generateDraft reads it. Mirrors the blog_posts columns the
 // generator consumes (migration 013); the write columns it sets are inlined
 // in the UPDATEs below.
@@ -146,6 +151,18 @@ export async function generateDraft(seedId: string): Promise<void> {
 
     // 6. Parse the structured head, strip the CITATIONS tail, derive a slug.
     const { title, body } = parseGenerated(raw, concepts);
+
+    // Thin-GENERATION guard (companion to the thin-retrieval guard at step 3).
+    // A reasoning model can return finish=stop with an empty content body (all
+    // tokens spent on hidden reasoning, or an upstream blip). parseGenerated
+    // falls back to a concept-label title, so without this check an empty essay
+    // would be saved as a publishable draft. Park it in needs_attention instead
+    // — same principle as Hard Rule 2: never persist empty output as a draft.
+    if (body.trim().length < MIN_BODY_CHARS) {
+      await fail(seedId, `empty generation: ${body.trim().length} chars (< ${MIN_BODY_CHARS})`);
+      return;
+    }
+
     const slugStr = await uniqueSlug(title);
 
     // 7. Cost is best-effort: observability only (HARD RULE 3), never fails

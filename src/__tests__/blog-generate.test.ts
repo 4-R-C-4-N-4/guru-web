@@ -187,6 +187,27 @@ describe('generateDraft — head-parse fallback', () => {
   });
 });
 
+describe('generateDraft — empty generation guard', () => {
+  it('parks an empty completion in needs_attention, not a draft (todo:831509e2)', async () => {
+    // A reasoning model can return finish=stop with NO content body. Unlike the
+    // thin-retrieval guard, completeStream IS called here — the failure is at
+    // generation, not retrieval. The row must not become a publishable draft.
+    wireOne(SEED);
+    mRetrieve.mockResolvedValue([makeChunk('a'), makeChunk('b'), makeChunk('c'), makeChunk('d')]);
+    mComplete.mockResolvedValue(goodStream('   ') as never); // blank body, only whitespace
+
+    await generateDraft('seed-1');
+
+    expect(mComplete).toHaveBeenCalled(); // generation was attempted
+    const upd = lastUpdate()!;
+    expect(upd.sql).toContain("status='needs_attention'");
+    expect(upd.params[1]).toMatch(/empty generation/);
+    // never a draft
+    const sawDraft = mExec.mock.calls.some(c => (c[0] as string).includes("status='draft'"));
+    expect(sawDraft).toBe(false);
+  });
+});
+
 describe('generateDraft — cost failure is non-fatal (HARD RULE 3)', () => {
   it('persists the draft with cost_usd null when computeCost throws', async () => {
     wireOne(SEED);
