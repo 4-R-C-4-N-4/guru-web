@@ -1,0 +1,30 @@
+{
+  "id": "bf1c07fb",
+  "type": "feature",
+  "state": "done",
+  "summary": "Dual-mode blog seeding: free-text prompt OR concept pair (searchable picker)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-05-31T23:17:42.176Z",
+  "updated_at": "2026-05-31T23:33:47.288Z",
+  "files": [
+    {
+      "path": "src/lib/blog-generate.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "admin",
+    "rag",
+    "generation"
+  ],
+  "description": "Operator feedback: the seed form is hardcoded to a two-concept-id pair and forces unguessable raw concept ids. Operator chose DUAL-MODE (free-text OR concepts), not free-text-only. Plan: a mode toggle in the seed form — 'From a prompt' (single free-text topic field; the primary/general path) and 'From concepts' (the existing pair, but via a searchable picker by LABEL, never raw ids). Generator: branch on seed.topic — if present, retrieve on the topic text + buildBlogPromptFromTopic; else the existing concept-pair path (buildBlogPrompt). Both share the retrieve→guard→stream→parse→empty-guard→cost→store tail. Schema: migration 013 is unmerged + local-dev only, so edit it in place — add 'topic TEXT', make concept_ids nullable, via idempotent ALTERs (ADD COLUMN IF NOT EXISTS / ALTER COLUMN DROP NOT NULL) so the existing local table upgrades WITHOUT dropping the user's draft (id 24b63388). Also: admin-blog.ts SeedInput+insertSeed accept topic; seed route validates (non-empty topic) XOR (2-elem concept pair); seed-form.tsx adds the toggle + a concept label-search; page.tsx shows title ?? topic ?? concept_ids. Tests: prompt.test (buildBlogPromptFromTopic), blog-generate.test (topic happy-path + keep concept cases), admin-blog.test (topic seed accepted, empty rejected). Update BRD/IMPL: free-text is the primary seed path, concept-pair retained as a mode. Run FULL suite + tsc BEFORE committing (don't repeat the failing-push). Ships on todo/467f527c (same PR #89) since the seed surface is unmerged.",
+  "resolution": {
+    "commit": "7871a5d97d81c23e38c470c26f6cdc2a5b7b21c1",
+    "resolved_at": "2026-05-31T23:33:47.288Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/blog-generate.test.ts",
+    "note": "Dual-mode seeding: seed form now has a 'From a prompt' / 'From concepts' toggle. Free-text topic is the general path (retrieve on the topic, buildBlogPromptFromTopic); concept pair retained (buildBlogPrompt). Migration 013 gained nullable topic + concept_ids via idempotent ALTERs (local table upgraded, draft 24b63388 preserved). Seed route enforces topic XOR pair. tsc clean; full suite 442 passed/22 skipped. Ships on PR #89 (seed surface was unmerged)."
+  }
+}
