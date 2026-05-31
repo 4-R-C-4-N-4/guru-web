@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-05-31T03:49:22.151Z",
-  "updated_at": "2026-05-31T03:49:22.151Z",
+  "updated_at": "2026-05-31T03:52:19.403Z",
   "files": [
     {
       "path": "src/lib/admin-blog.ts"
@@ -19,6 +19,11 @@
     "api"
   ],
   "relationships": {
-    "parent": "467f527c"
-  }
+    "parent": "467f527c",
+    "depends_on": [
+      "64be313c",
+      "3436c394"
+    ]
+  },
+  "description": "PR2/admin. Data layer + FIRST MUTATING /api/admin/* routes — HARD RULE 4: gate requireAdmin() (admin.ts:61), 404 on fail, dev bypass (admin.ts:62) keeps local working. src/lib/admin-blog.ts (mirror admin-queries.ts): listPosts(status) ORDER BY created_at DESC; getPost(id); listCorpusCatalog() (server-side, same SELECT DISTINCT tradition,text_name FROM chunks as api/corpus/route.ts:20-25); insertSeed(seed); setStatus(id,status,fields). Routes: POST /api/admin/blog/seed (validate 2-elem concept_ids, model via isCuratedSlug, scope_mode allowed -> 400 else; insert queued row seed_kind=custom, created_by=operator.email admin.ts:43); POST /[id]/generate (await generateDraft(id) SYNCHRONOUSLY per BRD §6, return row); POST /[id]/publish|reject|archive (setStatus; publish stamps published_at). Pattern from api/admin/users/route.ts:24-26. DONE: all five 404 w/o tailnet header & work with it; seed rejects non-pair/bad slug (400); generate returns row; publish/reject/archive transition; tsc clean. Tests: admin-blog.test.ts (seed validation; generate delegates to mocked generateDraft). DEPS: T1,T3. BLOCKS: T7. See IMPL T4."
 }

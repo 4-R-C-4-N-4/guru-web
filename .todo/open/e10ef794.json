@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-05-31T03:49:22.060Z",
-  "updated_at": "2026-05-31T03:49:22.060Z",
+  "updated_at": "2026-05-31T03:52:18.970Z",
   "files": [
     {
       "path": "src/lib/prompt.ts"
@@ -20,5 +20,6 @@
   ],
   "relationships": {
     "parent": "467f527c"
-  }
+  },
+  "description": "PR1/core. Add BLOG_OVERLAY + BLOG_RULES next to VOICE_OVERLAY (prompt.ts:36-44) / CORE_RULES (prompt.ts:46-78). BLOG_RULES keeps grounding/no-invented-quotes/register invariants verbatim but replaces the single-turn closer (prompt.ts:66-71) with essay shape + structured head the generator can parse: TITLE:/DEK:/body markdown/CITATIONS: block. Export getBlogSystemPrompt() (no voice param — single blog voice; voice column reserved), mirroring getSystemPrompt (prompt.ts:80-82). Export buildBlogPrompt(conceptLabels,definitions,angle,chunks) reusing formatChunk (prompt.ts:101-108), makeBudget (from ./budget) and compressChunks (from ./compress) exactly as buildPrompt (prompt.ts:122-146); trailing instruction is an essay brief instead of QUERY:. Budget against pro tier — CONTEXT_WINDOWS lives in budget.ts (free 8192 / pro 32768). NO change to VoiceSlug or getSystemPrompt. DONE: getBlogSystemPrompt has grounding rule + TITLE: contract; buildBlogPrompt emits SOURCE PASSAGES + brief, drops chunks under tight budget; tsc clean. Tests: extend prompt.test.ts. DEPS: none. BLOCKS: T3. See IMPL T2."
 }

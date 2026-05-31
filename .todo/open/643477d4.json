@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-05-31T03:49:22.299Z",
-  "updated_at": "2026-05-31T03:49:22.299Z",
+  "updated_at": "2026-05-31T03:52:19.529Z",
   "files": [
     {
       "path": "src/app/(admin)/admin/blog/page.tsx"
@@ -19,6 +19,12 @@
     "ui"
   ],
   "relationships": {
-    "parent": "467f527c"
-  }
+    "parent": "467f527c",
+    "depends_on": [
+      "3454b067",
+      "918e50b4",
+      "d7b45ef8"
+    ]
+  },
+  "description": "PR2/admin. Three-view editorial surface (Queue/Drafts/Published) via searchParams.tab (default queue). Server components for reads (force-dynamic, server-side lib helpers, no client read fetches — matches existing admin pages); small CLIENT components for actions. Files: (admin)/layout.tsx — add <NavItem href=/admin/blog>Blog</NavItem> after Users (layout.tsx:69; layout has force-dynamic at :22, requireAdmin at :25). admin/blog/page.tsx (server) — fetch admin-blog helper, render via DataTable/StatTile (src/components/admin/ both exist); Drafts render body via shared MD_COMPONENTS (T5) with chunks_used beside it; surface needs_attention + error_note. seed-form.tsx (client) — SOLE seeding entry: concept-pair pickers, <ModelPicker>+<ScopeSelector> (T6, fed server catalog), angle; POST /api/admin/blog/seed then refresh. actions.tsx (client) — per-row Generate/Publish/Reject/Archive POSTing to T4 routes + refresh; Generate shows in-flight (BRD §6). DONE: seed form posts valid pair -> Queue; Generate end-to-end -> Drafts (or needs_attention); Drafts show prose+sources; Publish->Published; Reject/Archive work; /admin/blog 404s w/o header. Tests: none automated for pages (logic tested T3/T4); covered by T9. DEPS: T4,T5,T6. BLOCKS: T9. See IMPL T7."
 }
