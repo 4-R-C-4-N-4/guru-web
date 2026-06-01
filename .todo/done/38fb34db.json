@@ -1,13 +1,13 @@
 {
   "id": "38fb34db",
   "type": "bug",
-  "state": "active",
+  "state": "done",
   "summary": "Mid-stream client disconnect cancels generation; query completes server-side instead",
   "source": {
     "type": "human"
   },
   "created_at": "2026-06-01T12:26:27.896Z",
-  "updated_at": "2026-06-01T12:26:42.867Z",
+  "updated_at": "2026-06-01T12:28:27.958Z",
   "files": [
     {
       "path": "src/app/api/query/route.ts",
@@ -27,5 +27,18 @@
     "base_branch": "main",
     "started_at": "2026-06-01T12:26:42.867Z",
     "started_by": "Backend Engineer"
+  },
+  "relationships": {
+    "linked_commits": [
+      "8b45069b15af00b99d87f69593c6aa6a9ec32013"
+    ]
+  },
+  "resolution": {
+    "commit": "8b45069b15af00b99d87f69593c6aa6a9ec32013",
+    "resolved_at": "2026-06-01T12:28:27.958Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "drains to completion server-side when client cancels mid-stream (todo:38fb34db)",
+    "note": "Replaced break with clientGone flag so the upstream stream drains to completion on client disconnect; full response + usage persist and bill normally. Verified by rewritten mid-stream-cancel test asserting full response_text, captured token counts, and finalizeBudget call. All 59 api tests pass; tsc clean for src/."
   }
 }
