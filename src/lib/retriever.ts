@@ -62,11 +62,17 @@ export async function retrieve(
   // Lexical weight: tuned default 1.0 (LEXICAL_WEIGHT const, sweep peak Round 4);
   // RETRIEVAL_LEXICAL_WEIGHT is an optional override for re-sweeping without a redeploy.
   const lexicalWeight = Number(process.env.RETRIEVAL_LEXICAL_WEIGHT) || LEXICAL_WEIGHT;
+  // GRAPH_WEIGHT env-tunable too (todo:dafd05d2): now that concept_aliases is
+  // populated, the graph leg surfaces transliteration content no other leg
+  // reaches — but at the default 0.3 those chunks lose top-K slots to vector
+  // hubs. Swept without a redeploy; default is GRAPH_WEIGHT until measured.
+  const graphWeight = Number(process.env.RETRIEVAL_GRAPH_WEIGHT) || GRAPH_WEIGHT;
 
   return mergeAndRerank(vectorResults, graphResults, topK, {
     traditionRarity,
     lexicalResults,
     lexicalWeight,
+    graphWeight,
   });
 }
 
@@ -250,11 +256,13 @@ export function mergeAndRerank(
     traditionRarity?: Map<string, number>;
     lexicalResults?: RetrievedChunk[];
     lexicalWeight?: number;
+    graphWeight?: number;
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
   const lexicalResults = opts.lexicalResults ?? [];
   const lexicalWeight = opts.lexicalWeight ?? LEXICAL_WEIGHT;
+  const graphWeight = opts.graphWeight ?? GRAPH_WEIGHT;
 
   // Vector leg. Vector search has no tier signal, so each hit is tagged
   // 'inferred' explicitly (not left undefined and silently floored). Its
@@ -352,7 +360,7 @@ export function mergeAndRerank(
     // Normalised lexical term — 0 when there are no lexical hits (leg off), so
     // the score reduces exactly to the vector+graph+diversity sum.
     const lexTerm = maxLex > 0 ? lexicalWeight * (entry.lexScore / maxLex) : 0;
-    const score = VECTOR_WEIGHT * entry.similarity + GRAPH_WEIGHT * graphTerm + lexTerm + diversity;
+    const score = VECTOR_WEIGHT * entry.similarity + graphWeight * graphTerm + lexTerm + diversity;
     return { entry, score, tierW, diversity, lexTerm };
   });
 
@@ -361,7 +369,7 @@ export function mergeAndRerank(
   // Opt-in score trace (set RETRIEVAL_TRACE=1). Off by default — no prod cost.
   if (process.env.RETRIEVAL_TRACE) {
     console.log(
-      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${GRAPH_WEIGHT} lex_w=${lexicalWeight} cap=${MAX_PER_TRADITION}):`,
+      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${graphWeight} lex_w=${lexicalWeight} cap=${MAX_PER_TRADITION}):`,
     );
     for (const s of scored.slice(0, topK)) {
       console.log(

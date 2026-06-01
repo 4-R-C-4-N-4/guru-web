@@ -1,0 +1,18 @@
+{
+  "id": "dafd05d2",
+  "type": "investigation",
+  "state": "done",
+  "summary": "Tune graph-leg weight (RETRIEVAL_GRAPH_WEIGHT) now that aliases are loaded — sweep precision@10 on alias + standard query sets",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-29T16:10:30.503Z",
+  "updated_at": "2026-05-29T16:31:37.452Z",
+  "resolution": {
+    "commit": "3c30aa84ac12d8af20b8b8ecae0b32d674d9a770",
+    "resolved_at": "2026-05-29T16:31:37.452Z",
+    "resolved_by": "unknown",
+    "test_file": "scripts/eval-graphweight.ts",
+    "note": "Graph-weight sweep on alias+standard sets (corpus v30, shipped cell): weak/noise lever — ALIAS 0.13→0.17 best at w=1.0 (~2 chunks, edge of judge noise), STANDARD flat ±0.04, w=1.5 regresses both (graph floor co-dominates). Same <0.06 noise band Round 2 ruled not-a-lever. DEFAULT KEPT 0.3 (behavior-neutral); knob retained for future re-sweep after better tagging/family-domain aliases. Round 6 in tuning-experiment.md."
+  }
+}
