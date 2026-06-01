@@ -80,3 +80,12 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_status
     ON blog_posts(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_published
     ON blog_posts(published_at DESC) WHERE status = 'published';
+
+-- Dual-mode seeding upgrade (todo:bf1c07fb). The CREATE TABLE above is a no-op
+-- on a table that already exists from an earlier version of this migration, so
+-- these idempotent ALTERs carry the free-text `topic` column and the relaxed
+-- concept_ids constraint to an existing install. Both are no-ops on a fresh
+-- build (the CREATE TABLE already matches). 013 is still unmerged, so editing
+-- it in place is the contract here.
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS topic TEXT;
+ALTER TABLE blog_posts ALTER COLUMN concept_ids DROP NOT NULL;
