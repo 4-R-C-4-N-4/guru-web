@@ -237,17 +237,26 @@ export async function POST(req: Request) {
         try { controller.close(); } catch { /* already closed/errored */ }
       };
 
+      // When the client socket goes away we stop pushing bytes (the socket is
+      // dead) but KEEP draining the upstream stream to completion — generation
+      // finishes server-side, so the full response + real usage still get
+      // persisted and billed. Matches the ChatGPT-style expectation that an
+      // answer completes even if the user navigated away. (todo:38fb34db)
+      let clientGone = false;
       try {
         for await (const chunk of stream) {
           const text = chunk.choices[0]?.delta?.content ?? '';
           if (text) {
             fullResponse += text;
-            try {
-              controller.enqueue(new TextEncoder().encode(text));
-            } catch {
-              // Client disconnected; stop iterating. Partial response is
-              // still in fullResponse and gets persisted below.
-              break;
+            if (!clientGone) {
+              try {
+                controller.enqueue(new TextEncoder().encode(text));
+              } catch {
+                // Client disconnected. Stop enqueuing, but DON'T break: keep
+                // consuming so the upstream stream runs to completion and the
+                // final usage chunk still arrives.
+                clientGone = true;
+              }
             }
           }
           if (chunk.usage) {
@@ -275,9 +284,11 @@ export async function POST(req: Request) {
       }
 
       // 6. Compute actual cost + reconcile budget.
-      // If usage chunk never arrived (truncation / upstream abort), leave
-      // the estimate locked in usd_used and persist cost_usd as NULL —
-      // honest about not knowing.
+      // The usage chunk arrives at the natural end of the stream — including
+      // when the client has already disconnected, since we drain to completion
+      // above. It's absent only on a genuine upstream failure (the for-await
+      // threw); in that case leave the estimate locked in usd_used and persist
+      // cost_usd as NULL — honest about not knowing.
       let costUsd: number | null = null;
       if (inputTokens !== null && outputTokens !== null) {
         try {
