@@ -825,12 +825,14 @@ describe('POST /api/query', () => {
     expect(mockFinalizeBudget).not.toHaveBeenCalled();
   });
 
-  it('persists partial response when client cancels mid-stream (todo:9dff8966)', async () => {
-    // Regression: the controller transitions to a closed/errored state when
-    // the consumer cancels, so the next controller.enqueue() throws
-    // "Invalid state: Controller is already closed". Without the safeClose
-    // guard, finally's controller.close() also throws and the persistence
-    // block at the end of start() never runs — losing the partial response.
+  it('drains to completion server-side when client cancels mid-stream (todo:38fb34db)', async () => {
+    // ChatGPT-style expectation: navigating away must not cancel generation.
+    // When the consumer cancels, the next controller.enqueue() throws
+    // "Controller is already closed" — but instead of breaking the loop
+    // (which would .return() the upstream iterator and abort the provider
+    // fetch), we stop enqueuing and KEEP draining. The stream runs to its
+    // natural end, the final usage chunk arrives, and the FULL response +
+    // real token counts get persisted and billed — not the partial.
 
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockOne.mockResolvedValueOnce({ id: 's1' });
@@ -841,13 +843,15 @@ describe('POST /api/query', () => {
     mockBuild.mockReturnValueOnce('assembled prompt');
     mockExec.mockResolvedValue(undefined);
 
-    // Slow stream so we can cancel between chunks and the loop body
-    // re-enters enqueue against a now-closed controller.
+    // Slow stream so we can cancel between chunks; the loop body then
+    // re-enters enqueue against a now-closed controller. A final usage chunk
+    // lands after all content, exactly as a real provider stream would.
     async function* slowStream() {
       for (let i = 0; i < 5; i++) {
         yield { choices: [{ delta: { content: `c${i} ` } }] };
         await new Promise(r => setTimeout(r, 5));
       }
+      yield { choices: [], usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 } };
     }
     mockStream.mockResolvedValueOnce(slowStream() as never);
 
@@ -858,13 +862,18 @@ describe('POST /api/query', () => {
     await reader.read();
     await reader.cancel();
 
-    // Give start() time to finish the catch+finally+persist sequence.
+    // Give start() time to drain the rest of the stream + persist.
     await new Promise(r => setTimeout(r, 100));
 
-    // Persistence MUST still run — the partial response is the user's record.
     expect(mockExec).toHaveBeenCalledTimes(1);
     const [, params] = mockExec.mock.calls[0]!;
-    expect(typeof params![3]).toBe('string'); // response_text — partial is fine
+    // Full response persisted, not just the chunk the client received.
+    expect(params![3]).toBe('c0 c1 c2 c3 c4 ');
+    // Usage captured from the final chunk despite the client being gone.
+    expect(params![7]).toBe(42);  // input_tokens
+    expect(params![8]).toBe(7);   // output_tokens
+    // Cost reconciled normally — abandoned queries bill like any other.
+    expect(mockFinalizeBudget).toHaveBeenCalled();
   });
 
   // ── Multi-turn conversation continuity (BRD-conversation-continuity §4.5) ──
