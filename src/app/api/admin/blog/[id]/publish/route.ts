@@ -24,5 +24,7 @@ export async function POST(
   if (!outcome.ok) {
     return new Response(null, { status: outcome.reason === 'illegal_transition' ? 409 : 404 });
   }
+  // The public /blog + homepage lists are cached with a short revalidate TTL
+  // (listPublishedCached), so a newly published post appears within that window.
   return Response.json(outcome.row);
 }

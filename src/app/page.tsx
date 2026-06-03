@@ -8,16 +8,19 @@
  * never statically prerendered).
  */
 
-import { listPublished } from '@/lib/blog-public';
-import { listTraditions } from '@/lib/corpus';
+import { listPublishedCached } from '@/lib/blog-public';
+import { listTraditionsCached } from '@/lib/corpus';
 import Landing from '@/components/landing';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  // Cached reads: the page still renders per request (force-dynamic for the
+  // tailnet/Clerk host check in the root layout), but the data is shared across
+  // requests so bot traffic on / doesn't re-run these queries every hit.
   const [posts, traditions] = await Promise.all([
-    listPublished(3),
-    listTraditions(),
+    listPublishedCached(3),
+    listTraditionsCached(),
   ]);
   return <Landing posts={posts} traditions={traditions} />;
 }

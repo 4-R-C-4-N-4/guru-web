@@ -5,6 +5,7 @@
  * can't call the requireUser-gated /api/corpus (e.g. the signed-out homepage).
  */
 
+import { unstable_cache } from 'next/cache';
 import { query } from './db';
 
 /**
@@ -26,3 +27,15 @@ export async function listTraditions(): Promise<string[]> {
   );
   return rows.map(r => r.tradition);
 }
+
+/**
+ * Cached listTraditions for the public homepage. The tradition set only changes
+ * on a corpus re-import (operator-driven, rare), so a long revalidate is safe —
+ * bot traffic on / shares one aggregation rather than running GROUP BY per hit.
+ * A corpus re-import that needs the badges refreshed sooner can revalidateTag.
+ */
+export const listTraditionsCached = unstable_cache(
+  () => listTraditions(),
+  ['corpus:listTraditions'],
+  { revalidate: 3600, tags: ['corpus-traditions'] },
+);

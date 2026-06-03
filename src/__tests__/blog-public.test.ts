@@ -70,7 +70,7 @@ describe('getPublishedBySlug', () => {
 });
 
 describe('listPublished', () => {
-  it("queries only published rows with a slug and content, newest first", async () => {
+  it("queries only published rows with a slug and content, reading only a left()-bounded dek source", async () => {
     mQuery.mockResolvedValue([]);
     await listPublished();
     const sql = mQuery.mock.calls[0][0] as string;
@@ -78,11 +78,13 @@ describe('listPublished', () => {
     expect(sql).toMatch(/slug IS NOT NULL/);
     expect(sql).toMatch(/content IS NOT NULL/);
     expect(sql).toMatch(/ORDER BY published_at DESC/);
+    // Never SELECT the full essay body for a card — only a bounded dek source.
+    expect(sql).toMatch(/left\(content, \d+\) AS dek_source/);
   });
 
-  it('derives a null dek (does not throw) when a row has null content', async () => {
+  it('derives a null dek (does not throw) when a row has null dek_source', async () => {
     mQuery.mockResolvedValue([
-      { title: 'T', slug: 't', content: null, published_at: '2026-05-31' },
+      { title: 'T', slug: 't', dek: null, dek_source: null, published_at: '2026-05-31' },
     ] as never);
     const items = await listPublished();
     expect(items[0].dek).toBeNull();
@@ -99,10 +101,10 @@ describe('listPublished', () => {
     expect(mQuery.mock.calls[1][1]).toEqual([3]);
   });
 
-  it('maps rows to cards, preferring the stored dek and falling back to content', async () => {
+  it('maps rows to cards, preferring the stored dek and falling back to the dek source', async () => {
     mQuery.mockResolvedValue([
-      { title: 'A', slug: 'a', dek: 'Stored framing.', content: 'First sentence here. More.', published_at: '2026-05-31' },
-      { title: 'B', slug: 'b', dek: null, content: 'Legacy first sentence. More.', published_at: '2026-05-30' },
+      { title: 'A', slug: 'a', dek: 'Stored framing.', dek_source: 'First sentence here. More.', published_at: '2026-05-31' },
+      { title: 'B', slug: 'b', dek: null, dek_source: 'Legacy first sentence. More.', published_at: '2026-05-30' },
     ] as never);
     const items = await listPublished();
     expect(items[0]).toMatchObject({ title: 'A', slug: 'a', dek: 'Stored framing.' });

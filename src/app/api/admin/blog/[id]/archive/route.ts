@@ -21,5 +21,6 @@ export async function POST(
   if (!outcome.ok) {
     return new Response(null, { status: outcome.reason === 'illegal_transition' ? 409 : 404 });
   }
+  // Archived posts drop off the public lists within the listPublishedCached TTL.
   return Response.json(outcome.row);
 }

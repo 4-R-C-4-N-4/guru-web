@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { listPublished } from '@/lib/blog-public';
+import { listPublishedCached } from '@/lib/blog-public';
 import EssayCard from '@/components/essay-card';
 import { tokens } from '@/styles/tokens';
 
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogIndexPage() {
-  const posts = await listPublished();
+  const posts = await listPublishedCached();
 
   return (
     <main

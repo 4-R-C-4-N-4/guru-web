@@ -9,6 +9,7 @@
  * Spec: docs/blog-pipeline/BRD-blog-pipeline.md §5.6, IMPL T8.
  */
 
+import { unstable_cache } from 'next/cache';
 import { one, query } from './db';
 
 /** A stored source entry on a published post (the chunks_used JSONB shape). */
@@ -62,8 +63,12 @@ function dekFromContent(content: string | null): string | null {
  * /blog index calls it with no limit to list everything.
  */
 export async function listPublished(limit?: number): Promise<PublishedListItem[]> {
-  const rows = await query<{ title: string; slug: string; dek: string | null; content: string; published_at: string }>(
-    `SELECT title, slug, dek, content, published_at
+  // Only ever read enough of `content` to derive a legacy dek — never the full
+  // multi-KB essay body, which the cards don't render (the post page reads full
+  // content via getPublishedBySlug). New rows use the stored `dek` and ignore
+  // dek_source entirely.
+  const rows = await query<{ title: string; slug: string; dek: string | null; dek_source: string | null; published_at: string }>(
+    `SELECT title, slug, dek, left(content, 300) AS dek_source, published_at
        FROM blog_posts
       WHERE status = 'published' AND slug IS NOT NULL AND content IS NOT NULL
       ORDER BY published_at DESC${limit !== undefined ? ' LIMIT $1' : ''}`,
@@ -72,10 +77,28 @@ export async function listPublished(limit?: number): Promise<PublishedListItem[]
   return rows.map(r => ({
     title: r.title,
     slug: r.slug,
-    dek: r.dek ?? dekFromContent(r.content),
+    dek: r.dek ?? dekFromContent(r.dek_source),
     published_at: r.published_at,
   }));
 }
+
+/**
+ * Cached listPublished for the public pages (homepage feed + /blog index). This
+ * is the bot shield: between publishes every anonymous request returns identical
+ * output, so one query is shared across the revalidate window instead of running
+ * per request. unstable_cache keys on the limit argument, so listPublishedCached(3)
+ * and listPublishedCached() cache independently.
+ *
+ * Invalidation is TTL-based: a 60s revalidate means a newly published or archived
+ * post appears within a minute — fine for the manual editorial cadence, and it
+ * keeps the cache decoupled from Next 16's evolving on-demand revalidate API. The
+ * `published-posts` tag is set so on-demand busting can be wired in later.
+ */
+export const listPublishedCached = unstable_cache(
+  (limit?: number) => listPublished(limit),
+  ['blog-public:listPublished'],
+  { revalidate: 60, tags: ['published-posts'] },
+);
 
 /**
  * A single published post by slug, or null if the slug is unknown OR the
