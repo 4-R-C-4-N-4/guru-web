@@ -1,0 +1,36 @@
+{
+  "id": "07cc01d5",
+  "type": "bug",
+  "state": "done",
+  "summary": "Publish route has no state guard: force-publishing a non-draft (null content) 500s the public /blog index and homepage via dekFromContent(null)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-03T18:35:48.471Z",
+  "updated_at": "2026-06-03T18:44:15.327Z",
+  "files": [
+    {
+      "path": "src/app/api/admin/blog/[id]/publish/route.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "robustness",
+    "publish",
+    "crash"
+  ],
+  "description": "src/app/api/admin/blog/[id]/publish/route.ts calls setStatus(id,'published') with no check on current status. migration 013 leaves title/slug/content nullable with no CHECK constraints. dekFromContent (blog-public.ts:50) does content.split() which throws on null. So force-publishing a queued/needs_attention row (content NULL) makes listPublished throw -> 500s BOTH the public /blog index and the homepage feed (both call listPublished). Not reachable via UI (Publish only on drafts) but unguarded API with large blast radius. Fix: (a) guard setStatus publish transition to require status='draft' AND content NOT NULL; (b) defensively make dekFromContent null-safe and have listPublished skip null-content/null-slug rows. Add tests.",
+  "relationships": {
+    "linked_commits": [
+      "b4253a1fc832c74e3b9039f9a1f8c3a3d8bedcff"
+    ]
+  },
+  "resolution": {
+    "commit": "b4253a1fc832c74e3b9039f9a1f8c3a3d8bedcff",
+    "resolved_at": "2026-06-03T18:44:15.327Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/admin-blog-setstatus.test.ts",
+    "test_function": "setStatus publish guard",
+    "note": "Guarded publish transition (draft+content only) + null-safe read path; routes return 200/409/404. Verified: 465 tests, build, browser."
+  }
+}
