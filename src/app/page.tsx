@@ -9,11 +9,15 @@
  */
 
 import { listPublished } from '@/lib/blog-public';
+import { listTraditions } from '@/lib/corpus';
 import Landing from '@/components/landing';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const posts = await listPublished(3);
-  return <Landing posts={posts} />;
+  const [posts, traditions] = await Promise.all([
+    listPublished(3),
+    listTraditions(),
+  ]);
+  return <Landing posts={posts} traditions={traditions} />;
 }

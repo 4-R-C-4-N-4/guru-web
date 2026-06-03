@@ -20,11 +20,12 @@ import type { PublishedListItem } from '@/lib/blog-public';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 
-export default function Landing({ posts }: { posts: PublishedListItem[] }) {
+export default function Landing(
+  { posts, traditions }: { posts: PublishedListItem[]; traditions: string[] },
+) {
   const mobile = useIsMobile();
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
-  const traditionKeys = Object.keys(tokens.tradition) as (keyof typeof tokens.tradition)[];
 
   // Redirect signed-in users to /chat. Must run from an effect, not during
   // render — calling router.replace() inline triggers React's "Cannot update a
@@ -74,16 +75,23 @@ export default function Landing({ posts }: { posts: PublishedListItem[] }) {
             letterSpacing: mobile ? 2 : 4, marginBottom: mobile ? 32 : 48, textTransform: 'uppercase',
           }}>Cross-Tradition Esoteric Analysis</div>
 
-          {/* Tradition badges */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: mobile ? 4 : 6, marginBottom: mobile ? 32 : 48 }}>
-            {traditionKeys.map(t => (
-              <span key={t} style={{
-                fontFamily: tokens.font.mono, fontSize: mobile ? 8 : 9, color: tokens.tradition[t],
-                padding: mobile ? '2px 5px' : '3px 8px', border: `1px solid ${tokens.tradition[t]}33`,
-                borderRadius: 2, textTransform: 'uppercase', letterSpacing: 1,
-              }}>{t}</span>
-            ))}
-          </div>
+          {/* Tradition badges — dynamic from the corpus (most-represented
+              first). No hardcoded fallback: if the corpus is empty the row is
+              simply omitted, surfacing the missing data rather than masking it. */}
+          {traditions.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: mobile ? 4 : 6, marginBottom: mobile ? 32 : 48 }}>
+              {traditions.map(t => {
+                const color = tokens.tradition[t as keyof typeof tokens.tradition] ?? tokens.text.secondary;
+                return (
+                  <span key={t} style={{
+                    fontFamily: tokens.font.mono, fontSize: mobile ? 8 : 9, color,
+                    padding: mobile ? '2px 5px' : '3px 8px', border: `1px solid ${color}33`,
+                    borderRadius: 2, textTransform: 'uppercase', letterSpacing: 1,
+                  }}>{t.replace(/_/g, ' ')}</span>
+                );
+              })}
+            </div>
+          )}
 
           {/* Tagline */}
           <p style={{
@@ -92,7 +100,7 @@ export default function Landing({ posts }: { posts: PublishedListItem[] }) {
             fontStyle: 'italic', padding: mobile ? '0 8px' : 0,
           }}>
             Discover the hidden threads between Gnostic aeons, Kabbalistic sefirot,
-            Neoplatonic emanations, and Vedantic consciousness — traced to their sources,
+            Neoplatonic emanations, and Taoist non-being — traced to their sources,
             every claim cited.
           </p>
 
