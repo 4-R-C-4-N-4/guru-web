@@ -1,6 +1,11 @@
 /**
  * src/proxy.ts
  *
+ * (Renamed from src/middleware.ts — Next 16 compiles proxy.ts, not
+ * middleware.ts; under the old name this logic was silently dropped
+ * and Clerk's default protective middleware ran instead, gating
+ * /blog and /chat. See ticket 0f850d3c.)
+ *
  * Clerk middleware wrapper. Wires Clerk session decoding into the
  * request context so public-domain handlers that call auth() /
  * useUser() see the caller's userId.

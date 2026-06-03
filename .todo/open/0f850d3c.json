@@ -1,0 +1,12 @@
+{
+  "id": "0f850d3c",
+  "type": "bug",
+  "state": "active",
+  "summary": "Remove leftover root ./middleware.ts that shadows src/proxy.ts and gates /blog behind Clerk auth.protect()",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-03T12:58:14.869Z",
+  "updated_at": "2026-06-03T13:02:31.468Z",
+  "description": "Root cause: a leftover Clerk-quickstart ./middleware.ts at repo root coexisted with the intended src/middleware.ts pass-through. The root file calls auth.protect() on every route except /, /sign-in, /sign-up, /api/webhooks/* — so /blog (and anything else) redirected signed-out users to login. The compiled middleware-manifest matcher matched the root file's (bare Clerk default), which the src file's header comment had misattributed to 'Next 16 substituting a default matcher'. Fix: delete root ./middleware.ts; rename src/middleware.ts -> src/proxy.ts (Next 16 PROXY_FILENAME convention) so the intended pass-through is the sole middleware. App routes stay protected by (app)/layout.tsx client bounce + per-handler requireUser + requireAdmin; nothing is newly exposed. Verified locally: GET /blog -> 200 after the change. Ships on todo/467f527c (blog PR)."
+}
