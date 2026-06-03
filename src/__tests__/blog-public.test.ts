@@ -66,6 +66,17 @@ describe('listPublished', () => {
     expect(sql).toMatch(/ORDER BY published_at DESC/);
   });
 
+  it('appends LIMIT only when a limit is passed (homepage feed vs full index)', async () => {
+    mQuery.mockResolvedValue([]);
+    await listPublished();
+    expect(mQuery.mock.calls[0][0] as string).not.toMatch(/LIMIT/);
+    expect(mQuery.mock.calls[0][1]).toBeUndefined();
+
+    await listPublished(3);
+    expect(mQuery.mock.calls[1][0] as string).toMatch(/LIMIT \$1/);
+    expect(mQuery.mock.calls[1][1]).toEqual([3]);
+  });
+
   it('maps rows to cards with a derived dek', async () => {
     mQuery.mockResolvedValue([
       { title: 'A', slug: 'a', content: 'First sentence here. More.', published_at: '2026-05-31' },

@@ -9,6 +9,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { listPublished } from '@/lib/blog-public';
+import EssayCard from '@/components/essay-card';
 import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
@@ -74,37 +75,7 @@ export default async function BlogIndexPage() {
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {posts.map(post => (
               <li key={post.slug} style={{ marginBottom: 36 }}>
-                <Link
-                  href={`/blog/${post.slug}`}
-                  style={{ textDecoration: 'none', display: 'block' }}
-                >
-                  <h2
-                    style={{
-                      fontFamily: tokens.font.display,
-                      fontSize: 26,
-                      fontWeight: 600,
-                      color: tokens.text.primary,
-                      margin: '0 0 8px',
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {post.title}
-                  </h2>
-                  {post.dek && (
-                    <p
-                      style={{
-                        fontFamily: tokens.font.display,
-                        fontSize: 16,
-                        color: tokens.text.secondary,
-                        margin: 0,
-                        lineHeight: 1.6,
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      {post.dek}
-                    </p>
-                  )}
-                </Link>
+                <EssayCard post={post} />
               </li>
             ))}
           </ul>

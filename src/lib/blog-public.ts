@@ -51,13 +51,18 @@ function dekFromContent(content: string): string | null {
   return sentence.slice(0, 200) || null;
 }
 
-/** Published posts, newest first (covered by idx_blog_posts_published). */
-export async function listPublished(): Promise<PublishedListItem[]> {
+/**
+ * Published posts, newest first (covered by idx_blog_posts_published). Pass a
+ * `limit` to cap the result — used by the homepage "Latest Essays" feed; the
+ * /blog index calls it with no limit to list everything.
+ */
+export async function listPublished(limit?: number): Promise<PublishedListItem[]> {
   const rows = await query<{ title: string; slug: string; content: string; published_at: string }>(
     `SELECT title, slug, content, published_at
        FROM blog_posts
       WHERE status = 'published'
-      ORDER BY published_at DESC`,
+      ORDER BY published_at DESC${limit !== undefined ? ' LIMIT $1' : ''}`,
+    limit !== undefined ? [limit] : undefined,
   );
   return rows.map(r => ({
     title: r.title,

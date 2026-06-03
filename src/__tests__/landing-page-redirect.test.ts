@@ -13,7 +13,8 @@
  * returns null.
  *
  * Covered:
- *   - src/app/page.tsx               — signed-in → /chat
+ *   - src/components/landing.tsx     — signed-in → /chat (the homepage's
+ *     interactive client component; src/app/page.tsx is now a server wrapper)
  *   - src/app/(app)/layout.tsx       — signed-out → /sign-in
  *
  * Behaviour test isn't possible without spinning up Clerk + Next's
@@ -28,7 +29,7 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const TARGETS: Array<{ label: string; relPath: string; destination: string }> = [
-  { label: 'LandingPage (signed-in)', relPath: '../app/page.tsx',         destination: '/chat' },
+  { label: 'Landing (signed-in)',     relPath: '../components/landing.tsx', destination: '/chat' },
   { label: 'AppLayout (signed-out)',  relPath: '../app/(app)/layout.tsx', destination: '/sign-in' },
 ];
 
