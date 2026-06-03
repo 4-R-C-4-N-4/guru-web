@@ -12,7 +12,7 @@
  * Spec: docs/blog-pipeline/BRD-blog-pipeline.md §5.4, IMPL T4.
  */
 
-import { one, query, exec } from './db';
+import { one, query } from './db';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -145,21 +145,40 @@ export async function insertSeed(seed: SeedInput): Promise<BlogPostRow> {
   return row;
 }
 
+/** Outcome of a guarded status transition (see setStatus). */
+export type SetStatusResult =
+  | { ok: true; row: BlogPostRow }
+  | { ok: false; reason: 'not_found' | 'illegal_transition' };
+
 /**
- * Transition a post's status. When moving to 'published', stamps
- * published_at; otherwise leaves it untouched. Returns the updated row
- * (null if the id doesn't exist).
+ * Transition a post's status. When moving to 'published', stamps published_at.
+ *
+ * Publishing is guarded: it only applies to a generated `draft` with non-null
+ * content. Without this, a direct POST could publish a `queued`/`needs_attention`
+ * row (whose content is NULL — migration 013 has no NOT NULL/CHECK), which would
+ * make dekFromContent() throw and 500 the public /blog index and homepage feed
+ * (both call listPublished). reject/archive are unguarded — they only ever move
+ * a post OUT of public view, so they can't create a broken live post.
+ *
+ * The guarded UPDATE is atomic (no check-then-act race); a 0-row result means
+ * either the id is unknown or the transition was illegal, disambiguated with a
+ * follow-up read on the (rare) failure path only.
  */
 export async function setStatus(
   id: string,
   status: 'published' | 'rejected' | 'archived',
-): Promise<BlogPostRow | null> {
+): Promise<SetStatusResult> {
   const publishedAt = status === 'published' ? 'now()' : 'published_at';
-  await exec(
+  const guard = status === 'published' ? "AND status = 'draft' AND content IS NOT NULL" : '';
+  const row = await one<BlogPostRow>(
     `UPDATE blog_posts
         SET status = $2, published_at = ${publishedAt}, updated_at = now()
-      WHERE id = $1`,
+      WHERE id = $1 ${guard}
+      RETURNING ${POST_COLUMNS}`,
     [id, status],
   );
-  return getPost(id);
+  if (row) return { ok: true, row };
+  // 0 rows: unknown id, or a publish blocked by the guard.
+  const exists = await getPost(id);
+  return { ok: false, reason: exists ? 'illegal_transition' : 'not_found' };
 }

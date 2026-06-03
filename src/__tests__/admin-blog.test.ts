@@ -157,7 +157,7 @@ describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
 
     it(`${route} calls setStatus(id, '${status}')`, async () => {
       mReq.mockResolvedValue(ADMIN);
-      mSetStatus.mockResolvedValue({ id: 'p1', status } as never);
+      mSetStatus.mockResolvedValue({ ok: true, row: { id: 'p1', status } } as never);
       const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
       const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
       expect(mSetStatus).toHaveBeenCalledWith('p1', status);
@@ -166,10 +166,18 @@ describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
 
     it(`${route} 404s when the post is missing`, async () => {
       mReq.mockResolvedValue(ADMIN);
-      mSetStatus.mockResolvedValue(null);
+      mSetStatus.mockResolvedValue({ ok: false, reason: 'not_found' } as never);
       const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
       const res = await POST(new Request('http://t', { method: 'POST' }), ctx('missing'));
       expect(res.status).toBe(404);
+    });
+
+    it(`${route} 409s when the transition is illegal (guard blocked)`, async () => {
+      mReq.mockResolvedValue(ADMIN);
+      mSetStatus.mockResolvedValue({ ok: false, reason: 'illegal_transition' } as never);
+      const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
+      const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
+      expect(res.status).toBe(409);
     });
   }
 });

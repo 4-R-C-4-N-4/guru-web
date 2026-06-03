@@ -8,7 +8,7 @@
  *
  * Lives separately from curated-models.ts so the data layer stays
  * styling-free; curated-models.ts can be imported by anything,
- * including non-UI scripts. This module imports tokens.ts.
+ * including non-UI scripts.
  *
  * questionsPerDay is *derived* from the pricing-config primitives —
  * the cap (PRO_DAILY_USD_CAP) and the typical-workload assumption
@@ -20,7 +20,6 @@
  * Spec: see todo:e8105324 — model-picker UX simplification.
  */
 
-import { tokens } from '@/styles/tokens';
 import { CURATED_MODELS, type CuratedSlug } from './curated-models';
 import { FALLBACK_PRICING } from './fallback-pricing';
 import {
@@ -48,11 +47,14 @@ export interface ProviderDisplay {
 /** Per-slug name + color. Bumping a CURATED_MODELS entry usually
  *  doesn't require touching this — colors and names belong to the
  *  provider, not the specific model version. */
+// Explicit per-provider hues, deliberately NOT sourced from tokens.tradition:
+// provider chips must stay stable when the tradition palette is rekeyed. (A
+// rekey once silently turned the OpenAI chip orange — todo:12d143f6.)
 const PROVIDER_META: Record<CuratedSlug, { name: string; color: string }> = {
-  deepseek:  { name: 'DeepSeek',  color: tokens.tradition.neoplatonism }, // muted blue
-  xai:       { name: 'X.AI',      color: tokens.tradition.gnosticism },   // rust
-  anthropic: { name: 'Anthropic', color: tokens.tier.verified },          // amber
-  openai:    { name: 'OpenAI',    color: tokens.tradition.buddhism },     // muted green
+  deepseek:  { name: 'DeepSeek',  color: '#5a8ac2' }, // muted blue
+  xai:       { name: 'X.AI',      color: '#c2785a' }, // rust
+  anthropic: { name: 'Anthropic', color: '#c4a35a' }, // amber
+  openai:    { name: 'OpenAI',    color: '#5ac27a' }, // muted green
 };
 
 /**

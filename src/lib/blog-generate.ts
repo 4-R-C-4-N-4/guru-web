@@ -169,7 +169,7 @@ export async function generateDraft(seedId: string): Promise<void> {
     }
 
     // 5. Parse the structured head, strip the CITATIONS tail, derive a slug.
-    const { title, body } = parseGenerated(raw, fallbackTitle);
+    const { title, dek, body } = parseGenerated(raw, fallbackTitle);
 
     // Thin-GENERATION guard (companion to the thin-retrieval guard at step 3).
     // A reasoning model can return finish=stop with an empty content body (all
@@ -218,10 +218,10 @@ export async function generateDraft(seedId: string): Promise<void> {
 
     await exec(
       `UPDATE blog_posts
-          SET status='draft', title=$2, slug=$3, content=$4,
-              chunks_used=$5, cost_usd=$6, error_note=NULL, updated_at=now()
+          SET status='draft', title=$2, slug=$3, dek=$4, content=$5,
+              chunks_used=$6, cost_usd=$7, error_note=NULL, updated_at=now()
         WHERE id=$1`,
-      [seedId, title, slugStr, body, JSON.stringify(used), cost],
+      [seedId, title, slugStr, dek || null, body, JSON.stringify(used), cost],
     );
   } catch (err) {
     await fail(seedId, err instanceof Error ? err.message : String(err));

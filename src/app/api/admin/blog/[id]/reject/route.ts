@@ -17,7 +17,9 @@ export async function POST(
   if (result instanceof Response) return result;
 
   const { id } = await ctx.params;
-  const row = await setStatus(id, 'rejected');
-  if (!row) return new Response(null, { status: 404 });
-  return Response.json(row);
+  const outcome = await setStatus(id, 'rejected');
+  if (!outcome.ok) {
+    return new Response(null, { status: outcome.reason === 'illegal_transition' ? 409 : 404 });
+  }
+  return Response.json(outcome.row);
 }

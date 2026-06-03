@@ -151,12 +151,14 @@ describe('generateDraft — happy path', () => {
 
     const upd = lastUpdate()!;
     expect(upd.sql).toContain("status='draft'");
-    const [, title, slug, content, chunksJson, cost] = upd.params;
+    const [, title, slug, dek, content, chunksJson, cost] = upd.params;
     expect(title).toBe('Two Names for One Source');
     expect(slug).toBe('two-names-for-one-source');
+    expect(dek).toBe('A resonance.');            // model-authored DEK is persisted, not discarded
     expect(content).toContain('develops the parallel');
     expect(content).not.toContain('CITATIONS:'); // tail stripped
     expect(content).not.toContain('TITLE:');      // head stripped
+    expect(content).not.toContain('DEK:');        // head stripped
     const used = JSON.parse(chunksJson as string);
     expect(used).toHaveLength(4);
     expect(used[0]).toEqual({ id: 'a', tradition: 'neoplatonism', text_name: 'neoplatonism Text', section: 'S1', tier: 'verified' });
@@ -260,7 +262,7 @@ describe('generateDraft — cost failure is non-fatal (HARD RULE 3)', () => {
 
     const upd = lastUpdate()!;
     expect(upd.sql).toContain("status='draft'");
-    expect(upd.params[5]).toBeNull(); // cost_usd
+    expect(upd.params[6]).toBeNull(); // cost_usd (shifted by the new dek param)
   });
 });
 

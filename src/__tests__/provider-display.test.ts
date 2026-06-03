@@ -31,6 +31,14 @@ describe('PROVIDER_DISPLAY', () => {
     }
   });
 
+  it('provider colors are distinct (chips must be visually separable)', () => {
+    // Guards todo:12d143f6 — colors are explicit hexes decoupled from
+    // tokens.tradition, so a palette rekey can't collapse two providers
+    // onto the same hue (OpenAI green vs Anthropic amber).
+    const colors = Object.values(PROVIDER_DISPLAY).map((d) => d.color.toLowerCase());
+    expect(new Set(colors).size).toBe(colors.length);
+  });
+
   it('default (deepseek) has the highest questionsPerDay', () => {
     const counts = Object.values(PROVIDER_DISPLAY).map((d) => d.questionsPerDay);
     expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBe(Math.max(...counts));

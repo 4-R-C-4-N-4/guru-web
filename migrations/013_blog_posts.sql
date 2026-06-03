@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
 
     title         TEXT,
     slug          TEXT UNIQUE,
+    dek           TEXT,                      -- model-authored framing sentence (the DEK: head); NULL for legacy rows, where the public reader falls back to the first sentence of content
     content       TEXT,
     chunks_used   JSONB,
     cost_usd      NUMERIC(10, 6),
@@ -89,3 +90,8 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_published
 -- it in place is the contract here.
 ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS topic TEXT;
 ALTER TABLE blog_posts ALTER COLUMN concept_ids DROP NOT NULL;
+-- Persist the model-authored DEK (todo:d48b44ba). Previously parseGenerated
+-- computed a dek and the call site discarded it, so the public surface
+-- re-derived a worse one from the essay's first sentence. Nullable: legacy rows
+-- generated before this column stay NULL and fall back to the first-sentence dek.
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS dek TEXT;

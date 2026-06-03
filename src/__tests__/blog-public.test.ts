@@ -32,11 +32,23 @@ describe('getPublishedBySlug', () => {
     expect(await getPublishedBySlug('a-draft-slug')).toBeNull();
   });
 
-  it('maps a published row and derives a dek from the first sentence', async () => {
+  it('prefers the stored dek when present', async () => {
+    mOne.mockResolvedValue({
+      id: 'p1', title: 'T', slug: 's',
+      dek: 'A framing line the model wrote.',
+      content: 'The essay opens differently from its dek. More here.',
+      chunks_used: null, published_at: 'x',
+    } as never);
+    const post = await getPublishedBySlug('s');
+    expect(post?.dek).toBe('A framing line the model wrote.');
+  });
+
+  it('falls back to the first sentence of content when dek is null (legacy rows)', async () => {
     mOne.mockResolvedValue({
       id: 'p1',
       title: 'Two Names for One Source',
       slug: 'two-names',
+      dek: null,
       content: 'The One overflows into being. A second sentence follows here.',
       chunks_used: [{ id: 'c1', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1', tier: 'verified' }],
       published_at: '2026-05-31T00:00:00Z',
@@ -58,12 +70,22 @@ describe('getPublishedBySlug', () => {
 });
 
 describe('listPublished', () => {
-  it("queries only published rows, newest first", async () => {
+  it("queries only published rows with a slug and content, newest first", async () => {
     mQuery.mockResolvedValue([]);
     await listPublished();
     const sql = mQuery.mock.calls[0][0] as string;
     expect(sql).toMatch(/status\s*=\s*'published'/);
+    expect(sql).toMatch(/slug IS NOT NULL/);
+    expect(sql).toMatch(/content IS NOT NULL/);
     expect(sql).toMatch(/ORDER BY published_at DESC/);
+  });
+
+  it('derives a null dek (does not throw) when a row has null content', async () => {
+    mQuery.mockResolvedValue([
+      { title: 'T', slug: 't', content: null, published_at: '2026-05-31' },
+    ] as never);
+    const items = await listPublished();
+    expect(items[0].dek).toBeNull();
   });
 
   it('appends LIMIT only when a limit is passed (homepage feed vs full index)', async () => {
@@ -77,12 +99,13 @@ describe('listPublished', () => {
     expect(mQuery.mock.calls[1][1]).toEqual([3]);
   });
 
-  it('maps rows to cards with a derived dek', async () => {
+  it('maps rows to cards, preferring the stored dek and falling back to content', async () => {
     mQuery.mockResolvedValue([
-      { title: 'A', slug: 'a', content: 'First sentence here. More.', published_at: '2026-05-31' },
+      { title: 'A', slug: 'a', dek: 'Stored framing.', content: 'First sentence here. More.', published_at: '2026-05-31' },
+      { title: 'B', slug: 'b', dek: null, content: 'Legacy first sentence. More.', published_at: '2026-05-30' },
     ] as never);
     const items = await listPublished();
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ title: 'A', slug: 'a', dek: 'First sentence here.' });
+    expect(items[0]).toMatchObject({ title: 'A', slug: 'a', dek: 'Stored framing.' });
+    expect(items[1]).toMatchObject({ title: 'B', slug: 'b', dek: 'Legacy first sentence.' });
   });
 });

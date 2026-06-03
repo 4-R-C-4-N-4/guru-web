@@ -40,11 +40,16 @@ export interface PublishedListItem {
 }
 
 /**
- * Derive the dek (one-sentence framing) from the first line of content.
- * The generator strips the TITLE:/DEK: head before storing, so the dek is
- * not a column — we surface the post's opening sentence as the card blurb.
+ * Legacy fallback for the dek (one-sentence framing). New drafts persist the
+ * model-authored DEK in the `dek` column (todo:d48b44ba); rows generated before
+ * that column existed have dek=NULL, so for those we surface the post's opening
+ * sentence as the card blurb. Prefer the stored dek whenever present.
  */
-function dekFromContent(content: string): string | null {
+function dekFromContent(content: string | null): string | null {
+  // Null-safe: a published row should always have content, but never let one
+  // malformed row throw and 500 the whole list path (defense-in-depth with the
+  // publish guard in admin-blog.setStatus).
+  if (!content) return null;
   const firstPara = content.split(/\n\s*\n/)[0]?.trim() ?? '';
   if (!firstPara) return null;
   const sentence = firstPara.match(/^.*?[.!?](\s|$)/)?.[0]?.trim() ?? firstPara;
@@ -57,17 +62,17 @@ function dekFromContent(content: string): string | null {
  * /blog index calls it with no limit to list everything.
  */
 export async function listPublished(limit?: number): Promise<PublishedListItem[]> {
-  const rows = await query<{ title: string; slug: string; content: string; published_at: string }>(
-    `SELECT title, slug, content, published_at
+  const rows = await query<{ title: string; slug: string; dek: string | null; content: string; published_at: string }>(
+    `SELECT title, slug, dek, content, published_at
        FROM blog_posts
-      WHERE status = 'published'
+      WHERE status = 'published' AND slug IS NOT NULL AND content IS NOT NULL
       ORDER BY published_at DESC${limit !== undefined ? ' LIMIT $1' : ''}`,
     limit !== undefined ? [limit] : undefined,
   );
   return rows.map(r => ({
     title: r.title,
     slug: r.slug,
-    dek: dekFromContent(r.content),
+    dek: r.dek ?? dekFromContent(r.content),
     published_at: r.published_at,
   }));
 }
@@ -81,13 +86,14 @@ export async function getPublishedBySlug(slug: string): Promise<PublishedPost | 
     id: string;
     title: string;
     slug: string;
+    dek: string | null;
     content: string;
     chunks_used: PublishedSource[] | null;
     published_at: string;
   }>(
-    `SELECT id, title, slug, content, chunks_used, published_at
+    `SELECT id, title, slug, dek, content, chunks_used, published_at
        FROM blog_posts
-      WHERE slug = $1 AND status = 'published'`,
+      WHERE slug = $1 AND status = 'published' AND content IS NOT NULL`,
     [slug],
   );
   if (!row) return null;
@@ -95,7 +101,7 @@ export async function getPublishedBySlug(slug: string): Promise<PublishedPost | 
     id: row.id,
     title: row.title,
     slug: row.slug,
-    dek: dekFromContent(row.content),
+    dek: row.dek ?? dekFromContent(row.content),
     content: row.content,
     chunks_used: Array.isArray(row.chunks_used) ? row.chunks_used : [],
     published_at: row.published_at,
