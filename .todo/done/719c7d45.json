@@ -1,0 +1,25 @@
+{
+  "id": "719c7d45",
+  "type": "bug",
+  "state": "done",
+  "summary": "Align tradition badges/colors with the real corpus: dynamic badges from DB + rekey tokens.tradition to actual corpus traditions",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-03T17:07:35.167Z",
+  "updated_at": "2026-06-03T17:10:43.225Z",
+  "description": "Homepage badges (and tokens.tradition app-wide color map) were out of sync with the corpus: 3 keys (vedanta, kabbalah, mysticism) don't exist in corpus.chunks, and the corpus's biggest traditions (egyptian, greek_mystery, western_esoteric, christian_mysticism, jewish_mysticism, zoroastrianism, etc.) were missing — so those citations rendered in fallback grey. Fix: add server helper listTraditions() (DISTINCT tradition FROM chunks, by prominence), make homepage badges dynamic from the DB (no hardcoded fallback per the no-fallbacks rule), and rekey tokens.tradition to the 16 real corpus slugs with colors. Also drop the false 'Vedantic consciousness' from the hero tagline.",
+  "relationships": {
+    "linked_commits": [
+      "75d9696ba8046aa95b02890a2a4af64aad6fa291"
+    ]
+  },
+  "resolution": {
+    "commit": "75d9696ba8046aa95b02890a2a4af64aad6fa291",
+    "resolved_at": "2026-06-03T17:10:43.225Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/corpus.test.ts",
+    "test_function": "listTraditions",
+    "note": "Badges now dynamic from DISTINCT tradition FROM chunks (16 real traditions, prominence order); tokens.tradition rekeyed to real corpus slugs (fixes citation/settings colors); tagline no longer claims Vedanta. Verified: lint, type-check, 454 tests, build, and browser (badges render real traditions, no vedanta/kabbalah/mysticism)."
+  }
+}
