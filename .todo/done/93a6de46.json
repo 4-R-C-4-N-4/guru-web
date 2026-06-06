@@ -1,0 +1,22 @@
+{
+  "id": "93a6de46",
+  "type": "feature",
+  "state": "done",
+  "summary": "Atlas: prompt — getAtlasSystemPrompt + buildAtlasPrompt in prompt.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-06T21:42:53.864Z",
+  "updated_at": "2026-06-06T22:07:26.567Z",
+  "relationships": {
+    "parent": "526a20c3"
+  },
+  "resolution": {
+    "commit": "2235a864c2d6b5cc1ff255874f03da855490d897",
+    "resolved_at": "2026-06-06T22:07:26.567Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas-prompt.test.ts",
+    "test_function": "buildAtlasPrompt",
+    "note": "Atlas system prompt + FACTS/SOURCE PASSAGES builder."
+  }
+}
