@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vites
 
 vi.mock('@/lib/db', () => ({ one: vi.fn(), query: vi.fn() }));
 
-import { listPublished, getPublishedBySlug } from '@/lib/blog-public';
+import { listPublished, getPublishedBySlug, listAtlasEditions } from '@/lib/blog-public';
 import { one, query } from '@/lib/db';
 
 const mOne = one as MockedFunction<typeof one>;
@@ -109,5 +109,19 @@ describe('listPublished', () => {
     const items = await listPublished();
     expect(items[0]).toMatchObject({ title: 'A', slug: 'a', dek: 'Stored framing.' });
     expect(items[1]).toMatchObject({ title: 'B', slug: 'b', dek: 'Legacy first sentence.' });
+  });
+});
+
+describe('listAtlasEditions', () => {
+  it('lists only published atlas editions, newest edition first, with the edition number', async () => {
+    mQuery.mockResolvedValue([
+      { title: 'State of the Atlas №2', slug: 'state-of-the-atlas-no-2', dek: 'Second.', dek_source: null, published_at: '2026-06-06', edition_no: 2 },
+    ] as never);
+    const items = await listAtlasEditions();
+    const sql = mQuery.mock.calls[0][0] as string;
+    expect(sql).toMatch(/seed_kind\s*=\s*'atlas'/);
+    expect(sql).toMatch(/status\s*=\s*'published'/);
+    expect(sql).toMatch(/ORDER BY edition_no DESC/);
+    expect(items[0]).toMatchObject({ slug: 'state-of-the-atlas-no-2', edition_no: 2, dek: 'Second.' });
   });
 });

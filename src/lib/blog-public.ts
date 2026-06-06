@@ -100,6 +100,38 @@ export const listPublishedCached = unstable_cache(
   { revalidate: 60, tags: ['published-posts'] },
 );
 
+/** A published "State of the Atlas" edition as the /atlas almanac index reads it. */
+export interface AtlasEditionListItem extends PublishedListItem {
+  edition_no: number | null;
+}
+
+/**
+ * Published atlas editions, newest edition first — drives the /atlas almanac
+ * index. Same published/slug/content guards and dek fallback as listPublished,
+ * filtered to seed_kind='atlas'.
+ */
+export async function listAtlasEditions(): Promise<AtlasEditionListItem[]> {
+  const rows = await query<{ title: string; slug: string; dek: string | null; dek_source: string | null; published_at: string; edition_no: number | null }>(
+    `SELECT title, slug, dek, left(content, 300) AS dek_source, published_at, edition_no
+       FROM blog_posts
+      WHERE status = 'published' AND seed_kind = 'atlas' AND slug IS NOT NULL AND content IS NOT NULL
+      ORDER BY edition_no DESC NULLS LAST, published_at DESC`,
+  );
+  return rows.map(r => ({
+    title: r.title,
+    slug: r.slug,
+    dek: r.dek ?? dekFromContent(r.dek_source),
+    published_at: r.published_at,
+    edition_no: r.edition_no,
+  }));
+}
+
+export const listAtlasEditionsCached = unstable_cache(
+  () => listAtlasEditions(),
+  ['blog-public:listAtlasEditions'],
+  { revalidate: 60, tags: ['published-posts'] },
+);
+
 /**
  * A single published post by slug, or null if the slug is unknown OR the
  * post is not published (draft/archived slugs 404 on the public side).

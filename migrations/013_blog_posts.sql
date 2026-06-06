@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
 
     status        TEXT NOT NULL DEFAULT 'queued',
-    seed_kind     TEXT NOT NULL,            -- 'candidate' | 'custom'
+    seed_kind     TEXT NOT NULL,            -- 'custom' | 'candidate' | 'atlas'
     topic         TEXT,                      -- free-text prompt seed (mode A); NULL for concept-pair seeds
     concept_ids   TEXT[],                    -- exactly two for a concept-pair seed (mode B); NULL for topic seeds
     edge_ref      TEXT,                      -- "<source>|<target>|<edge_type>"
@@ -95,3 +95,12 @@ ALTER TABLE blog_posts ALTER COLUMN concept_ids DROP NOT NULL;
 -- re-derived a worse one from the essay's first sentence. Nullable: legacy rows
 -- generated before this column stay NULL and fall back to the first-sentence dek.
 ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS dek TEXT;
+-- State of the Atlas editions (todo:526a20c3). An atlas edition is a blog_posts
+-- row with seed_kind='atlas' (a third seed_kind alongside 'custom'/'candidate'):
+-- a recurring, grounded essay over the WHOLE corpus rather than one parallel.
+--   atlas_snapshot — the deterministic analysis snapshot the essay was composed
+--     against (counts, matrices, exemplar citations), stored for audit and
+--     reproducibility. NULL on non-atlas rows.
+--   edition_no — the almanac edition number (1, 2, …). NULL on non-atlas rows.
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS atlas_snapshot JSONB;
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS edition_no INTEGER;

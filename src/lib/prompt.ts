@@ -10,6 +10,7 @@
 import { makeBudget } from "./budget";
 import { compressChunks } from "./compress";
 import type { RetrievedChunk, UserPreferences, VoiceSlug } from "./types";
+import type { AtlasSnapshot, AtlasChunk } from "./atlas";
 
 // Re-export VoiceSlug so callers can keep importing it from @/lib/prompt
 // alongside the runtime voice helpers (isVoiceSlug, DEFAULT_VOICE,
@@ -169,7 +170,19 @@ function tierSymbol(tier?: string): string {
   }
 }
 
-function formatChunk(chunk: RetrievedChunk, index: number): string {
+// Structural subset of the fields formatChunk reads — satisfied by both
+// RetrievedChunk (query/blog paths) and AtlasChunk (atlas path), so the exact
+// SOURCE PASSAGES formatting is shared by all three.
+interface FormattableChunk {
+  tradition: string;
+  text_name: string;
+  translator: string | null;
+  section: string;
+  body: string;
+  tier?: string;
+}
+
+function formatChunk(chunk: FormattableChunk, index: number): string {
   const tier = tierSymbol(chunk.tier);
   const translator = chunk.translator ? ` (trans. ${chunk.translator})` : "";
   return (
@@ -288,4 +301,159 @@ export function buildBlogPromptFromTopic(
   const brief = `ESSAY BRIEF: Write a grounded essay on: ${topic.trim()}`;
 
   return `${passagesBlock}\n\n---\n\n${brief}`;
+}
+
+// ---------------------------------------------------------------------------
+// State of the Atlas (recurring corpus-analysis essay)
+// ---------------------------------------------------------------------------
+//
+// A different shape from a single-parallel blog post: the atlas essay reads the
+// WHOLE corpus. Its quantitative claims come from a deterministic FACTS block
+// (src/lib/atlas.ts) the model may not alter, and its grounding is the exemplar
+// passages the analysis selected (not a semantic retrieval). It reuses the blog
+// grounding/citation contract and the TITLE/DEK/CITATIONS output shape.
+
+const ATLAS_OVERLAY = `You are a comparative-religion essayist writing "State of the Atlas" — a recurring,
+data-led essay on an evolving catalog of cross-tradition esoteric resonances. You
+do not trace a single parallel; you read the aggregate and say what the whole map
+shows, with the restraint of a scholar who knows a map is not the territory.`;
+
+// ATLAS_RULES keeps the blog grounding contract (no invented quotes, family
+// resemblance not equation, citation block) and adds two atlas-specific
+// disciplines: a mandatory methodology opening, and absolute fidelity to the
+// supplied FACTS — the model narrates numbers, it never produces them.
+const ATLAS_RULES = `You are given two things: a FACTS block (deterministic statistics computed
+directly from the corpus) and SOURCE PASSAGES (the primary-text passages behind
+the associations the FACTS summarize).
+
+METHODOLOGY — OPEN WITH THIS, PLAINLY:
+  - The associations are proposed by a language model tagging primary sources,
+  then tier-rated; this essay rests on the 'verified' tier only.
+  - The corpus is curated and additive, not a complete census of any tradition.
+  - Edges carry no confidence weight — tier is the only quality signal.
+  - Coverage is uneven: some traditions are far more represented than others, so
+  raw centrality partly reflects sampling. Where the FACTS give a normalized
+  figure (per-100-chunks), reason from it, and say why.
+  Tell the reader what the instrument is before you tell them what it sees. Do
+  not bury this as a footnote — it is the essay's frame.
+
+FACTS DISCIPLINE:
+  - Every number, ranking, and proportion you state MUST come from the FACTS
+  block, verbatim. Do not compute new statistics, round differently, extrapolate,
+  or invent a figure that is not given. If the FACTS don't support a quantitative
+  claim, make it qualitatively or not at all.
+
+GROUNDING (as in every essay here):
+  - Every interpretive claim about what a passage says must be grounded in the
+  SOURCE PASSAGES. Do not invent quotations or attribute wording to texts absent
+  from the passages.
+  - Treat every cross-tradition resonance as a *family resemblance*, not an
+  equation. Foreground where likeness breaks, and give the divergences (the
+  CONTRASTS) real weight — an essay that only shows convergence is advocacy, not
+  analysis.
+  - Distinguish what the data shows from what you are inferring about why.
+
+ESSAY SHAPE:
+  - Open with methodology, then the question the aggregate poses. Map the
+  network (hubs vs. bridges), name the candidate universals, press on the
+  long-range cases (resonance between traditions that never met — the hardest to
+  explain by contact), then where it breaks. Close on implications held to the
+  size of the evidence.
+  - Markdown prose. Tables only where a ranking genuinely reads better as one.
+
+Emit EXACTLY this structure so it can be parsed:
+
+TITLE: <a specific title for this edition>
+DEK: <one sentence framing what this edition of the atlas shows>
+
+<the essay, in markdown prose>
+
+CITATIONS:
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+(one line per SOURCE PASSAGE you actually drew on)`;
+
+export function getAtlasSystemPrompt(): string {
+  return `${ATLAS_OVERLAY}\n\n${ATLAS_RULES}`;
+}
+
+/** Render the deterministic snapshot as a plain-text FACTS block. */
+function formatFacts(s: AtlasSnapshot): string {
+  const h = s.headline;
+  const matrix = s.traditionMatrix
+    .map(m => `  ${m.a} ↔ ${m.b}: ${m.parallels}`)
+    .join("\n");
+  const central = s.centrality
+    .map(
+      c =>
+        `  ${c.tradition}: degree ${c.parallelDegree}, ${c.partnerTraditions} partner traditions, ${c.chunks} chunks, ${c.parallelsPer100Chunks} parallels/100 chunks`,
+    )
+    .join("\n");
+  const bridges = s.bridgeConcepts
+    .map(b => `  ${b.label}${b.domain ? ` (${b.domain})` : ""}: ${b.traditions} traditions, ${b.mentions} mentions`)
+    .join("\n");
+  const longRange = s.longRangeCases
+    .map(l => `  ${l.a} ↔ ${l.b}: ${l.parallels} verified parallels`)
+    .join("\n");
+
+  return [
+    `FACTS (corpus snapshot as of ${s.generatedAt}, schema v${s.schemaVersion}):`,
+    ``,
+    `Scale: ${h.traditions} traditions, ${h.concepts} concepts in ${h.families} families, ` +
+      `${h.parallelsVerified} verified cross-tradition parallels (+${h.parallelsProposed} proposed, not used here), ` +
+      `${h.contrasts} explicit contrasts. All parallels are cross-tradition by construction.`,
+    ``,
+    `Top cross-tradition pairs (verified parallels):\n${matrix}`,
+    ``,
+    `Tradition centrality (raw degree AND normalized per-100-chunks — use the normalized figure to separate genuine reach from over-sampling):\n${central}`,
+    ``,
+    `Concepts by tradition-spread (candidate universals):\n${bridges}`,
+    ``,
+    `Long-range / low-contact pairs that still resonate (the hard cases):\n${longRange}`,
+  ].join("\n");
+}
+
+/**
+ * Build the atlas user-prompt: the FACTS block + a SOURCE PASSAGES block built
+ * from the exemplar passages behind the long-range cases and contrasts (deduped
+ * by chunk id, budgeted to the pro window), then the brief.
+ */
+export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
+  const facts = formatFacts(snapshot);
+
+  // Flatten exemplar + contrast passages, dedup by chunk id.
+  const seen = new Set<string>();
+  const passages: AtlasChunk[] = [];
+  const push = (c: AtlasChunk) => {
+    if (seen.has(c.id)) return;
+    seen.add(c.id);
+    passages.push(c);
+  };
+  for (const lc of snapshot.longRangeCases) {
+    for (const ex of lc.exemplars) { push(ex.a); push(ex.b); }
+  }
+  for (const ct of snapshot.contrasts) { push(ct.a); push(ct.b); }
+
+  // Fit to the pro window, reserving room for the FACTS block + the response.
+  const factsTokens = Math.ceil(facts.length / 4);
+  const budget = makeBudget("pro", factsTokens);
+  let used = 0;
+  const fitted: AtlasChunk[] = [];
+  for (const c of passages) {
+    if (used + c.token_count > budget.available) break;
+    used += c.token_count;
+    fitted.push(c);
+  }
+
+  const passagesBlock =
+    fitted.length > 0
+      ? `SOURCE PASSAGES:\n\n${fitted.map((c, i) => formatChunk(c, i)).join("\n\n")}`
+      : "No source passages were available for this snapshot.";
+
+  const brief =
+    `ESSAY BRIEF: Write this edition of "State of the Atlas". Narrate what the FACTS ` +
+    `show about the structure of cross-tradition resonance, ground every interpretive ` +
+    `claim in the SOURCE PASSAGES, and open with the methodology. Use ONLY the figures ` +
+    `given in FACTS.`;
+
+  return `${facts}\n\n---\n\n${passagesBlock}\n\n---\n\n${brief}`;
 }
