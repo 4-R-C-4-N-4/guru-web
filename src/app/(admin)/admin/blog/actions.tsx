@@ -101,6 +101,50 @@ export function PublishedActions({ id }: { id: string }) {
   return <ActionButton id={id} action="unpublish" />;
 }
 
+/**
+ * Generate a "State of the Atlas" edition from the admin surface — the browser
+ * equivalent of `npm run atlas`. Synchronous LLM call (a few seconds); on
+ * success it lands a draft and routes to the Drafts tab to review it. Expected
+ * refusals (an edition already in flight, thin corpus) surface their message.
+ */
+export function GenerateAtlasButton() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch('/api/admin/blog/atlas', { method: 'POST' });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setErr(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      router.push('/admin/blog?tab=drafts');
+      router.refresh();
+    } catch {
+      setErr('request failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button type="button" onClick={run} disabled={busy} style={btnStyle(busy)}>
+        {busy ? 'Generating edition…' : 'Generate Atlas edition'}
+      </button>
+      {err && (
+        <span style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.error, maxWidth: 360 }}>
+          {err}
+        </span>
+      )}
+    </div>
+  );
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   fontFamily: tokens.font.mono,

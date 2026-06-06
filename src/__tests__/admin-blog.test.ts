@@ -21,10 +21,14 @@ vi.mock('@/lib/admin-blog', () => ({
   listCorpusCatalog: vi.fn(),
 }));
 vi.mock('@/lib/blog-generate', () => ({ generateDraft: vi.fn() }));
+vi.mock('@/lib/atlas-generate', () => ({ generateAtlasEdition: vi.fn() }));
 
 import * as admin from '@/lib/admin';
 import * as adminBlog from '@/lib/admin-blog';
 import * as gen from '@/lib/blog-generate';
+import { generateAtlasEdition } from '@/lib/atlas-generate';
+
+const mAtlas = generateAtlasEdition as MockedFunction<typeof generateAtlasEdition>;
 
 const mReq = admin.requireAdmin as MockedFunction<typeof admin.requireAdmin>;
 const mInsert = adminBlog.insertSeed as MockedFunction<typeof adminBlog.insertSeed>;
@@ -183,6 +187,36 @@ describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
       expect(res.status).toBe(409);
     });
   }
+});
+
+describe('POST /api/admin/blog/atlas', () => {
+  const atlasReq = () => new Request('http://t/api/admin/blog/atlas', { method: 'POST' });
+
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(404);
+    expect(mAtlas).not.toHaveBeenCalled();
+  });
+
+  it('generates an edition draft and returns its identity', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mAtlas.mockResolvedValue({ id: 'ed1', slug: 'state-of-the-atlas-no-1', editionNo: 1, title: 'State of the Atlas №1' } as never);
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ id: 'ed1', editionNo: 1 });
+  });
+
+  it('surfaces an expected refusal (e.g. already in flight) as 409 with the message', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mAtlas.mockRejectedValue(new Error('An atlas edition is already in flight'));
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already in flight/);
+  });
 });
 
 describe('PUT /api/admin/blog/:id/edit', () => {

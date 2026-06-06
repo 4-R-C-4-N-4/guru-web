@@ -16,7 +16,7 @@ import { tokens } from '@/styles/tokens';
 import { listPosts, listCorpusCatalog, type BlogPostRow } from '@/lib/admin-blog';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { SeedForm } from './seed-form';
-import { QueueActions, DraftActions, PublishedActions, DraftEditor } from './actions';
+import { QueueActions, DraftActions, PublishedActions, DraftEditor, GenerateAtlasButton } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,9 +54,12 @@ export default async function BlogAdminPage({
 
   return (
     <div>
-      <h1 style={{ fontFamily: tokens.font.display, fontSize: 24, color: tokens.text.primary, marginBottom: 16 }}>
-        Blog
-      </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <h1 style={{ fontFamily: tokens.font.display, fontSize: 24, color: tokens.text.primary, margin: 0 }}>
+          Blog
+        </h1>
+        <GenerateAtlasButton />
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, borderBottom: `1px solid ${tokens.border.subtle}` }}>
