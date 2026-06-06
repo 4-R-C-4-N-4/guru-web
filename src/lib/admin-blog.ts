@@ -152,14 +152,19 @@ export type SetStatusResult =
   | { ok: false; reason: 'not_found' | 'illegal_transition' };
 
 /**
- * Transition a post's status. When moving to 'published', stamps published_at.
+ * Transition a post's status, stamping published_at appropriately.
  *
- * Publishing is guarded: it only applies to a generated `draft` with non-null
- * content. Without this, a direct POST could publish a `queued`/`needs_attention`
- * row (whose content is NULL — migration 013 has no NOT NULL/CHECK), which would
- * make dekFromContent() throw and 500 the public /blog index and homepage feed
- * (both call listPublished). reject/archive are unguarded — they only ever move
- * a post OUT of public view, so they can't create a broken live post.
+ * Guards by target:
+ *   - 'published' — only from a generated `draft` with non-null content. Without
+ *     this a direct POST could publish a `queued`/`needs_attention` row (content
+ *     NULL — migration 013 has no NOT NULL/CHECK), making dekFromContent() throw
+ *     and 500 the public /blog index + homepage feed. Stamps published_at=now().
+ *   - 'draft' — UNPUBLISH: only from `published`/`archived`, back to an editable
+ *     draft (clears published_at) so a live post can be pulled, fixed in the
+ *     drafts editor, and re-published. It leaves public view within the list
+ *     cache TTL, same as the old archive.
+ *   - 'rejected'/'archived' — unguarded; only ever move a post OUT of public
+ *     view, so they can't create a broken live post.
  *
  * The guarded UPDATE is atomic (no check-then-act race); a 0-row result means
  * either the id is unknown or the transition was illegal, disambiguated with a
@@ -167,10 +172,14 @@ export type SetStatusResult =
  */
 export async function setStatus(
   id: string,
-  status: 'published' | 'rejected' | 'archived',
+  status: 'published' | 'draft' | 'rejected' | 'archived',
 ): Promise<SetStatusResult> {
-  const publishedAt = status === 'published' ? 'now()' : 'published_at';
-  const guard = status === 'published' ? "AND status = 'draft' AND content IS NOT NULL" : '';
+  const publishedAt =
+    status === 'published' ? 'now()' : status === 'draft' ? 'NULL' : 'published_at';
+  const guard =
+    status === 'published' ? "AND status = 'draft' AND content IS NOT NULL"
+    : status === 'draft' ? "AND status IN ('published', 'archived')"
+    : '';
   const row = await one<BlogPostRow>(
     `UPDATE blog_posts
         SET status = $2, published_at = ${publishedAt}, updated_at = now()

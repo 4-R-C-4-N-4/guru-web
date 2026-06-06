@@ -142,10 +142,11 @@ describe('POST /api/admin/blog/:id/generate', () => {
 });
 
 describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
-  const cases: Array<['publish' | 'reject' | 'archive', string]> = [
+  const cases: Array<['publish' | 'reject' | 'archive' | 'unpublish', string]> = [
     ['publish', 'published'],
     ['reject', 'rejected'],
     ['archive', 'archived'],
+    ['unpublish', 'draft'], // unpublish a live post back to an editable draft
   ];
 
   for (const [route, status] of cases) {

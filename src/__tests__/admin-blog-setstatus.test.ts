@@ -36,6 +36,14 @@ describe('setStatus publish guard', () => {
     expect(sql).not.toMatch(/published_at = now\(\)/);
   });
 
+  it("unpublish (->draft) only applies to published/archived rows and clears published_at", async () => {
+    mOne.mockResolvedValueOnce({ id: 'p1', status: 'draft' } as never);
+    await setStatus('p1', 'draft');
+    const sql = mOne.mock.calls[0][0] as string;
+    expect(sql).toMatch(/status IN \('published', 'archived'\)/);
+    expect(sql).toMatch(/published_at = NULL/);
+  });
+
   it('returns ok:true with the row when the guarded UPDATE applies', async () => {
     mOne.mockResolvedValueOnce({ id: 'p1', status: 'published' } as never);
     expect(await setStatus('p1', 'published')).toEqual({ ok: true, row: { id: 'p1', status: 'published' } });

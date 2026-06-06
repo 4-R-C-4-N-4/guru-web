@@ -1,0 +1,22 @@
+{
+  "id": "45f23e4a",
+  "type": "feature",
+  "state": "active",
+  "summary": "Published posts: replace Archive with Unpublish (back to draft) to close the archive trap-door",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-06T22:32:29.999Z",
+  "updated_at": "2026-06-06T22:32:30.068Z",
+  "files": [
+    {
+      "path": "src/lib/admin-blog.ts,src/app/(admin)/admin/blog/actions.tsx"
+    }
+  ],
+  "tags": [
+    "blog",
+    "admin",
+    "publish"
+  ],
+  "description": "On published posts the only action was Archive, which was effectively one-way (publish route requires status='draft', so archived posts couldn't return). Replace it with Unpublish: setStatus gains a guarded 'draft' target (only from published/archived; clears published_at), POST /api/admin/blog/[id]/unpublish, PublishedActions shows Unpublish. The post leaves public view (list cache TTL) and reappears in Drafts — editable + re-publishable. Verified loop live: published->unpublish->draft->publish->published."
+}

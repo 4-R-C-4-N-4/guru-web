@@ -13,13 +13,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { tokens } from '@/styles/tokens';
 
-type Action = 'generate' | 'publish' | 'reject' | 'archive';
+type Action = 'generate' | 'publish' | 'reject' | 'archive' | 'unpublish';
 
 const LABELS: Record<Action, string> = {
   generate: 'Generate',
   publish: 'Publish',
   reject: 'Reject',
   archive: 'Archive',
+  unpublish: 'Unpublish',
 };
 
 function btnStyle(disabled: boolean): React.CSSProperties {
@@ -95,9 +96,9 @@ export function DraftActions({ id, canPublish }: { id: string; canPublish: boole
   );
 }
 
-/** Action shown on a published row: archive (unpublish from the index). */
+/** Action shown on a published row: unpublish back to a draft (editable + re-publishable). */
 export function PublishedActions({ id }: { id: string }) {
-  return <ActionButton id={id} action="archive" />;
+  return <ActionButton id={id} action="unpublish" />;
 }
 
 const inputStyle: React.CSSProperties = {
