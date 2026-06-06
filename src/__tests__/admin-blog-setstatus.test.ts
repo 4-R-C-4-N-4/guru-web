@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vites
 
 vi.mock('@/lib/db', () => ({ one: vi.fn(), query: vi.fn(), exec: vi.fn() }));
 
-import { setStatus } from '@/lib/admin-blog';
+import { setStatus, updateDraft } from '@/lib/admin-blog';
 import { one } from '@/lib/db';
 
 const mOne = one as MockedFunction<typeof one>;
@@ -51,5 +51,36 @@ describe('setStatus publish guard', () => {
     mOne.mockResolvedValueOnce(null); // UPDATE matched nothing
     mOne.mockResolvedValueOnce(null); // getPost: gone
     expect(await setStatus('missing', 'published')).toEqual({ ok: false, reason: 'not_found' });
+  });
+});
+
+describe('updateDraft', () => {
+  it('only edits draft/needs_attention rows and normalizes status to draft (SQL guard)', async () => {
+    mOne.mockResolvedValueOnce({ id: 'p1', status: 'draft', title: 'New' } as never);
+    await updateDraft('p1', { title: 'New', dek: 'd', content: 'Body' });
+    const sql = mOne.mock.calls[0][0] as string;
+    expect(sql).toMatch(/UPDATE blog_posts/);
+    expect(sql).toMatch(/status IN \('draft', 'needs_attention'\)/);
+    expect(sql).toMatch(/SET[\s\S]*status = 'draft'/);  // promotes a salvaged needs_attention row
+    expect(sql).toMatch(/error_note = NULL/);
+    expect(mOne.mock.calls[0][1]).toEqual(['p1', 'New', 'd', 'Body']);
+  });
+
+  it('rejects empty title or content without touching the DB', async () => {
+    expect(await updateDraft('p1', { title: '  ', dek: null, content: 'x' })).toEqual({ ok: false, reason: 'empty' });
+    expect(await updateDraft('p1', { title: 'T', dek: null, content: '   ' })).toEqual({ ok: false, reason: 'empty' });
+    expect(mOne).not.toHaveBeenCalled();
+  });
+
+  it('reports not_editable when the row exists but is not a draft', async () => {
+    mOne.mockResolvedValueOnce(null);                                  // guarded UPDATE matched nothing
+    mOne.mockResolvedValueOnce({ id: 'p1', status: 'published' } as never); // getPost finds it
+    expect(await updateDraft('p1', { title: 'T', dek: null, content: 'C' })).toEqual({ ok: false, reason: 'not_editable' });
+  });
+
+  it('reports not_found when the row is missing', async () => {
+    mOne.mockResolvedValueOnce(null);
+    mOne.mockResolvedValueOnce(null);
+    expect(await updateDraft('missing', { title: 'T', dek: null, content: 'C' })).toEqual({ ok: false, reason: 'not_found' });
   });
 });

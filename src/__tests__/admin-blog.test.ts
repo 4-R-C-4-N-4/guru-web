@@ -15,6 +15,7 @@ vi.mock('@/lib/admin', () => ({ requireAdmin: vi.fn() }));
 vi.mock('@/lib/admin-blog', () => ({
   insertSeed: vi.fn(),
   setStatus: vi.fn(),
+  updateDraft: vi.fn(),
   getPost: vi.fn(),
   listPosts: vi.fn(),
   listCorpusCatalog: vi.fn(),
@@ -28,6 +29,7 @@ import * as gen from '@/lib/blog-generate';
 const mReq = admin.requireAdmin as MockedFunction<typeof admin.requireAdmin>;
 const mInsert = adminBlog.insertSeed as MockedFunction<typeof adminBlog.insertSeed>;
 const mSetStatus = adminBlog.setStatus as MockedFunction<typeof adminBlog.setStatus>;
+const mUpdateDraft = adminBlog.updateDraft as MockedFunction<typeof adminBlog.updateDraft>;
 const mGetPost = adminBlog.getPost as MockedFunction<typeof adminBlog.getPost>;
 const mGenerate = gen.generateDraft as MockedFunction<typeof gen.generateDraft>;
 
@@ -180,4 +182,51 @@ describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
       expect(res.status).toBe(409);
     });
   }
+});
+
+describe('PUT /api/admin/blog/:id/edit', () => {
+  const editReq = (body: unknown) =>
+    new Request('http://t', { method: 'PUT', body: JSON.stringify(body) });
+
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 'T', content: 'C' }), ctx('p1'));
+    expect(res.status).toBe(404);
+    expect(mUpdateDraft).not.toHaveBeenCalled();
+  });
+
+  it('400s on a non-string title/content body', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 123, content: 'C' }), ctx('p1'));
+    expect(res.status).toBe(400);
+    expect(mUpdateDraft).not.toHaveBeenCalled();
+  });
+
+  it('updates the draft and returns the row on success', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mUpdateDraft.mockResolvedValue({ ok: true, row: { id: 'p1', status: 'draft', title: 'New' } } as never);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 'New', dek: 'd', content: 'Body' }), ctx('p1'));
+    expect(mUpdateDraft).toHaveBeenCalledWith('p1', { title: 'New', dek: 'd', content: 'Body' });
+    expect(res.status).toBe(200);
+  });
+
+  it('409s when the row is not editable (e.g. already published)', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mUpdateDraft.mockResolvedValue({ ok: false, reason: 'not_editable' } as never);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 'T', content: 'C' }), ctx('p1'));
+    expect(res.status).toBe(409);
+  });
+
+  it('404s when the row is missing, 400 when empty', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    mUpdateDraft.mockResolvedValue({ ok: false, reason: 'not_found' } as never);
+    expect((await PUT(editReq({ title: 'T', content: 'C' }), ctx('x'))).status).toBe(404);
+    mUpdateDraft.mockResolvedValue({ ok: false, reason: 'empty' } as never);
+    expect((await PUT(editReq({ title: '', content: '' }), ctx('p1'))).status).toBe(400);
+  });
 });

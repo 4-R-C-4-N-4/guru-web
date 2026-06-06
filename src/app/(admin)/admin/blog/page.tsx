@@ -16,7 +16,7 @@ import { tokens } from '@/styles/tokens';
 import { listPosts, listCorpusCatalog, type BlogPostRow } from '@/lib/admin-blog';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { SeedForm } from './seed-form';
-import { QueueActions, DraftActions, PublishedActions } from './actions';
+import { QueueActions, DraftActions, PublishedActions, DraftEditor } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +148,12 @@ function PostCard({ row, tab }: { row: BlogPostRow; tab: Tab }) {
             <ChunksUsed chunks={row.chunks_used} />
           </div>
         </div>
+      )}
+
+      {/* Manual editor — fix LLM output before publishing. Available on drafts
+          and on needs_attention rows (saving content salvages a parked seed). */}
+      {tab === 'drafts' && (row.status === 'draft' || row.status === 'needs_attention') && (
+        <DraftEditor id={row.id} title={row.title} dek={row.dek} content={row.content} />
       )}
     </li>
   );

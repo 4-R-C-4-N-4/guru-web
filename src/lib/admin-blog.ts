@@ -35,6 +35,7 @@ export interface BlogPostRow {
   created_by: string | null;
   title: string | null;
   slug: string | null;
+  dek: string | null;
   content: string | null;
   chunks_used: unknown;
   cost_usd: string | null;
@@ -65,7 +66,7 @@ export interface SeedInput {
 const POST_COLUMNS = `id, status, seed_kind, topic, concept_ids, edge_ref, angle, model,
   scope_mode, blocked_traditions, blocked_texts,
   whitelisted_traditions, whitelisted_texts,
-  priority, created_by, title, slug, content, chunks_used,
+  priority, created_by, title, slug, dek, content, chunks_used,
   cost_usd, error_note, created_at, updated_at, published_at`;
 
 // ── Reads ────────────────────────────────────────────────────────────
@@ -181,4 +182,38 @@ export async function setStatus(
   // 0 rows: unknown id, or a publish blocked by the guard.
   const exists = await getPost(id);
   return { ok: false, reason: exists ? 'illegal_transition' : 'not_found' };
+}
+
+/** Outcome of a manual draft edit. */
+export type EditDraftResult =
+  | { ok: true; row: BlogPostRow }
+  | { ok: false; reason: 'not_found' | 'not_editable' | 'empty' };
+
+/**
+ * Manually edit a draft's title/dek/content before publishing — the operator's
+ * scalpel on LLM output. Editable only while a row is `draft` or
+ * `needs_attention` (never a published/rejected/archived post). title and
+ * content must be non-empty; editing a `needs_attention` row with content
+ * promotes it to `draft` and clears its error_note, so a parked seed can be
+ * salvaged by hand. The guarded UPDATE is atomic (no check-then-act race).
+ */
+export async function updateDraft(
+  id: string,
+  fields: { title: string; dek: string | null; content: string },
+): Promise<EditDraftResult> {
+  const title = fields.title.trim();
+  const content = fields.content;
+  if (!title || !content.trim()) return { ok: false, reason: 'empty' };
+
+  const row = await one<BlogPostRow>(
+    `UPDATE blog_posts
+        SET title = $2, dek = $3, content = $4,
+            status = 'draft', error_note = NULL, updated_at = now()
+      WHERE id = $1 AND status IN ('draft', 'needs_attention')
+      RETURNING ${POST_COLUMNS}`,
+    [id, title, fields.dek?.trim() || null, content],
+  );
+  if (row) return { ok: true, row };
+  const exists = await getPost(id);
+  return { ok: false, reason: exists ? 'not_editable' : 'not_found' };
 }
