@@ -77,4 +77,16 @@ describe('computeAtlasSnapshot', () => {
     const bridgeSql = mQuery.mock.calls.map(c => c[0] as string).find(s => s.includes('co.label'));
     expect(bridgeSql).toMatch(/edge_type='EXPRESSES'/);
   });
+
+  it('selects exemplar/contrast passages near a length target, not the shortest', async () => {
+    await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    const passageSql = mQuery.mock.calls
+      .map(c => c[0] as string)
+      .filter(s => s.includes('cs.tradition=$1') || s.includes("edge_type='CONTRASTS'"));
+    expect(passageSql.length).toBeGreaterThan(0);
+    for (const sql of passageSql) {
+      expect(sql).toMatch(/ORDER BY ABS\(\(cs\.token_count \+ ct\.token_count\) - \d+\)/);
+      expect(sql).not.toMatch(/ORDER BY cs\.token_count \+ ct\.token_count ASC/);
+    }
+  });
 });

@@ -34,6 +34,18 @@ const MIN_BODY_CHARS = 200;
 // terminally closed. We refuse to mint a second one over an in-flight draft.
 const IN_FLIGHT = ['queued', 'generating', 'draft', 'needs_attention'];
 
+/**
+ * A refusal the operator can act on (an edition already in flight, a corpus with
+ * no verified evidence) — distinct from an unexpected/transient failure (LLM
+ * error, empty completion). Callers map this to 409 and everything else to 500.
+ */
+export class AtlasRefusal extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AtlasRefusal';
+  }
+}
+
 export interface AtlasEditionResult {
   id: string;
   slug: string;
@@ -78,7 +90,7 @@ export async function generateAtlasEdition(opts: {
       [IN_FLIGHT],
     );
     if (inFlight) {
-      throw new Error(
+      throw new AtlasRefusal(
         `An atlas edition is already in flight (id ${inFlight.id}, №${inFlight.edition_no ?? '?'}). ` +
         `Review/publish or reject it first, or pass force to override.`,
       );
@@ -94,7 +106,7 @@ export async function generateAtlasEdition(opts: {
   // Deterministic analysis. Grounding guard: refuse an essay with no verified evidence.
   const snapshot = await computeAtlasSnapshot(generatedAt);
   if (snapshot.headline.parallelsVerified === 0) {
-    throw new Error('atlas: no verified parallels in the corpus — refusing to generate.');
+    throw new AtlasRefusal('atlas: no verified parallels in the corpus — refusing to generate.');
   }
 
   const slugStr = isCuratedSlug(opts.model ?? '') ? (opts.model as CuratedSlug) : DEFAULT_CURATED_SLUG;

@@ -6,14 +6,14 @@
  * the seed Generate route — the LLM call runs inline (~seconds) and the result
  * is a DRAFT to review and publish. Gates on requireAdmin().
  *
- * generateAtlasEdition throws on the expected refusals (an edition already in
- * flight, a corpus with no verified parallels, an empty completion); those map
- * to 409 with the message so the operator sees why. ?force=1 overrides the
- * in-flight dup-guard.
+ * Operator-actionable refusals (an edition already in flight, a corpus with no
+ * verified parallels) throw AtlasRefusal → 409 with the message. Unexpected or
+ * transient failures (LLM/network error, empty completion) → 500. ?force=1
+ * overrides the in-flight dup-guard.
  */
 
 import { requireAdmin } from '@/lib/admin';
-import { generateAtlasEdition } from '@/lib/atlas-generate';
+import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
 
 export async function POST(req: Request) {
   const result = await requireAdmin();
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const error = err instanceof Error ? err.message : 'generation failed';
-    return Response.json({ error }, { status: 409 });
+    // Refusals the operator can act on → 409; unexpected/transient → 500.
+    return Response.json({ error }, { status: err instanceof AtlasRefusal ? 409 : 500 });
   }
 }

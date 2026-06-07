@@ -92,6 +92,12 @@ const LONG_RANGE_PAIRS: Array<[string, string]> = [
 
 const EXEMPLARS_PER_CASE = 2;
 
+// Pick exemplar passages near this combined (source+target) token length rather
+// than the shortest available: the very shortest chunks tend to be the least
+// substantive, while the longest blow the prompt budget. ~240 tokens for the
+// pair (~120 each) reads as a concise-but-representative citation.
+const TARGET_PAIR_TOKENS = 240;
+
 const CHUNK_COLS = (alias: string) =>
   `${alias}.id, ${alias}.tradition, ${alias}.text_name, ${alias}.section,
    ${alias}.translator, ${alias}.body, ${alias}.token_count`;
@@ -204,7 +210,7 @@ async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasP
      JOIN corpus.chunks ct ON ct.id = e.target
      WHERE e.edge_type='PARALLELS' AND e.tier='verified'
        AND ((cs.tradition=$1 AND ct.tradition=$2) OR (cs.tradition=$2 AND ct.tradition=$1))
-     ORDER BY cs.token_count + ct.token_count ASC
+     ORDER BY ABS((cs.token_count + ct.token_count) - ${TARGET_PAIR_TOKENS}) ASC
      LIMIT $3`,
     [a, b, k],
   );
@@ -239,7 +245,7 @@ async function contrasts(limit = 8): Promise<AtlasParallel[]> {
      JOIN corpus.chunks cs ON cs.id = e.source
      JOIN corpus.chunks ct ON ct.id = e.target
      WHERE e.edge_type='CONTRASTS'
-     ORDER BY cs.token_count + ct.token_count ASC
+     ORDER BY ABS((cs.token_count + ct.token_count) - ${TARGET_PAIR_TOKENS}) ASC
      LIMIT $1`,
     [limit],
   );

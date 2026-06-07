@@ -21,12 +21,15 @@ vi.mock('@/lib/admin-blog', () => ({
   listCorpusCatalog: vi.fn(),
 }));
 vi.mock('@/lib/blog-generate', () => ({ generateDraft: vi.fn() }));
-vi.mock('@/lib/atlas-generate', () => ({ generateAtlasEdition: vi.fn() }));
+vi.mock('@/lib/atlas-generate', () => ({
+  generateAtlasEdition: vi.fn(),
+  AtlasRefusal: class AtlasRefusal extends Error {},
+}));
 
 import * as admin from '@/lib/admin';
 import * as adminBlog from '@/lib/admin-blog';
 import * as gen from '@/lib/blog-generate';
-import { generateAtlasEdition } from '@/lib/atlas-generate';
+import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
 
 const mAtlas = generateAtlasEdition as MockedFunction<typeof generateAtlasEdition>;
 
@@ -209,13 +212,22 @@ describe('POST /api/admin/blog/atlas', () => {
     expect(await res.json()).toMatchObject({ id: 'ed1', editionNo: 1 });
   });
 
-  it('surfaces an expected refusal (e.g. already in flight) as 409 with the message', async () => {
+  it('surfaces an operator refusal (already in flight) as 409 with the message', async () => {
     mReq.mockResolvedValue(ADMIN);
-    mAtlas.mockRejectedValue(new Error('An atlas edition is already in flight'));
+    mAtlas.mockRejectedValue(new AtlasRefusal('An atlas edition is already in flight'));
     const { POST } = await import('@/app/api/admin/blog/atlas/route');
     const res = await POST(atlasReq());
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/already in flight/);
+  });
+
+  it('returns 500 on an unexpected/transient failure (e.g. LLM error)', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mAtlas.mockRejectedValue(new Error('upstream LLM stream failed'));
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/LLM stream failed/);
   });
 });
 

@@ -13,7 +13,7 @@ vi.mock('@/lib/atlas', () => ({ computeAtlasSnapshot: vi.fn() }));
 vi.mock('@/lib/model', () => ({ completeStream: vi.fn() }));
 vi.mock('@/lib/cost', () => ({ computeCost: vi.fn() }));
 
-import { generateAtlasEdition } from '@/lib/atlas-generate';
+import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
 import { computeAtlasSnapshot } from '@/lib/atlas';
 import { one } from '@/lib/db';
 import { completeStream } from '@/lib/model';
@@ -78,15 +78,16 @@ describe('generateAtlasEdition', () => {
     expect(params.some(p => typeof p === 'string' && (p as string).includes('"schemaVersion":"3"'))).toBe(true);
   });
 
-  it('refuses to stack a second edition while one is in flight (unless forced)', async () => {
+  it('refuses (AtlasRefusal) to stack a second edition while one is in flight', async () => {
     mOne.mockImplementation(async (sql: string) =>
       sql.includes('status = ANY') ? ({ id: 'draft-x', edition_no: 1 } as never) : (null as never),
     );
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(AtlasRefusal);
     await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(/already in flight/);
   });
 
-  it('refuses to generate when the corpus has no verified parallels', async () => {
+  it('refuses (AtlasRefusal) when the corpus has no verified parallels', async () => {
     mSnap.mockResolvedValue(snapshot(0));
-    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(/no verified parallels/);
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(AtlasRefusal);
   });
 });
