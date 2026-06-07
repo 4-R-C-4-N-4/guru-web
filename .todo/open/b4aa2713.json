@@ -1,0 +1,22 @@
+{
+  "id": "b4aa2713",
+  "type": "feature",
+  "state": "active",
+  "summary": "Atlas: itemize the 8 explicit contrasts with their curated annotations in FACTS (currently only counted)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-07T19:40:33.532Z",
+  "updated_at": "2026-06-07T19:40:33.567Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts,src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "atlas",
+    "contrasts",
+    "grounding"
+  ]
+}

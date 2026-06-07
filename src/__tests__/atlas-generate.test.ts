@@ -38,7 +38,7 @@ function snapshot(parallelsVerified = 4252) {
     familyBridges: [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }],
     hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology'] }] }],
     longRangeCases: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, exemplars: [{ a: ch('a1', 'neoplatonism'), b: ch('b1', 'taoism') }] }],
-    contrasts: [{ a: ch('c1', 'zoroastrianism'), b: ch('c2', 'neoplatonism') }],
+    contrasts: [{ a: ch('c1', 'zoroastrianism'), b: ch('c2', 'neoplatonism'), annotation: 'They diverge on duality.' }],
   } as never;
 }
 

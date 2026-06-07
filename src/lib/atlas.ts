@@ -38,6 +38,12 @@ export interface AtlasParallel {
   b: AtlasChunk; // target-side passage
 }
 
+// An explicit CONTRASTS edge: the two passages plus the corpus's curated
+// annotation of HOW they diverge — the first-class evidence for "where it breaks".
+export interface AtlasContrast extends AtlasParallel {
+  annotation: string | null;
+}
+
 export interface AtlasSnapshot {
   generatedAt: string;        // ISO timestamp, injected by the caller (reproducible/testable)
   schemaVersion: string;      // corpus.corpus_metadata schema_version
@@ -93,8 +99,9 @@ export interface AtlasSnapshot {
     parallels: number;
     exemplars: AtlasParallel[];
   }>;
-  // The explicit divergences (rare — 8 in the current corpus).
-  contrasts: AtlasParallel[];
+  // The explicit divergences (rare — 8 in the current corpus), each with its
+  // curated annotation describing how the two passages diverge.
+  contrasts: AtlasContrast[];
 }
 
 // Tradition pairs with little-to-no historical contact: the strongest evidence
@@ -305,13 +312,13 @@ function chunkFrom(r: Record<string, unknown>, prefix: string, tier: string): At
   };
 }
 
-/** The 8 explicit CONTRASTS with their passages. */
-async function contrasts(limit = 8): Promise<AtlasParallel[]> {
+/** The 8 explicit CONTRASTS with their passages and curated annotations. */
+async function contrasts(limit = 8): Promise<AtlasContrast[]> {
   const rows = await query<Record<string, unknown>>(
     `SELECT ${CHUNK_COLS('cs')},
             ct.id AS b_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
             ct.section AS b_section, ct.translator AS b_translator, ct.body AS b_body,
-            ct.token_count AS b_token_count, e.tier AS edge_tier
+            ct.token_count AS b_token_count, e.tier AS edge_tier, e.annotation AS annotation
      FROM corpus.edges e
      JOIN corpus.chunks cs ON cs.id = e.source
      JOIN corpus.chunks ct ON ct.id = e.target
@@ -323,6 +330,7 @@ async function contrasts(limit = 8): Promise<AtlasParallel[]> {
   return rows.map(r => ({
     a: chunkFrom(r, '', String(r.edge_tier)),
     b: chunkFrom(r, 'b_', String(r.edge_tier)),
+    annotation: (r.annotation as string | null) ?? null,
   }));
 }
 

@@ -27,7 +27,11 @@ const SNAP: AtlasSnapshot = {
     a: 'neoplatonism', b: 'taoism', parallels: 322,
     exemplars: [{ a: chunk('a1', 'neoplatonism', 'Enneads', 'The One overflows into being.'), b: chunk('b1', 'taoism', 'Tao Te Ching', 'The Tao that can be named.') }],
   }],
-  contrasts: [{ a: chunk('c1', 'zoroastrianism', 'Gathas', 'Two primal spirits.'), b: chunk('c2', 'neoplatonism', 'Enneads', 'The One is beyond duality.') }],
+  contrasts: [{
+    a: chunk('c1', 'zoroastrianism', 'Gathas', 'Two primal spirits.'),
+    b: chunk('c2', 'neoplatonism', 'Enneads', 'The One is beyond duality.'),
+    annotation: 'A asserts an irreducible dual; B asserts an undivided One.',
+  }],
 };
 
 describe('getAtlasSystemPrompt', () => {
@@ -62,6 +66,9 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toContain('Divine Nature (theology, 5 concepts): 15 traditions');
     expect(prompt).toMatch(/Apophatic Theology \(theology › Divine Nature\)/);
     expect(prompt).toMatch(/Full concept map[\s\S]*theology[\s\S]*Divine Nature: Apophatic Theology, Divine Hiddenness/);
+    // Contrasts are itemized with their curated annotation, not just counted.
+    expect(prompt).toMatch(/Explicit contrasts/);
+    expect(prompt).toMatch(/zoroastrianism \(Gathas\) ⟷ neoplatonism \(Enneads\): A asserts an irreducible dual/);
   });
   it('emits SOURCE PASSAGES with exemplar + contrast bodies in the citation header format', () => {
     expect(prompt).toMatch(/SOURCE PASSAGES:/);

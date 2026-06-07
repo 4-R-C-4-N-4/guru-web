@@ -22,6 +22,7 @@ const EXEMPLAR_ROW = {
   translator: null, body: 'The One overflows.', token_count: 5,
   b_id: 'b1', b_tradition: 'taoism', b_text_name: 'Chuang Tzu', b_section: 'Bk 1',
   b_translator: null, b_body: 'The uncarved block.', b_token_count: 5, edge_tier: 'verified',
+  annotation: 'A asserts emanation; B asserts the uncarved simple — they diverge on structure.',
 };
 
 beforeEach(() => {
@@ -75,6 +76,7 @@ describe('computeAtlasSnapshot', () => {
     expect(snap.longRangeCases[0].exemplars[0].a.tradition).toBe('neoplatonism');
     expect(snap.longRangeCases[0].exemplars[0].b.tradition).toBe('taoism');
     expect(snap.contrasts.length).toBe(1);
+    expect(snap.contrasts[0].annotation).toMatch(/diverge on structure/);
   });
 
   it('uses the EXPRESSES edge for bridge concepts', async () => {

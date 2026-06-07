@@ -416,6 +416,9 @@ function formatFacts(s: AtlasSnapshot): string {
   const longRange = s.longRangeCases
     .map(l => `  ${l.a} ↔ ${l.b}: ${l.parallels} verified parallels`)
     .join("\n");
+  const contrastList = s.contrasts
+    .map(c => `  ${c.a.tradition} (${c.a.text_name}) ⟷ ${c.b.tradition} (${c.b.text_name}): ${c.annotation ?? "(no annotation)"}`)
+    .join("\n");
 
   return [
     `FACTS (corpus snapshot as of ${s.generatedAt}, schema v${s.schemaVersion}):`,
@@ -435,6 +438,8 @@ function formatFacts(s: AtlasSnapshot): string {
     `Full concept map (domain → family → concepts):\n${hier}`,
     ``,
     `Long-range / low-contact pairs that still resonate (the hard cases):\n${longRange}`,
+    ``,
+    `Explicit contrasts (the corpus's curated divergences — the verified places traditions pull APART; the passages for these are in SOURCE PASSAGES, the annotation states how they diverge):\n${contrastList}`,
   ].join("\n");
 }
 
