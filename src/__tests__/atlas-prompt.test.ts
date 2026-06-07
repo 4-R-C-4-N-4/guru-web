@@ -62,5 +62,7 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toContain('The Tao that can be named.');
     expect(prompt).toContain('Two primal spirits.'); // a contrast passage
     expect(prompt).toMatch(/neoplatonism \| Enneads \| I\.1/);
+    // Tier is explicit (copyable into CITATIONS), not just a glyph.
+    expect(prompt).toMatch(/\| Enneads \| I\.1 \| TIER: verified/);
   });
 });

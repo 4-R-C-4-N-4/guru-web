@@ -1,0 +1,22 @@
+{
+  "id": "0ce30e0e",
+  "type": "chore",
+  "state": "active",
+  "summary": "Prompts: make per-passage TIER explicit in SOURCE PASSAGES (not just a ◆ glyph) so emitted CITATIONS are grounded",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-07T14:51:50.930Z",
+  "updated_at": "2026-06-07T14:51:50.967Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "atlas",
+    "prompt",
+    "grounding"
+  ]
+}

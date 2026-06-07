@@ -183,10 +183,15 @@ interface FormattableChunk {
 }
 
 function formatChunk(chunk: FormattableChunk, index: number): string {
-  const tier = tierSymbol(chunk.tier);
+  // Tier is stated explicitly (TIER: verified), not only as the ◆/◇/○ glyph:
+  // the glyph has no legend in the prompt, so a model emitting the CITATIONS
+  // block (whose format ends `| TIER: …`) would otherwise have to *infer* each
+  // passage's tier rather than copy it. The header now mirrors the citation
+  // format so the tier is read, not guessed.
+  const tier = chunk.tier ?? "inferred";
   const translator = chunk.translator ? ` (trans. ${chunk.translator})` : "";
   return (
-    `[${index + 1}] ${tier} ${chunk.tradition} | ${chunk.text_name}${translator} | ${chunk.section}\n` +
+    `[${index + 1}] ${tierSymbol(tier)} ${chunk.tradition} | ${chunk.text_name}${translator} | ${chunk.section} | TIER: ${tier}\n` +
     `${chunk.body}`
   );
 }
