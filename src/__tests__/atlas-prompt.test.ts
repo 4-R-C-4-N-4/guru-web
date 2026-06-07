@@ -20,7 +20,9 @@ const SNAP: AtlasSnapshot = {
   headline: { traditions: 16, concepts: 95, families: 28, parallelsVerified: 4252, parallelsProposed: 382, contrasts: 8 },
   traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322 }],
   centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9 }],
-  bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', traditions: 15, mentions: 646 }],
+  bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],
+  familyBridges: [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }],
+  hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology', 'Divine Hiddenness'] }] }],
   longRangeCases: [{
     a: 'neoplatonism', b: 'taoism', parallels: 322,
     exemplars: [{ a: chunk('a1', 'neoplatonism', 'Enneads', 'The One overflows into being.'), b: chunk('b1', 'taoism', 'Tao Te Ching', 'The Tao that can be named.') }],
@@ -55,6 +57,11 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toContain('neoplatonism ↔ taoism: 322');
     expect(prompt).toContain('301.9 parallels/100 chunks'); // the normalized figure
     expect(prompt).toContain('Apophatic Theology');
+    // The hierarchy is expressed: family-level bridges, concept shown in its
+    // family, and the full domain → family → concept map.
+    expect(prompt).toContain('Divine Nature (theology, 5 concepts): 15 traditions');
+    expect(prompt).toMatch(/Apophatic Theology \(theology › Divine Nature\)/);
+    expect(prompt).toMatch(/Full concept map[\s\S]*theology[\s\S]*Divine Nature: Apophatic Theology, Divine Hiddenness/);
   });
   it('emits SOURCE PASSAGES with exemplar + contrast bodies in the citation header format', () => {
     expect(prompt).toMatch(/SOURCE PASSAGES:/);

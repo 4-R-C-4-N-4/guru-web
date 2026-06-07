@@ -36,7 +36,9 @@ beforeEach(() => {
   mQuery.mockImplementation(async (sql: string) => {
     if (sql.includes('GROUP BY a, b')) return [{ a: 'christian_mysticism', b: 'neoplatonism', parallels: 1073 }] as never;
     if (sql.includes('partner_traditions')) return [{ tradition: 'neoplatonism', chunks: 828, parallel_degree: 2500, partner_traditions: 13, per100: 301.9 }] as never;
-    if (sql.includes('co.label')) return [{ label: 'Apophatic Theology', domain: 'theology', traditions: 15, mentions: 646 }] as never;
+    if (sql.includes('split_part(cf.id')) return [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }] as never; // familyBridges
+    if (sql.includes('concept_label')) return [{ domain: 'theology', family_id: 'theology.divine_nature', family_label: 'Divine Nature', concept_label: 'Apophatic Theology' }] as never; // hierarchy
+    if (sql.includes('co.label')) return [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }] as never;
     if (sql.includes("edge_type='CONTRASTS'")) return [EXEMPLAR_ROW] as never;
     if (sql.includes('cs.tradition=$1')) return [EXEMPLAR_ROW] as never; // exemplarsForPair
     return [] as never;
@@ -65,7 +67,10 @@ describe('computeAtlasSnapshot', () => {
     expect(snap.headline.parallelsProposed).toBe(382);
     expect(snap.traditionMatrix[0]).toMatchObject({ a: 'christian_mysticism', b: 'neoplatonism', parallels: 1073 });
     expect(snap.centrality[0]).toMatchObject({ tradition: 'neoplatonism', parallelsPer100Chunks: 301.9 });
-    expect(snap.bridgeConcepts[0]).toMatchObject({ label: 'Apophatic Theology', traditions: 15 });
+    expect(snap.bridgeConcepts[0]).toMatchObject({ label: 'Apophatic Theology', family: 'Divine Nature', traditions: 15 });
+    expect(snap.familyBridges[0]).toMatchObject({ label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5 });
+    expect(snap.hierarchy[0]).toMatchObject({ domain: 'theology' });
+    expect(snap.hierarchy[0].families[0]).toMatchObject({ label: 'Divine Nature', concepts: ['Apophatic Theology'] });
     expect(snap.longRangeCases.length).toBeGreaterThan(0);
     expect(snap.longRangeCases[0].exemplars[0].a.tradition).toBe('neoplatonism');
     expect(snap.longRangeCases[0].exemplars[0].b.tradition).toBe('taoism');

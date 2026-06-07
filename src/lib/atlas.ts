@@ -59,12 +59,32 @@ export interface AtlasSnapshot {
     partnerTraditions: number;
     parallelsPer100Chunks: number;
   }>;
-  // Concepts that recur across the most traditions (the candidate "universals").
+  // Concepts that recur across the most traditions (the candidate "universals"),
+  // each situated in its domain → family.
   bridgeConcepts: Array<{
     label: string;
     domain: string | null;
+    family: string | null;
     traditions: number;
     mentions: number;
+  }>;
+  // The same EXPRESSES spread rolled up to the FAMILY layer — the hierarchy's
+  // load-bearing clusters (e.g. "Divine Nature", "Union And Return"), which
+  // pool related concepts that are really facets of one structure.
+  familyBridges: Array<{
+    id: string;
+    label: string;
+    domain: string;
+    traditions: number;
+    concepts: number;
+    mentions: number;
+  }>;
+  // The full concept map: domain → family → concepts. The corpus's formative
+  // structure, made available so the essay can read tags in the hierarchy
+  // rather than as a flat list.
+  hierarchy: Array<{
+    domain: string;
+    families: Array<{ id: string; label: string; concepts: string[] }>;
   }>;
   // Low-historical-contact pairs that still resonate — the evidential crux.
   longRangeCases: Array<{
@@ -179,24 +199,73 @@ async function centrality(): Promise<AtlasSnapshot['centrality']> {
   }));
 }
 
-/** Concepts ranked by how many distinct traditions express them (verified EXPRESSES). */
+/** Concepts ranked by tradition-spread (EXPRESSES), situated in their family. */
 async function bridgeConcepts(limit = 15): Promise<AtlasSnapshot['bridgeConcepts']> {
-  const rows = await query<{ label: string; domain: string | null; traditions: number; mentions: number }>(
-    `SELECT co.label, co.domain,
+  const rows = await query<{ label: string; domain: string | null; family: string | null; traditions: number; mentions: number }>(
+    `SELECT co.label, co.domain, cf.label AS family,
             COUNT(DISTINCT c.tradition)::int AS traditions,
             COUNT(*)::int AS mentions
      FROM corpus.edges e
      JOIN corpus.chunks c   ON c.id = e.source
      JOIN corpus.concepts co ON co.id = e.target
+     LEFT JOIN corpus.concept_families cf ON cf.id = co.family_id
      WHERE e.edge_type='EXPRESSES'
-     GROUP BY co.label, co.domain
+     GROUP BY co.label, co.domain, cf.label
      ORDER BY traditions DESC, mentions DESC
      LIMIT $1`,
     [limit],
   );
   return rows.map(r => ({
-    label: r.label, domain: r.domain,
+    label: r.label, domain: r.domain, family: r.family,
     traditions: Number(r.traditions), mentions: Number(r.mentions),
+  }));
+}
+
+/**
+ * Concept families ranked by tradition-spread (EXPRESSES rolled up to the
+ * family). domain comes from the family id namespace (e.g. "soteriology.x").
+ */
+async function familyBridges(limit = 15): Promise<AtlasSnapshot['familyBridges']> {
+  const rows = await query<{ id: string; label: string; domain: string; traditions: number; concepts: number; mentions: number }>(
+    `SELECT cf.id, cf.label, split_part(cf.id, '.', 1) AS domain,
+            COUNT(DISTINCT ch.tradition)::int AS traditions,
+            COUNT(DISTINCT c.id)::int        AS concepts,
+            COUNT(*)::int                    AS mentions
+     FROM corpus.edges e
+     JOIN corpus.chunks ch          ON ch.id = e.source
+     JOIN corpus.concepts c         ON c.id = e.target
+     JOIN corpus.concept_families cf ON cf.id = c.family_id
+     WHERE e.edge_type='EXPRESSES'
+     GROUP BY cf.id, cf.label
+     ORDER BY traditions DESC, mentions DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return rows.map(r => ({
+    id: r.id, label: r.label, domain: r.domain,
+    traditions: Number(r.traditions), concepts: Number(r.concepts), mentions: Number(r.mentions),
+  }));
+}
+
+/** The full domain → family → concept map, grouped from corpus.concepts. */
+async function hierarchy(): Promise<AtlasSnapshot['hierarchy']> {
+  const rows = await query<{ domain: string | null; family_id: string; family_label: string; concept_label: string }>(
+    `SELECT c.domain, cf.id AS family_id, cf.label AS family_label, c.label AS concept_label
+     FROM corpus.concepts c
+     JOIN corpus.concept_families cf ON cf.id = c.family_id
+     ORDER BY c.domain, cf.label, c.label`,
+  );
+  const domains = new Map<string, Map<string, { id: string; label: string; concepts: string[] }>>();
+  for (const r of rows) {
+    const domain = r.domain ?? 'unfiled';
+    if (!domains.has(domain)) domains.set(domain, new Map());
+    const fams = domains.get(domain)!;
+    if (!fams.has(r.family_id)) fams.set(r.family_id, { id: r.family_id, label: r.family_label, concepts: [] });
+    fams.get(r.family_id)!.concepts.push(r.concept_label);
+  }
+  return [...domains.entries()].map(([domain, fams]) => ({
+    domain,
+    families: [...fams.values()],
   }));
 }
 
@@ -266,11 +335,13 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     `SELECT value FROM corpus.corpus_metadata WHERE key = 'schema_version'`,
   );
 
-  const [head, matrix, central, bridges, contrastRows] = await Promise.all([
+  const [head, matrix, central, bridges, families, hier, contrastRows] = await Promise.all([
     headline(),
     traditionMatrix(),
     centrality(),
     bridgeConcepts(),
+    familyBridges(),
+    hierarchy(),
     contrasts(),
   ]);
 
@@ -292,6 +363,8 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     traditionMatrix: matrix,
     centrality: central,
     bridgeConcepts: bridges,
+    familyBridges: families,
+    hierarchy: hier,
     longRangeCases,
     contrasts: contrastRows,
   };

@@ -1,0 +1,21 @@
+{
+  "id": "70183c4d",
+  "type": "feature",
+  "state": "active",
+  "summary": "Atlas: read the concept hierarchy (domain->family->concept) — family bridge-spread + full map in FACTS, concepts situated in their family",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-07T16:53:56.530Z",
+  "updated_at": "2026-06-07T16:53:56.568Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts,src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "atlas",
+    "hierarchy"
+  ]
+}

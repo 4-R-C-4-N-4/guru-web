@@ -31,8 +31,10 @@ function printSnapshotSummary(s: Awaited<ReturnType<typeof computeAtlasSnapshot>
   console.log(`    ${h.parallelsVerified} verified parallels (+${h.parallelsProposed} proposed) · ${h.contrasts} contrasts`);
   console.log(`  Top pairs:`);
   for (const m of s.traditionMatrix.slice(0, 5)) console.log(`    ${m.a} ↔ ${m.b}: ${m.parallels}`);
+  console.log(`  Bridge families:`);
+  for (const f of s.familyBridges.slice(0, 5)) console.log(`    ${f.label} (${f.domain}): ${f.traditions} traditions, ${f.concepts} concepts`);
   console.log(`  Bridge concepts:`);
-  for (const b of s.bridgeConcepts.slice(0, 5)) console.log(`    ${b.label}: ${b.traditions} traditions`);
+  for (const b of s.bridgeConcepts.slice(0, 5)) console.log(`    ${b.label}${b.family ? ` [${b.family}]` : ''}: ${b.traditions} traditions`);
   console.log(`  Long-range cases: ${s.longRangeCases.map(l => `${l.a}↔${l.b} (${l.parallels})`).join(', ') || 'none'}`);
 }
 

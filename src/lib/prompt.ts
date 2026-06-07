@@ -360,10 +360,13 @@ GROUNDING (as in every essay here):
 
 ESSAY SHAPE:
   - Open with methodology, then the question the aggregate poses. Map the
-  network (hubs vs. bridges), name the candidate universals, press on the
-  long-range cases (resonance between traditions that never met — the hardest to
-  explain by contact), then where it breaks. Close on implications held to the
-  size of the evidence.
+  network (hubs vs. bridges), name the candidate universals — but read them in
+  the concept hierarchy: when several near-universal concepts belong to one
+  family (the FACTS give the domain → family → concept map), say so and treat the
+  family as the unit, not the loose concepts. Then press on the long-range cases
+  (resonance between traditions that never met — the hardest to explain by
+  contact), then where it breaks. Close on implications held to the size of the
+  evidence.
   - Markdown prose. Tables only where a ranking genuinely reads better as one.
 
 Emit EXACTLY this structure so it can be parsed:
@@ -394,7 +397,21 @@ function formatFacts(s: AtlasSnapshot): string {
     )
     .join("\n");
   const bridges = s.bridgeConcepts
-    .map(b => `  ${b.label}${b.domain ? ` (${b.domain})` : ""}: ${b.traditions} traditions, ${b.mentions} mentions`)
+    .map(b => {
+      const place = [b.domain, b.family].filter(Boolean).join(" › ");
+      return `  ${b.label}${place ? ` (${place})` : ""}: ${b.traditions} traditions, ${b.mentions} mentions`;
+    })
+    .join("\n");
+  const famBridges = s.familyBridges
+    .map(f => `  ${f.label} (${f.domain}, ${f.concepts} concepts): ${f.traditions} traditions, ${f.mentions} mentions`)
+    .join("\n");
+  const hier = s.hierarchy
+    .map(d => {
+      const fams = d.families
+        .map(f => `    ${f.label}: ${f.concepts.join(", ")}`)
+        .join("\n");
+      return `  ${d.domain}\n${fams}`;
+    })
     .join("\n");
   const longRange = s.longRangeCases
     .map(l => `  ${l.a} ↔ ${l.b}: ${l.parallels} verified parallels`)
@@ -411,7 +428,11 @@ function formatFacts(s: AtlasSnapshot): string {
     ``,
     `Tradition centrality (raw degree AND normalized per-100-chunks — use the normalized figure to separate genuine reach from over-sampling):\n${central}`,
     ``,
-    `Concepts by tradition-spread (candidate universals):\n${bridges}`,
+    `Concept families by tradition-spread (the hierarchy's load-bearing clusters — several near-universal concepts are really facets of one family; read at this level before treating concepts as independent coincidences):\n${famBridges}`,
+    ``,
+    `Concepts by tradition-spread (candidate universals), shown as domain › family › concept:\n${bridges}`,
+    ``,
+    `Full concept map (domain → family → concepts):\n${hier}`,
     ``,
     `Long-range / low-contact pairs that still resonate (the hard cases):\n${longRange}`,
   ].join("\n");

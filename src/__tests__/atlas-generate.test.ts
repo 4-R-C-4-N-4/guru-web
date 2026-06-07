@@ -34,7 +34,9 @@ function snapshot(parallelsVerified = 4252) {
     headline: { traditions: 16, concepts: 95, families: 28, parallelsVerified, parallelsProposed: 382, contrasts: 8 },
     traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322 }],
     centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9 }],
-    bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', traditions: 15, mentions: 646 }],
+    bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],
+    familyBridges: [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }],
+    hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology'] }] }],
     longRangeCases: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, exemplars: [{ a: ch('a1', 'neoplatonism'), b: ch('b1', 'taoism') }] }],
     contrasts: [{ a: ch('c1', 'zoroastrianism'), b: ch('c2', 'neoplatonism') }],
   } as never;
