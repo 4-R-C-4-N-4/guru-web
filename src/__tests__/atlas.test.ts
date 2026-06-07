@@ -78,15 +78,17 @@ describe('computeAtlasSnapshot', () => {
     expect(bridgeSql).toMatch(/edge_type='EXPRESSES'/);
   });
 
-  it('selects exemplar/contrast passages near a length target, not the shortest', async () => {
+  it('targets each exemplar/contrast side to a length (not the pair sum, not shortest)', async () => {
     await computeAtlasSnapshot('2026-06-06T00:00:00Z');
     const passageSql = mQuery.mock.calls
       .map(c => c[0] as string)
       .filter(s => s.includes('cs.tradition=$1') || s.includes("edge_type='CONTRASTS'"));
     expect(passageSql.length).toBeGreaterThan(0);
     for (const sql of passageSql) {
-      expect(sql).toMatch(/ORDER BY ABS\(\(cs\.token_count \+ ct\.token_count\) - \d+\)/);
-      expect(sql).not.toMatch(/ORDER BY cs\.token_count \+ ct\.token_count ASC/);
+      // Per-side: penalize each chunk's distance from the target so a thin
+      // heading stub can't ride along with a long passage.
+      expect(sql).toMatch(/ORDER BY ABS\(cs\.token_count - \d+\) \+ ABS\(ct\.token_count - \d+\) ASC/);
+      expect(sql).not.toMatch(/ABS\(\(cs\.token_count \+ ct\.token_count\)/);
     }
   });
 });

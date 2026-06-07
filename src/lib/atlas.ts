@@ -92,11 +92,13 @@ const LONG_RANGE_PAIRS: Array<[string, string]> = [
 
 const EXEMPLARS_PER_CASE = 2;
 
-// Pick exemplar passages near this combined (source+target) token length rather
-// than the shortest available: the very shortest chunks tend to be the least
-// substantive, while the longest blow the prompt budget. ~240 tokens for the
-// pair (~120 each) reads as a concise-but-representative citation.
-const TARGET_PAIR_TOKENS = 240;
+// Prefer exemplars where BOTH sides are near this token length. Targeting the
+// pair's SUM (an earlier attempt) let a substantive passage carry a thin one —
+// the corpus has table-of-contents / heading stubs (e.g. "THE THIRD ENNEAD
+// Next: FIRST TRACTATE", ~10 tokens) that summed-with-a-long-passage to the
+// target and got cited. Penalizing EACH side's distance from the target keeps
+// both halves of a cited parallel substantive while staying budget-friendly.
+const TARGET_CHUNK_TOKENS = 150;
 
 const CHUNK_COLS = (alias: string) =>
   `${alias}.id, ${alias}.tradition, ${alias}.text_name, ${alias}.section,
@@ -210,7 +212,7 @@ async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasP
      JOIN corpus.chunks ct ON ct.id = e.target
      WHERE e.edge_type='PARALLELS' AND e.tier='verified'
        AND ((cs.tradition=$1 AND ct.tradition=$2) OR (cs.tradition=$2 AND ct.tradition=$1))
-     ORDER BY ABS((cs.token_count + ct.token_count) - ${TARGET_PAIR_TOKENS}) ASC
+     ORDER BY ABS(cs.token_count - ${TARGET_CHUNK_TOKENS}) + ABS(ct.token_count - ${TARGET_CHUNK_TOKENS}) ASC
      LIMIT $3`,
     [a, b, k],
   );
@@ -245,7 +247,7 @@ async function contrasts(limit = 8): Promise<AtlasParallel[]> {
      JOIN corpus.chunks cs ON cs.id = e.source
      JOIN corpus.chunks ct ON ct.id = e.target
      WHERE e.edge_type='CONTRASTS'
-     ORDER BY ABS((cs.token_count + ct.token_count) - ${TARGET_PAIR_TOKENS}) ASC
+     ORDER BY ABS(cs.token_count - ${TARGET_CHUNK_TOKENS}) + ABS(ct.token_count - ${TARGET_CHUNK_TOKENS}) ASC
      LIMIT $1`,
     [limit],
   );
