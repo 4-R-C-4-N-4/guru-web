@@ -22,6 +22,7 @@
  */
 
 import { query, one, exec } from './db';
+import { parseCitationsBlock } from './citations';
 import { uniqueSlug } from './slug';
 import { retrieve } from './retriever';
 import { getBlogSystemPrompt, buildBlogPrompt, buildBlogPromptFromTopic } from './prompt';
@@ -282,8 +283,8 @@ export function parseGenerated(
   let body = text;
   // Drop the head lines (TITLE:/DEK:) if present.
   body = body.replace(/^\s*TITLE:.*$/m, '').replace(/^\s*DEK:.*$/m, '');
-  // Strip the CITATIONS block (from the CITATIONS: marker to end).
-  body = body.replace(/\n*CITATIONS:[\s\S]*$/m, '').trim();
+  // Strip the CITATIONS block (shared parser — the one CITATIONS regex).
+  body = parseCitationsBlock(body).body;
 
   const title = (titleMatch?.[1] ?? fallbackTitle).trim() || fallbackTitle;
 
