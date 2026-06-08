@@ -1,0 +1,30 @@
+{
+  "id": "831509e2",
+  "type": "bug",
+  "state": "done",
+  "summary": "generateDraft saves empty LLM completion as a publishable draft",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T22:41:26.453Z",
+  "updated_at": "2026-05-31T22:50:34.131Z",
+  "files": [
+    {
+      "path": "src/lib/blog-generate.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "rag",
+    "generation"
+  ],
+  "description": "Found during T9 local smoke (2026-05-31). deepseek-v4-pro is a reasoning model; one run spent all tokens on reasoning_tokens and returned an EMPTY content body (finish=stop, no error). generateDraft then ran parseGenerated on '' → fell back to the concept-label title, derived a slug, and saved status='draft' with empty content + null cost — i.e. an empty post became publishable. Grounding guard only covers thin RETRIEVAL, not thin GENERATION. Fix: after parseGenerated, if the body is empty/whitespace (or below a small floor), fail(seedId, 'empty generation') → needs_attention, never a draft. Same principle as Hard Rule 2 (no silent empty output). Intermittent but real. Test: blog-generate.test.ts case — stream yields only a usage chunk / blank content → needs_attention, no draft.",
+  "resolution": {
+    "commit": "32a0dc3ccdbda1ea3cc10a29353e70b5844d86f3",
+    "resolved_at": "2026-05-31T22:50:34.131Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/blog-generate.test.ts",
+    "test_function": "generateDraft — empty generation guard",
+    "note": "Added MIN_BODY_CHARS=200 generation floor in blog-generate.ts: after parseGenerated, an empty/whitespace body → fail()→needs_attention instead of a publishable draft. Companion to the thin-retrieval guard. Root cause: deepseek-v4-pro (reasoning model) can return finish=stop with all tokens spent on reasoning_tokens and an empty content body. Test added (10 blog-generate tests pass); full suite 435 green; tsc clean."
+  }
+}

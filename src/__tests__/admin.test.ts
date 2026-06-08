@@ -138,7 +138,7 @@ describe('middleware (post-cutover)', () => {
     // which makes clerkMiddleware emit protect-rewrite for every
     // request there. Our handler short-circuits all tailnet
     // requests before clerkMiddleware can fire.
-    const middleware = (await import('@/middleware')).default;
+    const middleware = (await import('@/proxy')).default;
     const tailnet = 'guru-web-prod.tailb5626e.ts.net';
     expect(await middleware(makeReq('/chat',          tailnet) as never, {} as never)).toBeUndefined();
     expect(await middleware(makeReq('/admin',         tailnet) as never, {} as never)).toBeUndefined();
@@ -150,7 +150,7 @@ describe('middleware (post-cutover)', () => {
     // Path bypass — defensive. Caddy's public listener already
     // rewrites these paths to /admin-404, so this guard catches
     // anything that slips past.
-    const middleware = (await import('@/middleware')).default;
+    const middleware = (await import('@/proxy')).default;
     expect(await middleware(makeReq('/admin/users')           as never, {} as never)).toBeUndefined();
     expect(await middleware(makeReq('/api/admin/overview')    as never, {} as never)).toBeUndefined();
   });
@@ -162,7 +162,7 @@ describe('middleware (post-cutover)', () => {
     // skipped clerk" from "clerk ran and returned nothing." For
     // this test the value of asserting undefined is just that we
     // didn't throw and didn't emit a non-Response.
-    const middleware = (await import('@/middleware')).default;
+    const middleware = (await import('@/proxy')).default;
     expect(await middleware(makeReq('/chat')      as never, {} as never)).toBeUndefined();
     expect(await middleware(makeReq('/api/query') as never, {} as never)).toBeUndefined();
   });
@@ -189,21 +189,21 @@ describe('middleware matcher config', () => {
   }
 
   it('excludes /admin paths', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/admin',                config.matcher)).toBe(false);
     expect(matchesAny('/admin/users',          config.matcher)).toBe(false);
     expect(matchesAny('/admin/sessions/abc',   config.matcher)).toBe(false);
   });
 
   it('excludes /api/admin paths', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/api/admin',            config.matcher)).toBe(false);
     expect(matchesAny('/api/admin/overview',   config.matcher)).toBe(false);
     expect(matchesAny('/api/admin/users/xyz',  config.matcher)).toBe(false);
   });
 
   it('still fires on ordinary app and api paths', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/chat',                 config.matcher)).toBe(true);
     expect(matchesAny('/account',              config.matcher)).toBe(true);
     expect(matchesAny('/api/query',            config.matcher)).toBe(true);
@@ -211,7 +211,7 @@ describe('middleware matcher config', () => {
   });
 
   it('still excludes Next internals and static files', async () => {
-    const { config } = await import('@/middleware');
+    const { config } = await import('@/proxy');
     expect(matchesAny('/_next/static/foo',     config.matcher)).toBe(false);
     expect(matchesAny('/favicon.ico',          config.matcher)).toBe(false);
     expect(matchesAny('/foo.css',              config.matcher)).toBe(false);

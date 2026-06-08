@@ -1,0 +1,35 @@
+{
+  "id": "0ce30e0e",
+  "type": "chore",
+  "state": "done",
+  "summary": "Prompts: make per-passage TIER explicit in SOURCE PASSAGES (not just a ◆ glyph) so emitted CITATIONS are grounded",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-07T14:51:50.930Z",
+  "updated_at": "2026-06-07T14:53:13.383Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "atlas",
+    "prompt",
+    "grounding"
+  ],
+  "relationships": {
+    "linked_commits": [
+      "0330c42ef8e167cb1f53c5cd39f63078077cabba"
+    ]
+  },
+  "resolution": {
+    "commit": "0330c42ef8e167cb1f53c5cd39f63078077cabba",
+    "resolved_at": "2026-06-07T14:53:13.383Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas-prompt.test.ts",
+    "test_function": "buildAtlasPrompt",
+    "note": "Explicit '| TIER: <tier>' in passage headers; verified via regenerated payload."
+  }
+}

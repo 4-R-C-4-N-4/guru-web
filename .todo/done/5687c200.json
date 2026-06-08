@@ -1,0 +1,25 @@
+{
+  "id": "5687c200",
+  "type": "feature",
+  "state": "done",
+  "summary": "Homepage: surface latest published essays below the hero; drop static SAMPLE QUERY card",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-03T15:00:17.967Z",
+  "updated_at": "2026-06-03T15:07:19.837Z",
+  "description": "Convert src/app/page.tsx to an async server component that fetches listPublished(3) and renders a new client component src/components/landing.tsx (interactive hero moved verbatim, SAMPLE QUERY card removed, Latest Essays feed added below). Extract shared src/components/essay-card.tsx used by both the landing feed and /blog index. Add optional limit param to listPublished. Hero-on-top + essays-below layout (user-approved). Signed-in redirect unchanged.",
+  "relationships": {
+    "linked_commits": [
+      "53e2f7829655c32b2fbf7136fba21ddb55d8f353"
+    ]
+  },
+  "resolution": {
+    "commit": "53e2f7829655c32b2fbf7136fba21ddb55d8f353",
+    "resolved_at": "2026-06-03T15:07:19.837Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/essay-card.test.ts",
+    "test_function": "EssayCard",
+    "note": "Homepage now renders a Latest Essays feed below the hero; SAMPLE QUERY card removed. Verified locally (lint, type-check, 448 tests, build) and in a signed-out browser: / stays public, hero + LATEST ESSAYS + post card render, card links to and navigates to /blog/<slug>."
+  }
+}

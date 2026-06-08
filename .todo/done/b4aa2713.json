@@ -1,0 +1,35 @@
+{
+  "id": "b4aa2713",
+  "type": "feature",
+  "state": "done",
+  "summary": "Atlas: itemize the 8 explicit contrasts with their curated annotations in FACTS (currently only counted)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-07T19:40:33.532Z",
+  "updated_at": "2026-06-07T19:43:19.414Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts,src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "atlas",
+    "contrasts",
+    "grounding"
+  ],
+  "relationships": {
+    "linked_commits": [
+      "1fad1ec93c0274d1e0ffb6afbf859c314e635c9c"
+    ]
+  },
+  "resolution": {
+    "commit": "1fad1ec93c0274d1e0ffb6afbf859c314e635c9c",
+    "resolved_at": "2026-06-07T19:43:19.414Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas-prompt.test.ts",
+    "test_function": "buildAtlasPrompt",
+    "note": "Contrasts itemized with annotations in FACTS; verified via dry-run + regenerated payload."
+  }
+}

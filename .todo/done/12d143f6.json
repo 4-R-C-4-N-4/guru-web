@@ -1,0 +1,36 @@
+{
+  "id": "12d143f6",
+  "type": "bug",
+  "state": "done",
+  "summary": "OpenAI provider chip color regression: tokens.tradition.buddhism changed green to orange in the rekey, now clashes with Anthropic amber",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-03T18:35:48.510Z",
+  "updated_at": "2026-06-03T18:44:15.359Z",
+  "files": [
+    {
+      "path": "src/lib/provider-display.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "ui",
+    "regression",
+    "colors"
+  ],
+  "description": "src/lib/provider-display.ts:55 sets OpenAI chip color = tokens.tradition.buddhism (comment 'muted green'). The tradition rekey (todo 719c7d45) changed buddhism from #5ac27a green to #d08a30 orange, so the OpenAI chip is now orange and collides with Anthropic's amber (tokens.tier.verified #c4a35a). Provider colors should not be coupled to the tradition palette. Fix: give PROVIDER_META its own explicit colors (or repoint openai to a green that won't drift). Add a guard test that provider colors are distinct.",
+  "relationships": {
+    "linked_commits": [
+      "b4253a1fc832c74e3b9039f9a1f8c3a3d8bedcff"
+    ]
+  },
+  "resolution": {
+    "commit": "b4253a1fc832c74e3b9039f9a1f8c3a3d8bedcff",
+    "resolved_at": "2026-06-03T18:44:15.359Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/provider-display.test.ts",
+    "test_function": "provider colors are distinct",
+    "note": "Provider chip colors are explicit hexes, decoupled from tokens.tradition."
+  }
+}

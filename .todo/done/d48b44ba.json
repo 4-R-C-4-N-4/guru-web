@@ -1,0 +1,35 @@
+{
+  "id": "d48b44ba",
+  "type": "bug",
+  "state": "done",
+  "summary": "Model-authored DEK is parsed then discarded; public dek re-derived from raw markdown first sentence (leaks #/**, splits decimals)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-03T18:35:48.546Z",
+  "updated_at": "2026-06-03T18:44:15.400Z",
+  "files": [
+    {
+      "path": "src/lib/blog-generate.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "content",
+    "dek"
+  ],
+  "description": "blog-generate.ts parseGenerated returns {title,dek,body} but generateDraft destructures only {title,body}; the model-authored DEK: line is stripped from body and discarded. No dek column exists (migration 013). blog-public.ts dekFromContent re-derives a dek from the first sentence of raw markdown -> leaks leading #/** tokens, splits on decimals/abbreviations (e.g. 'Plotinus 4.8'), dumps whole 200-char paragraph when no terminal punctuation. Fix: persist the parsed dek (add nullable dek column + store on generate + read in blog-public, falling back to dekFromContent for legacy rows). Add tests.",
+  "relationships": {
+    "linked_commits": [
+      "b4253a1fc832c74e3b9039f9a1f8c3a3d8bedcff"
+    ]
+  },
+  "resolution": {
+    "commit": "b4253a1fc832c74e3b9039f9a1f8c3a3d8bedcff",
+    "resolved_at": "2026-06-03T18:44:15.400Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/blog-generate.test.ts",
+    "test_function": "generateDraft — happy path",
+    "note": "Added nullable dek column; store model DEK on generate; blog-public reads it with first-sentence fallback for legacy rows."
+  }
+}

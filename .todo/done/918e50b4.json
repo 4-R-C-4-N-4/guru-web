@@ -1,0 +1,31 @@
+{
+  "id": "918e50b4",
+  "type": "chore",
+  "state": "done",
+  "summary": "T5 — extract MD_COMPONENTS to shared module",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.199Z",
+  "updated_at": "2026-05-31T16:44:05.627Z",
+  "files": [
+    {
+      "path": "src/lib/markdown.tsx"
+    }
+  ],
+  "tags": [
+    "blog",
+    "markdown",
+    "refactor"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  },
+  "description": "PR2/admin. Behaviour-preserving extraction. New src/lib/markdown.tsx exporting the chat-view.tsx:79-119 component map as a plain STATIC const: export const MD_COMPONENTS: Components = {...}. NO mobile param, NO factory — never varied on mobile (mobile sizing lives in chat-view layout JSX, not the component map). chat-view.tsx: delete local MD_COMPONENTS (:79-119), import shared const; ReactMarkdown usage (:426-428) unchanged; remark-gfm stays caller-wired. DONE: chat-view imports shared const, no chat visual change, tsc clean. Tests: none (pure extraction; covered by chat path + T8). DEPS: none. BLOCKS: T7,T8. See IMPL T5.",
+  "resolution": {
+    "commit": "f8f772be259db6e6f45fe288866037642f531e91",
+    "resolved_at": "2026-05-31T16:44:05.627Z",
+    "resolved_by": "unknown",
+    "note": "Extracted MD_COMPONENTS verbatim from chat-view.tsx:79-119 into src/lib/markdown.tsx as a static const (no mobile param/factory). chat-view imports the shared const; ReactMarkdown usage unchanged. Behaviour-preserving — chat-view 32 tests pass, full suite 428 green, tsc clean. No new tests (covered by chat path + T8)."
+  }
+}

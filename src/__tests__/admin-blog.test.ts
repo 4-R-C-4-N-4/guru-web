@@ -1,0 +1,319 @@
+/**
+ * src/__tests__/admin-blog.test.ts
+ *
+ * Endpoint contract for the mutating blog admin routes (IMPL T4).
+ *
+ * Strategy: mock requireAdmin, the admin-blog lib helpers, and generateDraft.
+ * Assert: 404 to non-admins on every route; seed validation rejects non-pairs
+ * and bad slugs; seed inserts on the happy path; generate delegates to
+ * generateDraft and returns the row; publish/reject/archive call setStatus.
+ */
+
+import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
+
+vi.mock('@/lib/admin', () => ({ requireAdmin: vi.fn() }));
+vi.mock('@/lib/admin-blog', () => ({
+  insertSeed: vi.fn(),
+  setStatus: vi.fn(),
+  updateDraft: vi.fn(),
+  createManualDraft: vi.fn(),
+  getPost: vi.fn(),
+  listPosts: vi.fn(),
+  listCorpusCatalog: vi.fn(),
+}));
+vi.mock('@/lib/blog-generate', () => ({ generateDraft: vi.fn() }));
+vi.mock('@/lib/atlas-generate', () => ({
+  generateAtlasEdition: vi.fn(),
+  AtlasRefusal: class AtlasRefusal extends Error {},
+}));
+
+import * as admin from '@/lib/admin';
+import * as adminBlog from '@/lib/admin-blog';
+import * as gen from '@/lib/blog-generate';
+import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
+
+const mAtlas = generateAtlasEdition as MockedFunction<typeof generateAtlasEdition>;
+
+const mReq = admin.requireAdmin as MockedFunction<typeof admin.requireAdmin>;
+const mInsert = adminBlog.insertSeed as MockedFunction<typeof adminBlog.insertSeed>;
+const mSetStatus = adminBlog.setStatus as MockedFunction<typeof adminBlog.setStatus>;
+const mUpdateDraft = adminBlog.updateDraft as MockedFunction<typeof adminBlog.updateDraft>;
+const mCreateManual = adminBlog.createManualDraft as MockedFunction<typeof adminBlog.createManualDraft>;
+const mGetPost = adminBlog.getPost as MockedFunction<typeof adminBlog.getPost>;
+const mGenerate = gen.generateDraft as MockedFunction<typeof gen.generateDraft>;
+
+const ADMIN = { id: 'tailnet', email: 'admin@tailnet', tier: 'pro' as const, stripe_customer_id: null, payment_state: null };
+
+const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
+const seedReq = (body: unknown) =>
+  new Request('http://t/api/admin/blog/seed', { method: 'POST', body: JSON.stringify(body) });
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('POST /api/admin/blog/seed — auth', () => {
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ concept_ids: ['a', 'b'], model: 'deepseek' }));
+    expect(res.status).toBe(404);
+    expect(mInsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/admin/blog/seed — validation', () => {
+  beforeEach(() => mReq.mockResolvedValue(ADMIN));
+
+  it('rejects a non-pair concept_ids (400)', async () => {
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ concept_ids: ['only-one'], model: 'deepseek' }));
+    expect(res.status).toBe(400);
+    expect(mInsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown model slug (400)', async () => {
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ concept_ids: ['a', 'b'], model: 'not-a-model' }));
+    expect(res.status).toBe(400);
+    expect(mInsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid scope_mode (400)', async () => {
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ concept_ids: ['a', 'b'], model: 'deepseek', scope_mode: 'sideways' }));
+    expect(res.status).toBe(400);
+    expect(mInsert).not.toHaveBeenCalled();
+  });
+
+  it('accepts a free-text topic seed (201) and passes topic, null concept_ids', async () => {
+    mInsert.mockResolvedValue({ id: 'pt', status: 'queued' } as never);
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ topic: 'the role of silence in mystical union', model: 'deepseek' }));
+    expect(res.status).toBe(201);
+    const arg = mInsert.mock.calls[0][0];
+    expect(arg.topic).toBe('the role of silence in mystical union');
+    expect(arg.concept_ids).toBeNull();
+  });
+
+  it('rejects a seed with neither topic nor a concept pair (400)', async () => {
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({ model: 'deepseek' }));
+    expect(res.status).toBe(400);
+    expect(mInsert).not.toHaveBeenCalled();
+  });
+
+  it('inserts a queued seed on the happy path (201) with operator email', async () => {
+    mInsert.mockResolvedValue({ id: 'p1', status: 'queued' } as never);
+    const { POST } = await import('@/app/api/admin/blog/seed/route');
+    const res = await POST(seedReq({
+      concept_ids: ['c-a', 'c-b'],
+      model: 'anthropic',
+      scope_mode: 'all',
+      angle: 'both resist a made world',
+    }));
+    expect(res.status).toBe(201);
+    expect(mInsert).toHaveBeenCalledOnce();
+    const arg = mInsert.mock.calls[0][0];
+    expect(arg.concept_ids).toEqual(['c-a', 'c-b']);
+    expect(arg.model).toBe('anthropic');
+    expect(arg.angle).toBe('both resist a made world');
+    expect(arg.created_by).toBe('admin@tailnet');
+  });
+});
+
+describe('POST /api/admin/blog/:id/generate', () => {
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { POST } = await import('@/app/api/admin/blog/[id]/generate/route');
+    const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
+    expect(res.status).toBe(404);
+    expect(mGenerate).not.toHaveBeenCalled();
+  });
+
+  it('delegates to generateDraft and returns the resulting row', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mGenerate.mockResolvedValue(undefined);
+    mGetPost.mockResolvedValue({ id: 'p1', status: 'draft' } as never);
+    const { POST } = await import('@/app/api/admin/blog/[id]/generate/route');
+    const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
+    expect(mGenerate).toHaveBeenCalledWith('p1');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ id: 'p1', status: 'draft' });
+  });
+
+  it('404s when the post does not exist after generation', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mGenerate.mockResolvedValue(undefined);
+    mGetPost.mockResolvedValue(null);
+    const { POST } = await import('@/app/api/admin/blog/[id]/generate/route');
+    const res = await POST(new Request('http://t', { method: 'POST' }), ctx('missing'));
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
+  const cases: Array<['publish' | 'reject' | 'archive' | 'unpublish', string]> = [
+    ['publish', 'published'],
+    ['reject', 'rejected'],
+    ['archive', 'archived'],
+    ['unpublish', 'draft'], // unpublish a live post back to an editable draft
+  ];
+
+  for (const [route, status] of cases) {
+    it(`${route} 404s without admin trust`, async () => {
+      mReq.mockResolvedValue(new Response(null, { status: 404 }));
+      const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
+      const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
+      expect(res.status).toBe(404);
+      expect(mSetStatus).not.toHaveBeenCalled();
+    });
+
+    it(`${route} calls setStatus(id, '${status}')`, async () => {
+      mReq.mockResolvedValue(ADMIN);
+      mSetStatus.mockResolvedValue({ ok: true, row: { id: 'p1', status } } as never);
+      const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
+      const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
+      expect(mSetStatus).toHaveBeenCalledWith('p1', status);
+      expect(res.status).toBe(200);
+    });
+
+    it(`${route} 404s when the post is missing`, async () => {
+      mReq.mockResolvedValue(ADMIN);
+      mSetStatus.mockResolvedValue({ ok: false, reason: 'not_found' } as never);
+      const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
+      const res = await POST(new Request('http://t', { method: 'POST' }), ctx('missing'));
+      expect(res.status).toBe(404);
+    });
+
+    it(`${route} 409s when the transition is illegal (guard blocked)`, async () => {
+      mReq.mockResolvedValue(ADMIN);
+      mSetStatus.mockResolvedValue({ ok: false, reason: 'illegal_transition' } as never);
+      const { POST } = await import(`@/app/api/admin/blog/[id]/${route}/route`);
+      const res = await POST(new Request('http://t', { method: 'POST' }), ctx('p1'));
+      expect(res.status).toBe(409);
+    });
+  }
+});
+
+describe('POST /api/admin/blog/manual', () => {
+  const manualReq = (body: unknown) =>
+    new Request('http://t/api/admin/blog/manual', { method: 'POST', body: JSON.stringify(body) });
+
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: 'T', content: 'C' }));
+    expect(res.status).toBe(404);
+    expect(mCreateManual).not.toHaveBeenCalled();
+  });
+
+  it('400s on a non-string title/content body', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: 42, content: 'C' }));
+    expect(res.status).toBe(400);
+    expect(mCreateManual).not.toHaveBeenCalled();
+  });
+
+  it('creates a draft (201) and stamps the operator as author', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mCreateManual.mockResolvedValue({ ok: true, row: { id: 'm1', status: 'draft', seed_kind: 'manual' } } as never);
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: 'Hand Written', dek: 'A dek', content: 'Body' }));
+    expect(res.status).toBe(201);
+    expect(mCreateManual).toHaveBeenCalledWith({ title: 'Hand Written', dek: 'A dek', content: 'Body', created_by: 'admin@tailnet' });
+  });
+
+  it('400s when the title/content are empty', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mCreateManual.mockResolvedValue({ ok: false, reason: 'empty' } as never);
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: '', content: '' }));
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/admin/blog/atlas', () => {
+  const atlasReq = () => new Request('http://t/api/admin/blog/atlas', { method: 'POST' });
+
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(404);
+    expect(mAtlas).not.toHaveBeenCalled();
+  });
+
+  it('generates an edition draft and returns its identity', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mAtlas.mockResolvedValue({ id: 'ed1', slug: 'state-of-the-atlas-no-1', editionNo: 1, title: 'State of the Atlas №1' } as never);
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ id: 'ed1', editionNo: 1 });
+  });
+
+  it('surfaces an operator refusal (already in flight) as 409 with the message', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mAtlas.mockRejectedValue(new AtlasRefusal('An atlas edition is already in flight'));
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already in flight/);
+  });
+
+  it('returns 500 on an unexpected/transient failure (e.g. LLM error)', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mAtlas.mockRejectedValue(new Error('upstream LLM stream failed'));
+    const { POST } = await import('@/app/api/admin/blog/atlas/route');
+    const res = await POST(atlasReq());
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/LLM stream failed/);
+  });
+});
+
+describe('PUT /api/admin/blog/:id/edit', () => {
+  const editReq = (body: unknown) =>
+    new Request('http://t', { method: 'PUT', body: JSON.stringify(body) });
+
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 'T', content: 'C' }), ctx('p1'));
+    expect(res.status).toBe(404);
+    expect(mUpdateDraft).not.toHaveBeenCalled();
+  });
+
+  it('400s on a non-string title/content body', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 123, content: 'C' }), ctx('p1'));
+    expect(res.status).toBe(400);
+    expect(mUpdateDraft).not.toHaveBeenCalled();
+  });
+
+  it('updates the draft and returns the row on success', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mUpdateDraft.mockResolvedValue({ ok: true, row: { id: 'p1', status: 'draft', title: 'New' } } as never);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 'New', dek: 'd', content: 'Body' }), ctx('p1'));
+    expect(mUpdateDraft).toHaveBeenCalledWith('p1', { title: 'New', dek: 'd', content: 'Body' });
+    expect(res.status).toBe(200);
+  });
+
+  it('409s when the row is not editable (e.g. already published)', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mUpdateDraft.mockResolvedValue({ ok: false, reason: 'not_editable' } as never);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    const res = await PUT(editReq({ title: 'T', content: 'C' }), ctx('p1'));
+    expect(res.status).toBe(409);
+  });
+
+  it('404s when the row is missing, 400 when empty', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    const { PUT } = await import('@/app/api/admin/blog/[id]/edit/route');
+    mUpdateDraft.mockResolvedValue({ ok: false, reason: 'not_found' } as never);
+    expect((await PUT(editReq({ title: 'T', content: 'C' }), ctx('x'))).status).toBe(404);
+    mUpdateDraft.mockResolvedValue({ ok: false, reason: 'empty' } as never);
+    expect((await PUT(editReq({ title: '', content: '' }), ctx('p1'))).status).toBe(400);
+  });
+});

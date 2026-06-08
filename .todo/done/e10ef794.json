@@ -1,0 +1,32 @@
+{
+  "id": "e10ef794",
+  "type": "chore",
+  "state": "done",
+  "summary": "T2 — hidden essayist voice + blog prompt builder",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.060Z",
+  "updated_at": "2026-05-31T04:06:11.772Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "prompt",
+    "voice"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  },
+  "description": "PR1/core. Add BLOG_OVERLAY + BLOG_RULES next to VOICE_OVERLAY (prompt.ts:36-44) / CORE_RULES (prompt.ts:46-78). BLOG_RULES keeps grounding/no-invented-quotes/register invariants verbatim but replaces the single-turn closer (prompt.ts:66-71) with essay shape + structured head the generator can parse: TITLE:/DEK:/body markdown/CITATIONS: block. Export getBlogSystemPrompt() (no voice param — single blog voice; voice column reserved), mirroring getSystemPrompt (prompt.ts:80-82). Export buildBlogPrompt(conceptLabels,definitions,angle,chunks) reusing formatChunk (prompt.ts:101-108), makeBudget (from ./budget) and compressChunks (from ./compress) exactly as buildPrompt (prompt.ts:122-146); trailing instruction is an essay brief instead of QUERY:. Budget against pro tier — CONTEXT_WINDOWS lives in budget.ts (free 8192 / pro 32768). NO change to VoiceSlug or getSystemPrompt. DONE: getBlogSystemPrompt has grounding rule + TITLE: contract; buildBlogPrompt emits SOURCE PASSAGES + brief, drops chunks under tight budget; tsc clean. Tests: extend prompt.test.ts. DEPS: none. BLOCKS: T3. See IMPL T2.",
+  "resolution": {
+    "commit": "8e2f9ce55d051a1bd854750a76711d29bebcaa1a",
+    "resolved_at": "2026-05-31T04:06:11.772Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/prompt.test.ts",
+    "note": "getBlogSystemPrompt + buildBlogPrompt added to prompt.ts; grounding contract shared with CORE_RULES, essay-shape TITLE/DEK/CITATIONS head; budgets pro tier via budget.ts. 32 prompt tests pass (4 new blog cases), full suite 351 green, tsc clean."
+  }
+}

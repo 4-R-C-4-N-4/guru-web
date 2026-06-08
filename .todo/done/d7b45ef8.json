@@ -1,0 +1,40 @@
+{
+  "id": "d7b45ef8",
+  "type": "chore",
+  "state": "done",
+  "summary": "T6 — extract ScopeSelector + ModelPicker for reuse",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.258Z",
+  "updated_at": "2026-05-31T16:48:54.177Z",
+  "files": [
+    {
+      "path": "src/components/scope-selector.tsx"
+    }
+  ],
+  "tags": [
+    "blog",
+    "settings",
+    "refactor"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  },
+  "description": "PR2/admin. DECISION NEEDED before starting (operator gate, IMPL Open Questions 'Still active'): (A) EXTRACT inline scope tree + model radio from settings/page.tsx into presentational props-driven components; settings keeps fetching /api/corpus and passes result as catalog. Single source of truth; touches working settings. RECOMMENDED. (B) REBUILD simpler scope control inside seed form, leave settings untouched (faster, two copies drift). This ticket specs (A): new src/components/scope-selector.tsx <ScopeSelector catalog value onChange/> (lift tradition->text tree settings/page.tsx ~:333-376) and src/components/model-picker.tsx <ModelPicker value onChange disabled?/> over CURATED_MODELS (curated-models.ts:21-26; lift radio ~:205-256). If (B): collapses into T7, settings untouched. DONE: settings renders/saves identically (manual smoke); components pure; tsc clean. Tests: none (presentational). DEPS: none. BLOCKS: T7. See IMPL T6.",
+  "analysis": [
+    {
+      "timestamp": "2026-05-31T16:38:41.403Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Operator chose option (B) 2026-05-31: rebuild a simple scope/model control inside the admin seed form rather than extracting shared ScopeSelector/ModelPicker from settings. settings/page.tsx stays untouched (zero risk to a working page); accept that the admin control is a second, simpler copy. Per IMPL T6, this collapses T6 into T7 — the controls are built as part of the seed-form.tsx in T7. No separate src/components/scope-selector.tsx / model-picker.tsx files. T7 dependency on T6 is effectively satisfied by this decision.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "00668d78ac10d37ec7ae3f8cc5e72e2753d45398",
+    "resolved_at": "2026-05-31T16:48:54.177Z",
+    "resolved_by": "unknown",
+    "note": "Folded into T7 per operator decision (option B): the scope/model control was rebuilt inline in seed-form.tsx; settings/page.tsx untouched. No separate scope-selector.tsx/model-picker.tsx files. Shipped as part of todo:643477d4."
+  }
+}

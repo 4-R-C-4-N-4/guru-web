@@ -1,0 +1,37 @@
+{
+  "id": "64be313c",
+  "type": "chore",
+  "state": "done",
+  "summary": "T1 — migration: blog_posts table",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-31T03:49:22.019Z",
+  "updated_at": "2026-05-31T03:58:54.626Z",
+  "files": [
+    {
+      "path": "migrations/013_blog_posts.sql"
+    }
+  ],
+  "tags": [
+    "blog",
+    "db",
+    "migration"
+  ],
+  "relationships": {
+    "parent": "467f527c"
+  },
+  "description": "PR1/core. One additive migration: blog_posts table. Columns: status (lifecycle), seed_kind+edge_ref (reserved for deferred candidate path), concept_ids[2], angle, voice (reserved), model (default deepseek), scope_mode + blocked/whitelisted arrays, priority, created_by (TEXT, no FK — synthetic tailnet operator email), title, slug UNIQUE, content, chunks_used JSONB, cost_usd, error_note, timestamps. Style: IF NOT EXISTS (re-run no-op), NO CHECK constraints (validate in app, per 012_chat_voice.sql precedent), numbered after 012 — 013 confirmed free on current main. Indexes: idx_blog_posts_status(status,created_at DESC), idx_blog_posts_published(published_at DESC) WHERE status=published. gen_random_uuid already available (migrations/002). DONE: npm run migrate clean + no-op on re-run; backslash-d blog_posts shows cols+indexes. Tests: none (schema). DEPS: none. BLOCKS: T3,T4. See IMPL T1.",
+  "work": {
+    "branch": "todo/467f527c",
+    "base_branch": "main",
+    "started_at": "2026-05-31T03:57:10.778Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "83da70a1a999ad264bec7076ddd7868090576a43",
+    "resolved_at": "2026-05-31T03:58:54.626Z",
+    "resolved_by": "unknown",
+    "note": "blog_posts table created (migrations/013_blog_posts.sql); npm run migrate applies clean + no-op on re-run; \\d blog_posts shows all 24 columns, both indexes (idx_blog_posts_status, idx_blog_posts_published partial), and slug unique constraint. Schema-only, no tests per spec."
+  }
+}
