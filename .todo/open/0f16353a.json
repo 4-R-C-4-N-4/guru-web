@@ -1,0 +1,18 @@
+{
+  "id": "0f16353a",
+  "type": "chore",
+  "state": "open",
+  "summary": "Add shared parseCitationsBlock() util + unit tests",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-08T20:43:43.071Z",
+  "updated_at": "2026-06-08T20:44:13.891Z",
+  "tags": [
+    "citations"
+  ],
+  "relationships": {
+    "parent": "a0e98810"
+  },
+  "description": "Add src/lib/citations.ts exporting parseCitationsBlock(raw: string): { body: string; citations: ParsedCitation[] }.\n\nPARSE the block emitted per src/lib/prompt.ts CORE_RULES:\n  CITATIONS:\n  [TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]\n  \"optional short quote\"\n  [ ... more entries ... ]\n\n- Match from a line-start 'CITATIONS:' marker to end of string (mirror blog-generate.ts:286 regex: /\\n*CITATIONS:[\\s\\S]*$/m).\n- Each bracketed line -> { tradition, text, section, tier, quote? }. Split on '|', trim. Strip the leading 'TIER:' label from the 4th field; lowercase + validate tier against verified|proposed|inferred, default 'inferred' on miss.\n- A quoted line immediately following a bracket line attaches as that entry's optional quote (strip surrounding curly/straight quotes).\n- tradition kept as emitted (Citation lowercases for the color lookup itself).\n- body = input with the CITATIONS block stripped, trimmed.\n\nREUSE: refactor blog-generate.ts parseGenerated to call this for the strip (keep its TITLE/DEK head parsing) so there is one CITATIONS regex in the codebase. The ParsedCitation shape should line up with citation.tsx CitationProps (tradition,text,section,quote?,tier) so it feeds the component directly.\n\nTESTS (src/__tests__/citations.test.ts): well-formed single + multiple entries; no block present (citations:[] , body unchanged); malformed/short lines skipped gracefully; optional quote attached; TIER label + casing normalized; unknown tier -> inferred. Mirror fixtures in existing prompt.test.ts / blog-generate.test.ts.\n\nDONE: util + passing unit tests committed; blog-generate strip delegated to it with its existing tests still green."
+}

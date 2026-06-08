@@ -1,0 +1,22 @@
+{
+  "id": "50b9a90a",
+  "type": "chore",
+  "state": "open",
+  "summary": "Chat: strip raw CITATIONS block from assistant prose so only styled cards show",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-08T20:43:43.112Z",
+  "updated_at": "2026-06-08T20:44:18.314Z",
+  "tags": [
+    "citations",
+    "chat"
+  ],
+  "relationships": {
+    "parent": "a0e98810",
+    "depends_on": [
+      "0f16353a"
+    ]
+  },
+  "description": "In src/components/chat-view.tsx, the assistant message text is rendered raw via ReactMarkdown (line ~380) and the model's CITATIONS tail (always emitted — CORE_RULES, both voices) shows as unstyled plaintext above the already-styled 'References' block (built from chunks_used, line ~384). Remove the duplicate.\n\nCHANGE: before passing msg.text to ReactMarkdown, run it through parseCitationsBlock (C1) and render only the stripped body. The styled References cards already come from msg.citations/chunks_used — leave that path untouched.\n\nEDGE CASE: if a response has NO chunks_used (retrieval empty) the References block is absent; stripping would drop the citations entirely. Acceptable (no retrieval => nothing to cite), but optionally fall back to the parsed citations to populate the cards when msg.citations is empty. Note which you chose.\n\nDECISION (render vs server): default render-time here so existing stored response_text rows are also cleaned and the billing/persist path in api/query/route.ts is untouched. If chosen instead to strip server-side before persisting fullResponse (route.ts:338), document why.\n\nTEST: a chat message whose text contains a CITATIONS tail renders body-only (assert the raw block text is absent from the rendered prose). Depends on C1."
+}

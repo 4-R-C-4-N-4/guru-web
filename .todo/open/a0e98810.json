@@ -1,0 +1,26 @@
+{
+  "id": "a0e98810",
+  "type": "feature",
+  "state": "open",
+  "summary": "Align citation rendering across chat & blog: parse raw CITATIONS blocks into styled Citation cards",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-08T20:43:15.104Z",
+  "updated_at": "2026-06-08T20:43:43.185Z",
+  "tags": [
+    "citations",
+    "ui",
+    "blog",
+    "chat"
+  ],
+  "description": "PROBLEM\nThe same source/citation data renders three different ways across surfaces. The LLM emits a structured tail block:\n\n  CITATIONS:\n  [TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]\n  \"optional short quote\"\n\n(defined in src/lib/prompt.ts CORE_RULES, both chat voices). The styled renderer is src/components/citation.tsx — a colored left-border card: tradition color from tokens.tradition, tier glyph (verified ◆ / proposed ◇ / inferred ○), optional italic quote.\n\nCURRENT STATE per surface:\n- LLM-generated blog (concept-pair / topic seeds): CORRECT. blog-generate.ts strips the CITATIONS tail (parseGenerated, line 286) and builds structured chunks_used from retrieval; src/app/blog/[slug]/page.tsx renders a styled 'Sources' block of Citation cards. No change needed.\n- General chat (src/components/chat-view.tsx): BROKEN. api/query/route.ts streams the model's full text — INCLUDING the raw CITATIONS block — straight to the client (route.ts:248) and persists it as response_text; chat-view renders it via ReactMarkdown with NO stripping (line 380). Separately a styled 'References' block renders from chunks_used (line 384). Result: the user sees the raw plaintext CITATIONS block AND the styled cards (duplicate + ugly).\n- By-hand / free-form & edited blog posts (admin createManualDraft, admin-blog.ts:243): BROKEN. Operator types a CITATIONS block in the markdown body; the post has no chunks_used (comment admin-blog.ts:241), so blog/[slug]/page.tsx renders no Sources block and the raw block shows as plain markdown text. This is the live example: https://guru-ai.org/blog/state-of-the-atlas-the-spine-is-genealogy-the-surprise-is-the-tao (the bottom 'CITATIONS' section is unstyled plaintext).\n\nGOAL\nWherever a raw CITATIONS block appears (chat assistant prose; hand-authored/edited blog content), parse it out of the prose and render it as the same styled Citation cards used by the LLM-generated blog path — consistent colors, tier glyphs, optional quote.\n\nAPPROACH\n1. A shared parser util that turns a CITATIONS block into structured {tradition,text,section,tier,quote?}[] and returns the prose with the block stripped (generalizes blog-generate.ts:286).\n2. Chat: strip the raw block from displayed prose (styled cards already exist from chunks_used).\n3. By-hand/edited blog: parse the typed block into styled Sources cards, strip from body.\n4. Consistency + verification pass (colors/glyphs match; optional quote rendered; live post + a chat response verified).\n\nOPEN DECISIONS (resolve at implementation)\n- Section label: chat says 'References', blog says 'Sources', the model emits 'CITATIONS'. Default: leave labels as-is and align only the styled formatting (the user's ask is 'colors and formatting'). Reconsider if a single label is wanted.\n- Chat strip location: render-time in chat-view (reversible, covers existing rows, no billing/persist impact) vs server-side before persisting response_text. Default: render-time.\n\nKEY FILES\n- src/components/citation.tsx (styled card; quote field currently vestigial)\n- src/lib/prompt.ts (CITATIONS format contract, CORE_RULES)\n- src/lib/blog-generate.ts:266-287 (parseGenerated — existing strip to generalize)\n- src/components/chat-view.tsx:379-395 (raw prose render + References block)\n- src/app/api/query/route.ts:248 (streams raw model text incl. CITATIONS)\n- src/app/blog/[slug]/page.tsx:99-128 (markdown body + Sources block)\n- src/lib/admin-blog.ts:243 (createManualDraft — no chunks_used)\n- src/styles/tokens.ts (tradition/tier colors)",
+  "relationships": {
+    "children": [
+      "0f16353a",
+      "50b9a90a",
+      "ad5159c9",
+      "4b9c3cf2"
+    ]
+  }
+}

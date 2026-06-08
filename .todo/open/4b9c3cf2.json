@@ -1,0 +1,23 @@
+{
+  "id": "4b9c3cf2",
+  "type": "chore",
+  "state": "open",
+  "summary": "Cross-surface consistency + verification (colors/glyphs/quote, run tests, verify live)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-08T20:43:43.185Z",
+  "updated_at": "2026-06-08T20:44:18.430Z",
+  "tags": [
+    "citations",
+    "verify"
+  ],
+  "relationships": {
+    "parent": "a0e98810",
+    "depends_on": [
+      "50b9a90a",
+      "ad5159c9"
+    ]
+  },
+  "description": "Consistency + verification once chat (C2) and blog (C3) both render styled cards.\n\n- Confirm both surfaces use the same Citation card: tradition color (tokens.tradition), tier glyph ◆/◇/○ (tokens.tier), optional italic quote. The quote field in citation.tsx is currently vestigial — now that parseCitationsBlock extracts quotes, verify they render (or intentionally suppress) consistently on both surfaces.\n- Section header/footer: chat='References' (+ stats footer: verified/proposed/traditions/chunks counts), blog='Sources' (no footer). Per parent OPEN DECISION, default to leaving labels as-is and aligning only the card formatting. If the user wants one label, unify here.\n- Run the full test suite (npm test) — ensure C1/C2/C3 tests + existing prompt/blog-generate tests pass.\n- Verify live: (a) the linked by-hand blog post now shows styled Sources cards; (b) a fresh chat response shows styled References cards with no raw CITATIONS plaintext. Use the /verify or /run skill to drive the app.\n\nDepends on C2 and C3."
+}
