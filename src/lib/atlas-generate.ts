@@ -16,7 +16,8 @@ import { one } from './db';
 import { computeAtlasSnapshot, type AtlasSnapshot, type AtlasChunk } from './atlas';
 import { getAtlasSystemPrompt, buildAtlasPrompt } from './prompt';
 import { completeStream } from './model';
-import { parseGenerated, uniqueSlug } from './blog-generate';
+import { parseGenerated } from './blog-generate';
+import { uniqueSlug } from './slug';
 import {
   resolveCuratedModel,
   isCuratedSlug,

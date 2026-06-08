@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vites
 
 vi.mock('@/lib/db', () => ({ one: vi.fn(), query: vi.fn(), exec: vi.fn() }));
 
-import { setStatus, updateDraft } from '@/lib/admin-blog';
+import { setStatus, updateDraft, createManualDraft } from '@/lib/admin-blog';
 import { one } from '@/lib/db';
 
 const mOne = one as MockedFunction<typeof one>;
@@ -90,5 +90,27 @@ describe('updateDraft', () => {
     mOne.mockResolvedValueOnce(null);
     mOne.mockResolvedValueOnce(null);
     expect(await updateDraft('missing', { title: 'T', dek: null, content: 'C' })).toEqual({ ok: false, reason: 'not_found' });
+  });
+});
+
+describe('createManualDraft', () => {
+  it('inserts a hand-written draft (seed_kind manual, status draft, no model run)', async () => {
+    mOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('WHERE slug')) return null as never;                 // uniqueSlug: free
+      if (sql.includes('INSERT INTO blog_posts')) return { id: 'm1' } as never;
+      return null as never;
+    });
+    const res = await createManualDraft({ title: 'Hand Written', dek: 'A dek', content: 'Body', created_by: 'op@tailnet' });
+    expect(res).toEqual({ ok: true, row: { id: 'm1' } });
+    const insert = mOne.mock.calls.find(c => (c[0] as string).includes('INSERT INTO blog_posts'))!;
+    const sql = insert[0] as string;
+    expect(sql).toMatch(/'draft', 'manual', 'none'/);   // status, seed_kind, model
+    expect(insert[1]).toEqual(['Hand Written', 'hand-written', 'A dek', 'Body', 'op@tailnet']);
+  });
+
+  it('rejects empty title or content without touching the DB', async () => {
+    expect(await createManualDraft({ title: '  ', dek: null, content: 'x', created_by: null })).toEqual({ ok: false, reason: 'empty' });
+    expect(await createManualDraft({ title: 'T', dek: null, content: '  ', created_by: null })).toEqual({ ok: false, reason: 'empty' });
+    expect(mOne).not.toHaveBeenCalled();
   });
 });

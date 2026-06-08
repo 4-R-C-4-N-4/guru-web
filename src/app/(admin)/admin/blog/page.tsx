@@ -16,7 +16,7 @@ import { tokens } from '@/styles/tokens';
 import { listPosts, listCorpusCatalog, type BlogPostRow } from '@/lib/admin-blog';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { SeedForm } from './seed-form';
-import { QueueActions, DraftActions, PublishedActions, DraftEditor, GenerateAtlasButton } from './actions';
+import { QueueActions, DraftActions, PublishedActions, DraftEditor, GenerateAtlasButton, ManualPostForm } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,7 +83,14 @@ export default async function BlogAdminPage({
         ))}
       </div>
 
-      {tab === 'queue' && <SeedForm catalog={catalog} />}
+      {tab === 'queue' && (
+        <div style={{ marginBottom: 24 }}>
+          <SeedForm catalog={catalog} />
+          <div style={{ marginTop: 16 }}>
+            <ManualPostForm />
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <p style={{ fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.muted }}>

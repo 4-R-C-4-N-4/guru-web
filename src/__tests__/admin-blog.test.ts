@@ -16,6 +16,7 @@ vi.mock('@/lib/admin-blog', () => ({
   insertSeed: vi.fn(),
   setStatus: vi.fn(),
   updateDraft: vi.fn(),
+  createManualDraft: vi.fn(),
   getPost: vi.fn(),
   listPosts: vi.fn(),
   listCorpusCatalog: vi.fn(),
@@ -37,6 +38,7 @@ const mReq = admin.requireAdmin as MockedFunction<typeof admin.requireAdmin>;
 const mInsert = adminBlog.insertSeed as MockedFunction<typeof adminBlog.insertSeed>;
 const mSetStatus = adminBlog.setStatus as MockedFunction<typeof adminBlog.setStatus>;
 const mUpdateDraft = adminBlog.updateDraft as MockedFunction<typeof adminBlog.updateDraft>;
+const mCreateManual = adminBlog.createManualDraft as MockedFunction<typeof adminBlog.createManualDraft>;
 const mGetPost = adminBlog.getPost as MockedFunction<typeof adminBlog.getPost>;
 const mGenerate = gen.generateDraft as MockedFunction<typeof gen.generateDraft>;
 
@@ -190,6 +192,44 @@ describe('POST /api/admin/blog/:id/{publish,reject,archive}', () => {
       expect(res.status).toBe(409);
     });
   }
+});
+
+describe('POST /api/admin/blog/manual', () => {
+  const manualReq = (body: unknown) =>
+    new Request('http://t/api/admin/blog/manual', { method: 'POST', body: JSON.stringify(body) });
+
+  it('404s without admin trust', async () => {
+    mReq.mockResolvedValue(new Response(null, { status: 404 }));
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: 'T', content: 'C' }));
+    expect(res.status).toBe(404);
+    expect(mCreateManual).not.toHaveBeenCalled();
+  });
+
+  it('400s on a non-string title/content body', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: 42, content: 'C' }));
+    expect(res.status).toBe(400);
+    expect(mCreateManual).not.toHaveBeenCalled();
+  });
+
+  it('creates a draft (201) and stamps the operator as author', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mCreateManual.mockResolvedValue({ ok: true, row: { id: 'm1', status: 'draft', seed_kind: 'manual' } } as never);
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: 'Hand Written', dek: 'A dek', content: 'Body' }));
+    expect(res.status).toBe(201);
+    expect(mCreateManual).toHaveBeenCalledWith({ title: 'Hand Written', dek: 'A dek', content: 'Body', created_by: 'admin@tailnet' });
+  });
+
+  it('400s when the title/content are empty', async () => {
+    mReq.mockResolvedValue(ADMIN);
+    mCreateManual.mockResolvedValue({ ok: false, reason: 'empty' } as never);
+    const { POST } = await import('@/app/api/admin/blog/manual/route');
+    const res = await POST(manualReq({ title: '', content: '' }));
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('POST /api/admin/blog/atlas', () => {

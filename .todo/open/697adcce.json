@@ -1,0 +1,21 @@
+{
+  "id": "697adcce",
+  "type": "feature",
+  "state": "active",
+  "summary": "Admin: free-form post — write & save a draft by hand, no LLM/seed (then publish via the normal flow)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-08T03:07:24.349Z",
+  "updated_at": "2026-06-08T03:07:24.394Z",
+  "files": [
+    {
+      "path": "src/lib/admin-blog.ts,src/app/(admin)/admin/blog/actions.tsx"
+    }
+  ],
+  "tags": [
+    "blog",
+    "admin",
+    "manual"
+  ]
+}

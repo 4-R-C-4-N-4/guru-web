@@ -13,6 +13,7 @@
  */
 
 import { one, query } from './db';
+import { uniqueSlug } from './slug';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -225,4 +226,33 @@ export async function updateDraft(
   if (row) return { ok: true, row };
   const exists = await getPost(id);
   return { ok: false, reason: exists ? 'not_editable' : 'not_found' };
+}
+
+/** Outcome of creating a hand-written draft. */
+export type CreateManualResult =
+  | { ok: true; row: BlogPostRow }
+  | { ok: false; reason: 'empty' };
+
+/**
+ * Create a free-form post as a draft — no LLM, no seed, no retrieval. The
+ * operator writes title/dek/content directly; it lands in the Drafts tab and
+ * goes through the same editor + review→publish flow as a generated draft.
+ * seed_kind='manual' marks it hand-authored; model='none' since none ran. It
+ * has no chunks_used, so the public post simply shows no Sources block.
+ */
+export async function createManualDraft(
+  fields: { title: string; dek: string | null; content: string; created_by: string | null },
+): Promise<CreateManualResult> {
+  const title = fields.title.trim();
+  if (!title || !fields.content.trim()) return { ok: false, reason: 'empty' };
+
+  const slug = await uniqueSlug(title);
+  const row = await one<BlogPostRow>(
+    `INSERT INTO blog_posts (status, seed_kind, model, title, slug, dek, content, created_by)
+     VALUES ('draft', 'manual', 'none', $1, $2, $3, $4, $5)
+     RETURNING ${POST_COLUMNS}`,
+    [title, slug, fields.dek?.trim() || null, fields.content, fields.created_by],
+  );
+  if (!row) throw new Error('createManualDraft: INSERT returned no row');
+  return { ok: true, row };
 }

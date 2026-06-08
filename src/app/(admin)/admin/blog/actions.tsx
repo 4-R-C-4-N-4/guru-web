@@ -168,6 +168,88 @@ const labelStyle: React.CSSProperties = {
 };
 
 /**
+ * Free-form post composer — write a draft by hand, no LLM/seed/retrieval.
+ * Collapsed to a "Write a post" button; expands to title/dek/content fields that
+ * POST to the manual route and land a draft, then route to the Drafts tab to
+ * review and publish it through the normal flow.
+ */
+export function ManualPostForm() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [t, setT] = useState('');
+  const [d, setD] = useState('');
+  const [c, setC] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch('/api/admin/blog/manual', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: t, dek: d, content: c }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setErr(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setOpen(false);
+      setT(''); setD(''); setC('');
+      router.push('/admin/blog?tab=drafts');
+      router.refresh();
+    } catch {
+      setErr('request failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} style={btnStyle(false)}>
+        Write a post
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 12, padding: 14, border: `1px solid ${tokens.border.medium}`, borderRadius: 4, background: tokens.bg.surface }}>
+      <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 4, letterSpacing: 1, textTransform: 'uppercase' }}>
+        Free-form post (no generation) — saves to Drafts
+      </div>
+
+      <label style={labelStyle}>Title</label>
+      <input style={inputStyle} value={t} onChange={e => setT(e.target.value)} />
+
+      <label style={labelStyle}>Dek</label>
+      <input style={inputStyle} value={d} onChange={e => setD(e.target.value)} />
+
+      <label style={labelStyle}>Content (markdown)</label>
+      <textarea
+        style={{ ...inputStyle, minHeight: 320, lineHeight: 1.6, resize: 'vertical' }}
+        value={c}
+        onChange={e => setC(e.target.value)}
+      />
+
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button type="button" disabled={busy} onClick={save} style={btnStyle(busy)}>
+          {busy ? 'Saving…' : 'Save draft'}
+        </button>
+        <button type="button" disabled={busy} onClick={() => { setT(''); setD(''); setC(''); setErr(null); setOpen(false); }} style={btnStyle(busy)}>
+          Cancel
+        </button>
+        {err && (
+          <span style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.error }}>{err}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Inline manual editor for a draft (or a salvageable needs_attention row) — the
  * operator's scalpel on LLM output before publishing. Collapsed to an "Edit
  * draft" button; expands to title/dek/content fields that PUT to the edit route

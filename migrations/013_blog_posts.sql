@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
 
     status        TEXT NOT NULL DEFAULT 'queued',
-    seed_kind     TEXT NOT NULL,            -- 'custom' | 'candidate' | 'atlas'
+    seed_kind     TEXT NOT NULL,            -- 'custom' | 'candidate' | 'atlas' | 'manual' (hand-written, no generation)
     topic         TEXT,                      -- free-text prompt seed (mode A); NULL for concept-pair seeds
     concept_ids   TEXT[],                    -- exactly two for a concept-pair seed (mode B); NULL for topic seeds
     edge_ref      TEXT,                      -- "<source>|<target>|<edge_type>"
