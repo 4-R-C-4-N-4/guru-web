@@ -1,13 +1,13 @@
 {
   "id": "a0e98810",
   "type": "feature",
-  "state": "open",
+  "state": "done",
   "summary": "Align citation rendering across chat & blog: parse raw CITATIONS blocks into styled Citation cards",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-06-08T20:43:15.104Z",
-  "updated_at": "2026-06-08T20:43:43.185Z",
+  "updated_at": "2026-06-08T22:03:35.810Z",
   "tags": [
     "citations",
     "ui",
@@ -22,5 +22,11 @@
       "ad5159c9",
       "4b9c3cf2"
     ]
+  },
+  "resolution": {
+    "commit": "bab1859c3f57204deb77372c3b4332335192c83f",
+    "resolved_at": "2026-06-08T22:03:35.810Z",
+    "resolved_by": "unknown",
+    "note": "All 4 subtasks complete. Shared parseCitationsBlock() now drives citation rendering on every surface: LLM-blog (unchanged), chat (raw tail stripped, styled cards only), and hand-authored/edited blog posts (typed CITATIONS block → styled Sources). One CITATIONS regex in the tree."
   }
 }
