@@ -13,6 +13,7 @@ import type { Metadata } from 'next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getPublishedBySlug } from '@/lib/blog-public';
+import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import Citation from '@/components/citation';
 import { tokens } from '@/styles/tokens';
@@ -37,6 +38,17 @@ export default async function BlogPostPage(
   const { slug } = await params;
   const post = await getPublishedBySlug(slug);
   if (!post) notFound();
+
+  // LLM-generated posts strip their CITATIONS tail at generation time and store
+  // structured chunks_used. Hand-authored / edited posts (createManualDraft)
+  // have no chunks_used — the operator typed the CITATIONS block into the body.
+  // For those, parse it out so the body renders clean and the same styled
+  // Sources cards show, instead of a raw plaintext block (todo:ad5159c9).
+  const parsed = post.chunks_used.length > 0 ? null : parseCitationsBlock(post.content);
+  const bodyContent = parsed ? parsed.body : post.content;
+  const sources = post.chunks_used.length > 0
+    ? post.chunks_used.map(s => ({ key: s.id, tradition: s.tradition, text: s.text_name, section: s.section, tier: s.tier, quote: undefined as string | undefined }))
+    : (parsed?.citations ?? []).map((c, i) => ({ key: `c${i}`, tradition: c.tradition, text: c.text, section: c.section, tier: c.tier, quote: c.quote }));
 
   return (
     <main
@@ -97,11 +109,11 @@ export default async function BlogPostPage(
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
-            {post.content}
+            {bodyContent}
           </ReactMarkdown>
         </div>
 
-        {post.chunks_used.length > 0 && (
+        {sources.length > 0 && (
           <section style={{ marginTop: 48 }}>
             <h2
               style={{
@@ -115,13 +127,14 @@ export default async function BlogPostPage(
             >
               Sources
             </h2>
-            {post.chunks_used.map(src => (
+            {sources.map(src => (
               <Citation
-                key={src.id}
+                key={src.key}
                 tradition={src.tradition}
-                text={src.text_name}
+                text={src.text}
                 section={src.section}
                 tier={src.tier}
+                quote={src.quote}
               />
             ))}
           </section>
