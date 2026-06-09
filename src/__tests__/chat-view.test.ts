@@ -49,7 +49,6 @@ describe('recordsToMessages', () => {
       { query_text: 'Q', response_text: 'A' },
     ]);
     expect(out[1]!.citations).toBeUndefined();
-    expect(out[1]!.meta).toBeUndefined();
   });
 
   it('passes citations through to the assistant message (todo:89af833a)', () => {

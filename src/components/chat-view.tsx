@@ -39,7 +39,6 @@ export interface Message {
   content?: string;
   text?: string;
   citations?: CitationData[];
-  meta?: { chunks: number; traditions: number; verified: number; proposed: number };
   /** Query-expansion transparency (todo:9d2ad427): family/domain matches that
    *  fanned the query out. Live-only — arrives via the X-Query-Expansion header
    *  on /api/query; not persisted, so resumed sessions don't show it. */
@@ -396,14 +395,6 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                   <>
                     <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 1, marginBottom: 6, textTransform: 'uppercase' }}>References</div>
                     {cards.map((c, j) => <Citation key={j} {...c} />)}
-                    {msg.meta && (
-                      <div style={{ display: 'flex', gap: mobile ? 10 : 16, marginTop: 10, fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, padding: '8px 0', borderTop: `1px solid ${tokens.border.subtle}`, flexWrap: 'wrap' }}>
-                        <span>◆ {msg.meta.verified}</span>
-                        <span>◇ {msg.meta.proposed}</span>
-                        <span>{msg.meta.traditions} traditions</span>
-                        <span>{msg.meta.chunks} chunks</span>
-                      </div>
-                    )}
                   </>
                 )}
                 {/* Per-response attribution badge — provider only.

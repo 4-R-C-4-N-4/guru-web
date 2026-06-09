@@ -69,4 +69,14 @@ describe('parseCitationsBlock', () => {
     expect(citations).toEqual([]);
     expect(body).toBe(raw);
   });
+
+  it('does not treat a lowercase "citations:" line as the marker', () => {
+    // The emitted contract is always uppercase; matching lowercase would let
+    // ordinary hand-authored prose (a line starting "citations:") truncate the
+    // body. Case-sensitive marker keeps it intact.
+    const raw = 'Some prose.\n\ncitations: see the index at the back of the book.';
+    const { body, citations } = parseCitationsBlock(raw);
+    expect(citations).toEqual([]);
+    expect(body).toBe(raw);
+  });
 });

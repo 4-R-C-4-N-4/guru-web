@@ -35,8 +35,11 @@ export interface ParsedCitation {
 
 // The CITATIONS: marker on its own line — everything from here to EOF is the
 // block. Anchored to line start (m flag) so a stray "CITATIONS:" mid-sentence
-// in the prose doesn't trigger a false strip.
-const MARKER_RE = /^[^\S\n]*CITATIONS:[^\n]*$/im;
+// doesn't trigger a false strip. Case-SENSITIVE on purpose: the emitted
+// contract (prompt.ts) is always uppercase CITATIONS:, and matching a
+// lowercase "citations:" line would let ordinary hand-authored prose
+// truncate the body.
+const MARKER_RE = /^[^\S\n]*CITATIONS:[^\n]*$/m;
 
 function normalizeTier(raw: string | undefined): CitationTier {
   const v = (raw ?? '').replace(/^TIER:\s*/i, '').trim().toLowerCase();
