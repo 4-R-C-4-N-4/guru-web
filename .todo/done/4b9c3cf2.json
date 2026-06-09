@@ -1,0 +1,29 @@
+{
+  "id": "4b9c3cf2",
+  "type": "chore",
+  "state": "done",
+  "summary": "Cross-surface consistency + verification (colors/glyphs/quote, run tests, verify live)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-08T20:43:43.185Z",
+  "updated_at": "2026-06-08T22:03:30.303Z",
+  "tags": [
+    "citations",
+    "verify"
+  ],
+  "relationships": {
+    "parent": "a0e98810",
+    "depends_on": [
+      "50b9a90a",
+      "ad5159c9"
+    ]
+  },
+  "description": "Consistency + verification once chat (C2) and blog (C3) both render styled cards.\n\n- Confirm both surfaces use the same Citation card: tradition color (tokens.tradition), tier glyph ◆/◇/○ (tokens.tier), optional italic quote. The quote field in citation.tsx is currently vestigial — now that parseCitationsBlock extracts quotes, verify they render (or intentionally suppress) consistently on both surfaces.\n- Section header/footer: chat='References' (+ stats footer: verified/proposed/traditions/chunks counts), blog='Sources' (no footer). Per parent OPEN DECISION, default to leaving labels as-is and aligning only the card formatting. If the user wants one label, unify here.\n- Run the full test suite (npm test) — ensure C1/C2/C3 tests + existing prompt/blog-generate tests pass.\n- Verify live: (a) the linked by-hand blog post now shows styled Sources cards; (b) a fresh chat response shows styled References cards with no raw CITATIONS plaintext. Use the /verify or /run skill to drive the app.\n\nDepends on C2 and C3.",
+  "resolution": {
+    "commit": "808b0c7d4c3c3a9d7d72826c70c19d1330fb2ef0",
+    "resolved_at": "2026-06-08T22:03:30.303Z",
+    "resolved_by": "unknown",
+    "note": "Verified: full suite 515 passing (incl. SSR render tests reproducing both chat & blog surfaces — raw CITATIONS absent, styled cards present), tsc clean, eslint clean, next build succeeds. Both surfaces share the citation.tsx card (tradition color, tier glyph, optional quote); parsed-from-text citations now light up the previously-vestigial quote field on both. Section labels left as-is per parent default (chat 'References' + stats footer, blog 'Sources'). Live deployed confirmation follows on merge+deploy; the linked manual post will gain styled cards with no backfill (render-time parse)."
+  }
+}

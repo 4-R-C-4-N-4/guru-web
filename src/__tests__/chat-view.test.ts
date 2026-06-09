@@ -49,7 +49,6 @@ describe('recordsToMessages', () => {
       { query_text: 'Q', response_text: 'A' },
     ]);
     expect(out[1]!.citations).toBeUndefined();
-    expect(out[1]!.meta).toBeUndefined();
   });
 
   it('passes citations through to the assistant message (todo:89af833a)', () => {
@@ -132,7 +131,9 @@ describe('chat-view markdown rendering', () => {
     // The assistant render path uses ReactMarkdown; remarkGfm is passed
     // in remarkPlugins so tables/strikethrough/task lists/autolinks work.
     expect(SRC).toMatch(/<ReactMarkdown[^>]*remarkPlugins=\{\[remarkGfm\]\}/);
-    expect(SRC).toMatch(/\{msg\.text\s*\?\?\s*['"]{2}\}\s*<\/ReactMarkdown>/);
+    // The child is the CITATIONS-stripped body (bodyText), not the raw msg.text
+    // — the raw tail is rendered as styled cards instead (todo:50b9a90a).
+    expect(SRC).toMatch(/\{bodyText\}\s*<\/ReactMarkdown>/);
   });
 
   it('user messages render as plain text (not through markdown)', () => {

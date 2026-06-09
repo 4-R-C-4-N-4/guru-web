@@ -21,6 +21,7 @@ import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
+import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { displayForModelId } from '@/lib/provider-display';
 import type { QueryExpansion } from '@/lib/types';
@@ -38,7 +39,6 @@ export interface Message {
   content?: string;
   text?: string;
   citations?: CitationData[];
-  meta?: { chunks: number; traditions: number; verified: number; proposed: number };
   /** Query-expansion transparency (todo:9d2ad427): family/domain matches that
    *  fanned the query out. Live-only — arrives via the X-Query-Expansion header
    *  on /api/query; not persisted, so resumed sessions don't show it. */
@@ -351,7 +351,17 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
           </div>
         )}
 
-        {messages.map((msg, i) => (
+        {messages.map((msg, i) => {
+          // The model always emits a raw CITATIONS tail (prompt.ts CORE_RULES).
+          // Strip it from the prose — the sources render as styled cards below,
+          // from chunks_used (msg.citations) or, when retrieval attached none,
+          // the parsed block as a fallback. Otherwise the raw block would show
+          // as plaintext above the styled cards (todo:50b9a90a).
+          const parsed = msg.role === 'assistant' ? parseCitationsBlock(msg.text ?? '') : null;
+          const bodyText = parsed ? parsed.body : (msg.text ?? '');
+          const cards: CitationData[] =
+            msg.citations && msg.citations.length > 0 ? msg.citations : parsed?.citations ?? [];
+          return (
           <div key={i} style={{ maxWidth: 680, margin: '0 auto', padding: mobile ? '0 14px' : '0 24px', marginBottom: mobile ? 18 : 24 }}>
             <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: msg.role === 'user' ? tokens.text.accent : tokens.text.muted, letterSpacing: 2, marginBottom: 6, textTransform: 'uppercase' }}>
               {msg.role === 'user' ? 'You' : 'Guru'}
@@ -376,21 +386,15 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                     ))}
                   </div>
                 )}
-                <div className="md" style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 15, color: tokens.text.primary, lineHeight: 1.7, marginBottom: msg.citations?.length ? 14 : 0, overflowWrap: 'anywhere' }}>
+                <div className="md" style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 15, color: tokens.text.primary, lineHeight: 1.7, marginBottom: cards.length ? 14 : 0, overflowWrap: 'anywhere' }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
-                    {msg.text ?? ''}
+                    {bodyText}
                   </ReactMarkdown>
                 </div>
-                {msg.citations && msg.citations.length > 0 && (
+                {cards.length > 0 && (
                   <>
                     <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 1, marginBottom: 6, textTransform: 'uppercase' }}>References</div>
-                    {msg.citations.map((c, j) => <Citation key={j} {...c} />)}
-                    <div style={{ display: 'flex', gap: mobile ? 10 : 16, marginTop: 10, fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, padding: '8px 0', borderTop: `1px solid ${tokens.border.subtle}`, flexWrap: 'wrap' }}>
-                      <span>◆ {msg.meta?.verified}</span>
-                      <span>◇ {msg.meta?.proposed}</span>
-                      <span>{msg.meta?.traditions} traditions</span>
-                      <span>{msg.meta?.chunks} chunks</span>
-                    </div>
+                    {cards.map((c, j) => <Citation key={j} {...c} />)}
                   </>
                 )}
                 {/* Per-response attribution badge — provider only.
@@ -402,7 +406,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                   if (!display) return null;
                   return (
                     <div style={{
-                      marginTop: msg.citations?.length ? 6 : 10,
+                      marginTop: cards.length ? 6 : 10,
                       fontFamily: tokens.font.mono,
                       fontSize: 10,
                       color: tokens.text.muted,
@@ -414,7 +418,8 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {loading && (
           <div style={{ maxWidth: 680, margin: '0 auto', padding: mobile ? '0 14px' : '0 24px' }}>

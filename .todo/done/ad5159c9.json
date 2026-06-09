@@ -1,0 +1,29 @@
+{
+  "id": "ad5159c9",
+  "type": "chore",
+  "state": "done",
+  "summary": "Blog by-hand/edited posts: render styled Sources cards from typed CITATIONS block",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-08T20:43:43.153Z",
+  "updated_at": "2026-06-08T22:02:14.062Z",
+  "tags": [
+    "citations",
+    "blog"
+  ],
+  "relationships": {
+    "parent": "a0e98810",
+    "depends_on": [
+      "0f16353a"
+    ]
+  },
+  "description": "By-hand (createManualDraft, admin-blog.ts:243) and hand-edited blog posts carry the operator's CITATIONS block inside content and have empty chunks_used, so src/app/blog/[slug]/page.tsx renders no styled Sources block and the raw block shows as plaintext (live: /blog/state-of-the-atlas-the-spine-is-genealogy-the-surprise-is-the-tao).\n\nCHANGE in src/app/blog/[slug]/page.tsx (server component): when post.chunks_used is empty, run parseCitationsBlock(post.content) (C1); render the returned body as the markdown prose, and if it yielded citations render them through the existing <Citation> 'Sources' section (same JSX as the chunks_used path, lines ~104-127). When chunks_used IS present, keep current behavior unchanged (LLM-generated posts already strip server-side and store structured sources).\n\nCONSIDER: doing this at render keeps it robust for already-published manual posts (no backfill/migration needed). Alternatively parse-on-save in createManualDraft to populate chunks_used — note the tradeoff but prefer render-time to cover existing rows.\n\nTEST: a manual post whose content ends in a CITATIONS block renders styled Sources cards and the raw block is stripped from the body. Depends on C1.",
+  "resolution": {
+    "commit": "daccb32aeb8aa259ff32e6f1be2707e237abfdfe",
+    "resolved_at": "2026-06-08T22:02:14.062Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/blog-citations.test.tsx",
+    "note": "Blog page: when chunks_used is empty, parseCitationsBlock(content) supplies the Sources cards and the body renders stripped. Structured (LLM) posts unchanged. Render-time, so already-published manual posts (incl. the linked state-of-the-atlas post) gain styled cards with no backfill."
+  }
+}
