@@ -1,0 +1,41 @@
+{
+  "id": "c2b401a2",
+  "type": "bug",
+  "state": "done",
+  "summary": "Blog seed-form exposes only blacklist scope — no whitelist/'limit-to' mode, so generation can't be restricted to a chosen set of traditions",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-09T17:53:14.663Z",
+  "updated_at": "2026-06-09T19:36:40.534Z",
+  "files": [
+    {
+      "path": "src/app/(admin)/admin/blog/seed-form.tsx",
+      "lines": [
+        59,
+        83
+      ]
+    }
+  ],
+  "tags": [
+    "blog",
+    "scope",
+    "retrieval",
+    "admin-ui"
+  ],
+  "description": "User report: the tradition filter in the blog section 'doesn't work for limiting the scope of the blog posts.'\n\nROOT CAUSE — UI gap, not a backend bug. The seed-form only offers a blacklist (\"Scope — block traditions\"); checked boxes always mean EXCLUDE. There is no whitelist/'limit-to' control, so a post cannot be restricted to only a chosen set of traditions (you'd have to block the other ~14). Confirmed empirically: across all blog_posts, 1 seed ever used blacklist (honored correctly, zero violations) and 0 seeds ever used whitelist.\n\nThe backend already fully supports whitelist end-to-end:\n- src/app/api/admin/blog/seed/route.ts:17 SCOPE_MODES includes 'whitelist'; :77 reads whitelisted_traditions\n- src/lib/admin-blog.ts insertSeed persists whitelisted_traditions\n- src/lib/blog-generate.ts:241-255 seedToPrefs maps 'whitelist' through to UserPreferences\n- src/lib/graph.ts:341-351 buildScopeFilter emits tradition = ANY($n) for whitelist; applied by all 3 retrieval legs (vector/graph/lexical)\n\nFIX (UI-only, no backend changes): add a scope-mode toggle to seed-form.tsx (src/app/(admin)/admin/blog/seed-form.tsx:59-83,221-233) so the checked traditions can mean either Block (current blacklist) or Limit-to (whitelist -> POST scope_mode:'whitelist' + whitelisted_traditions:[...]).\n\nTEST: a unit/integration test asserting the form POSTs scope_mode:'whitelist' with whitelisted_traditions when the limit-to mode is selected (the seed route already validates it).",
+  "work": {
+    "branch": "todo/c2b401a2",
+    "base_branch": "main",
+    "started_at": "2026-06-09T19:34:06.029Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "fbea4f2dcae5154f33d51d8a7ab109d4fb957eae",
+    "resolved_at": "2026-06-09T19:36:40.534Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/blog-seed-scope.test.tsx",
+    "test_function": "buildScopePayload limit-to mode → whitelist scope restricted to the checked traditions",
+    "note": "UI gap fix: added Block/Limit-to scope toggle to the blog seed-form so checked traditions can mean whitelist (restrict-to) not only blacklist (exclude). Backend whitelist path was already live; logic extracted to buildScopePayload and unit-tested. No backend changes."
+  }
+}
