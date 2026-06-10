@@ -23,6 +23,33 @@ type Catalog = Record<string, { texts: string[] }>;
 
 const MODEL_SLUGS = Object.keys(CURATED_MODELS) as CuratedSlug[];
 
+/**
+ * Map the scope toggle + checked traditions into the seed payload's scope
+ * fields. Exported for unit testing (todo:c2b401a2).
+ *   - empty selection          → 'all' (no narrowing)
+ *   - kind 'limit' + selection → 'whitelist' (restrict to ONLY the checked set)
+ *   - kind 'block' + selection → 'blacklist' (exclude the checked set)
+ * The unused list is always [] so a stale set is never persisted. The whitelist
+ * path is already supported end-to-end (seed route, seedToPrefs,
+ * buildScopeFilter); the 'limit' kind is what finally exposes it.
+ */
+export function buildScopePayload(
+  kind: 'block' | 'limit',
+  selected: string[],
+): {
+  scope_mode: 'all' | 'whitelist' | 'blacklist';
+  blocked_traditions: string[];
+  whitelisted_traditions: string[];
+} {
+  if (selected.length === 0) {
+    return { scope_mode: 'all', blocked_traditions: [], whitelisted_traditions: [] };
+  }
+  if (kind === 'limit') {
+    return { scope_mode: 'whitelist', blocked_traditions: [], whitelisted_traditions: selected };
+  }
+  return { scope_mode: 'blacklist', blocked_traditions: selected, whitelisted_traditions: [] };
+}
+
 const inputStyle: React.CSSProperties = {
   fontFamily: tokens.font.mono,
   fontSize: 12,
@@ -56,15 +83,18 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
   const [conceptB, setConceptB] = useState('');
   const [angle, setAngle] = useState('');
   const [model, setModel] = useState<CuratedSlug>('deepseek');
-  // Scope: 'all' (no narrowing) or 'blacklist' (block the checked traditions).
-  // KISS rebuild — tradition-level only, no per-text tree (settings keeps that).
-  const [blocked, setBlocked] = useState<Set<string>>(new Set());
+  // Scope narrowing — tradition-level only (KISS rebuild; settings keeps the
+  // per-text tree). `scopeKind` decides what the checked set MEANS: 'block'
+  // excludes the checked traditions (blacklist); 'limit' restricts generation
+  // to ONLY the checked ones (whitelist). An empty set is 'all' either way.
+  const [scopeKind, setScopeKind] = useState<'block' | 'limit'>('block');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
-  function toggleBlocked(t: string) {
-    setBlocked(prev => {
+  function toggleScope(t: string) {
+    setSelected(prev => {
       const next = new Set(prev);
       if (next.has(t)) next.delete(t);
       else next.add(t);
@@ -76,12 +106,7 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
     e.preventDefault();
     setErr(null);
 
-    const blockedTraditions = [...blocked];
-    const common = {
-      model,
-      scope_mode: blockedTraditions.length ? 'blacklist' : 'all',
-      blocked_traditions: blockedTraditions,
-    };
+    const common = { model, ...buildScopePayload(scopeKind, [...selected]) };
 
     let payload: Record<string, unknown>;
     if (mode === 'topic') {
@@ -119,7 +144,8 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
       setConceptA('');
       setConceptB('');
       setAngle('');
-      setBlocked(new Set());
+      setSelected(new Set());
+      setScopeKind('block');
       setOpen(false);
       router.refresh();
     } catch {
@@ -220,14 +246,31 @@ export function SeedForm({ catalog }: { catalog: Catalog }) {
 
       {traditions.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Scope — block traditions (optional)</label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', maxHeight: 120, overflowY: 'auto' }}>
-            {traditions.map(t => (
-              <label key={t} style={{ fontFamily: tokens.font.mono, fontSize: 11, color: blocked.has(t) ? tokens.text.muted : tokens.text.secondary, cursor: 'pointer' }}>
-                <input type="checkbox" checked={blocked.has(t)} onChange={() => toggleBlocked(t)} style={{ marginRight: 4 }} />
-                {t}
+          <label style={labelStyle}>Scope — narrow traditions (optional)</label>
+          {/* What the checked set means: Block (exclude) vs Limit to (include only). */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
+            {([['block', 'Block'], ['limit', 'Limit to']] as const).map(([k, lbl]) => (
+              <label key={k} style={{ fontFamily: tokens.font.mono, fontSize: 11, color: scopeKind === k ? tokens.text.accent : tokens.text.secondary, cursor: 'pointer' }}>
+                <input type="radio" name="scopeKind" checked={scopeKind === k} onChange={() => setScopeKind(k)} style={{ marginRight: 4 }} />
+                {lbl}
               </label>
             ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', maxHeight: 120, overflowY: 'auto' }}>
+            {traditions.map(t => {
+              const on = selected.has(t);
+              // 'limit' → a checked tradition is INCLUDED (accent); 'block' → a
+              // checked tradition is EXCLUDED (muted). Unchecked stays neutral.
+              const color = on
+                ? scopeKind === 'limit' ? tokens.text.accent : tokens.text.muted
+                : tokens.text.secondary;
+              return (
+                <label key={t} style={{ fontFamily: tokens.font.mono, fontSize: 11, color, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={on} onChange={() => toggleScope(t)} style={{ marginRight: 4 }} />
+                  {t}
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
