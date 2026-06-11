@@ -1,0 +1,36 @@
+{
+  "id": "2538570b",
+  "type": "bug",
+  "state": "done",
+  "summary": "parseCitationsBlock drops inline (single-line) CITATIONS blocks — Sources vanish on hand-authored posts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-11T13:04:27.827Z",
+  "updated_at": "2026-06-11T13:06:00.336Z",
+  "files": [
+    {
+      "path": "src/lib/citations.ts"
+    }
+  ],
+  "tags": [
+    "blog",
+    "citations",
+    "parser"
+  ],
+  "description": "On prod, the published manual post (seed_kind=manual, chunks_used=[]) carries its CITATIONS block on a SINGLE line: 'CITATIONS: [trad | text | section | TIER: verified] [..] [..]'. parseCitationsBlock finds the marker via /^[^\\S\\n]*CITATIONS:[^\\n]*$/m, but marker[0] consumes the whole line (the [^\\n]* eats every bracket entry). It then scans only text.slice(marker.index + marker[0].length).split('\\n') for entries — which is empty. Net: body gets the block stripped, zero citations parse, Sources section disappears (regression introduced by PR #91 / todo:a0e98810; pre-#91 the raw block at least rendered as plaintext). Fix: scan the whole block region (from marker to EOF) for [..] groups regardless of newlines, preserving line-based optional quote attachment. Add regression test with the inline format. Repro post slug: state-of-the-atlas-the-spine-is-genealogy-the-surprise-is-the-tao.",
+  "work": {
+    "branch": "todo/2538570b",
+    "base_branch": "main",
+    "started_at": "2026-06-11T13:04:39.906Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "b802e19",
+    "resolved_at": "2026-06-11T13:06:00.336Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/citations.test.ts",
+    "test_function": "parses an inline block whose entries share the marker line (todo:2538570b)",
+    "note": "Region-scan parser fix; verified against live prod content (0→25 sources)."
+  }
+}
