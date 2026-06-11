@@ -54,6 +54,24 @@ function asQuote(line: string): string | undefined {
   return inner || undefined;
 }
 
+// Each [ ... ] citation entry. Scanned globally over the block region (not
+// per-line) so entries collapsed onto one line — e.g. a hand-authored post
+// whose block reads `CITATIONS: [..] [..] [..]`, or any source that reflows
+// the newlines — parse the same as the newline-delimited contract form.
+const ENTRY_RE = /\[([^\]]+)\]/g;
+
+// The first quote-glyph line in the gap between one entry and the next is that
+// entry's optional quote. Inline blocks have no such line (the gap is a space),
+// so they simply carry no quote — the newline contract still attaches one.
+function quoteFromGap(gap: string): string | undefined {
+  for (const line of gap.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    return asQuote(t); // undefined unless this line is a quote line
+  }
+  return undefined;
+}
+
 /**
  * Split prose from its trailing CITATIONS block.
  *
@@ -69,27 +87,28 @@ export function parseCitationsBlock(raw: string): { body: string; citations: Par
   if (!marker) return { body: text, citations: [] };
 
   const body = text.slice(0, marker.index).trim();
-  const blockLines = text.slice(marker.index + marker[0].length).split('\n');
+  // The block is everything from the marker to EOF. Scan it for [ ... ] groups
+  // rather than splitting on '\n' and requiring one entry per line: the entries
+  // may be newline-delimited (the emitted contract) OR collapsed onto the
+  // marker line itself (a hand-authored / reflowed block — the regression that
+  // made Sources vanish, todo:2538570b). The literal `CITATIONS:` keyword holds
+  // no brackets, so leaving it in the scanned region is harmless.
+  const block = text.slice(marker.index);
+  const matches = [...block.matchAll(ENTRY_RE)];
 
   const citations: ParsedCitation[] = [];
-  for (let i = 0; i < blockLines.length; i++) {
-    const line = blockLines[i].trim();
-    const bracket = line.match(/^\[(.+)\]$/);
-    if (!bracket) continue;
-
-    const parts = bracket[1].split('|').map(s => s.trim());
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const parts = m[1].split('|').map(s => s.trim());
     if (parts.length < 3) continue; // need at least tradition, text, section
     const [tradition, textName, section, tierRaw] = parts;
     if (!tradition || !textName) continue;
 
-    // Optional quote: the immediate next non-empty line, if it's a quote line.
-    let quote: string | undefined;
-    for (let j = i + 1; j < blockLines.length; j++) {
-      const next = blockLines[j].trim();
-      if (!next) continue;
-      quote = asQuote(next); // undefined if the next entry's bracket, not a quote
-      break;
-    }
+    // Optional quote: a quote line in the gap before the next entry (or EOF).
+    // Newline blocks put it on its own line; inline blocks have no quote.
+    const gapStart = m.index + m[0].length;
+    const gapEnd = i + 1 < matches.length ? matches[i + 1].index : block.length;
+    const quote = quoteFromGap(block.slice(gapStart, gapEnd));
 
     citations.push({
       tradition,
