@@ -1,0 +1,24 @@
+{
+  "id": "25ec2f4c",
+  "type": "feature",
+  "state": "done",
+  "summary": "Connect isolated blog to main site (nav entry + auth-aware home exit)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-16T15:33:21.433Z",
+  "updated_at": "2026-06-16T15:40:55.476Z",
+  "relationships": {
+    "children": [
+      "3eb7c659",
+      "133d94d6",
+      "12107b42"
+    ]
+  },
+  "resolution": {
+    "commit": "9390f8bb83bdaa8a9982bd7a24c9b9d8a3f13679",
+    "resolved_at": "2026-06-16T15:40:55.476Z",
+    "resolved_by": "unknown",
+    "note": "Blog connected to main site: auth-aware home button (shared blog layout) gives an exit; Essays nav link gives an entry for logged-in users. All 3 subtasks closed; 525 tests pass."
+  }
+}
