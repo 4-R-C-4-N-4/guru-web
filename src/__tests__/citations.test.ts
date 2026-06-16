@@ -70,6 +70,26 @@ describe('parseCitationsBlock', () => {
     expect(body).toBe(raw);
   });
 
+  it('parses an inline block whose entries share the marker line (todo:2538570b)', () => {
+    // A hand-authored / reflowed post can collapse the whole block onto one
+    // line: `CITATIONS: [..] [..] [..]`. The old per-following-line scan saw
+    // the marker line consumed and zero entries left, so it stripped the block
+    // from the body AND rendered no cards — the Sources section vanished. The
+    // region scan must recover every entry regardless of newlines.
+    const raw =
+      `${PROSE}\n\nCITATIONS: ` +
+      '[neoplatonism | Select Works of Plotinus (trans. Thomas Taylor) | Section 203 (part 2) | TIER: verified] ' +
+      '[taoism | Tao Te Ching (trans. James Legge) | Chapter 1 | TIER: verified] ' +
+      '[buddhism | Visuddhimagga | IX | TIER: proposed]';
+    const { body, citations } = parseCitationsBlock(raw);
+    expect(body).toBe(PROSE);
+    expect(body).not.toContain('CITATIONS:');
+    expect(citations.map(c => c.tradition)).toEqual(['neoplatonism', 'taoism', 'buddhism']);
+    expect(citations.map(c => c.tier)).toEqual(['verified', 'verified', 'proposed']);
+    expect(citations[0].text).toBe('Select Works of Plotinus (trans. Thomas Taylor)');
+    expect(citations[0].section).toBe('Section 203 (part 2)');
+  });
+
   it('does not treat a lowercase "citations:" line as the marker', () => {
     // The emitted contract is always uppercase; matching lowercase would let
     // ordinary hand-authored prose (a line starting "citations:") truncate the
