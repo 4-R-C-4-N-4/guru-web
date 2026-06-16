@@ -1,0 +1,25 @@
+{
+  "id": "12107b42",
+  "type": "chore",
+  "state": "done",
+  "summary": "Verify blog home button routes correctly in both auth states and nav link reaches blog",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-16T15:33:32.097Z",
+  "updated_at": "2026-06-16T15:40:50.171Z",
+  "relationships": {
+    "parent": "25ec2f4c",
+    "depends_on": [
+      "133d94d6"
+    ]
+  },
+  "resolution": {
+    "commit": "c3c3f496b840c79e377f7cd811e4ccd7dda75bab",
+    "resolved_at": "2026-06-16T15:40:50.171Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/blog-nav.test.tsx",
+    "test_function": "BlogHomeButton auth-aware target (todo:3eb7c659)",
+    "note": "6 tests: BlogHomeButton renders href=/sign-in when signed-out or loading and href=/chat when signed-in; NAV_ITEMS has Essays->/blog and mobile dropdown maps NAV_ITEMS; blog layout mounts BlogHomeButton. Full suite 525 passed."
+  }
+}
