@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/chat',     label: 'Query'    },
   { href: '/history',  label: 'Sessions' },
   { href: '/settings', label: 'Scope'    },
+  { href: '/blog',     label: 'Essays'   },
   { href: '/account',  label: 'Account'  },
 ];
 
