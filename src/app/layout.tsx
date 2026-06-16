@@ -3,6 +3,7 @@ import { Cormorant_Garamond, IBM_Plex_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { headers } from 'next/headers';
 import { clerkAppearance } from '@/styles/clerk-appearance';
+import { TAILNET_HOST } from '@/lib/host';
 import './globals.css';
 
 const display = Cormorant_Garamond({
@@ -19,13 +20,6 @@ const mono = IBM_Plex_Mono({
   variable: '--font-mono',
   display: 'swap',
 });
-
-/**
- * Hostname of the VPS's tailnet listener (deploy/Caddyfile). Must
- * match exactly — both files need updating together if the tailnet
- * suffix changes.
- */
-const TAILNET_HOST = 'guru-web-prod.tailb5626e.ts.net';
 
 export const metadata: Metadata = {
   title: 'Guru — Cross-Tradition Esoteric Research',

@@ -25,7 +25,14 @@ vi.mock('@clerk/nextjs', () => ({
   useUser: () => ({ isSignedIn: mockAuth.isSignedIn }),
 }));
 
+const mockHost = vi.hoisted(() => ({ value: 'app.guru-ai.org' as string | null }));
+vi.mock('next/headers', () => ({
+  headers: async () => ({ get: (k: string) => (k === 'host' ? mockHost.value : null) }),
+}));
+
 import BlogHomeButton from '@/components/blog-home-button';
+import BlogLayout from '@/app/blog/layout';
+import { TAILNET_HOST } from '@/lib/host';
 
 describe('BlogHomeButton auth-aware target (todo:3eb7c659)', () => {
   it('points anonymous visitors at /sign-in', () => {
@@ -66,5 +73,26 @@ describe('shared blog layout mounts the home button (todo:3eb7c659)', () => {
   it('blog/layout.tsx renders BlogHomeButton', () => {
     expect(LAYOUT_SRC).toMatch(/import\s+BlogHomeButton/);
     expect(LAYOUT_SRC).toMatch(/<BlogHomeButton\s*\/>/);
+  });
+});
+
+describe('blog layout degrades gracefully on the tailnet host (todo:3eb7c659)', () => {
+  // The root layout skips ClerkProvider on the tailnet host, so calling the
+  // useUser() hook there throws. The blog is public and must still render —
+  // the layout falls back to a static link instead of the Clerk-driven button.
+  it('renders a static home link to / (no Clerk hook) when ClerkProvider is absent', async () => {
+    mockHost.value = TAILNET_HOST;
+    const html = renderToStaticMarkup(await BlogLayout({ children: null }));
+    expect(html).toContain('href="/"');
+    expect(html).toContain('← Home');
+    expect(html).not.toContain('href="/sign-in"');
+    expect(html).not.toContain('href="/chat"');
+  });
+
+  it('mounts the auth-aware BlogHomeButton on a normal host', async () => {
+    mockHost.value = 'app.guru-ai.org';
+    mockAuth.isSignedIn = true;
+    const html = renderToStaticMarkup(await BlogLayout({ children: null }));
+    expect(html).toContain('href="/chat"');
   });
 });
