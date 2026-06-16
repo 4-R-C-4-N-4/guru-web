@@ -1,0 +1,11 @@
+{
+  "id": "25ec2f4c",
+  "type": "feature",
+  "state": "open",
+  "summary": "Connect isolated blog to main site (nav entry + auth-aware home exit)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-16T15:33:21.433Z",
+  "updated_at": "2026-06-16T15:33:21.433Z"
+}
