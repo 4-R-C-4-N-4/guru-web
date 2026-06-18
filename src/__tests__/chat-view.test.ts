@@ -215,6 +215,33 @@ describe('chat-view streaming attribution (post-fix #1)', () => {
   });
 });
 
+describe('chat-view live citations from X-Citations header (todo:2fd21c61)', () => {
+  // The live stream must NOT depend on parsing the model's free-text CITATIONS
+  // tail — that varied enough that cards only appeared after a refresh
+  // rehydrated them from chunks_used. The route now sends the authoritative
+  // chunks_used set in X-Citations; the client seeds msg.citations from it so
+  // the "References" cards render during the stream, identical to a refresh.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('reads X-Citations from the response headers', () => {
+    expect(SRC).toMatch(/res\.headers\.get\(['"]X-Citations['"]\)/);
+  });
+
+  it('seeds citations on the assistant message (placeholder + each stream update)', () => {
+    // Spread guarded on a non-empty parsed payload, like modelUsed/expansion.
+    const seeds = SRC.match(/\.\.\.\(hasCitations && \{ citations \}\)/g) ?? [];
+    expect(seeds.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('parses the header defensively (a malformed header must not break the stream)', () => {
+    expect(SRC).toMatch(/JSON\.parse\(decodeURIComponent\(citationsHeader\)\)/);
+  });
+});
+
 describe('chat-view UX simplification (todo:e8105324)', () => {
   // Source-level guards locking in the C9 reframe:
   //   - per-response attribution shows 'via <Provider>' only,

@@ -62,6 +62,26 @@ describe('parseCitationsBlock', () => {
     expect(citations[0].tradition).toBe('neoplatonism');
   });
 
+  // Regression (todo:2fd21c61): the model sometimes appends the quote on the
+  // SAME line as the bracketed entry rather than on the next line. The fallback
+  // parser (chat now seeds cards from the authoritative X-Citations header, so
+  // this only feeds the hand-authored blog path) must still recover both the
+  // entry and its inline quote.
+  it('parses a bracketed entry with an inline quote on the same line', () => {
+    const raw = `${PROSE}\n\nCITATIONS:\n[neoplatonism | Select Works of Plotinus | Section 275 | tier: verified] “In its character as Life … the Source of plurality.”\n[jewish_mysticism | The Kabbalah Unveiled | Introduction | tier: proposed]`;
+    const { citations } = parseCitationsBlock(raw);
+    expect(citations).toHaveLength(2);
+    expect(citations[0]).toEqual({
+      tradition: 'neoplatonism',
+      text: 'Select Works of Plotinus',
+      section: 'Section 275',
+      tier: 'verified',
+      quote: 'In its character as Life … the Source of plurality.',
+    });
+    expect(citations[1].tradition).toBe('jewish_mysticism');
+    expect(citations[1].quote).toBeUndefined();
+  });
+
   it('does not false-trigger on the word CITATIONS mid-prose', () => {
     const raw = 'He listed the CITATIONS: inline, then continued.\n\nMore prose.';
     const { body, citations } = parseCitationsBlock(raw);
