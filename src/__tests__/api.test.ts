@@ -720,6 +720,53 @@ describe('POST /api/query', () => {
     await res.text();
   });
 
+  it('surfaces retrieved chunks as authoritative citations in the X-Citations header (todo:2fd21c61)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    // Two retrieved chunks — the chat client renders these as live "References"
+    // cards instead of parsing the model's free-text CITATIONS tail.
+    mockRetrieve.mockResolvedValueOnce([
+      { id: 'c1', text_id: 't1', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1', translator: null, body: 'b', token_count: 1, source: 'vector', tier: 'verified' },
+      { id: 'c2', text_id: 't2', tradition: 'taoism', text_name: 'Tao Te Ching', section: '1', translator: null, body: 'b', token_count: 1, source: 'graph', tier: 'proposed' },
+    ] as never);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+
+    async function* fakeStream() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(fakeStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'the One', sessionId: 's1' }));
+    expect(res.status).toBe(200);
+    const header = res.headers.get('X-Citations');
+    expect(header).toBeTruthy();
+    expect(JSON.parse(decodeURIComponent(header!))).toEqual([
+      { tradition: 'neoplatonism', text: 'Enneads', section: 'V.1', tier: 'verified' },
+      { tradition: 'taoism', text: 'Tao Te Ching', section: '1', tier: 'proposed' },
+    ]);
+    await res.text();
+  });
+
+  it('omits the X-Citations header when retrieval returned no chunks', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1' });
+    mockComputeCost.mockResolvedValue(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce(ALLOWED_RESERVE);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('assembled prompt');
+    mockExec.mockResolvedValue(undefined);
+
+    async function* fakeStream() { yield { choices: [{ delta: { content: 'ok' } }] }; }
+    mockStream.mockResolvedValueOnce(fakeStream() as never);
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'qqq', sessionId: 's1' }));
+    expect(res.headers.get('X-Citations')).toBeNull();
+    await res.text();
+  });
+
   it('persists token counts + cost_usd from final usage chunk', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockOne.mockResolvedValueOnce({ id: 's1' });

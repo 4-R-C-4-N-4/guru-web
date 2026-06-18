@@ -1,0 +1,40 @@
+{
+  "id": "2fd21c61",
+  "type": "bug",
+  "state": "done",
+  "summary": "Chat citations don't render live (only after refresh): parser too strict for real model CITATIONS formats",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-06-18T12:30:05.444Z",
+  "updated_at": "2026-06-18T13:56:03.430Z",
+  "files": [
+    {
+      "path": "src/lib/citations.ts"
+    }
+  ],
+  "tags": [
+    "citations",
+    "chat",
+    "parser",
+    "regression"
+  ],
+  "description": "Regression from todo:50b9a90a (strip CITATIONS tail from chat, render styled cards from parseCitationsBlock).\n\nSYMPTOM: chat citation cards do not appear during the live stream; they only show after a page refresh.\n\nROOT CAUSE: live path renders cards from parseCitationsBlock(streamed text); refresh path rehydrates from chunks_used -> corpus.chunks (authoritative). The parser only accepted the documented '[tradition | text | section | TIER: x]' line ending exactly in ']'. Real model output (confirmed from queries rows) uses two other shapes:\n  1. bracketed + inline quote on same line: [a | b | c | tier: x] \"quote...\"  (line doesn't end in ']')\n  2. index-prefixed, unbracketed fields echoing the SOURCE PASSAGES input shape: [7] neoplatonism | b | c | Tier: verified\nBoth yielded zero parsed citations -> no live cards. Refresh path bypasses the parser, hence 'only after refresh'.\n\nFIX: added extractFields() in src/lib/citations.ts tolerating both formats (+ leading tier glyph, inline-quote preference). Strict documented format still parses identically.\n\nTESTS: 3 regression tests added to src/__tests__/citations.test.ts; full suite 530 passed, typecheck clean.",
+  "analysis": [
+    {
+      "timestamp": "2026-06-18T13:55:49.497Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Original capture framed the parser strictness as THE fix. That was necessary but NOT sufficient: with next dev + HMR running, the parser fix was live and the bug persisted. Real root cause is architectural — the live chat render reconstructed citations by PARSING the model's free-text CITATIONS tail, while refresh rehydrates from authoritative chunks_used -> corpus.chunks. Model output varies too much (inline quotes, index-prefixed/unbracketed entries, block omitted under output-token cap) for parsing to be reliable. FIX: /api/query now emits the retrieved chunks_used set in an X-Citations header (mirroring X-Model-Used/X-Query-Expansion); chat-view seeds msg.citations from it so cards render live, identical to refresh, independent of model formatting. Parser hardening retained as fallback (serves the hand-authored blog path).",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "676b314fd77fa750017b5afd355ed9cb3da09c9e",
+    "resolved_at": "2026-06-18T13:56:03.430Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/api.test.ts",
+    "test_function": "POST /api/query > surfaces retrieved chunks as authoritative citations in the X-Citations header (todo:2fd21c61)",
+    "note": "Root cause was architectural, not just parser strictness: live render parsed the model's free-text CITATIONS tail while refresh used authoritative chunks_used. Fix emits X-Citations header from retrieved chunks; chat-view seeds msg.citations so cards render live, identical to refresh. Parser hardening kept as fallback. Verified: 110 tests pass (api + chat-view + citations + chat-citations), tsc clean."
+  }
+}

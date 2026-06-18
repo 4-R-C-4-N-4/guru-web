@@ -353,6 +353,26 @@ export async function POST(req: Request) {
     },
   });
 
+  // Authoritative citations for the LIVE render. The chat client used to
+  // recover citations by parsing the model's free-text CITATIONS tail out of
+  // the stream — fragile, since the model varies that format (inline quotes,
+  // index-prefixed/unbracketed entries, sometimes omitting the block under the
+  // output-token cap), so cards frequently failed to appear until a refresh
+  // rehydrated them from chunks_used. These ARE the chunks_used rows (same set
+  // /api/sessions/[id] rehydrates on refresh), so the client gets identical,
+  // model-format-independent citations the moment the stream opens — no refresh
+  // needed (todo:2fd21c61). URI-encoded JSON keeps the header ASCII-safe.
+  const citationsHeader = chunks.length > 0
+    ? encodeURIComponent(JSON.stringify(
+        chunks.map(c => ({
+          tradition: c.tradition,
+          text: c.text_name,
+          section: c.section,
+          tier: c.tier ?? 'verified',
+        })),
+      ))
+    : '';
+
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
@@ -374,6 +394,7 @@ export async function POST(req: Request) {
       // concepts". URI-encoded JSON keeps the header ASCII-safe; omitted when
       // nothing expanded (concept-only / no match) so no chip renders.
       ...(expansion.length > 0 && { 'X-Query-Expansion': encodeURIComponent(JSON.stringify(expansion)) }),
+      ...(citationsHeader && { 'X-Citations': citationsHeader }),
       ...(streamError ? { 'X-Stream-Error': 'truncated' } : {}),
     },
   });

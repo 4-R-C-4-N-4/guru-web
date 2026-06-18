@@ -232,6 +232,19 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         catch { /* ignore a malformed header */ }
       }
 
+      // Authoritative citations (todo:2fd21c61) — the retrieved chunks_used set,
+      // the same one /api/sessions/[id] rehydrates on refresh. Seeding them here
+      // makes the "References" cards render live regardless of how the model
+      // formatted (or omitted) its CITATIONS tail. Parse defensively; a malformed
+      // header must never break the stream render.
+      let citations: CitationData[] | undefined;
+      const citationsHeader = res.headers.get('X-Citations');
+      if (citationsHeader) {
+        try { citations = JSON.parse(decodeURIComponent(citationsHeader)) as CitationData[]; }
+        catch { /* ignore a malformed header */ }
+      }
+      const hasCitations = citations !== undefined && citations.length > 0;
+
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
 
@@ -245,6 +258,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
           text: '',
           ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
           ...(expansion && expansion.length > 0 && { expansion }),
+          ...(hasCitations && { citations }),
         },
       ]);
 
@@ -259,6 +273,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
             text: fullText,
             ...(modelUsedHeader && { modelUsed: modelUsedHeader }),
             ...(expansion && expansion.length > 0 && { expansion }),
+            ...(hasCitations && { citations }),
           };
           return next;
         });
