@@ -1,0 +1,27 @@
+{
+  "id": "5abd5582",
+  "type": "chore",
+  "state": "done",
+  "summary": "Move SAVE and RESET TO ALL buttons from bottom of scope list to corpus scope header",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-06-19T21:09:26.388Z",
+  "updated_at": "2026-06-19T21:11:02.062Z",
+  "files": [
+    {
+      "path": "src/app/(app)/settings/page.tsx"
+    }
+  ],
+  "tags": [
+    "ui",
+    "settings",
+    "scope"
+  ],
+  "resolution": {
+    "commit": "e79176a976b5009b5945d540fc4b7b8603b4513d",
+    "resolved_at": "2026-06-19T21:11:02.062Z",
+    "resolved_by": "unknown",
+    "note": "Relocated Save and Reset to All buttons into the Corpus Scope header row (right-aligned, flex-wrap for mobile); removed the trailing button block at the bottom of the traditions list. Verified with tsc --noEmit and eslint, both clean."
+  }
+}
