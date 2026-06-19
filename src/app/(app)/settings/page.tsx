@@ -323,11 +323,31 @@ export default function SettingsPage() {
         })}
       </div>
 
-      <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>Corpus Scope</div>
-      <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary, marginBottom: 20 }}>
-        {status === 'loading' && 'loading…'}
-        {status === 'error'   && <span style={{ color: tokens.text.error }}>failed to load corpus</span>}
-        {status === 'ready'   && `${activeTexts}/${totalTexts} texts · ${activeTrad}/${Object.keys(traditions).length} traditions`}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 4, textTransform: 'uppercase' }}>Corpus Scope</div>
+          <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.secondary }}>
+            {status === 'loading' && 'loading…'}
+            {status === 'error'   && <span style={{ color: tokens.text.error }}>failed to load corpus</span>}
+            {status === 'ready'   && `${activeTexts}/${totalTexts} texts · ${activeTrad}/${Object.keys(traditions).length} traditions`}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleSave} disabled={saving} style={{
+            fontFamily: tokens.font.mono, fontSize: 11, padding: mobile ? '12px 20px' : '8px 16px',
+            background: tokens.text.accent, color: tokens.bg.deep, border: 'none', borderRadius: 2,
+            cursor: saving ? 'default' : 'pointer', fontWeight: 600,
+          }}>{saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}</button>
+          <button onClick={() => setTraditions(prev => Object.fromEntries(
+            Object.entries(prev).map(([name, data]) => [name, {
+              active: true,
+              texts: Object.fromEntries(Object.keys(data.texts).map(t => [t, true])),
+            }]),
+          ))} style={{
+            fontFamily: tokens.font.mono, fontSize: 11, padding: mobile ? '12px 20px' : '8px 16px',
+            background: 'none', color: tokens.text.muted, border: `1px solid ${tokens.border.subtle}`, borderRadius: 2, cursor: 'pointer',
+          }}>Reset to All</button>
+        </div>
       </div>
 
       {Object.entries(traditions).map(([name, data]) => {
@@ -374,23 +394,6 @@ export default function SettingsPage() {
           </div>
         );
       })}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-        <button onClick={handleSave} disabled={saving} style={{
-          fontFamily: tokens.font.mono, fontSize: 11, padding: mobile ? '12px 20px' : '8px 16px',
-          background: tokens.text.accent, color: tokens.bg.deep, border: 'none', borderRadius: 2,
-          cursor: saving ? 'default' : 'pointer', fontWeight: 600,
-        }}>{saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}</button>
-        <button onClick={() => setTraditions(prev => Object.fromEntries(
-          Object.entries(prev).map(([name, data]) => [name, {
-            active: true,
-            texts: Object.fromEntries(Object.keys(data.texts).map(t => [t, true])),
-          }]),
-        ))} style={{
-          fontFamily: tokens.font.mono, fontSize: 11, padding: mobile ? '12px 20px' : '8px 16px',
-          background: 'none', color: tokens.text.muted, border: `1px solid ${tokens.border.subtle}`, borderRadius: 2, cursor: 'pointer',
-        }}>Reset to All</button>
-      </div>
     </div>
   );
 }
