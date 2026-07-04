@@ -76,18 +76,36 @@ export async function retrieve(
   });
 }
 
-// Corpus-apparatus patterns (todo:9e31302a; mined in tuning-experiment.md Round 2).
+// Corpus-apparatus patterns (todo:9e31302a; hardened by the guru-repo V8 audit —
+// docs/summary/boilerplate-audit.md, todo:fccaf47d). As of the V8 clean the
+// corpus ships with bodies already stripped at source; this layer is
+// defense-in-depth for pre-V8 exports and future ingest regressions.
 // DROP: chunks that are pure navigation/TOC/errata. STRIP: boilerplate baked into
-// otherwise-real chunks (the sacred-texts nav prefix is ~32% of the corpus; the
-// {p. N} brace form is a scan page-marker). Deliberately NOT length-based — the
-// 9-token Gospel of Thomas logion is real content.
+// otherwise-real chunks. Deliberately NOT length-based — the 9-token
+// Gospel of Thomas logion is real content.
 const APPARATUS_DROP = /^\s*(?:next|previous)\s*:|^\s*errata\b/i;
-const NAV_PREFIX = /^\s*Sacred Texts\b.*?\bPrevious\s+Next\b\s*/i;
-const PAGE_MARKER = /\{\s*p\.\s*\d+\s*\}/gi;
+// V8: hyphenated "Sacred-Texts" and header-without-nav-links forms exist
+// (enuma-elish 001 was the reproducer). Ordered alternatives: (1) breadcrumb
+// through "Previous Next" (the classic form); (2) hyphenated or capital-T
+// breadcrumb line without nav links, eaten to end-of-line — deliberately
+// case-sensitive on "Texts" so prose like "sacred texts are…" never matches;
+// (3) gnosis.org "Index Previous Next". No /i flag for that reason.
+const NAV_PREFIX =
+  /^\s*(?:[Ss]acred[- ][Tt]exts?\b[^\n]{0,300}\bPrevious\s+Next\b[ \t]*|Sacred-[Tt]exts?\b[^\n]{0,300}(?:\n+|$)|Sacred\s+Texts\b[^\n]{0,300}(?:\n+|$)|Index\s+Previous\s+Next\b[ \t]*)/;
+// V8: `{p. N}` matches zero chunks in the current corpus (vestigial); the live
+// form is Gutenberg's inline `[Pg N]`. Keep both — they're cheap.
+const PAGE_MARKER = /\{\s*p\.\s*\d+\s*\}|\[\s*pg\.?\s*\d+\s*\]/gi;
+// V8: trailing nav pointer glued to the end of a body ("… Next: Section 6").
+const NAV_TAIL = /\s*(?:Next|Previous)\s*:\s[^\n]{0,80}$/i;
 
 /** Strip baked-in boilerplate from a chunk body. */
 export function cleanBody(body: string): string {
-  return body.replace(NAV_PREFIX, '').replace(PAGE_MARKER, '').trim();
+  return body
+    .replace(NAV_PREFIX, '')
+    .replace(PAGE_MARKER, ' ')
+    .replace(NAV_TAIL, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
 
 /** Drop pure-apparatus chunks and strip boilerplate from the rest. Exported for
