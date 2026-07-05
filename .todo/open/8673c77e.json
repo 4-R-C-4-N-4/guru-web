@@ -7,10 +7,19 @@
     "type": "agent"
   },
   "created_at": "2026-05-29T00:03:48.200Z",
-  "updated_at": "2026-05-29T00:03:48.237Z",
+  "updated_at": "2026-07-05T02:27:43.243Z",
   "relationships": {
     "related": [
       "b80d8d7d"
     ]
-  }
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-07-05T02:27:43.243Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "Heads-up: the V8 clean-body re-embed (guru fccaf47d) changed every chunk embedding; the golden-retrieval baseline shifts again at the v4 corpus deploy (Phase W). Re-baseline once, after that deploy, rather than against any intermediate corpus.",
+      "confidence": "medium"
+    }
+  ]
 }

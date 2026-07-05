@@ -171,9 +171,13 @@ LIMIT $k
 4. `migrations/014` runs via the normal migrate path (app-side, independent
    of the corpus swap).
 
-## Suggested ticket structure (guru-web repo has no .todo store — track in guru)
+## Suggested ticket structure
 
-Parent "Phase W: consume document-knowledge layer in guru-web" with children
+guru-web HAS its own .todo store (correction to an earlier draft of this doc)
+— and it holds b80d8d7d, the retrieval-pollution ticket the design doc cites:
+now annotated as substantially resolved by the V8 source-side clean, closable
+at the v4 deploy. Phase W tickets belong here: parent "Phase W: consume
+document-knowledge layer in guru-web" with children
 W1 (pairing+boot), W2 (migration+sessions API), W3 (summary leg + scope
 filter), W4 (dossier prompt), W5 (query route + UI + citations). W6 is the
 deploy runbook. W3 and W4 are parallel after W1; W5 needs both.

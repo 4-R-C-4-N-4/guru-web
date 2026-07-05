@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-05-28T13:42:34.960Z",
-  "updated_at": "2026-05-28T15:09:07.255Z",
+  "updated_at": "2026-07-05T02:27:43.205Z",
   "tags": [
     "corpus",
     "retrieval",
@@ -27,6 +27,13 @@
       "author": "Backend Engineer",
       "type": "conclusion",
       "content": "Round-2b (query-time quality filter) proves the upstream fix must RE-EMBED on cleaned text, not just strip strings: stripping boilerplate from chunk bodies at query time barely moved precision (0.20->0.24) because the vectors still carry the boilerplate, so the same chunks are retrieved. Cleaning + re-export without re-embedding will NOT fix retrieval relevance.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-07-05T02:27:43.205Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "Substantially resolved at the SOURCE by guru repo todo:fccaf47d (2026-07-04): corpus-wide V8 audit found pollution had already dropped from the v27-era 32% to ~7% residual; clean_bodies.py stripped ~1,050 chunks in place (nav, credits, page markers, orphan titles), full re-embed over clean bodies (4,176 x 768d), and retriever.ts patterns hardened as defense-in-depth (guru-web branch chore/v8-apparatus-sync). Remaining runtime exposure is only the currently-deployed v3 corpus; closure rides the v4 deploy (docs/summary-phase-w.md W6). Whole-chunk apparatus remnants tracked in guru todo:50438e23.",
       "confidence": "high"
     }
   ]
