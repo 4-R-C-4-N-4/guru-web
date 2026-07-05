@@ -46,11 +46,11 @@ Proven:
    study mode without the block (design §3.3) — W4 treats the empty result
    as normal.
 
-Design decision surfaced by vetting, for review during W3: summary rows have
-no `tier`. `formatChunk` defaults missing tier to `inferred`, which mislabels
-curated summaries. W3 sets `tier: 'summary'` and extends `tierSymbol`/the
-citation legend accordingly (one-line change; alternative is accepting the
-`inferred` glyph).
+Design decision (CONFIRMED 2026-07-04): summary rows carry `tier: 'summary'`
+— `formatChunk` would otherwise mislabel them `inferred`. W3 extends
+`tierSymbol`/the citation legend accordingly. (Noted for later: the tier
+system is under-implemented in practice — worth its own pass someday, out of
+Phase W scope.)
 
 ---
 
