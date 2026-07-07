@@ -97,7 +97,7 @@ export interface Citation {
   text: string;
   section: string;
   quote?: string;
-  tier: 'verified' | 'proposed' | 'inferred';
+  tier: 'verified' | 'proposed' | 'inferred' | 'summary';
 }
 
 /**

@@ -31,7 +31,7 @@ interface CitationData {
   text: string;
   section: string;
   quote?: string;
-  tier: 'verified' | 'proposed' | 'inferred';
+  tier: 'verified' | 'proposed' | 'inferred' | 'summary';
 }
 
 export interface Message {
@@ -72,9 +72,17 @@ const QUERY_DANGER_CHARS = 3800;
 // on every update, which is fine for streaming — partial markdown settles
 // once content lands.
 
+export interface StudyToc {
+  work_label: string;
+  entries: { section_span: string; title: string }[];
+}
+
 export interface ChatViewProps {
   initialSessionId?: string;
   initialMessages?: Message[];
+  /** Resumed study sessions pass the dossier TOC for the sidebar (W5). */
+  initialMode?: 'chat' | 'study';
+  studyToc?: StudyToc | null;
 }
 
 // LocalStorage key for the model-picker default-switch announcement
@@ -82,7 +90,7 @@ export interface ChatViewProps {
 // this one (BRD-model-selection §9 / IMPL §7).
 const MODEL_PICKER_BANNER_KEY = 'guru.banner.modelpicker.v1';
 
-export default function ChatView({ initialSessionId, initialMessages }: ChatViewProps = {}) {
+export default function ChatView({ initialSessionId, initialMessages, initialMode, studyToc }: ChatViewProps = {}) {
   const mobile  = useIsMobile();
   const [messages,    setMessages]    = useState<Message[]>(initialMessages ?? []);
   const [input,       setInput]       = useState('');
@@ -96,6 +104,25 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
   // a pure compute (useMemo below) — keeps us out of the
   // react-hooks/set-state-in-effect rule.
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Study-mode picker (summary-phase-w.md §W5). Only meaningful before the
+  // session exists — mode is immutable once created (like voice).
+  const [mode, setMode] = useState<'chat' | 'study'>(initialMode ?? 'chat');
+  const [studyTextId, setStudyTextId] = useState<string>('');
+  const [textItems, setTextItems] = useState<{ id: string; label: string; tradition: string }[]>([]);
+  useEffect(() => {
+    if (sessionId || mode !== 'study' || textItems.length > 0) return;
+    fetch('/api/corpus')
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { traditions?: Record<string, { text_items?: { id: string; label: string }[] }> } | null) => {
+        if (!data?.traditions) return;
+        const items: { id: string; label: string; tradition: string }[] = [];
+        for (const [trad, t] of Object.entries(data.traditions)) {
+          for (const it of t.text_items ?? []) items.push({ ...it, tradition: trad });
+        }
+        setTextItems(items);
+      })
+      .catch(() => { /* picker stays empty; study send is disabled without a pick */ });
+  }, [mode, sessionId, textItems.length]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
   // Stick-to-bottom is a ref, not state: scroll events fire on every
@@ -182,7 +209,12 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
         const sessionRes = await fetch('/api/sessions', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ title: queryText.slice(0, 80) }),
+          body: JSON.stringify({
+            title: queryText.slice(0, 80),
+            ...(mode === 'study' && studyTextId
+              ? { mode: 'study', study_text_id: studyTextId }
+              : {}),
+          }),
         });
         const sessionData = await sessionRes.json() as { id: string };
         sid = sessionData.id;
@@ -285,7 +317,7 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId, tier]);
+  }, [input, loading, sessionId, tier, mode, studyTextId]);
 
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;
@@ -294,6 +326,27 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 53px)', background: tokens.bg.deep }}>
+      {/* Study session TOC (W5) — display-only, from the dossier structure
+          shipped by GET /api/sessions/[id]. Missing dossier → no strip. */}
+      {studyToc && (
+        <details data-testid="study-toc" style={{
+          background: tokens.bg.surface,
+          borderBottom: `1px solid ${tokens.border.subtle}`,
+          padding: mobile ? '8px 14px' : '8px 24px',
+          fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.secondary,
+        }}>
+          <summary style={{ cursor: 'pointer', color: tokens.text.accent, letterSpacing: 1 }}>
+            STUDYING: {studyToc.work_label} — contents ({studyToc.entries.length})
+          </summary>
+          <ol style={{ margin: '8px 0 4px', paddingLeft: 22, maxHeight: 180, overflowY: 'auto', lineHeight: 1.9 }}>
+            {studyToc.entries.map(e => (
+              <li key={e.section_span}>
+                <span style={{ color: tokens.text.muted }}>{e.section_span}</span> — {e.title}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       {/* One-time announcement banner — pro users only, dismissible.
           BRD-model-selection §9 step 4. Drops after the model-picker
           rollout settles (track on the parent ticket and remove the
@@ -363,6 +416,38 @@ export default function ChatView({ initialSessionId, initialMessages }: ChatView
                 }}>{q}</button>
               ))}
             </div>
+            {/* Study-mode picker (W5): mode is immutable once the session exists. */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 18, fontFamily: tokens.font.mono, fontSize: 10 }}>
+              {(['chat', 'study'] as const).map(m => (
+                <button key={m} onClick={() => setMode(m)} style={{
+                  background: mode === m ? tokens.bg.surface : 'transparent',
+                  border: `1px solid ${mode === m ? tokens.text.accent : tokens.border.subtle}`,
+                  borderRadius: 3, padding: '5px 12px', cursor: 'pointer',
+                  color: mode === m ? tokens.text.accent : tokens.text.muted,
+                  fontFamily: tokens.font.mono, fontSize: 10, letterSpacing: 1,
+                }}>{m.toUpperCase()}</button>
+              ))}
+              {mode === 'study' && (
+                <select
+                  value={studyTextId}
+                  onChange={e => setStudyTextId(e.target.value)}
+                  style={{
+                    background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`,
+                    borderRadius: 3, padding: '5px 8px', color: tokens.text.secondary,
+                    fontFamily: tokens.font.mono, fontSize: 10, maxWidth: 240,
+                  }}>
+                  <option value="">— pick a text to study —</option>
+                  {textItems.map(t => (
+                    <option key={t.id} value={t.id}>{t.tradition} / {t.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            {mode === 'study' && !studyTextId && (
+              <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, marginTop: 6 }}>
+                study sessions pin every answer to one work
+              </div>
+            )}
           </div>
         )}
 

@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { tokens } from '@/styles/tokens';
-import ChatView, { recordsToMessages } from '@/components/chat-view';
+import ChatView, { recordsToMessages, type StudyToc } from '@/components/chat-view';
 import type { QueryRecord, Session } from '@/lib/types';
 
 interface SessionData {
   session: Session;
   messages: QueryRecord[];
+  study_toc?: StudyToc | null;
 }
 
 type FetchState =
@@ -43,6 +44,8 @@ export default function SessionPage() {
     <ChatView
       initialSessionId={sessionId}
       initialMessages={recordsToMessages(state.data.messages)}
+      initialMode={state.data.session.mode ?? 'chat'}
+      studyToc={state.data.study_toc ?? null}
     />
   );
 }

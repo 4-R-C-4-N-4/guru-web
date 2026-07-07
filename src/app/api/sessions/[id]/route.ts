@@ -13,6 +13,7 @@
 
 import { requireUser } from '@/lib/auth';
 import { one, query } from '@/lib/db';
+import { getDossierForText } from '@/lib/dossier';
 import type { Citation, QueryRecord, Session } from '@/lib/types';
 
 interface MessageWithCitations extends QueryRecord {
@@ -72,18 +73,31 @@ export async function GET(
 
   const chunkMap = new Map<string, Citation>();
   if (allChunkIds.size > 0) {
-    const rows = await query<{ id: string; tradition: string; text_name: string; section: string }>(
-      `SELECT id, tradition, text_name, section
+    // Study sessions persist summary-node ids ('sum:...') alongside chunk
+    // ids; the UNION rehydrates both so refresh never drops a citation card
+    // (summary-phase-w.md §W5). Column shape mirrors the W3 retrieval leg.
+    const rows = await query<{ id: string; tradition: string; text_name: string; section: string; src: string }>(
+      `SELECT id, tradition, text_name, section, 'chunk' AS src
        FROM corpus.chunks
-       WHERE id = ANY($1::text[])`,
+       WHERE id = ANY($1::text[])
+       UNION ALL
+       SELECT s.id,
+              s.tradition,
+              COALESCE(tx.label, w.label)            AS text_name,
+              COALESCE(s.section_span, 'Whole work') AS section,
+              'summary' AS src
+       FROM corpus.summary_nodes s
+       JOIN corpus.works w       ON w.id = s.work_id
+       LEFT JOIN corpus.texts tx ON tx.id = s.text_id
+       WHERE s.id = ANY($1::text[])`,
       [Array.from(allChunkIds)]
     );
     for (const r of rows) {
       chunkMap.set(r.id, {
         tradition: r.tradition,
         text: r.text_name,
-        section: r.section,
-        tier: 'verified',
+        section: r.src === 'summary' ? `${r.section} (summary)` : r.section,
+        tier: r.src === 'summary' ? 'summary' : 'verified',
       });
     }
   }
@@ -98,5 +112,18 @@ export async function GET(
       : [],
   }));
 
-  return Response.json({ session, messages });
+  // Study sessions ship the dossier TOC for the sidebar — display-only,
+  // same fetch (summary-phase-w.md §W5); missing dossier = null, no block.
+  let study_toc: { work_label: string; entries: { section_span: string; title: string }[] } | null = null;
+  if (session.mode === 'study' && session.study_text_id) {
+    const dossier = await getDossierForText(session.study_text_id);
+    if (dossier) {
+      study_toc = {
+        work_label: dossier.work_label,
+        entries: dossier.structure.map(e => ({ section_span: e.section_span, title: e.title })),
+      };
+    }
+  }
+
+  return Response.json({ session, messages, study_toc });
 }

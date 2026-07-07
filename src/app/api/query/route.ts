@@ -20,10 +20,11 @@
 import { requireUser } from '@/lib/auth';
 import { retrieve } from '@/lib/retriever';
 import { summarizeExpansion } from '@/lib/graph';
-import { buildPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
+import { buildPrompt, buildStudyPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { VoiceSlug } from '@/lib/types';
 import { completeStream } from '@/lib/model';
 import { loadSessionHistory, type ChatMessage } from '@/lib/history';
+import { getDossierForText } from '@/lib/dossier';
 import {
   DEFAULT_CURATED_SLUG,
   isCuratedSlug,
@@ -86,15 +87,19 @@ export async function POST(req: Request) {
   // prompt this turn matches the voice the thread was started under.
   // Spec: BRD-chat-voice.md §5.
   let sessionVoice: string | null = null;
+  let sessionMode: 'chat' | 'study' = 'chat';
+  let studyTextId: string | null = null;
   if (sessionId) {
-    const owned = await one<{ id: string; voice: string }>(
-      `SELECT id, voice FROM sessions WHERE id = $1 AND user_id = $2`,
+    const owned = await one<{ id: string; voice: string; mode: 'chat' | 'study'; study_text_id: string | null }>(
+      `SELECT id, voice, mode, study_text_id FROM sessions WHERE id = $1 AND user_id = $2`,
       [sessionId, user.id]
     );
     if (!owned) {
       return Response.json({ error: 'Session not found' }, { status: 404 });
     }
     sessionVoice = owned.voice;
+    sessionMode = owned.mode ?? 'chat';
+    studyTextId = owned.study_text_id;
   }
 
   // 3. Retrieve + build prompt (before budget reservation — failed retrieval
@@ -114,13 +119,22 @@ export async function POST(req: Request) {
   // Retrieve and summarise the query expansion in parallel — the expansion
   // summary feeds the X-Query-Expansion transparency header (todo:9d2ad427) and
   // is independent of the chunk fetch, so it adds no latency.
-  const [chunks, expansion] = await Promise.all([
-    retrieve(queryText, prefs),
+  // Study sessions (summary-phase-w.md §W5) add the summary retrieval leg
+  // (W3) and the work dossier (W4); the dossier fetch is one PK-shaped query
+  // and independent of retrieval, so it joins the parallel batch.
+  const isStudy = sessionMode === 'study' && !!studyTextId;
+  const [chunks, expansion, dossier] = await Promise.all([
+    isStudy
+      ? retrieve(queryText, prefs, 15, 'study', studyTextId)
+      : retrieve(queryText, prefs),
     summarizeExpansion(queryText),
+    isStudy ? getDossierForText(studyTextId!) : Promise.resolve(null),
   ]);
   // Reserve room for history in the chunk-fitting budget so long sessions
   // retrieve fewer chunks rather than blowing the context window.
-  const prompt = buildPrompt(queryText, chunks, prefs, user.tier, historyTokens);
+  const prompt = isStudy
+    ? buildStudyPrompt(queryText, chunks, dossier, prefs, user.tier, historyTokens)
+    : buildPrompt(queryText, chunks, prefs, user.tier, historyTokens);
 
   // 4. Estimate cost + reserve budget atomically.
   //

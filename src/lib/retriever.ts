@@ -58,6 +58,7 @@ export async function retrieve(
   // (revert without a redeploy). The lexical pool is fixed at topK*2 (like graph):
   // FTS is not corpus-size-biased the way the vector leg is, so it skips poolMult.
   const runLexical = process.env.RETRIEVAL_LEXICAL !== 'off';
+  // eslint-disable-next-line prefer-const -- first three are reassigned by the quality filter
   let [vectorResults, graphResults, lexicalResults, summaryResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),

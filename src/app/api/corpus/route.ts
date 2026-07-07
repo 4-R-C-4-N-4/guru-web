@@ -17,17 +17,21 @@ export async function GET() {
   const userOrResponse = await requireUser();
   if (userOrResponse instanceof Response) return userOrResponse;
 
-  const rows = await query<{ tradition: string; text_name: string }>(
-    `SELECT DISTINCT tradition, text_name
+  const rows = await query<{ tradition: string; text_id: string; text_name: string }>(
+    `SELECT DISTINCT tradition, text_id, text_name
        FROM chunks
        WHERE tradition IS NOT NULL AND text_name IS NOT NULL
        ORDER BY tradition, text_name`,
   );
 
-  const traditions: Record<string, { texts: string[] }> = {};
-  for (const { tradition, text_name } of rows) {
-    if (!traditions[tradition]) traditions[tradition] = { texts: [] };
+  // `texts` (names only) predates the study picker and is kept verbatim for
+  // existing consumers; `text_items` adds the ids the picker POSTs as
+  // study_text_id (summary-phase-w.md §W5).
+  const traditions: Record<string, { texts: string[]; text_items: { id: string; label: string }[] }> = {};
+  for (const { tradition, text_id, text_name } of rows) {
+    if (!traditions[tradition]) traditions[tradition] = { texts: [], text_items: [] };
     traditions[tradition].texts.push(text_name);
+    traditions[tradition].text_items.push({ id: text_id, label: text_name });
   }
 
   return Response.json({ traditions });
