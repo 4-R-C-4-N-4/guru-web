@@ -1,0 +1,14 @@
+{
+  "id": "6c4e1312",
+  "type": "chore",
+  "state": "open",
+  "summary": "W6: lockstep deploy runbook — load v4 corpus + deploy new build in same step; migration 014 via normal path; close b80d8d7d at deploy; re-baseline golden retrieval (8673c77e). Needs W5 + guru export.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-07T12:40:06.329Z",
+  "updated_at": "2026-07-07T12:40:06.329Z",
+  "relationships": {
+    "parent": "55aa9982"
+  }
+}
