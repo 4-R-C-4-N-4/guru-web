@@ -165,6 +165,8 @@ function tierSymbol(tier?: string): string {
       return "◇";
     case "inferred":
       return "○";
+    case "summary":
+      return "§"; // generated study apparatus, not a scraped source (W0 decision)
     default:
       return "○";
   }

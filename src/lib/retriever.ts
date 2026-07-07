@@ -5,9 +5,9 @@
  * Top-level export: retrieve(queryText, prefs, topK)
  */
 
-import { query } from './db';
+import { query, one } from './db';
 import { embed } from './embed';
-import { extractConcepts, walkGraph, buildScopeFilter } from './graph';
+import { extractConcepts, walkGraph, buildScopeFilter, buildSummaryScopeFilter } from './graph';
 import type { RetrievedChunk, UserPreferences } from './types';
 
 /**
@@ -17,8 +17,34 @@ import type { RetrievedChunk, UserPreferences } from './types';
 export async function retrieve(
   queryText: string,
   prefs: UserPreferences,
-  topK: number = 15
+  topK: number = 15,
+  mode: 'chat' | 'study' = 'chat',
+  studyTextId?: string | null
 ): Promise<RetrievedChunk[]> {
+  // Study mode (summary-phase-w.md §W3): both chunk legs pin to the study
+  // work's member texts, and a summary leg joins the vector candidates. The
+  // chat/compare path below is byte-for-byte the tuned config — mode defaults
+  // keep every existing caller on it.
+  let studyWorkId: string | null = null;
+  if (mode === 'study' && studyTextId) {
+    const pin = await one<{ work_id: string; member_text_ids: string[] }>(
+      `SELECT w.id AS work_id, w.member_text_ids
+       FROM texts t JOIN works w ON w.id = t.work_id
+       WHERE t.id = $1`,
+      [studyTextId]
+    );
+    if (pin) {
+      studyWorkId = pin.work_id;
+      // Pinning reuses the whitelist path of buildScopeFilter verbatim: the
+      // pinned work's members become the effective scope for chunk legs.
+      prefs = {
+        ...prefs,
+        scopeMode: 'whitelist',
+        whitelistedTraditions: [],
+        whitelistedTexts: pin.member_text_ids,
+      };
+    }
+  }
   // Vector candidate-pool multiplier. Widening the pool lets the long tail reach
   // the rarity-aware reranker; alone it churns the head (tuning-experiment.md §1),
   // but PAIRED WITH the lexical leg it's the measured-best cell (Round 4: lexical
@@ -32,10 +58,13 @@ export async function retrieve(
   // (revert without a redeploy). The lexical pool is fixed at topK*2 (like graph):
   // FTS is not corpus-size-biased the way the vector leg is, so it skips poolMult.
   const runLexical = process.env.RETRIEVAL_LEXICAL !== 'off';
-  let [vectorResults, graphResults, lexicalResults] = await Promise.all([
+  let [vectorResults, graphResults, lexicalResults, summaryResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
     runLexical ? lexicalSearch(queryText, prefs, topK * 2) : Promise.resolve([] as RetrievedChunk[]),
+    studyWorkId
+      ? summarySearch(queryText, prefs, topK, studyWorkId)
+      : Promise.resolve([] as RetrievedChunk[]),
   ]);
 
   // Quality filter (todo:9e31302a) — drop corpus apparatus (nav/TOC/errata) and
@@ -48,6 +77,7 @@ export async function retrieve(
     vectorResults = applyQualityFilter(vectorResults);
     graphResults = applyQualityFilter(graphResults);
     lexicalResults = applyQualityFilter(lexicalResults);
+    // summaryResults deliberately skipped: generated apparatus, not scraped
   }
 
   // Diversity mode (todo:59060e24). 'live' (default) divides the bump by a
@@ -68,12 +98,59 @@ export async function retrieve(
   // hubs. Swept without a redeploy; default is GRAPH_WEIGHT until measured.
   const graphWeight = Number(process.env.RETRIEVAL_GRAPH_WEIGHT) || GRAPH_WEIGHT;
 
-  return mergeAndRerank(vectorResults, graphResults, topK, {
+  return mergeAndRerank([...vectorResults, ...summaryResults], graphResults, topK, {
     traditionRarity,
     lexicalResults,
     lexicalWeight,
     graphWeight,
+    // A pinned study work is single-tradition: the cap would truncate results
+    // to MAX_PER_TRADITION regardless of topK.
+    perTraditionCap: studyWorkId ? 0 : undefined,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Summary leg (study mode; summary-phase-w.md §W3)
+// ---------------------------------------------------------------------------
+
+// Vector search over summary_nodes, column-compatible with the chunk legs so
+// the reranker and formatChunk need no special cases beyond tier/source:
+//   text_name  := COALESCE(texts.label, works.label)  — works fallback covers
+//                 multi-member L2 rows where text_id IS NULL (W0 finding 2)
+//   section    := COALESCE(section_span, 'Whole work')
+//   text_id    := COALESCE(text_id, work_id)          — field is non-nullable
+// Exported for unit testing; callers use retrieve().
+export async function summarySearch(
+  queryText: string,
+  prefs: UserPreferences,
+  limit: number,
+  studyWorkId?: string | null
+): Promise<RetrievedChunk[]> {
+  const queryEmbedding = await embed(queryText);
+  const { where, params, paramIndex } = buildSummaryScopeFilter(prefs, 2); // $1 = embedding
+  const pinClause = studyWorkId ? `AND s.work_id = $${paramIndex}` : '';
+
+  const rows = await query<RetrievedChunk & { distance: number }>(
+    `SELECT s.id,
+            COALESCE(s.text_id, s.work_id)         AS text_id,
+            s.tradition,
+            COALESCE(tx.label, w.label)             AS text_name,
+            COALESCE(s.section_span, 'Whole work')  AS section,
+            NULL::text                              AS translator,
+            s.body, s.token_count,
+            (s.embedding <=> $1::vector)            AS distance,
+            'summary' AS source
+     FROM summary_nodes s
+     JOIN works w       ON w.id = s.work_id
+     LEFT JOIN texts tx ON tx.id = s.text_id
+     WHERE ${where} ${pinClause}
+     ORDER BY s.embedding <=> $1::vector
+     LIMIT $${paramIndex + (studyWorkId ? 1 : 0)}`,
+    [JSON.stringify(queryEmbedding), ...params,
+     ...(studyWorkId ? [studyWorkId] : []), limit]
+  );
+
+  return rows.map(r => ({ ...r, tier: 'summary' as const }));
 }
 
 // Corpus-apparatus patterns (todo:9e31302a; hardened by the guru-repo V8 audit —
@@ -240,7 +317,7 @@ const GRAPH_WEIGHT = 0.3;
 const LEXICAL_WEIGHT = 1.0; // tuned default (todo:3fc23534): swept 0→2.5, peak mean p@10 0.36 at 1.0 (baseline 0.21); env-overridable
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
-const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4 };
+const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4, summary: 0.4 };
 
 type Tier = NonNullable<RetrievedChunk['tier']>;
 function tierWeight(tier: Tier): number {
@@ -275,6 +352,8 @@ export function mergeAndRerank(
     lexicalResults?: RetrievedChunk[];
     lexicalWeight?: number;
     graphWeight?: number;
+    /** Override MAX_PER_TRADITION (0 disables the cap — study mode). */
+    perTraditionCap?: number;
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
@@ -288,10 +367,13 @@ export function mergeAndRerank(
   // graph leg also surfaces it below.
   for (const chunk of vectorResults) {
     const similarity = chunk.distance != null ? 1 - chunk.distance : 0;
+    // Summary rows keep their 'summary' tier (W0 decision: formatChunk would
+    // otherwise mislabel generated apparatus as 'inferred').
+    const tier: Tier = chunk.source === 'summary' ? 'summary' : 'inferred';
     merged.set(chunk.id, {
-      chunk: { ...chunk, tier: 'inferred' },
+      chunk: { ...chunk, tier },
       similarity,
-      tier: 'inferred',
+      tier,
       graphScore: 0,
       matchWeight: 1.0, // vector hit, no query expansion
       lexScore: 0,
@@ -406,7 +488,8 @@ export function mergeAndRerank(
   for (const { entry } of scored) {
     if (out.length >= topK) break;
     const trad = entry.chunk.tradition;
-    if (MAX_PER_TRADITION > 0 && (tradCounts.get(trad) ?? 0) >= MAX_PER_TRADITION) continue;
+    const cap = opts.perTraditionCap ?? MAX_PER_TRADITION;
+    if (cap > 0 && (tradCounts.get(trad) ?? 0) >= cap) continue;
     out.push(entry.chunk);
     tradCounts.set(trad, (tradCounts.get(trad) ?? 0) + 1);
   }

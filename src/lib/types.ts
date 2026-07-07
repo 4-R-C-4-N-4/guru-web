@@ -43,8 +43,8 @@ export interface QueryExpansion {
 
 export interface RetrievedChunk extends Chunk {
   distance?: number;
-  source: 'vector' | 'graph' | 'lexical';
-  tier?: 'verified' | 'proposed' | 'inferred';
+  source: 'vector' | 'graph' | 'lexical' | 'summary';
+  tier?: 'verified' | 'proposed' | 'inferred' | 'summary';
   /**
    * Raw Postgres `ts_rank` carried by lexical-leg chunks (todo:af69f5e5): the
    * full-text relevance of this chunk's body against the query. Unbounded and
