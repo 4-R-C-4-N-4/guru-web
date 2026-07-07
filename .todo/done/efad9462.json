@@ -1,0 +1,26 @@
+{
+  "id": "efad9462",
+  "type": "chore",
+  "state": "done",
+  "summary": "W2: migration 014_study_mode — sessions.mode ('chat'|'study') + study_text_id; sessions API create/read validation (400 on unknown text id). After W1.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-07T12:40:06.186Z",
+  "updated_at": "2026-07-07T13:38:36.028Z",
+  "relationships": {
+    "parent": "55aa9982"
+  },
+  "work": {
+    "branch": "feature/summary",
+    "base_branch": "main",
+    "started_at": "2026-07-07T13:35:54.784Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "dc45a4c231b3f8580e6a6c53c9bea88afb308a64",
+    "resolved_at": "2026-07-07T13:38:36.028Z",
+    "resolved_by": "unknown",
+    "note": "migration 014 + API validation (400 on missing/unknown text, unknown mode); 5 new contract tests, 66 passing in api.test.ts"
+  }
+}
