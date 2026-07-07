@@ -1,0 +1,26 @@
+{
+  "id": "6c4e1312",
+  "type": "chore",
+  "state": "done",
+  "summary": "W6: lockstep deploy runbook — load v4 corpus + deploy new build in same step; migration 014 via normal path; close b80d8d7d at deploy; re-baseline golden retrieval (8673c77e). Needs W5 + guru export.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-07T12:40:06.329Z",
+  "updated_at": "2026-07-07T13:54:34.433Z",
+  "relationships": {
+    "parent": "55aa9982"
+  },
+  "work": {
+    "branch": "feature/summary",
+    "base_branch": "main",
+    "started_at": "2026-07-07T13:53:40.596Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "190ecc99a8c9fa3754244ac0059c8b8e115c1211",
+    "resolved_at": "2026-07-07T13:54:34.433Z",
+    "resolved_by": "unknown",
+    "note": "runbook docs/summary-deploy-v4.md: preconditions, one-window swap+restart lockstep, boot-check verification, scope-regression check, b80d8d7d/8673c77e close-out, rollback"
+  }
+}
