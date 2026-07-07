@@ -170,3 +170,20 @@ export interface QueryRecord {
   cost_usd?:      number | null;
   created_at: string;
 }
+
+/**
+ * A work's study dossier (schema v4 work_dossiers; summary-phase-w.md §W4).
+ * `themes` arrives as concept ids from the corpus; the query route resolves
+ * them to display labels before prompt assembly where possible.
+ */
+export interface WorkDossier {
+  work_id: string;
+  work_label: string;
+  summary: string;
+  context: string;
+  structure: { section_span: string; title: string; synopsis?: string }[];
+  key_figures: { name: string; role?: string; gloss?: string }[];
+  key_terms: { term: string; transliteration?: string | null; gloss?: string }[];
+  themes: string[];
+  reading_notes: string | null;
+}

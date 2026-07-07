@@ -9,7 +9,7 @@
 
 import { makeBudget } from "./budget";
 import { compressChunks } from "./compress";
-import type { RetrievedChunk, UserPreferences, VoiceSlug } from "./types";
+import type { RetrievedChunk, UserPreferences, VoiceSlug, WorkDossier } from "./types";
 import type { AtlasSnapshot, AtlasChunk } from "./atlas";
 
 // Re-export VoiceSlug so callers can keep importing it from @/lib/prompt
@@ -234,6 +234,87 @@ export function buildPrompt(
       : "No source passages were found for this query.";
 
   return `${passagesBlock}\n\n---\n\nQUERY: ${queryText}`;
+}
+
+// ---------------------------------------------------------------------------
+// Study mode (summary-phase-w.md §W4)
+// ---------------------------------------------------------------------------
+
+/** ~chars/4, the estimator used throughout budget.ts. */
+function roughTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Render the WORK DOSSIER block. Apparatus, not source: the header instructs
+ * the model to cite only SOURCE PASSAGES. Fields are compact by construction
+ * (§1.1 token bands) and are never compressed — the passage budget shrinks
+ * around them instead (buildStudyPrompt reserves the block's tokens).
+ */
+export function formatDossier(d: WorkDossier): string {
+  const toc = d.structure
+    .map(e => `- ${e.section_span} — ${e.title}`)
+    .join("\n");
+  const figures = d.key_figures
+    .filter(f => f.name && (f.role || f.gloss))
+    .map(f => `${f.name} (${f.role || f.gloss})`)
+    .join("; ");
+  const terms = d.key_terms
+    .filter(t => t.term && t.gloss)
+    .map(t => `${t.term} — ${t.gloss}`)
+    .join("; ");
+  const themes = d.themes
+    .map(t => t.replace(/^concept\./, "").replace(/_/g, " "))
+    .join(", ");
+
+  const parts = [
+    `WORK DOSSIER — ${d.work_label} (study apparatus, generated: for orientation only. ` +
+      `Cite SOURCE PASSAGES, never this block.)`,
+    `SUMMARY: ${d.summary}`,
+    `CONTEXT: ${d.context}`,
+    toc ? `STRUCTURE:\n${toc}` : null,
+    figures ? `KEY FIGURES: ${figures}` : null,
+    terms ? `KEY TERMS: ${terms}` : null,
+    themes ? `THEMES: ${themes}` : null,
+    d.reading_notes ? `READING NOTES: ${d.reading_notes}` : null,
+  ];
+  return parts.filter(Boolean).join("\n\n");
+}
+
+/**
+ * Study-mode variant of buildPrompt: prepends the pinned work's dossier
+ * (when one exists) ahead of SOURCE PASSAGES. Missing dossier = no block,
+ * never an error or placeholder (W0 finding 4 — coverage may be partial).
+ * The dossier is budgeted like history via reservedExtra so passages fit
+ * around it; the dossier itself is never compressed.
+ */
+export function buildStudyPrompt(
+  queryText: string,
+  chunks: RetrievedChunk[],
+  dossier: WorkDossier | null,
+  _prefs: UserPreferences,
+  tier: "free" | "pro",
+  reservedExtra = 0,
+): string {
+  const dossierBlock = dossier ? formatDossier(dossier) : null;
+  const dossierTokens = dossierBlock ? roughTokens(dossierBlock) : 0;
+
+  const budget = makeBudget(tier, reservedExtra + dossierTokens);
+  const targetPerChunk = Math.floor(
+    budget.available / Math.max(chunks.length, 1),
+  );
+  const compressed = compressChunks(chunks, queryText, targetPerChunk);
+  const fitted = budget.fitChunks(compressed);
+
+  const passagesBlock =
+    fitted.length > 0
+      ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
+      : "No source passages were found for this query.";
+
+  const blocks = dossierBlock
+    ? [dossierBlock, passagesBlock]
+    : [passagesBlock];
+  return `${blocks.join("\n\n---\n\n")}\n\n---\n\nQUERY: ${queryText}`;
 }
 
 /**
