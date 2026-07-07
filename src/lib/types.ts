@@ -149,6 +149,8 @@ export interface User {
 export interface Session {
   id: string;
   title: string | null;
+  mode: 'chat' | 'study';
+  study_text_id: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -37,7 +37,7 @@ export async function GET(
   const { id } = await params;
 
   const session = await one<Session>(
-    `SELECT id, title, created_at, updated_at
+    `SELECT id, title, mode, study_text_id, created_at, updated_at
      FROM sessions
      WHERE id = $1 AND user_id = $2`,
     [id, user.id]

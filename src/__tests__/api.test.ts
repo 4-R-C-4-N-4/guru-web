@@ -215,6 +215,58 @@ describe('POST /api/sessions', () => {
     const [, insertParams] = mockOne.mock.calls[0]!;
     expect(insertParams![2]).toBe('scholar');
   });
+
+  // Study mode (migration 014, summary-phase-w.md §W2)
+
+  it('400s a study session without study_text_id', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    const res = await sessionsPOST(req('POST', '/api/sessions', { mode: 'study' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/study_text_id/);
+  });
+
+  it('400s a study session whose text id is not in corpus.texts', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce(null); // texts lookup misses
+    const res = await sessionsPOST(
+      req('POST', '/api/sessions', { mode: 'study', study_text_id: 'no-such-text' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/unknown text id/);
+  });
+
+  it('creates a study session pinned to a valid text', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockOne
+      .mockResolvedValueOnce({ id: 'gnostic-john-baptizer-2' }) // texts lookup hits
+      .mockResolvedValueOnce({
+        id: 's5', title: null, mode: 'study', study_text_id: 'gnostic-john-baptizer-2',
+        created_at: '', updated_at: '',
+      });
+    const res = await sessionsPOST(
+      req('POST', '/api/sessions', { mode: 'study', study_text_id: 'gnostic-john-baptizer-2' }));
+    expect(res.status).toBe(201);
+    const [insertSql, insertParams] = mockOne.mock.calls[1]!;
+    expect(insertSql).toMatch(/mode, study_text_id/);
+    expect(insertParams![3]).toBe('study');
+    expect(insertParams![4]).toBe('gnostic-john-baptizer-2');
+  });
+
+  it("400s an unknown mode value", async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    const res = await sessionsPOST(req('POST', '/api/sessions', { mode: 'zen' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('nulls a stray study_text_id on chat sessions', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockOne.mockResolvedValueOnce({ id: 's6', title: null, mode: 'chat', study_text_id: null, created_at: '', updated_at: '' });
+    await sessionsPOST(req('POST', '/api/sessions', { study_text_id: 'kalevala' }));
+    const [, insertParams] = mockOne.mock.calls[0]!;
+    expect(insertParams![3]).toBe('chat');
+    expect(insertParams![4]).toBeNull();
+  });
 });
 
 describe('GET /api/sessions/[id]', () => {
