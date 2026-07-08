@@ -418,33 +418,48 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               Ask about concepts across traditions. Every claim is traced to its source.
             </div>
             {/* Study picker: implicit mode — empty select = chat, a picked
-                work pins the session. Native optgroups; 52 works, not texts. */}
-            <select
-              aria-label="Study a text"
-              value={studyTextId}
-              onChange={e => {
-                setStudyTextId(e.target.value);
-                const w = works.find(x => x.pin_text_id === e.target.value);
-                setStudyLabel(w ? w.label : null);
-              }}
-              style={{
-                background: tokens.bg.surface, border: `1px solid ${studyTextId ? tokens.text.accent : tokens.border.subtle}`,
-                borderRadius: 3, padding: '8px 10px',
-                color: studyTextId ? tokens.text.accent : tokens.text.muted,
-                fontFamily: tokens.font.mono, fontSize: 11,
-                width: '100%', maxWidth: 340, textOverflow: 'ellipsis',
-              }}>
-              <option value="">Study a text… (optional — leave empty to chat)</option>
-              {Array.from(worksByTradition.entries()).map(([trad, ws]) => (
-                <optgroup key={trad} label={trad.replace(/_/g, ' ')}>
-                  {ws.map(w => (
-                    <option key={w.id} value={w.pin_text_id}>
-                      {w.label}{w.members > 1 ? ` (${w.members})` : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+                work pins the session. Native optgroups; 52 works, not texts.
+                Gold STUDY header + tagline so the mode reads as its own
+                feature instead of melding into the description text. */}
+            <div style={{
+              width: '100%', maxWidth: 400, marginTop: 6,
+              background: tokens.bg.surface, border: `1px solid ${studyTextId ? tokens.text.accent : tokens.border.subtle}`,
+              borderRadius: 3, padding: mobile ? '12px 14px' : '14px 16px',
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontFamily: tokens.font.mono, fontSize: 11, fontWeight: 700, letterSpacing: 3, color: tokens.text.accent }}>§ STUDY</span>
+              </div>
+              <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, lineHeight: 1.6 }}>
+                Deep dive into the structure and content of a specific text
+              </div>
+              <select
+                aria-label="Study a text"
+                value={studyTextId}
+                onChange={e => {
+                  setStudyTextId(e.target.value);
+                  const w = works.find(x => x.pin_text_id === e.target.value);
+                  setStudyLabel(w ? w.label : null);
+                }}
+                style={{
+                  background: tokens.bg.deep, border: `1px solid ${studyTextId ? tokens.text.accent : tokens.border.subtle}`,
+                  borderRadius: 3, padding: '8px 10px',
+                  color: studyTextId ? tokens.text.accent : tokens.text.secondary,
+                  fontFamily: tokens.font.mono, fontSize: 11,
+                  width: '100%', textOverflow: 'ellipsis', cursor: 'pointer',
+                }}>
+                <option value="">choose a text — or leave empty to chat freely</option>
+                {Array.from(worksByTradition.entries()).map(([trad, ws]) => (
+                  <optgroup key={trad} label={trad.replace(/_/g, ' ')}>
+                    {ws.map(w => (
+                      <option key={w.id} value={w.pin_text_id}>
+                        {w.label}{w.members > 1 ? ` (${w.members})` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 
