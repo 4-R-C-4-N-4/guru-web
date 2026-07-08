@@ -7,7 +7,7 @@
  * via getSystemPrompt(voice).
  */
 
-import { makeBudget } from "./budget";
+import { makeBudget, estimateTokens } from "./budget";
 import { compressChunks } from "./compress";
 import type { RetrievedChunk, UserPreferences, VoiceSlug, WorkDossier } from "./types";
 import type { AtlasSnapshot, AtlasChunk } from "./atlas";
@@ -75,7 +75,7 @@ Rules:
 
 Citation format (after your main response):
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
 "optional short quote"`;
 
 export function getSystemPrompt(voice: VoiceSlug): string {
@@ -143,7 +143,7 @@ DEK: <one sentence that frames the parallel>
 <the essay, in markdown prose>
 
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
 (one line per source passage you actually drew on)`;
 
 // getBlogSystemPrompt composes the blog overlay + blog rules. No voice
@@ -217,33 +217,13 @@ export function buildPrompt(
   tier: "free" | "pro",
   reservedExtra = 0,
 ): string {
-  const budget = makeBudget(tier, reservedExtra);
-
-  // Target tokens per chunk for compression (don't let one chunk eat the budget)
-  const targetPerChunk = Math.floor(
-    budget.available / Math.max(chunks.length, 1),
-  );
-  const compressed = compressChunks(chunks, queryText, targetPerChunk);
-
-  // Fit within overall budget
-  const fitted = budget.fitChunks(compressed);
-
-  const passagesBlock =
-    fitted.length > 0
-      ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
-      : "No source passages were found for this query.";
-
+  const passagesBlock = fitPassagesBlock(queryText, chunks, tier, reservedExtra);
   return `${passagesBlock}\n\n---\n\nQUERY: ${queryText}`;
 }
 
 // ---------------------------------------------------------------------------
 // Study mode (summary-phase-w.md §W4)
 // ---------------------------------------------------------------------------
-
-/** ~chars/4, the estimator used throughout budget.ts. */
-function roughTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
 
 /**
  * Render the WORK DOSSIER block. Apparatus, not source: the header instructs
@@ -297,24 +277,34 @@ export function buildStudyPrompt(
   reservedExtra = 0,
 ): string {
   const dossierBlock = dossier ? formatDossier(dossier) : null;
-  const dossierTokens = dossierBlock ? roughTokens(dossierBlock) : 0;
+  const dossierTokens = dossierBlock ? estimateTokens(dossierBlock) : 0;
 
-  const budget = makeBudget(tier, reservedExtra + dossierTokens);
-  const targetPerChunk = Math.floor(
-    budget.available / Math.max(chunks.length, 1),
-  );
-  const compressed = compressChunks(chunks, queryText, targetPerChunk);
-  const fitted = budget.fitChunks(compressed);
-
-  const passagesBlock =
-    fitted.length > 0
-      ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
-      : "No source passages were found for this query.";
+  const passagesBlock = fitPassagesBlock(
+    queryText, chunks, tier, reservedExtra + dossierTokens);
 
   const blocks = dossierBlock
     ? [dossierBlock, passagesBlock]
     : [passagesBlock];
   return `${blocks.join("\n\n---\n\n")}\n\n---\n\nQUERY: ${queryText}`;
+}
+
+/** Shared budget→compress→fit→format core of buildPrompt/buildStudyPrompt —
+ *  one drift point for chunk budgeting instead of two. */
+function fitPassagesBlock(
+  queryText: string,
+  chunks: RetrievedChunk[],
+  tier: "free" | "pro",
+  reservedExtra: number,
+): string {
+  const budget = makeBudget(tier, reservedExtra);
+  const targetPerChunk = Math.floor(
+    budget.available / Math.max(chunks.length, 1),
+  );
+  const compressed = compressChunks(chunks, queryText, targetPerChunk);
+  const fitted = budget.fitChunks(compressed);
+  return fitted.length > 0
+    ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
+    : "No source passages were found for this query.";
 }
 
 /**
@@ -460,7 +450,7 @@ DEK: <one sentence framing what this edition of the atlas shows>
 <the essay, in markdown prose>
 
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
 (one line per SOURCE PASSAGE you actually drew on)`;
 
 export function getAtlasSystemPrompt(): string {

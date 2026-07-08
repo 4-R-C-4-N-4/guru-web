@@ -116,7 +116,7 @@ describe('retrieve() mode wiring', () => {
 
   it('study mode resolves the pin, scopes chunk legs to members, runs the summary leg', async () => {
     mockOne.mockResolvedValueOnce({
-      work_id: 'gnostic-john-baptizer',
+      work_id: 'gnostic-john-baptizer', tradition: 'mandaean',
       member_text_ids: ['gnostic-john-baptizer-1', 'gnostic-john-baptizer-2'],
     });
     mockQuery.mockResolvedValue([]);
@@ -131,6 +131,39 @@ describe('retrieve() mode wiring', () => {
     // chunk legs whitelist the members (pin via buildScopeFilter's whitelist path)
     const vectorCall = mockQuery.mock.calls.find(c => /FROM chunks/.test(String(c[0])) && /embedding/.test(String(c[0])));
     expect(vectorCall![1]).toContainEqual(['gnostic-john-baptizer-1', 'gnostic-john-baptizer-2']);
+  });
+});
+
+describe('retrieve() study scope semantics (review findings)', () => {
+  it('ANDs the pin with a user blacklist: a blocked member text stays excluded', async () => {
+    mockOne.mockResolvedValueOnce({
+      work_id: 'gnostic-john-baptizer', tradition: 'mandaean',
+      member_text_ids: ['gnostic-john-baptizer-1', 'gnostic-john-baptizer-2'],
+    });
+    mockQuery.mockResolvedValue([]);
+    await retrieve('q', {
+      ...OPEN_PREFS, scopeMode: 'blacklist', blockedTexts: ['gnostic-john-baptizer-1'],
+    } as UserPreferences, 5, 'study', 'gnostic-john-baptizer-2');
+    const vectorCall = mockQuery.mock.calls.find(c => /FROM chunks/.test(String(c[0])) && /embedding/.test(String(c[0])));
+    expect(vectorCall![1]).toContainEqual(['gnostic-john-baptizer-2']); // blocked member removed
+  });
+
+  it('returns [] when the blacklist covers the pinned work tradition', async () => {
+    mockOne.mockResolvedValueOnce({
+      work_id: 'kalevala', tradition: 'finnic', member_text_ids: ['kalevala'],
+    });
+    const out = await retrieve('q', {
+      ...OPEN_PREFS, scopeMode: 'blacklist', blockedTraditions: ['finnic'],
+    } as UserPreferences, 5, 'study', 'kalevala');
+    expect(out).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled(); // fail closed before any leg runs
+  });
+
+  it('fails closed on a stale pin (text gone after a corpus swap)', async () => {
+    mockOne.mockResolvedValueOnce(null);
+    const out = await retrieve('q', OPEN_PREFS, 5, 'study', 'removed-text-id');
+    expect(out).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });
 

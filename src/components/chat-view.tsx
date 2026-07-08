@@ -322,7 +322,10 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;
   const counterColor   = input.length >= QUERY_DANGER_CHARS ? tokens.text.error : tokens.text.muted;
-  const sendDisabled   = !input.trim() || loading || overLimit;
+  // Study needs a picked text before the first send — otherwise the create
+  // silently falls back to a chat session (review finding).
+  const studyUnpinned  = !sessionId && mode === 'study' && !studyTextId;
+  const sendDisabled   = !input.trim() || loading || overLimit || studyUnpinned;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 53px)', background: tokens.bg.deep }}>

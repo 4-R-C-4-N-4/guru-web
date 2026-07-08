@@ -27,9 +27,17 @@ export async function GET() {
   // `texts` (names only) predates the study picker and is kept verbatim for
   // existing consumers; `text_items` adds the ids the picker POSTs as
   // study_text_id (summary-phase-w.md §W5).
+  // The finer DISTINCT (text_id added for the study picker) would emit one
+  // row per member text of a grouped work — 26× "The Dhammapada" — so both
+  // arrays dedupe on display label. Any member id pins the same work, so
+  // keeping the first id per label loses nothing for the picker.
   const traditions: Record<string, { texts: string[]; text_items: { id: string; label: string }[] }> = {};
+  const seen = new Set<string>();
   for (const { tradition, text_id, text_name } of rows) {
     if (!traditions[tradition]) traditions[tradition] = { texts: [], text_items: [] };
+    const key = `${tradition}\u0000${text_name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     traditions[tradition].texts.push(text_name);
     traditions[tradition].text_items.push({ id: text_id, label: text_name });
   }

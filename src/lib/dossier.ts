@@ -27,7 +27,13 @@ interface DossierRow {
  * work has no dossier — the caller renders no block (W0 finding 4: missing
  * dossier is normal partial coverage, never an error).
  */
+// Corpus data is immutable between deploys and a corpus swap always restarts
+// the process (boot version check), so a process-level cache is safe and
+// saves two DB round-trips per study turn.
+const cache = new Map<string, WorkDossier | null>();
+
 export async function getDossierForText(textId: string): Promise<WorkDossier | null> {
+  if (cache.has(textId)) return cache.get(textId)!;
   const row = await one<DossierRow>(
     `SELECT d.work_id, w.label AS work_label, d.summary, d.context,
             d.structure, d.key_figures, d.key_terms, d.themes, d.reading_notes
@@ -37,12 +43,17 @@ export async function getDossierForText(textId: string): Promise<WorkDossier | n
      WHERE t.id = $1`,
     [textId]
   );
-  if (!row) return null;
+  if (!row) { cache.set(textId, null); return null; }
+  // JSONB columns are NOT NULL but not shape-constrained: a malformed export
+  // (object instead of array) must degrade, not crash the query route.
+  row.structure   = Array.isArray(row.structure)   ? row.structure   : [];
+  row.key_figures = Array.isArray(row.key_figures) ? row.key_figures : [];
+  row.key_terms   = Array.isArray(row.key_terms)   ? row.key_terms   : [];
 
   // Resolve theme concept ids ('concept.cosmic_dualism') to display labels.
   // Unresolvable ids fall back to the id itself — formatDossier strips the
   // prefix for display, so a stale theme never breaks the block.
-  let themes = row.themes ?? [];
+  let themes = Array.isArray(row.themes) ? row.themes : [];
   if (themes.length > 0) {
     const labels = await query<{ id: string; label: string }>(
       `SELECT id, label FROM concepts WHERE id = ANY($1::text[])`,
@@ -52,5 +63,7 @@ export async function getDossierForText(textId: string): Promise<WorkDossier | n
     themes = themes.map(t => byId.get(t) ?? t);
   }
 
-  return { ...row, themes, reading_notes: row.reading_notes ?? null };
+  const dossier = { ...row, themes, reading_notes: row.reading_notes ?? null };
+  cache.set(textId, dossier);
+  return dossier;
 }

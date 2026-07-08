@@ -1,0 +1,11 @@
+{
+  "id": "15f7069e",
+  "type": "debt",
+  "state": "open",
+  "summary": "Review backlog (PR #97): thread study pin as first-class param instead of prefs overwrite (mergeAndRerank tier sniff + cap override generalization), share SUMMARY_NODE_DISPLAY_COLUMNS SQL fragment between retriever and rehydration, single text->work resolution per turn (retrieve + getDossierForText both join texts->works), rehydration summary-branch test coverage",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-08T01:58:36.358Z",
+  "updated_at": "2026-07-08T01:58:36.358Z"
+}

@@ -63,7 +63,7 @@ describe('getSystemPrompt', () => {
   });
 
   it('locks the citation format', () => {
-    expect(scholarPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+    expect(scholarPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\/summary\]\n"optional short quote"$/);
   });
 
   it('separates voice overlay from CORE_RULES with a blank line', () => {
@@ -133,12 +133,12 @@ describe('getSystemPrompt(woowoo)', () => {
     expect(woowooPrompt).toContain('Do not invent quotations');
     expect(woowooPrompt).toContain('Avoid false equivalences');
     expect(woowooPrompt).toContain('End each reply with a beat that opens the next turn');
-    expect(woowooPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]\n"optional short quote"$/);
+    expect(woowooPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\/summary\]\n"optional short quote"$/);
   });
 
   it('differs from scholar only in the overlay', () => {
     // Both should end with the same CITATIONS block (proves the shared CORE_RULES tail).
-    const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]\n"optional short quote"';
+    const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]\n"optional short quote"';
     expect(woowooPrompt.endsWith(tail)).toBe(true);
     expect(scholarPrompt.endsWith(tail)).toBe(true);
   });
@@ -231,7 +231,7 @@ describe('getBlogSystemPrompt', () => {
   it('carries the parseable TITLE / DEK / CITATIONS contract', () => {
     expect(blogPrompt).toContain('TITLE:');
     expect(blogPrompt).toContain('DEK:');
-    expect(blogPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\]/);
+    expect(blogPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\/summary\]/);
   });
 
   it('uses essay shape, not the chat single-turn closer', () => {

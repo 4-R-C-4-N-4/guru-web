@@ -48,18 +48,25 @@ export async function GET(
     return Response.json({ error: 'Session not found' }, { status: 404 });
   }
 
-  const records = await query<QueryRecord & {
-    input_tokens:  number | null;
-    output_tokens: number | null;
-    cost_usd:      string | number | null;
-  }>(
-    `SELECT id, query_text, response_text, chunks_used, model_used,
-            input_tokens, output_tokens, cost_usd, created_at
-     FROM queries
-     WHERE session_id = $1
-     ORDER BY created_at ASC`,
-    [id]
-  );
+  // The dossier TOC depends only on the session row, so it overlaps the
+  // records fetch instead of adding a round-trip after it.
+  const [records, dossier] = await Promise.all([
+    query<QueryRecord & {
+      input_tokens:  number | null;
+      output_tokens: number | null;
+      cost_usd:      string | number | null;
+    }>(
+      `SELECT id, query_text, response_text, chunks_used, model_used,
+              input_tokens, output_tokens, cost_usd, created_at
+       FROM queries
+       WHERE session_id = $1
+       ORDER BY created_at ASC`,
+      [id]
+    ),
+    session.mode === 'study' && session.study_text_id
+      ? getDossierForText(session.study_text_id)
+      : Promise.resolve(null),
+  ]);
 
   // Single batched JOIN against corpus.chunks to rehydrate citations.
   // Collect unique chunk IDs across the whole session so we never run
@@ -96,7 +103,7 @@ export async function GET(
       chunkMap.set(r.id, {
         tradition: r.tradition,
         text: r.text_name,
-        section: r.src === 'summary' ? `${r.section} (summary)` : r.section,
+        section: r.section, // identical to the live X-Citations path; tier carries the summary signal
         tier: r.src === 'summary' ? 'summary' : 'verified',
       });
     }
@@ -114,16 +121,12 @@ export async function GET(
 
   // Study sessions ship the dossier TOC for the sidebar — display-only,
   // same fetch (summary-phase-w.md §W5); missing dossier = null, no block.
-  let study_toc: { work_label: string; entries: { section_span: string; title: string }[] } | null = null;
-  if (session.mode === 'study' && session.study_text_id) {
-    const dossier = await getDossierForText(session.study_text_id);
-    if (dossier) {
-      study_toc = {
+  const study_toc = dossier
+    ? {
         work_label: dossier.work_label,
         entries: dossier.structure.map(e => ({ section_span: e.section_span, title: e.title })),
-      };
-    }
-  }
+      }
+    : null;
 
   return Response.json({ session, messages, study_toc });
 }

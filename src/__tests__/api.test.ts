@@ -266,14 +266,11 @@ describe('POST /api/sessions', () => {
     expect(res.status).toBe(400);
   });
 
-  it('nulls a stray study_text_id on chat sessions', async () => {
+  it('400s a stray study_text_id on chat sessions (client bug surfaced at the write boundary)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
-    mockOne.mockResolvedValueOnce({ id: 's6', title: null, mode: 'chat', study_text_id: null, created_at: '', updated_at: '' });
-    await sessionsPOST(req('POST', '/api/sessions', { study_text_id: 'kalevala' }));
-    const [, insertParams] = mockOne.mock.calls[0]!;
-    expect(insertParams![3]).toBe('chat');
-    expect(insertParams![4]).toBeNull();
+    const res = await sessionsPOST(req('POST', '/api/sessions', { study_text_id: 'kalevala' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/requires mode/);
   });
 });
 

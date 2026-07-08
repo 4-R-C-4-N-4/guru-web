@@ -27,23 +27,38 @@ export async function retrieve(
   // keep every existing caller on it.
   let studyWorkId: string | null = null;
   if (mode === 'study' && studyTextId) {
-    const pin = await one<{ work_id: string; member_text_ids: string[] }>(
-      `SELECT w.id AS work_id, w.member_text_ids
+    const pin = await one<{ work_id: string; tradition: string; member_text_ids: string[] }>(
+      `SELECT w.id AS work_id, w.tradition, w.member_text_ids
        FROM texts t JOIN works w ON w.id = t.work_id
        WHERE t.id = $1`,
       [studyTextId]
     );
-    if (pin) {
-      studyWorkId = pin.work_id;
-      // Pinning reuses the whitelist path of buildScopeFilter verbatim: the
-      // pinned work's members become the effective scope for chunk legs.
-      prefs = {
-        ...prefs,
-        scopeMode: 'whitelist',
-        whitelistedTraditions: [],
-        whitelistedTexts: pin.member_text_ids,
-      };
+    if (!pin) {
+      // A stale study_text_id (text removed/renamed by a corpus swap) must
+      // not silently degrade to an unrestricted chat query — fail closed.
+      console.warn(`[retriever] study pin ${studyTextId} not in corpus; returning no results`);
+      return [];
     }
+    studyWorkId = pin.work_id;
+    // The pin is an ADDITIONAL scope constraint (phase-w §W3), not a
+    // replacement: a user's blacklist/whitelist still applies inside the
+    // pinned work. Intersect in code, then reuse buildScopeFilter's
+    // whitelist path with the effective member set.
+    let members = pin.member_text_ids;
+    if (prefs.scopeMode === 'blacklist') {
+      if (prefs.blockedTraditions.includes(pin.tradition)) members = [];
+      members = members.filter(m => !prefs.blockedTexts.includes(m));
+    } else if (prefs.scopeMode === 'whitelist') {
+      if (prefs.whitelistedTraditions.length > 0 && !prefs.whitelistedTraditions.includes(pin.tradition)) members = [];
+      if (prefs.whitelistedTexts.length > 0) members = members.filter(m => prefs.whitelistedTexts.includes(m));
+    }
+    if (members.length === 0) return []; // scope excludes the whole pinned work
+    prefs = {
+      ...prefs,
+      scopeMode: 'whitelist',
+      whitelistedTraditions: [],
+      whitelistedTexts: members,
+    };
   }
   // Vector candidate-pool multiplier. Widening the pool lets the long tail reach
   // the rarity-aware reranker; alone it churns the head (tuning-experiment.md §1),
@@ -318,6 +333,9 @@ const GRAPH_WEIGHT = 0.3;
 const LEXICAL_WEIGHT = 1.0; // tuned default (todo:3fc23534): swept 0→2.5, peak mean p@10 0.36 at 1.0 (baseline 0.21); env-overridable
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
+// 'summary' starts at inferred's weight deliberately (unswept — generated
+// apparatus competes on similarity, not tier); retune independently of
+// 'inferred' when the study-mode sweep lands.
 const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4, summary: 0.4 };
 
 type Tier = NonNullable<RetrievedChunk['tier']>;

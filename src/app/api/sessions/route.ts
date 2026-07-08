@@ -77,8 +77,11 @@ export async function POST(req: Request) {
     if (!text) {
       return Response.json({ error: `unknown text id: ${studyTextId}` }, { status: 400 });
     }
-  } else {
-    studyTextId = null; // chat sessions never carry a pinned text
+  } else if (studyTextId) {
+    // Creation is the only write boundary for mode/study_text_id; a stray
+    // pin on a chat session is a client bug — surface it now, not in QA.
+    return Response.json(
+      { error: "study_text_id requires mode: 'study'" }, { status: 400 });
   }
 
   // Snapshot the user's preferred voice onto the new session row. Free

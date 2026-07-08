@@ -23,7 +23,7 @@
  * so entries can be spread straight into <Citation {...c} />.
  */
 
-export type CitationTier = 'verified' | 'proposed' | 'inferred';
+export type CitationTier = 'verified' | 'proposed' | 'inferred' | 'summary';
 
 export interface ParsedCitation {
   tradition: string;
@@ -43,7 +43,7 @@ const MARKER_RE = /^[^\S\n]*CITATIONS:[^\n]*$/m;
 
 function normalizeTier(raw: string | undefined): CitationTier {
   const v = (raw ?? '').replace(/^TIER:\s*/i, '').trim().toLowerCase();
-  return v === 'verified' || v === 'proposed' || v === 'inferred' ? v : 'inferred';
+  return v === 'verified' || v === 'proposed' || v === 'inferred' || v === 'summary' ? v : 'inferred';
 }
 
 // A line whose first non-space char is a quote glyph is treated as the quote

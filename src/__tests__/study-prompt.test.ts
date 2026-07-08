@@ -90,3 +90,13 @@ describe('buildStudyPrompt', () => {
     expect(p).toContain(DOSSIER.context);
   });
 });
+
+describe('citations tier vocabulary (review finding)', () => {
+  it('parseCitationsBlock preserves TIER: summary instead of downgrading to inferred', async () => {
+    const { parseCitationsBlock } = await import('@/lib/citations');
+    const raw = 'Answer body.\n\nCITATIONS:\n[mandaean | John-Book | Whole work | TIER: summary]';
+    const { citations } = parseCitationsBlock(raw);
+    expect(citations).toHaveLength(1);
+    expect(citations[0].tier).toBe('summary');
+  });
+});
