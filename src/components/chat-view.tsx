@@ -53,12 +53,6 @@ export interface Message {
   costUsd?:      number | null;
 }
 
-const SAMPLE_QUERIES = [
-  'How does emanation differ between Plotinus and the Zohar?',
-  'What traditions describe ego death as prerequisite for awakening?',
-  'Compare apophatic theology across Christian and Buddhist thought',
-];
-
 // Mirrors POST /api/query MAX_QUERY_CHARS. Server is the authoritative gate;
 // these only drive the UI counter + send button disabled state.
 const QUERY_MAX_CHARS    = 4000;
@@ -104,25 +98,34 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // a pure compute (useMemo below) — keeps us out of the
   // react-hooks/set-state-in-effect rule.
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  // Study-mode picker (summary-phase-w.md §W5). Only meaningful before the
-  // session exists — mode is immutable once created (like voice).
-  const [mode, setMode] = useState<'chat' | 'study'>(initialMode ?? 'chat');
+  // Study picker (summary-phase-w.md §W5, reworked per UX review): mode is
+  // implicit — leave the work picker empty and it's a chat session; pick a
+  // work and the session pins to it. No invalid state exists. The unit is
+  // the WORK (52 entries grouped by tradition), pinned via its first member
+  // text id (the server resolves any member to the same work).
+  interface StudyWork { id: string; label: string; tradition: string; members: number; pin_text_id: string }
   const [studyTextId, setStudyTextId] = useState<string>('');
-  const [textItems, setTextItems] = useState<{ id: string; label: string; tradition: string }[]>([]);
+  const [studyLabel, setStudyLabel] = useState<string | null>(
+    initialMode === 'study' ? (studyToc?.work_label ?? 'study session') : null);
+  const [works, setWorks] = useState<StudyWork[]>([]);
   useEffect(() => {
-    if (sessionId || mode !== 'study' || textItems.length > 0) return;
+    if (sessionId || works.length > 0) return;
     fetch('/api/corpus')
       .then(r => r.ok ? r.json() : null)
-      .then((data: { traditions?: Record<string, { text_items?: { id: string; label: string }[] }> } | null) => {
-        if (!data?.traditions) return;
-        const items: { id: string; label: string; tradition: string }[] = [];
-        for (const [trad, t] of Object.entries(data.traditions)) {
-          for (const it of t.text_items ?? []) items.push({ ...it, tradition: trad });
-        }
-        setTextItems(items);
+      .then((data: { works?: StudyWork[] } | null) => {
+        if (data?.works) setWorks(data.works);
       })
-      .catch(() => { /* picker stays empty; study send is disabled without a pick */ });
-  }, [mode, sessionId, textItems.length]);
+      .catch(() => { /* picker renders empty; chat still works */ });
+  }, [sessionId, works.length]);
+  const worksByTradition = useMemo(() => {
+    const m = new Map<string, StudyWork[]>();
+    for (const w of works) {
+      if (!m.has(w.tradition)) m.set(w.tradition, []);
+      m.get(w.tradition)!.push(w);
+    }
+    return m;
+  }, [works]);
+  const mode: 'chat' | 'study' = studyTextId || initialMode === 'study' ? 'study' : 'chat';
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
   // Stick-to-bottom is a ref, not state: scroll events fire on every
@@ -322,16 +325,14 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;
   const counterColor   = input.length >= QUERY_DANGER_CHARS ? tokens.text.error : tokens.text.muted;
-  // Study needs a picked text before the first send — otherwise the create
-  // silently falls back to a chat session (review finding).
-  const studyUnpinned  = !sessionId && mode === 'study' && !studyTextId;
-  const sendDisabled   = !input.trim() || loading || overLimit || studyUnpinned;
+  const sendDisabled   = !input.trim() || loading || overLimit;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 53px)', background: tokens.bg.deep }}>
-      {/* Study session TOC (W5) — display-only, from the dossier structure
-          shipped by GET /api/sessions/[id]. Missing dossier → no strip. */}
-      {studyToc && (
+      {/* Studying strip (W5 + UX review): the persistent mode indicator for
+          study sessions — visible from the first message, not just on resume.
+          Expands to the dossier TOC when GET /api/sessions/[id] shipped one. */}
+      {mode === 'study' && (studyLabel || studyToc) && (
         <details data-testid="study-toc" style={{
           background: tokens.bg.surface,
           borderBottom: `1px solid ${tokens.border.subtle}`,
@@ -339,15 +340,22 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
           fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.secondary,
         }}>
           <summary style={{ cursor: 'pointer', color: tokens.text.accent, letterSpacing: 1 }}>
-            STUDYING: {studyToc.work_label} — contents ({studyToc.entries.length})
+            § STUDYING — {studyToc?.work_label ?? studyLabel}
+            {studyToc ? ` · contents (${studyToc.entries.length})` : ''}
           </summary>
-          <ol style={{ margin: '8px 0 4px', paddingLeft: 22, maxHeight: 180, overflowY: 'auto', lineHeight: 1.9 }}>
-            {studyToc.entries.map(e => (
-              <li key={e.section_span}>
-                <span style={{ color: tokens.text.muted }}>{e.section_span}</span> — {e.title}
-              </li>
-            ))}
-          </ol>
+          {studyToc ? (
+            <ol style={{ margin: '8px 0 4px', paddingLeft: 22, maxHeight: 180, overflowY: 'auto', lineHeight: 1.9 }}>
+              {studyToc.entries.map(e => (
+                <li key={e.section_span}>
+                  <span style={{ color: tokens.text.muted }}>{e.section_span}</span> — {e.title}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div style={{ margin: '8px 0 4px', color: tokens.text.muted }}>
+              answers in this session are pinned to this work — contents appear on reload
+            </div>
+          )}
         </details>
       )}
       {/* One-time announcement banner — pro users only, dismissible.
@@ -409,48 +417,34 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
             <div style={{ fontFamily: tokens.font.mono, fontSize: mobile ? 10 : 11, color: tokens.text.muted, maxWidth: 400, textAlign: 'center', lineHeight: 1.8, marginBottom: 20 }}>
               Ask about concepts across traditions. Every claim is traced to its source.
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 460, padding: mobile ? '0 8px' : 0 }}>
-              {SAMPLE_QUERIES.map(q => (
-                <button key={q} onClick={() => setInput(q)} style={{
-                  background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`,
-                  borderRadius: 3, padding: mobile ? '12px 14px' : '10px 14px',
-                  fontFamily: tokens.font.display, fontSize: mobile ? 14 : 13,
-                  color: tokens.text.secondary, cursor: 'pointer', textAlign: 'left',
-                }}>{q}</button>
-              ))}
-            </div>
-            {/* Study-mode picker (W5): mode is immutable once the session exists. */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 18, fontFamily: tokens.font.mono, fontSize: 10 }}>
-              {(['chat', 'study'] as const).map(m => (
-                <button key={m} onClick={() => setMode(m)} style={{
-                  background: mode === m ? tokens.bg.surface : 'transparent',
-                  border: `1px solid ${mode === m ? tokens.text.accent : tokens.border.subtle}`,
-                  borderRadius: 3, padding: '5px 12px', cursor: 'pointer',
-                  color: mode === m ? tokens.text.accent : tokens.text.muted,
-                  fontFamily: tokens.font.mono, fontSize: 10, letterSpacing: 1,
-                }}>{m.toUpperCase()}</button>
-              ))}
-              {mode === 'study' && (
-                <select
-                  value={studyTextId}
-                  onChange={e => setStudyTextId(e.target.value)}
-                  style={{
-                    background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`,
-                    borderRadius: 3, padding: '5px 8px', color: tokens.text.secondary,
-                    fontFamily: tokens.font.mono, fontSize: 10, maxWidth: 240,
-                  }}>
-                  <option value="">— pick a text to study —</option>
-                  {textItems.map(t => (
-                    <option key={t.id} value={t.id}>{t.tradition} / {t.label}</option>
+            {/* Study picker: implicit mode — empty select = chat, a picked
+                work pins the session. Native optgroups; 52 works, not texts. */}
+            <select
+              aria-label="Study a text"
+              value={studyTextId}
+              onChange={e => {
+                setStudyTextId(e.target.value);
+                const w = works.find(x => x.pin_text_id === e.target.value);
+                setStudyLabel(w ? w.label : null);
+              }}
+              style={{
+                background: tokens.bg.surface, border: `1px solid ${studyTextId ? tokens.text.accent : tokens.border.subtle}`,
+                borderRadius: 3, padding: '8px 10px',
+                color: studyTextId ? tokens.text.accent : tokens.text.muted,
+                fontFamily: tokens.font.mono, fontSize: 11,
+                width: '100%', maxWidth: 340, textOverflow: 'ellipsis',
+              }}>
+              <option value="">Study a text… (optional — leave empty to chat)</option>
+              {Array.from(worksByTradition.entries()).map(([trad, ws]) => (
+                <optgroup key={trad} label={trad.replace(/_/g, ' ')}>
+                  {ws.map(w => (
+                    <option key={w.id} value={w.pin_text_id}>
+                      {w.label}{w.members > 1 ? ` (${w.members})` : ''}
+                    </option>
                   ))}
-                </select>
-              )}
-            </div>
-            {mode === 'study' && !studyTextId && (
-              <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, marginTop: 6 }}>
-                study sessions pin every answer to one work
-              </div>
-            )}
+                </optgroup>
+              ))}
+            </select>
           </div>
         )}
 
@@ -549,7 +543,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
                 handleSend();
               }
             }}
-            placeholder="Ask across traditions..."
+            placeholder={studyLabel ? `Ask about ${studyLabel}...` : "Ask across traditions..."}
             rows={1}
             style={{
               flex: 1, padding: mobile ? '13px 12px' : '12px 16px',

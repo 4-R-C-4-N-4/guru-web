@@ -541,15 +541,34 @@ describe('GET /api/corpus', () => {
 
   it('aggregates DISTINCT (tradition, text_id, text_name) chunk rows into the catalog shape', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockQuery.mockResolvedValueOnce([
-      { tradition: 'Gnosticism', text_id: 'gospel-of-thomas', text_name: 'Gospel of Thomas' },
-      { tradition: 'Gnosticism', text_id: 'gospel-of-philip', text_name: 'Gospel of Philip' },
-      { tradition: 'Taoism',     text_id: 'tao-te-ching-legge', text_name: 'Tao Te Ching' },
-    ]);
+    mockQuery
+      .mockResolvedValueOnce([
+        { tradition: 'Gnosticism', text_id: 'gospel-of-thomas', text_name: 'Gospel of Thomas' },
+        { tradition: 'Gnosticism', text_id: 'gospel-of-philip', text_name: 'Gospel of Philip' },
+        // grouped-work members share a display label — must dedupe (review finding)
+        { tradition: 'Taoism',     text_id: 'tao-te-ching-legge', text_name: 'Tao Te Ching' },
+        { tradition: 'Taoism',     text_id: 'tao-te-ching-2', text_name: 'Tao Te Ching' },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'gospel-of-thomas', label: 'Gospel of Thomas', tradition: 'Gnosticism',
+          member_text_ids: ['gospel-of-thomas'] },
+        { id: 'tao-te-ching-legge', label: 'Tao Te Ching', tradition: 'Taoism',
+          member_text_ids: ['tao-te-ching-legge', 'tao-te-ching-2'] },
+      ]);
 
     const res = await corpusGET();
-    const body = await res.json() as { traditions: Record<string, { texts: string[]; text_items: { id: string; label: string }[] }> };
+    const body = await res.json() as {
+      traditions: Record<string, { texts: string[]; text_items: { id: string; label: string }[] }>;
+      works: { id: string; label: string; tradition: string; members: number; pin_text_id: string }[];
+    };
     expect(res.status).toBe(200);
+    // duplicate member labels collapse to one catalog entry
+    expect(body.traditions.Taoism.texts).toEqual(['Tao Te Ching']);
+    // works array drives the study picker: one entry per WORK with a pin id
+    expect(body.works).toEqual([
+      { id: 'gospel-of-thomas', label: 'Gospel of Thomas', tradition: 'Gnosticism', members: 1, pin_text_id: 'gospel-of-thomas' },
+      { id: 'tao-te-ching-legge', label: 'Tao Te Ching', tradition: 'Taoism', members: 2, pin_text_id: 'tao-te-ching-legge' },
+    ]);
     expect(body.traditions).toEqual({
       Gnosticism: {
         texts: ['Gospel of Thomas', 'Gospel of Philip'],
@@ -570,7 +589,7 @@ describe('GET /api/corpus', () => {
 
   it('returns an empty catalog when chunks is empty (no fallback)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockQuery.mockResolvedValueOnce([]);
+    mockQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
     const res = await corpusGET();
     const body = await res.json() as { traditions: Record<string, unknown> };
