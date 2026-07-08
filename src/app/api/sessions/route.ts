@@ -20,11 +20,16 @@ export async function GET(req: Request) {
   const limit  = Math.min(parseInt(searchParams.get('limit')  ?? '20', 10), 100);
   const offset = Math.max(parseInt(searchParams.get('offset') ?? '0',  10), 0);
 
+  // study_work_label rides along for the history list's § STUDY badge —
+  // LEFT JOINs so chat sessions and stale pins (post-corpus-swap) get null.
   const sessions = await query<Session>(
-    `SELECT id, title, mode, study_text_id, created_at, updated_at
-     FROM sessions
-     WHERE user_id = $1
-     ORDER BY updated_at DESC
+    `SELECT s.id, s.title, s.mode, s.study_text_id, w.label AS study_work_label,
+            s.created_at, s.updated_at
+     FROM sessions s
+     LEFT JOIN texts t ON t.id = s.study_text_id
+     LEFT JOIN works w ON w.id = t.work_id
+     WHERE s.user_id = $1
+     ORDER BY s.updated_at DESC
      LIMIT $2 OFFSET $3`,
     [user.id, limit, offset]
   );

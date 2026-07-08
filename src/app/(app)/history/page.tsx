@@ -8,6 +8,8 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 interface Session {
   id: string;
   title: string | null;
+  mode?: 'chat' | 'study';
+  study_work_label?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,8 +59,14 @@ export default function HistoryPage() {
               <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 16, color: tokens.text.primary, marginBottom: 4 }}>
                 {s.title ?? 'Untitled session'}
               </div>
-              <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted }}>
-                {s.id.slice(0, 8)}
+              <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                {s.mode === 'study' && (
+                  <span style={{
+                    color: tokens.text.accent, border: `1px solid ${tokens.text.accent}`,
+                    borderRadius: 2, padding: '1px 5px', letterSpacing: 1, flexShrink: 0,
+                  }}>§ STUDY{s.study_work_label ? ` — ${s.study_work_label}` : ''}</span>
+                )}
+                <span>{s.id.slice(0, 8)}</span>
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>

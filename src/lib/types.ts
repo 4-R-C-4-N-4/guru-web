@@ -151,6 +151,9 @@ export interface Session {
   title: string | null;
   mode: 'chat' | 'study';
   study_text_id: string | null;
+  /** Resolved work label for the history list badge; null for chat sessions
+   *  and stale pins. Only populated by GET /api/sessions. */
+  study_work_label?: string | null;
   created_at: string;
   updated_at: string;
 }
