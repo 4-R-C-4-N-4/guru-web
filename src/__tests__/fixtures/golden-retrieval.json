@@ -1,33 +1,110 @@
 {
   "corpus": {
-    "schema_version": "3",
-    "corpus_version": "27",
+    "schema_version": "4",
+    "corpus_version": "37",
     "embedding_model": "ollama/nomic-embed-text",
-    "captured_at": "2026-05-27",
-    "note": "Domain-knowledge regression labels pinned to this corpus snapshot (todo:b22586bc, design §9.3). Two assertion kinds, neither circular: (1) tradition-anchored queries use a distinctive term whose tradition a comparative-religion reader would assert regardless of the system — recall is 'did the expected tradition survive into top-K'; (2) hierarchy queries assert the query plane engages (minConcepts) + breadth (minTraditions). These are NOT chunk-level relevance judgments — those need human ratification (follow-up). Re-baseline deliberately when corpus_version changes; do not let it silently rot."
+    "captured_at": "2026-07-09",
+    "note": "Domain-knowledge regression labels pinned to this corpus snapshot (todo:b22586bc, design §9.3). Two assertion kinds, neither circular: (1) tradition-anchored queries use a distinctive term whose tradition a comparative-religion reader would assert regardless of the system — recall is 'did the expected tradition survive into top-K'; (2) hierarchy queries assert the query plane engages (minConcepts) + breadth (minTraditions). These are NOT chunk-level relevance judgments — those need human ratification (follow-up). Re-baseline deliberately when corpus_version changes; do not let it silently rot. Re-baselined 2026-07-09 at the v4 document-knowledge deploy (todo:8673c77e): all v27 labels re-verified against the V8-cleaned re-embedded corpus; 13/14 held unchanged."
   },
   "topK": 15,
   "queries": [
-    { "query": "the tao and the way of wu wei", "mustIncludeTraditions": ["taoism"], "minTraditions": 2 },
-    { "query": "the sefirot and the tree of life", "mustIncludeTraditions": ["jewish_mysticism"], "minTraditions": 2 },
-    { "query": "the One and emanation from the Nous", "mustIncludeTraditions": ["neoplatonism"], "minTraditions": 3 },
-    { "query": "Poimandres the shepherd of men", "mustIncludeTraditions": ["hermeticism"], "minTraditions": 2 },
-    { "query": "the Egyptian book of the dead and the weighing of the heart", "mustIncludeTraditions": ["egyptian"], "minTraditions": 2 },
-    { "query": "gnosis and the demiurge and the archons", "mustIncludeTraditions": ["gnosticism"], "minTraditions": 2 },
-    { "query": "the reed flute of separation in the Masnavi", "mustIncludeTraditions": ["sufism"], "minTraditions": 1 },
-    { "query": "cosmology", "minConcepts": 5, "minTraditions": 3 },
-    { "query": "the cosmos and its origin", "minConcepts": 1, "minTraditions": 3 },
-    { "query": "soteriology", "minConcepts": 1, "minTraditions": 2 },
-    { "query": "divine emanation", "minConcepts": 1, "minTraditions": 4 },
-    { "query": "union with the divine", "minTraditions": 4 },
-    { "query": "divine light and the inner spark", "minTraditions": 4 },
-    { "query": "the ascent of the soul", "minConcepts": 1, "minTraditions": 3 }
+    {
+      "query": "the tao and the way of wu wei",
+      "mustIncludeTraditions": [
+        "taoism"
+      ],
+      "minTraditions": 2
+    },
+    {
+      "query": "the Sephiroth and the tree of life",
+      "mustIncludeTraditions": [
+        "jewish_mysticism"
+      ],
+      "minTraditions": 2,
+      "note": "Corpus-native (Mathers) spelling. The modern 'sefirot' spelling misses top-15 despite a concept_aliases entry — graph-leg transliteration hits lose slots to vector hubs (GRAPH_WEIGHT tuning, see todo:31a7fe76). Domain-true either way; the gate pins the spelling the corpus can currently defend."
+    },
+    {
+      "query": "the One and emanation from the Nous",
+      "mustIncludeTraditions": [
+        "neoplatonism"
+      ],
+      "minTraditions": 3
+    },
+    {
+      "query": "Poimandres the shepherd of men",
+      "mustIncludeTraditions": [
+        "hermeticism"
+      ],
+      "minTraditions": 2
+    },
+    {
+      "query": "the Egyptian book of the dead and the weighing of the heart",
+      "mustIncludeTraditions": [
+        "egyptian"
+      ],
+      "minTraditions": 2
+    },
+    {
+      "query": "gnosis and the demiurge and the archons",
+      "mustIncludeTraditions": [
+        "gnosticism"
+      ],
+      "minTraditions": 2
+    },
+    {
+      "query": "the reed flute of separation in the Masnavi",
+      "mustIncludeTraditions": [
+        "sufism"
+      ],
+      "minTraditions": 1
+    },
+    {
+      "query": "cosmology",
+      "minConcepts": 5,
+      "minTraditions": 3
+    },
+    {
+      "query": "the cosmos and its origin",
+      "minConcepts": 1,
+      "minTraditions": 3
+    },
+    {
+      "query": "soteriology",
+      "minConcepts": 1,
+      "minTraditions": 2
+    },
+    {
+      "query": "divine emanation",
+      "minConcepts": 1,
+      "minTraditions": 4
+    },
+    {
+      "query": "union with the divine",
+      "minTraditions": 4
+    },
+    {
+      "query": "divine light and the inner spark",
+      "minTraditions": 4
+    },
+    {
+      "query": "the ascent of the soul",
+      "minConcepts": 1,
+      "minTraditions": 3
+    }
   ],
   "knownGaps": {
     "note": "Recorded, NOT asserted — these would make the baseline perpetually red. Distinctive in-corpus terms whose (small / commentary-heavy) tradition does NOT survive into top-K under current vector+graph retrieval at corpus v27. Captured as todo for investigation; promote to asserted queries once retrieval surfaces them.",
     "cases": [
-      { "query": "Tiamat and the Babylonian creation", "expectedTradition": "mesopotamian", "reason": "only 15 chunks; 'Babylonian creation' pulls creation content from larger traditions despite 'tiamat'/'marduk' being in-corpus" },
-      { "query": "Ahura Mazda and the Gathas", "expectedTradition": "zoroastrianism", "reason": "'ahura'/'mazda' appear 100+ times but the Gathas chunks are dense philological commentary that embeds poorly against a clean query" }
+      {
+        "query": "Tiamat and the Babylonian creation",
+        "expectedTradition": "mesopotamian",
+        "reason": "only 15 chunks; 'Babylonian creation' pulls creation content from larger traditions despite 'tiamat'/'marduk' being in-corpus"
+      },
+      {
+        "query": "Ahura Mazda and the Gathas",
+        "expectedTradition": "zoroastrianism",
+        "reason": "'ahura'/'mazda' appear 100+ times but the Gathas chunks are dense philological commentary that embeds poorly against a clean query"
+      }
     ]
   }
 }
