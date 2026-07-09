@@ -1,13 +1,13 @@
 {
   "id": "8673c77e",
   "type": "debt",
-  "state": "open",
+  "state": "done",
   "summary": "Re-baseline golden-retrieval gate to corpus v29 ('the One … Nous' no longer recalls neoplatonism after the re-embed; gate pinned to v27)",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-29T00:03:48.200Z",
-  "updated_at": "2026-07-05T02:27:43.243Z",
+  "updated_at": "2026-07-09T15:49:44.178Z",
   "relationships": {
     "related": [
       "b80d8d7d"
@@ -21,5 +21,11 @@
       "content": "Heads-up: the V8 clean-body re-embed (guru fccaf47d) changed every chunk embedding; the golden-retrieval baseline shifts again at the v4 corpus deploy (Phase W). Re-baseline once, after that deploy, rather than against any intermediate corpus.",
       "confidence": "medium"
     }
-  ]
+  ],
+  "resolution": {
+    "commit": "b7da54875c16b7c65053b1a9f9186f51c147ce49",
+    "resolved_at": "2026-07-09T15:49:44.178Z",
+    "resolved_by": "unknown",
+    "note": "Re-baselined at the v4 deploy per the ticket's own timing guidance: 13/14 v27 labels held on the V8-cleaned re-embedded corpus incl. the original 'the One … Nous' failure (now green); sefirot query pinned to corpus-native Sephiroth spelling with the transliteration weighting gap documented on 31a7fe76. 14/14 green."
+  }
 }

@@ -1,13 +1,13 @@
 {
   "id": "b80d8d7d",
   "type": "bug",
-  "state": "open",
+  "state": "done",
   "summary": "~32% of corpus chunks (994/3089, v27) are retrievable but are apparatus/boilerplate, not content: site nav ('Sacred Texts... Previous Next'), tables of contents ('Next: Chapter IV', 'Next: Book XI'), and editorial/manuscript footnotes ('the word aidum stood... in his MS'). Found via the tuning experiment (59060e24): LLM-judged precision@10 is ~0.2 corpus-wide and ~0.00 for distinctive small-tradition queries because the surfaced chunks are this junk (Zoroastrian Gathas results are philological footnotes, not doctrine). This — not ranking weights (which moved precision <0.06) — is the dominant retrieval-precision lever. FIX IS UPSTREAM in the guru pipeline chunker: filter/strip apparatus at ingestion + re-export. Cross-repo. Evidence: docs/concept-hierarchy/tuning-experiment.md Round 2.",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-28T13:42:34.960Z",
-  "updated_at": "2026-07-05T02:27:43.205Z",
+  "updated_at": "2026-07-09T15:49:54.970Z",
   "tags": [
     "corpus",
     "retrieval",
@@ -36,5 +36,13 @@
       "content": "Substantially resolved at the SOURCE by guru repo todo:fccaf47d (2026-07-04): corpus-wide V8 audit found pollution had already dropped from the v27-era 32% to ~7% residual; clean_bodies.py stripped ~1,050 chunks in place (nav, credits, page markers, orphan titles), full re-embed over clean bodies (4,176 x 768d), and retriever.ts patterns hardened as defense-in-depth (guru-web branch chore/v8-apparatus-sync). Remaining runtime exposure is only the currently-deployed v3 corpus; closure rides the v4 deploy (docs/summary-phase-w.md W6). Whole-chunk apparatus remnants tracked in guru todo:50438e23.",
       "confidence": "high"
     }
-  ]
+  ],
+  "resolution": {
+    "commit": "8ca130ccae8f08071652b6ee672db8244fa0e5ab",
+    "resolved_at": "2026-07-09T15:49:54.970Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/quality-filter.test.ts",
+    "test_function": "applyQualityFilter",
+    "note": "Resolved at source by the guru V8 chunk-level clean (P1-P6) + full re-embed, shipped in the v4 corpus deployed 2026-07-09. Runtime quality filter retained as defense-in-depth (its tests are the regression net). Prod verified."
+  }
 }

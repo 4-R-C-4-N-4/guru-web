@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-05-27T23:17:21.324Z",
-  "updated_at": "2026-05-27T23:17:21.365Z",
+  "updated_at": "2026-07-09T15:49:44.260Z",
   "tags": [
     "retrieval",
     "golden"
@@ -16,5 +16,14 @@
     "related": [
       "b22586bc"
     ]
-  }
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-07-09T15:49:44.259Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "Golden-gate re-baseline (8673c77e) isolated a concrete reproducer for the transliteration half of this: 'sefirot' has a concept_aliases row and still misses top-15 ('Sephiroth' recalls jewish_mysticism at rank 1) — the graph leg surfaces the alias match but GRAPH_WEIGHT 0.3 loses the slot to vector hubs. A graph-weight sweep (RETRIEVAL_GRAPH_WEIGHT env, no redeploy) is the cheap experiment.",
+      "confidence": "high"
+    }
+  ]
 }
