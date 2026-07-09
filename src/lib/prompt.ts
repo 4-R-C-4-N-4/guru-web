@@ -7,9 +7,9 @@
  * via getSystemPrompt(voice).
  */
 
-import { makeBudget } from "./budget";
+import { makeBudget, estimateTokens } from "./budget";
 import { compressChunks } from "./compress";
-import type { RetrievedChunk, UserPreferences, VoiceSlug } from "./types";
+import type { RetrievedChunk, UserPreferences, VoiceSlug, WorkDossier } from "./types";
 import type { AtlasSnapshot, AtlasChunk } from "./atlas";
 
 // Re-export VoiceSlug so callers can keep importing it from @/lib/prompt
@@ -75,7 +75,7 @@ Rules:
 
 Citation format (after your main response):
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
 "optional short quote"`;
 
 export function getSystemPrompt(voice: VoiceSlug): string {
@@ -143,7 +143,7 @@ DEK: <one sentence that frames the parallel>
 <the essay, in markdown prose>
 
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
 (one line per source passage you actually drew on)`;
 
 // getBlogSystemPrompt composes the blog overlay + blog rules. No voice
@@ -165,6 +165,8 @@ function tierSymbol(tier?: string): string {
       return "◇";
     case "inferred":
       return "○";
+    case "summary":
+      return "§"; // generated study apparatus, not a scraped source (W0 decision)
     default:
       return "○";
   }
@@ -215,23 +217,94 @@ export function buildPrompt(
   tier: "free" | "pro",
   reservedExtra = 0,
 ): string {
-  const budget = makeBudget(tier, reservedExtra);
+  const passagesBlock = fitPassagesBlock(queryText, chunks, tier, reservedExtra);
+  return `${passagesBlock}\n\n---\n\nQUERY: ${queryText}`;
+}
 
-  // Target tokens per chunk for compression (don't let one chunk eat the budget)
+// ---------------------------------------------------------------------------
+// Study mode (summary-phase-w.md §W4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render the WORK DOSSIER block. Apparatus, not source: the header instructs
+ * the model to cite only SOURCE PASSAGES. Fields are compact by construction
+ * (§1.1 token bands) and are never compressed — the passage budget shrinks
+ * around them instead (buildStudyPrompt reserves the block's tokens).
+ */
+export function formatDossier(d: WorkDossier): string {
+  const toc = d.structure
+    .map(e => `- ${e.section_span} — ${e.title}`)
+    .join("\n");
+  const figures = d.key_figures
+    .filter(f => f.name && (f.role || f.gloss))
+    .map(f => `${f.name} (${f.role || f.gloss})`)
+    .join("; ");
+  const terms = d.key_terms
+    .filter(t => t.term && t.gloss)
+    .map(t => `${t.term} — ${t.gloss}`)
+    .join("; ");
+  const themes = d.themes
+    .map(t => t.replace(/^concept\./, "").replace(/_/g, " "))
+    .join(", ");
+
+  const parts = [
+    `WORK DOSSIER — ${d.work_label} (study apparatus, generated: for orientation only. ` +
+      `Cite SOURCE PASSAGES, never this block.)`,
+    `SUMMARY: ${d.summary}`,
+    `CONTEXT: ${d.context}`,
+    toc ? `STRUCTURE:\n${toc}` : null,
+    figures ? `KEY FIGURES: ${figures}` : null,
+    terms ? `KEY TERMS: ${terms}` : null,
+    themes ? `THEMES: ${themes}` : null,
+    d.reading_notes ? `READING NOTES: ${d.reading_notes}` : null,
+  ];
+  return parts.filter(Boolean).join("\n\n");
+}
+
+/**
+ * Study-mode variant of buildPrompt: prepends the pinned work's dossier
+ * (when one exists) ahead of SOURCE PASSAGES. Missing dossier = no block,
+ * never an error or placeholder (W0 finding 4 — coverage may be partial).
+ * The dossier is budgeted like history via reservedExtra so passages fit
+ * around it; the dossier itself is never compressed.
+ */
+export function buildStudyPrompt(
+  queryText: string,
+  chunks: RetrievedChunk[],
+  dossier: WorkDossier | null,
+  _prefs: UserPreferences,
+  tier: "free" | "pro",
+  reservedExtra = 0,
+): string {
+  const dossierBlock = dossier ? formatDossier(dossier) : null;
+  const dossierTokens = dossierBlock ? estimateTokens(dossierBlock) : 0;
+
+  const passagesBlock = fitPassagesBlock(
+    queryText, chunks, tier, reservedExtra + dossierTokens);
+
+  const blocks = dossierBlock
+    ? [dossierBlock, passagesBlock]
+    : [passagesBlock];
+  return `${blocks.join("\n\n---\n\n")}\n\n---\n\nQUERY: ${queryText}`;
+}
+
+/** Shared budget→compress→fit→format core of buildPrompt/buildStudyPrompt —
+ *  one drift point for chunk budgeting instead of two. */
+function fitPassagesBlock(
+  queryText: string,
+  chunks: RetrievedChunk[],
+  tier: "free" | "pro",
+  reservedExtra: number,
+): string {
+  const budget = makeBudget(tier, reservedExtra);
   const targetPerChunk = Math.floor(
     budget.available / Math.max(chunks.length, 1),
   );
   const compressed = compressChunks(chunks, queryText, targetPerChunk);
-
-  // Fit within overall budget
   const fitted = budget.fitChunks(compressed);
-
-  const passagesBlock =
-    fitted.length > 0
-      ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
-      : "No source passages were found for this query.";
-
-  return `${passagesBlock}\n\n---\n\nQUERY: ${queryText}`;
+  return fitted.length > 0
+    ? `SOURCE PASSAGES:\n\n${fitted.map(formatChunk).join("\n\n")}`
+    : "No source passages were found for this query.";
 }
 
 /**
@@ -377,7 +450,7 @@ DEK: <one sentence framing what this edition of the atlas shows>
 <the essay, in markdown prose>
 
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
 (one line per SOURCE PASSAGE you actually drew on)`;
 
 export function getAtlasSystemPrompt(): string {

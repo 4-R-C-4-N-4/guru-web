@@ -53,6 +53,7 @@ export const tokens = {
     verified: '#c4a35a',
     proposed: '#7a9ec2',
     inferred: '#5a5650',
+    summary:  '#8a7fb0', // generated study apparatus (W5)
   },
   font: {
     display: "'Cormorant Garamond', serif",

@@ -138,7 +138,6 @@ export default function NavBar() {
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <span style={{ fontFamily: tokens.font.display, fontSize: mobile ? 18 : 22, fontWeight: 600, color: tokens.text.accent, letterSpacing: 3 }}>GURU</span>
-          <span style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, border: `1px solid ${tokens.border.subtle}`, padding: '2px 5px', borderRadius: 2 }}>v3</span>
         </button>
 
         {!mobile && (

@@ -5,9 +5,9 @@
  * Top-level export: retrieve(queryText, prefs, topK)
  */
 
-import { query } from './db';
+import { query, one } from './db';
 import { embed } from './embed';
-import { extractConcepts, walkGraph, buildScopeFilter } from './graph';
+import { extractConcepts, walkGraph, buildScopeFilter, buildSummaryScopeFilter } from './graph';
 import type { RetrievedChunk, UserPreferences } from './types';
 
 /**
@@ -17,8 +17,49 @@ import type { RetrievedChunk, UserPreferences } from './types';
 export async function retrieve(
   queryText: string,
   prefs: UserPreferences,
-  topK: number = 15
+  topK: number = 15,
+  mode: 'chat' | 'study' = 'chat',
+  studyTextId?: string | null
 ): Promise<RetrievedChunk[]> {
+  // Study mode (summary-phase-w.md §W3): both chunk legs pin to the study
+  // work's member texts, and a summary leg joins the vector candidates. The
+  // chat/compare path below is byte-for-byte the tuned config — mode defaults
+  // keep every existing caller on it.
+  let studyWorkId: string | null = null;
+  if (mode === 'study' && studyTextId) {
+    const pin = await one<{ work_id: string; tradition: string; member_text_ids: string[] }>(
+      `SELECT w.id AS work_id, w.tradition, w.member_text_ids
+       FROM texts t JOIN works w ON w.id = t.work_id
+       WHERE t.id = $1`,
+      [studyTextId]
+    );
+    if (!pin) {
+      // A stale study_text_id (text removed/renamed by a corpus swap) must
+      // not silently degrade to an unrestricted chat query — fail closed.
+      console.warn(`[retriever] study pin ${studyTextId} not in corpus; returning no results`);
+      return [];
+    }
+    studyWorkId = pin.work_id;
+    // The pin is an ADDITIONAL scope constraint (phase-w §W3), not a
+    // replacement: a user's blacklist/whitelist still applies inside the
+    // pinned work. Intersect in code, then reuse buildScopeFilter's
+    // whitelist path with the effective member set.
+    let members = pin.member_text_ids;
+    if (prefs.scopeMode === 'blacklist') {
+      if (prefs.blockedTraditions.includes(pin.tradition)) members = [];
+      members = members.filter(m => !prefs.blockedTexts.includes(m));
+    } else if (prefs.scopeMode === 'whitelist') {
+      if (prefs.whitelistedTraditions.length > 0 && !prefs.whitelistedTraditions.includes(pin.tradition)) members = [];
+      if (prefs.whitelistedTexts.length > 0) members = members.filter(m => prefs.whitelistedTexts.includes(m));
+    }
+    if (members.length === 0) return []; // scope excludes the whole pinned work
+    prefs = {
+      ...prefs,
+      scopeMode: 'whitelist',
+      whitelistedTraditions: [],
+      whitelistedTexts: members,
+    };
+  }
   // Vector candidate-pool multiplier. Widening the pool lets the long tail reach
   // the rarity-aware reranker; alone it churns the head (tuning-experiment.md §1),
   // but PAIRED WITH the lexical leg it's the measured-best cell (Round 4: lexical
@@ -32,10 +73,14 @@ export async function retrieve(
   // (revert without a redeploy). The lexical pool is fixed at topK*2 (like graph):
   // FTS is not corpus-size-biased the way the vector leg is, so it skips poolMult.
   const runLexical = process.env.RETRIEVAL_LEXICAL !== 'off';
-  let [vectorResults, graphResults, lexicalResults] = await Promise.all([
+  // eslint-disable-next-line prefer-const -- first three are reassigned by the quality filter
+  let [vectorResults, graphResults, lexicalResults, summaryResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
     graphSearch(queryText, prefs, topK * 2),
     runLexical ? lexicalSearch(queryText, prefs, topK * 2) : Promise.resolve([] as RetrievedChunk[]),
+    studyWorkId
+      ? summarySearch(queryText, prefs, topK, studyWorkId)
+      : Promise.resolve([] as RetrievedChunk[]),
   ]);
 
   // Quality filter (todo:9e31302a) — drop corpus apparatus (nav/TOC/errata) and
@@ -48,6 +93,7 @@ export async function retrieve(
     vectorResults = applyQualityFilter(vectorResults);
     graphResults = applyQualityFilter(graphResults);
     lexicalResults = applyQualityFilter(lexicalResults);
+    // summaryResults deliberately skipped: generated apparatus, not scraped
   }
 
   // Diversity mode (todo:59060e24). 'live' (default) divides the bump by a
@@ -68,26 +114,91 @@ export async function retrieve(
   // hubs. Swept without a redeploy; default is GRAPH_WEIGHT until measured.
   const graphWeight = Number(process.env.RETRIEVAL_GRAPH_WEIGHT) || GRAPH_WEIGHT;
 
-  return mergeAndRerank(vectorResults, graphResults, topK, {
+  return mergeAndRerank([...vectorResults, ...summaryResults], graphResults, topK, {
     traditionRarity,
     lexicalResults,
     lexicalWeight,
     graphWeight,
+    // A pinned study work is single-tradition: the cap would truncate results
+    // to MAX_PER_TRADITION regardless of topK.
+    perTraditionCap: studyWorkId ? 0 : undefined,
   });
 }
 
-// Corpus-apparatus patterns (todo:9e31302a; mined in tuning-experiment.md Round 2).
+// ---------------------------------------------------------------------------
+// Summary leg (study mode; summary-phase-w.md §W3)
+// ---------------------------------------------------------------------------
+
+// Vector search over summary_nodes, column-compatible with the chunk legs so
+// the reranker and formatChunk need no special cases beyond tier/source:
+//   text_name  := COALESCE(texts.label, works.label)  — works fallback covers
+//                 multi-member L2 rows where text_id IS NULL (W0 finding 2)
+//   section    := COALESCE(section_span, 'Whole work')
+//   text_id    := COALESCE(text_id, work_id)          — field is non-nullable
+// Exported for unit testing; callers use retrieve().
+export async function summarySearch(
+  queryText: string,
+  prefs: UserPreferences,
+  limit: number,
+  studyWorkId?: string | null
+): Promise<RetrievedChunk[]> {
+  const queryEmbedding = await embed(queryText);
+  const { where, params, paramIndex } = buildSummaryScopeFilter(prefs, 2); // $1 = embedding
+  const pinClause = studyWorkId ? `AND s.work_id = $${paramIndex}` : '';
+
+  const rows = await query<RetrievedChunk & { distance: number }>(
+    `SELECT s.id,
+            COALESCE(s.text_id, s.work_id)         AS text_id,
+            s.tradition,
+            COALESCE(tx.label, w.label)             AS text_name,
+            COALESCE(s.section_span, 'Whole work')  AS section,
+            NULL::text                              AS translator,
+            s.body, s.token_count,
+            (s.embedding <=> $1::vector)            AS distance,
+            'summary' AS source
+     FROM summary_nodes s
+     JOIN works w       ON w.id = s.work_id
+     LEFT JOIN texts tx ON tx.id = s.text_id
+     WHERE ${where} ${pinClause}
+     ORDER BY s.embedding <=> $1::vector
+     LIMIT $${paramIndex + (studyWorkId ? 1 : 0)}`,
+    [JSON.stringify(queryEmbedding), ...params,
+     ...(studyWorkId ? [studyWorkId] : []), limit]
+  );
+
+  return rows.map(r => ({ ...r, tier: 'summary' as const }));
+}
+
+// Corpus-apparatus patterns (todo:9e31302a; hardened by the guru-repo V8 audit —
+// docs/summary/boilerplate-audit.md, todo:fccaf47d). As of the V8 clean the
+// corpus ships with bodies already stripped at source; this layer is
+// defense-in-depth for pre-V8 exports and future ingest regressions.
 // DROP: chunks that are pure navigation/TOC/errata. STRIP: boilerplate baked into
-// otherwise-real chunks (the sacred-texts nav prefix is ~32% of the corpus; the
-// {p. N} brace form is a scan page-marker). Deliberately NOT length-based — the
-// 9-token Gospel of Thomas logion is real content.
+// otherwise-real chunks. Deliberately NOT length-based — the 9-token
+// Gospel of Thomas logion is real content.
 const APPARATUS_DROP = /^\s*(?:next|previous)\s*:|^\s*errata\b/i;
-const NAV_PREFIX = /^\s*Sacred Texts\b.*?\bPrevious\s+Next\b\s*/i;
-const PAGE_MARKER = /\{\s*p\.\s*\d+\s*\}/gi;
+// V8: hyphenated "Sacred-Texts" and header-without-nav-links forms exist
+// (enuma-elish 001 was the reproducer). Ordered alternatives: (1) breadcrumb
+// through "Previous Next" (the classic form); (2) hyphenated or capital-T
+// breadcrumb line without nav links, eaten to end-of-line — deliberately
+// case-sensitive on "Texts" so prose like "sacred texts are…" never matches;
+// (3) gnosis.org "Index Previous Next". No /i flag for that reason.
+const NAV_PREFIX =
+  /^\s*(?:[Ss]acred[- ][Tt]exts?\b[^\n]{0,300}\bPrevious\s+Next\b[ \t]*|Sacred-[Tt]exts?\b[^\n]{0,300}(?:\n+|$)|Sacred\s+Texts\b[^\n]{0,300}(?:\n+|$)|Index\s+Previous\s+Next\b[ \t]*)/;
+// V8: `{p. N}` matches zero chunks in the current corpus (vestigial); the live
+// form is Gutenberg's inline `[Pg N]`. Keep both — they're cheap.
+const PAGE_MARKER = /\{\s*p\.\s*\d+\s*\}|\[\s*pg\.?\s*\d+\s*\]/gi;
+// V8: trailing nav pointer glued to the end of a body ("… Next: Section 6").
+const NAV_TAIL = /\s*(?:Next|Previous)\s*:\s[^\n]{0,80}$/i;
 
 /** Strip baked-in boilerplate from a chunk body. */
 export function cleanBody(body: string): string {
-  return body.replace(NAV_PREFIX, '').replace(PAGE_MARKER, '').trim();
+  return body
+    .replace(NAV_PREFIX, '')
+    .replace(PAGE_MARKER, ' ')
+    .replace(NAV_TAIL, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
 
 /** Drop pure-apparatus chunks and strip boilerplate from the rest. Exported for
@@ -222,7 +333,10 @@ const GRAPH_WEIGHT = 0.3;
 const LEXICAL_WEIGHT = 1.0; // tuned default (todo:3fc23534): swept 0→2.5, peak mean p@10 0.36 at 1.0 (baseline 0.21); env-overridable
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
-const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4 };
+// 'summary' starts at inferred's weight deliberately (unswept — generated
+// apparatus competes on similarity, not tier); retune independently of
+// 'inferred' when the study-mode sweep lands.
+const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4, summary: 0.4 };
 
 type Tier = NonNullable<RetrievedChunk['tier']>;
 function tierWeight(tier: Tier): number {
@@ -257,6 +371,8 @@ export function mergeAndRerank(
     lexicalResults?: RetrievedChunk[];
     lexicalWeight?: number;
     graphWeight?: number;
+    /** Override MAX_PER_TRADITION (0 disables the cap — study mode). */
+    perTraditionCap?: number;
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
@@ -270,10 +386,13 @@ export function mergeAndRerank(
   // graph leg also surfaces it below.
   for (const chunk of vectorResults) {
     const similarity = chunk.distance != null ? 1 - chunk.distance : 0;
+    // Summary rows keep their 'summary' tier (W0 decision: formatChunk would
+    // otherwise mislabel generated apparatus as 'inferred').
+    const tier: Tier = chunk.source === 'summary' ? 'summary' : 'inferred';
     merged.set(chunk.id, {
-      chunk: { ...chunk, tier: 'inferred' },
+      chunk: { ...chunk, tier },
       similarity,
-      tier: 'inferred',
+      tier,
       graphScore: 0,
       matchWeight: 1.0, // vector hit, no query expansion
       lexScore: 0,
@@ -388,7 +507,8 @@ export function mergeAndRerank(
   for (const { entry } of scored) {
     if (out.length >= topK) break;
     const trad = entry.chunk.tradition;
-    if (MAX_PER_TRADITION > 0 && (tradCounts.get(trad) ?? 0) >= MAX_PER_TRADITION) continue;
+    const cap = opts.perTraditionCap ?? MAX_PER_TRADITION;
+    if (cap > 0 && (tradCounts.get(trad) ?? 0) >= cap) continue;
     out.push(entry.chunk);
     tradCounts.set(trad, (tradCounts.get(trad) ?? 0) + 1);
   }

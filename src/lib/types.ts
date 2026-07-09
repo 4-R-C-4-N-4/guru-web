@@ -43,8 +43,8 @@ export interface QueryExpansion {
 
 export interface RetrievedChunk extends Chunk {
   distance?: number;
-  source: 'vector' | 'graph' | 'lexical';
-  tier?: 'verified' | 'proposed' | 'inferred';
+  source: 'vector' | 'graph' | 'lexical' | 'summary';
+  tier?: 'verified' | 'proposed' | 'inferred' | 'summary';
   /**
    * Raw Postgres `ts_rank` carried by lexical-leg chunks (todo:af69f5e5): the
    * full-text relevance of this chunk's body against the query. Unbounded and
@@ -97,7 +97,7 @@ export interface Citation {
   text: string;
   section: string;
   quote?: string;
-  tier: 'verified' | 'proposed' | 'inferred';
+  tier: 'verified' | 'proposed' | 'inferred' | 'summary';
 }
 
 /**
@@ -149,6 +149,11 @@ export interface User {
 export interface Session {
   id: string;
   title: string | null;
+  mode: 'chat' | 'study';
+  study_text_id: string | null;
+  /** Resolved work label for the history list badge; null for chat sessions
+   *  and stale pins. Only populated by GET /api/sessions. */
+  study_work_label?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -167,4 +172,21 @@ export interface QueryRecord {
   output_tokens?: number | null;
   cost_usd?:      number | null;
   created_at: string;
+}
+
+/**
+ * A work's study dossier (schema v4 work_dossiers; summary-phase-w.md §W4).
+ * `themes` arrives as concept ids from the corpus; the query route resolves
+ * them to display labels before prompt assembly where possible.
+ */
+export interface WorkDossier {
+  work_id: string;
+  work_label: string;
+  summary: string;
+  context: string;
+  structure: { section_span: string; title: string; synopsis?: string }[];
+  key_figures: { name: string; role?: string; gloss?: string }[];
+  key_terms: { term: string; transliteration?: string | null; gloss?: string }[];
+  themes: string[];
+  reading_notes: string | null;
 }

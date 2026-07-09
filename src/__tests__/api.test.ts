@@ -53,9 +53,14 @@ vi.mock('@/lib/prompt', async () => {
   return {
     ...actual,
     buildPrompt: vi.fn(),
+    buildStudyPrompt: vi.fn(),
     getSystemPrompt: vi.fn(() => 'mock system prompt'),
   };
 });
+
+vi.mock('@/lib/dossier', () => ({
+  getDossierForText: vi.fn(),
+}));
 
 vi.mock('@/lib/model', async () => {
   // Use real CURATED_MODELS / resolveCuratedModel so the route's
@@ -89,6 +94,7 @@ import * as cost    from '@/lib/cost';
 import * as retriever from '@/lib/retriever';
 import * as graph   from '@/lib/graph';
 import * as prompt  from '@/lib/prompt';
+import * as dossierLib from '@/lib/dossier';
 import * as model   from '@/lib/model';
 import * as rl      from '@/lib/rate-limit';
 
@@ -104,6 +110,8 @@ const mockFinalizeBudget = spend.finalizeBudget as MockedFunction<typeof spend.f
 const mockComputeCost    = cost.computeCost     as MockedFunction<typeof cost.computeCost>;
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
+const mockBuildStudy = prompt.buildStudyPrompt as MockedFunction<typeof prompt.buildStudyPrompt>;
+const mockGetDossier = dossierLib.getDossierForText as MockedFunction<typeof dossierLib.getDossierForText>;
 const mockGetSystemPrompt = prompt.getSystemPrompt as MockedFunction<typeof prompt.getSystemPrompt>;
 const mockStream = model.completeStream   as MockedFunction<typeof model.completeStream>;
 const mockRateLimit = rl.rateLimit         as MockedFunction<typeof rl.rateLimit>;
@@ -214,6 +222,55 @@ describe('POST /api/sessions', () => {
     await sessionsPOST(req('POST', '/api/sessions', {}));
     const [, insertParams] = mockOne.mock.calls[0]!;
     expect(insertParams![2]).toBe('scholar');
+  });
+
+  // Study mode (migration 014, summary-phase-w.md §W2)
+
+  it('400s a study session without study_text_id', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    const res = await sessionsPOST(req('POST', '/api/sessions', { mode: 'study' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/study_text_id/);
+  });
+
+  it('400s a study session whose text id is not in corpus.texts', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce(null); // texts lookup misses
+    const res = await sessionsPOST(
+      req('POST', '/api/sessions', { mode: 'study', study_text_id: 'no-such-text' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/unknown text id/);
+  });
+
+  it('creates a study session pinned to a valid text', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockOne
+      .mockResolvedValueOnce({ id: 'gnostic-john-baptizer-2' }) // texts lookup hits
+      .mockResolvedValueOnce({
+        id: 's5', title: null, mode: 'study', study_text_id: 'gnostic-john-baptizer-2',
+        created_at: '', updated_at: '',
+      });
+    const res = await sessionsPOST(
+      req('POST', '/api/sessions', { mode: 'study', study_text_id: 'gnostic-john-baptizer-2' }));
+    expect(res.status).toBe(201);
+    const [insertSql, insertParams] = mockOne.mock.calls[1]!;
+    expect(insertSql).toMatch(/mode, study_text_id/);
+    expect(insertParams![3]).toBe('study');
+    expect(insertParams![4]).toBe('gnostic-john-baptizer-2');
+  });
+
+  it("400s an unknown mode value", async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    const res = await sessionsPOST(req('POST', '/api/sessions', { mode: 'zen' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('400s a stray study_text_id on chat sessions (client bug surfaced at the write boundary)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    const res = await sessionsPOST(req('POST', '/api/sessions', { study_text_id: 'kalevala' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/requires mode/);
   });
 });
 
@@ -482,29 +539,57 @@ describe('GET /api/corpus', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('aggregates DISTINCT (tradition, text_name) chunk rows into the catalog shape', async () => {
+  it('aggregates DISTINCT (tradition, text_id, text_name) chunk rows into the catalog shape', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockQuery.mockResolvedValueOnce([
-      { tradition: 'Gnosticism', text_name: 'Gospel of Thomas' },
-      { tradition: 'Gnosticism', text_name: 'Gospel of Philip' },
-      { tradition: 'Taoism',     text_name: 'Tao Te Ching' },
-    ]);
+    mockQuery
+      .mockResolvedValueOnce([
+        { tradition: 'Gnosticism', text_id: 'gospel-of-thomas', text_name: 'Gospel of Thomas' },
+        { tradition: 'Gnosticism', text_id: 'gospel-of-philip', text_name: 'Gospel of Philip' },
+        // grouped-work members share a display label — must dedupe (review finding)
+        { tradition: 'Taoism',     text_id: 'tao-te-ching-legge', text_name: 'Tao Te Ching' },
+        { tradition: 'Taoism',     text_id: 'tao-te-ching-2', text_name: 'Tao Te Ching' },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'gospel-of-thomas', label: 'Gospel of Thomas', tradition: 'Gnosticism',
+          member_text_ids: ['gospel-of-thomas'] },
+        { id: 'tao-te-ching-legge', label: 'Tao Te Ching', tradition: 'Taoism',
+          member_text_ids: ['tao-te-ching-legge', 'tao-te-ching-2'] },
+      ]);
 
     const res = await corpusGET();
-    const body = await res.json() as { traditions: Record<string, { texts: string[] }> };
+    const body = await res.json() as {
+      traditions: Record<string, { texts: string[]; text_items: { id: string; label: string }[] }>;
+      works: { id: string; label: string; tradition: string; members: number; pin_text_id: string }[];
+    };
     expect(res.status).toBe(200);
+    // duplicate member labels collapse to one catalog entry
+    expect(body.traditions.Taoism.texts).toEqual(['Tao Te Ching']);
+    // works array drives the study picker: one entry per WORK with a pin id
+    expect(body.works).toEqual([
+      { id: 'gospel-of-thomas', label: 'Gospel of Thomas', tradition: 'Gnosticism', members: 1, pin_text_id: 'gospel-of-thomas' },
+      { id: 'tao-te-ching-legge', label: 'Tao Te Ching', tradition: 'Taoism', members: 2, pin_text_id: 'tao-te-ching-legge' },
+    ]);
     expect(body.traditions).toEqual({
-      Gnosticism: { texts: ['Gospel of Thomas', 'Gospel of Philip'] },
-      Taoism:     { texts: ['Tao Te Ching'] },
+      Gnosticism: {
+        texts: ['Gospel of Thomas', 'Gospel of Philip'],
+        text_items: [
+          { id: 'gospel-of-thomas', label: 'Gospel of Thomas' },
+          { id: 'gospel-of-philip', label: 'Gospel of Philip' },
+        ],
+      },
+      Taoism: {
+        texts: ['Tao Te Ching'],
+        text_items: [{ id: 'tao-te-ching-legge', label: 'Tao Te Ching' }],
+      },
     });
 
     const [sql] = mockQuery.mock.calls[0]!;
-    expect(sql).toMatch(/SELECT\s+DISTINCT\s+tradition,\s*text_name\s+FROM\s+chunks/i);
+    expect(sql).toMatch(/SELECT\s+DISTINCT\s+tradition,\s*text_id,\s*text_name\s+FROM\s+chunks/i);
   });
 
   it('returns an empty catalog when chunks is empty (no fallback)', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
-    mockQuery.mockResolvedValueOnce([]);
+    mockQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
     const res = await corpusGET();
     const body = await res.json() as { traditions: Record<string, unknown> };
@@ -560,6 +645,53 @@ describe('POST /api/query', () => {
     // 'reason' on the body stays for log/admin telemetry but the
     // string the user sees doesn't branch on it.
     expect(body.error).toMatch(/Daily question limit/);
+  });
+
+  // Study sessions (summary-phase-w.md §W5): the route must switch to the
+  // W3 retrieval signature and the W4 prompt builder. Modeled on the 429
+  // tests — reserveBudget denies AFTER retrieval+prompt, so the assertion
+  // surface is reached without streaming.
+  it('study session uses study retrieval + dossier prompt', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({
+      id: 's9', voice: 'scholar', mode: 'study', study_text_id: 'plato-republic-7-0',
+    });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    const dossierFixture = { work_id: 'plato-republic', work_label: 'Plato: Republic' };
+    mockGetDossier.mockResolvedValueOnce(dossierFixture as never);
+    mockBuildStudy.mockReturnValueOnce('study prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    const res = await queryPOST(req('POST', '/api/query', { query: 'the cave', sessionId: 's9' }));
+    expect(res.status).toBe(429); // deliberate stop after the assertion surface
+
+    expect(mockRetrieve).toHaveBeenCalledWith('the cave', DEFAULT_PREFS, 15, 'study', 'plato-republic-7-0');
+    expect(mockGetDossier).toHaveBeenCalledWith('plato-republic-7-0');
+    expect(mockBuildStudy).toHaveBeenCalledWith('the cave', [], dossierFixture, DEFAULT_PREFS, 'free', 0);
+    expect(mockBuild).not.toHaveBeenCalled();
+  });
+
+  it('chat session never touches the dossier or study prompt', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1', voice: 'scholar', mode: 'chat', study_text_id: null });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    expect(mockRetrieve).toHaveBeenCalledWith('q', DEFAULT_PREFS);
+    expect(mockGetDossier).not.toHaveBeenCalled();
+    expect(mockBuildStudy).not.toHaveBeenCalled();
   });
 
   it('returns 429 with reason=usd when spend cap would overrun (same user-facing message)', async () => {

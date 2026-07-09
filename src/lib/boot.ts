@@ -45,7 +45,10 @@ const EXPECTED_EMBED_DIM = 768;
 // v3 (2026-05-27): concept hierarchy — domains → families → concepts + alias
 // tables (todo:30dca55e; handoff §1, §5.2). Lockstep: the export raises if the
 // corpus's schema_version != 3, so this must advance in the same deploy.
-export const EXPECTED_SCHEMA_VERSION = '3';
+// v4 (2026-07-07): document-knowledge layer — works, texts.work_id,
+// work_dossiers, summary_nodes(+embedding) (todo:55aa9982 W1; guru campaign
+// c1). Same lockstep rule: corpus swap and this bump ship in one deploy.
+export const EXPECTED_SCHEMA_VERSION = '4';
 
 export class BootError extends Error {
   constructor(message: string) {

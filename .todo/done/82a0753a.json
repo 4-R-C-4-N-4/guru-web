@@ -1,0 +1,26 @@
+{
+  "id": "82a0753a",
+  "type": "chore",
+  "state": "done",
+  "summary": "W1: schema pairing + boot bump — copy guru corpus-schema.sql byte-identical, regenerate sha256 pairing hash, EXPECTED_SCHEMA_VERSION='4' in boot.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-07T12:39:49.021Z",
+  "updated_at": "2026-07-07T12:56:31.641Z",
+  "relationships": {
+    "parent": "55aa9982"
+  },
+  "work": {
+    "branch": "feature/summary",
+    "base_branch": "main",
+    "started_at": "2026-07-07T12:55:37.923Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "9712a95cbd2c9cabd03e16c3c871136866f0db82",
+    "resolved_at": "2026-07-07T12:56:31.641Z",
+    "resolved_by": "unknown",
+    "note": "schemas byte-identical (5d486951a7d7), pairing hash regenerated, boot bumped to '4' with changelog; type-check + full vitest green"
+  }
+}

@@ -318,6 +318,54 @@ export async function walkGraph(
   }));
 }
 
+/**
+ * Scope filter for summary_nodes (summary-phase-w.md §W0 finding 3 / §W3).
+ * buildScopeFilter cannot be applied verbatim: multi-member L2 rows have
+ * text_id IS NULL, and in SQL `NULL <> ALL(array)` is NULL — so any
+ * text-level blacklist silently drops them (whitelists invert the failure).
+ * Text-level scope therefore applies via WORKS MEMBERSHIP overlap on the
+ * joined works row (alias `w`); tradition-level conditions apply verbatim
+ * on the summary row (alias `s` — every work is single-tradition).
+ */
+export function buildSummaryScopeFilter(
+  prefs: UserPreferences,
+  startIndex: number = 2
+): { where: string; params: unknown[]; paramIndex: number } {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  let paramIndex = startIndex;
+
+  if (prefs.scopeMode === 'blacklist') {
+    if (prefs.blockedTraditions.length > 0) {
+      conditions.push(`s.tradition <> ALL($${paramIndex}::text[])`);
+      params.push(prefs.blockedTraditions);
+      paramIndex++;
+    }
+    if (prefs.blockedTexts.length > 0) {
+      conditions.push(`NOT (w.member_text_ids && $${paramIndex}::text[])`);
+      params.push(prefs.blockedTexts);
+      paramIndex++;
+    }
+  } else if (prefs.scopeMode === 'whitelist') {
+    if (prefs.whitelistedTraditions.length > 0) {
+      conditions.push(`s.tradition = ANY($${paramIndex}::text[])`);
+      params.push(prefs.whitelistedTraditions);
+      paramIndex++;
+    }
+    if (prefs.whitelistedTexts.length > 0) {
+      conditions.push(`w.member_text_ids && $${paramIndex}::text[]`);
+      params.push(prefs.whitelistedTexts);
+      paramIndex++;
+    }
+  }
+
+  return {
+    where: conditions.length > 0 ? conditions.join(' AND ') : 'TRUE',
+    params,
+    paramIndex,
+  };
+}
+
 /** Build a WHERE clause fragment for tradition/text scope preferences. */
 export function buildScopeFilter(
   prefs: UserPreferences,

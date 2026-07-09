@@ -32,6 +32,29 @@ describe('cleanBody — strip baked-in boilerplate', () => {
   it('leaves clean content untouched', () => {
     expect(cleanBody('Tat tvam asi — thou art that.')).toBe('Tat tvam asi — thou art that.');
   });
+
+  // V8 hardening (guru repo docs/summary/boilerplate-audit.md, todo:fccaf47d)
+  it('strips the hyphenated Sacred-Texts header without nav links (enuma-elish reproducer)', () => {
+    const out = cleanBody('Sacred-Texts Ancient Near East ENUMA ELISH THE EPIC OF CREATION L.W.\n\nTHE FIRST TABLET When in the height');
+    expect(out).not.toMatch(/Sacred-Texts/);
+    expect(out).toContain('THE FIRST TABLET');
+  });
+
+  it('strips inline [Pg N] Gutenberg page markers', () => {
+    const out = cleanBody('the Pytha [Pg 2] goreans held that');
+    expect(out).not.toMatch(/\[Pg/);
+    expect(out).toContain('goreans held that');
+  });
+
+  it('strips a trailing Next: nav pointer glued to content', () => {
+    const out = cleanBody('analogy will make every part a Sign. Next: Section 6');
+    expect(out).toBe('analogy will make every part a Sign.');
+  });
+
+  it('does not strip prose that merely mentions sacred texts', () => {
+    const prose = 'The sacred texts of this tradition describe the ascent.';
+    expect(cleanBody(prose)).toBe(prose);
+  });
 });
 
 describe('applyQualityFilter — drop apparatus, keep content (todo:35c5da28)', () => {

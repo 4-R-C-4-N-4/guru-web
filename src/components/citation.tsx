@@ -8,10 +8,10 @@ interface CitationProps {
   text: string;
   section: string;
   quote?: string;
-  tier: 'verified' | 'proposed' | 'inferred';
+  tier: 'verified' | 'proposed' | 'inferred' | 'summary';
 }
 
-const TIER_SYMBOL = { verified: '◆', proposed: '◇', inferred: '○' } as const;
+const TIER_SYMBOL = { verified: '◆', proposed: '◇', inferred: '○', summary: '§' } as const;
 
 export default function Citation({ tradition, text, section, quote, tier }: CitationProps) {
   const mobile = useIsMobile();
