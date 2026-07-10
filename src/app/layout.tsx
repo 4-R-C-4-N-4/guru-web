@@ -3,6 +3,7 @@ import { Cormorant_Garamond, IBM_Plex_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { headers } from 'next/headers';
 import { clerkAppearance } from '@/styles/clerk-appearance';
+import { tokensToCssVars } from '@/styles/tokens';
 import { TAILNET_HOST } from '@/lib/host';
 import { SITE_URL } from '@/lib/site';
 import './globals.css';
@@ -55,8 +56,15 @@ export default async function RootLayout({
   const host = (await headers()).get('host');
   const isTailnet = host === TAILNET_HOST;
 
+  // Design tokens ride <html> as CSS custom properties so globals.css
+  // primitives (.btn, .row, focus ring, …) consume the exact values
+  // components import from tokens.ts — one source of truth, no drift.
   const tree = (
-    <html lang="en" className={`${display.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${display.variable} ${mono.variable}`}
+      style={tokensToCssVars() as React.CSSProperties}
+    >
       <body>{children}</body>
     </html>
   );

@@ -63,3 +63,24 @@ export const tokens = {
 
 export type Tradition = keyof typeof tokens.tradition;
 export type Tier      = keyof typeof tokens.tier;
+
+/**
+ * Flatten the token tree into CSS custom properties, e.g.
+ * tokens.bg.deep → '--bg-deep', tokens.tradition.greek_mystery →
+ * '--tradition-greek-mystery'. layout.tsx spreads these onto <html> so
+ * stylesheets consume the SAME values components import — tokens.ts stays
+ * the single source of truth and CSS can never drift from it.
+ */
+export function tokensToCssVars(): Record<string, string> {
+  const vars: Record<string, string> = {};
+  for (const [group, entries] of Object.entries(tokens)) {
+    // next/font owns --font-display/--font-mono (set via its __variable
+    // class with size-adjusted fallback faces). Emitting tokens.font here
+    // would shadow those as inline styles and drop the tuned fallbacks.
+    if (group === 'font') continue;
+    for (const [name, value] of Object.entries(entries)) {
+      vars[`--${group}-${name.replace(/_/g, '-')}`] = value as string;
+    }
+  }
+  return vars;
+}
