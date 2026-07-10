@@ -85,18 +85,42 @@ describe('deploy.sh supply-chain contract (todo:3ec0c41d)', () => {
     expect(guardIdx).toBeLessThan(unpackIdx);
   });
 
-  it('wipes $RELEASE before extraction so retries and re-execs are idempotent', () => {
-    const rmIdx = CODE.search(/rm\s+-rf\s+["']?\$RELEASE["']?/);
-    const unpackIdx = CODE.search(/tar\s+-xzf\s+["']?\$TARBALL["']?/);
-    expect(rmIdx).toBeGreaterThan(-1);
-    expect(rmIdx).toBeLessThan(unpackIdx);
+  it('validates $SHA as hex before building any rm -rf paths from it', () => {
+    // The sha arrives from a workflow_dispatch input via a remote shell —
+    // reject traversal/metacharacters before RELEASE/TARBALL are derived.
+    const validateIdx = CODE.search(/\[0-9a-f\]\{7,40\}/);
+    const firstRmIdx = CODE.search(/rm\s+-rf/);
+    expect(validateIdx).toBeGreaterThan(-1);
+    expect(firstRmIdx).toBeGreaterThan(-1);
+    expect(validateIdx).toBeLessThan(firstRmIdx);
   });
 
-  it('cleans consumed tarballs only after the restart verified', () => {
+  it('extracts into $STAGING then swaps, so a live $RELEASE is never gutted mid-unpack', () => {
+    // Redeploying the SHA `current` points at must not rm -rf the tree the
+    // running app is serving from for the duration of the extract — the
+    // wipe happens only in the instant before the mv rename.
+    const stageWipeIdx = CODE.search(/rm\s+-rf\s+["']?\$STAGING["']?/);
+    const unpackIdx = CODE.search(/tar\s+-xzf\s+["']?\$TARBALL["']?\s+-C\s+["']?\$STAGING["']?/);
+    const releaseWipeIdx = CODE.search(/rm\s+-rf\s+["']?\$RELEASE["']?/);
+    const swapIdx = CODE.search(/mv\s+["']?\$STAGING["']?\s+["']?\$RELEASE["']?/);
+    expect(stageWipeIdx).toBeGreaterThan(-1);
+    expect(unpackIdx).toBeGreaterThan(-1);
+    expect(releaseWipeIdx).toBeGreaterThan(-1);
+    expect(swapIdx).toBeGreaterThan(-1);
+    expect(stageWipeIdx).toBeLessThan(unpackIdx);
+    expect(unpackIdx).toBeLessThan(releaseWipeIdx);
+    expect(releaseWipeIdx).toBeLessThan(swapIdx);
+  });
+
+  it('cleans only its own tarball ($TARBALL, not a release-* glob) after the restart verified', () => {
+    // A glob would eat a parallel dispatch-run's freshly-shipped artifact;
+    // and cleanup before the is-active check would drop the retry tarball
+    // on a failed deploy.
     const verifyIdx = CODE.indexOf('is-active');
-    const cleanIdx = CODE.search(/rm\s+-f\s+["']?\$INCOMING["']?\/release-\*\.tar\.gz/);
+    const cleanIdx = CODE.search(/rm\s+-f\s+["']?\$TARBALL["']?/);
     expect(verifyIdx).toBeGreaterThan(-1);
     expect(cleanIdx).toBeGreaterThan(verifyIdx);
+    expect(CODE).not.toMatch(/rm\s+-f\s+["']?\$INCOMING["']?\/release-\*\.tar\.gz/);
   });
 });
 

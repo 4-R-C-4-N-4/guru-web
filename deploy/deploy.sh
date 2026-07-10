@@ -14,8 +14,12 @@
 # is a loud failure, not a quiet rebuild from the public internet.
 #
 # Behaviour: idempotent, atomic-ish (symlink swap), keeps last 5 releases
-# for rollback (roll back with: ln -sfn releases/<old-sha> current && sudo
-# systemctl restart guru-web).
+# for rollback. Roll back with the same two-step idiom the script uses
+# (plain `ln -sfn` onto an existing dir symlink drops the link *inside*
+# the target dir):
+#   ln -sfn /srv/guru-web/releases/<old-sha> /srv/guru-web/current.new
+#   mv -Tf /srv/guru-web/current.new /srv/guru-web/current
+#   sudo systemctl restart guru-web
 #
 # Self-updating: after unpacking the new release, this script compares
 # itself to $RELEASE/deploy/deploy.sh and re-execs with the repo version
@@ -33,11 +37,22 @@ if [[ $# -ne 1 ]]; then
 fi
 
 SHA="$1"
+
+# $SHA names paths we rm -rf and arrives from a workflow_dispatch input via
+# a remote shell — insist it looks like a commit sha before building paths
+# from it. Rejects ../ traversal, shell metacharacters, and branch names
+# (which checkout would accept but which would mint oddly-named releases).
+if [[ ! "$SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
+    echo "deploy.sh: '$SHA' is not a commit sha (expected 7-40 lowercase hex chars)" >&2
+    exit 1
+fi
+
 ROOT=/srv/guru-web
 RELEASE="$ROOT/releases/$SHA"
 CURRENT="$ROOT/current"
 INCOMING="$ROOT/releases/.incoming"
 TARBALL="$INCOMING/release-$SHA.tar.gz"
+STAGING="$INCOMING/stage-$SHA"
 
 log() { printf '\n\033[1;34m==>\033[0m deploy.sh: %s\n' "$*"; }
 
@@ -52,25 +67,36 @@ sudo /bin/chown -R deploy:deploy "$ROOT/releases" || true
 
 # 1. Unpack the CI-built artifact into releases/<sha>.
 #
-#    Idempotent: wipe + re-extract. A retried deploy (or the self-update
-#    re-exec below, or a leftover git clone from the pre-tarball flow)
-#    leaves a partial/foreign $RELEASE — rm -rf guarantees the tree is
-#    exactly the tarball's contents.
+#    Extract into a staging dir first, then swap it into place. Extracting
+#    straight into $RELEASE would mean rm -rf'ing it for the duration of
+#    the unpack — and when the deployed SHA is the one `current` already
+#    points at (redeploy of last-good after an env fix, retried run), that
+#    is the tree the live app is lazily loading chunks from. The staging
+#    swap shrinks that window from "full extract" to a single rename.
+#
+#    Idempotent: staging is wiped before extract, $RELEASE is replaced
+#    wholesale — a retried deploy, the self-update re-exec below, or a
+#    leftover git clone from the pre-tarball flow all end up with exactly
+#    the tarball's contents. Staging lives under $INCOMING (a dotdir) so
+#    the `ls -1t` release-prune never sees it.
 #
 #    Deploying without CI (registry outage, lost artifact): build the
 #    tarball anywhere with the same steps deploy.yml runs (npm ci, source
 #    /etc/guru-web.public.env, npm run build, npm prune --omit=dev,
-#    tar --exclude=.git -czf release-<sha>.tar.gz .) and scp it to
-#    $INCOMING/ yourself, then re-run this script.
+#    tar --exclude=.git --exclude=.next/cache --exclude=node_modules/.cache
+#    -czf release-<sha>.tar.gz .) and scp it to $INCOMING/ yourself, then
+#    re-run this script.
 if [[ ! -f "$TARBALL" ]]; then
     echo "deploy.sh: $TARBALL not found — CI ships it before invoking this script." >&2
     echo "deploy.sh: no git/npm fallback by design (supply-chain hardening); see comment above for the manual path." >&2
     exit 1
 fi
 log "unpacking release-$SHA.tar.gz"
+rm -rf "$STAGING"
+mkdir -p "$STAGING"
+tar -xzf "$TARBALL" -C "$STAGING"
 rm -rf "$RELEASE"
-mkdir -p "$RELEASE"
-tar -xzf "$TARBALL" -C "$RELEASE"
+mv "$STAGING" "$RELEASE"
 
 # 1a. Self-update.  vps-bootstrap.sh installs deploy.sh once and never
 # refreshes it, so changes to deploy/deploy.sh in the repo wouldn't reach
@@ -144,11 +170,18 @@ if ! /bin/systemctl is-active --quiet guru-web; then
     exit 1
 fi
 
-# 5. Clean up shipped tarballs — the unpacked releases/ dirs are the
-# rollback surface, so consumed tarballs have no further use. Only after
-# the restart verified, so a failed deploy keeps its tarball for retry.
-log "clean incoming tarballs"
-rm -f "$INCOMING"/release-*.tar.gz
+# 5. Clean up the consumed tarball — the unpacked releases/ dirs are the
+# rollback surface, so it has no further use. Only after the restart
+# verified, so a failed deploy keeps its tarball for retry. Delete ONLY
+# $TARBALL, not release-*.tar.gz: workflow_dispatch runs on different refs
+# aren't serialized by the concurrency group, so a glob here could eat a
+# parallel deploy's freshly-shipped artifact before its deploy.sh runs.
+# Week-old strays (failed runs never retried, abandoned staging dirs) get
+# swept separately.
+log "clean incoming tarball"
+rm -f "$TARBALL"
+find "$INCOMING" -maxdepth 1 -name 'release-*.tar.gz' -mtime +7 -delete 2>/dev/null || true
+find "$INCOMING" -maxdepth 1 -type d -name 'stage-*' -mtime +7 -exec rm -rf {} + 2>/dev/null || true
 
 # 6. Prune old releases — keep newest 5 by mtime. (`ls -1t` skips
 # dotfiles, so releases/.incoming survives the prune.)

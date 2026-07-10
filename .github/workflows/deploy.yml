@@ -74,10 +74,14 @@ jobs:
       # the deploy path. accept-new is fine here: the tailnet already
       # authenticates the peer at the WireGuard layer, and MagicDNS resolves
       # guru-web-prod inside the tailnet only.
+      # Key passed via env rather than ${{ }} inline so the secret is never
+      # spliced into shell source text (masked in logs either way).
       - name: Configure SSH to the VPS
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           {
             echo 'Host guru-web-prod'
@@ -132,8 +136,11 @@ jobs:
           echo "smoke-boot HTTP status: $code"
           [ "$code" != "000" ]
 
+      # Build caches (.next/cache is the webpack cache, often hundreds of MB)
+      # are useless at runtime — excluding them shrinks the scp and the ×5
+      # copies the release-prune keeps on the VPS's disk.
       - name: Pack release artifact
-        run: tar -C "$GITHUB_WORKSPACE" --exclude=.git -czf "$RUNNER_TEMP/release-$DEPLOY_SHA.tar.gz" .
+        run: tar -C "$GITHUB_WORKSPACE" --exclude=.git --exclude=.next/cache --exclude=node_modules/.cache -czf "$RUNNER_TEMP/release-$DEPLOY_SHA.tar.gz" .
 
       # releases/ is deploy-owned (vps-bootstrap.sh), so the deploy user can
       # create .incoming without extra sudo. Dotfile name keeps it out of the
