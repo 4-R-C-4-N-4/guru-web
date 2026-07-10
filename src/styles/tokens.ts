@@ -48,6 +48,11 @@ export const tokens = {
     platonism:               '#7a9ec2',
     buddhism:                '#d08a30',
     mesopotamian:            '#a85a3a',
+    upanishads:              '#d0a040',
+    shinto:                  '#c25a5a',
+    norse:                   '#8a9ab8',
+    celtic:                  '#6ab04a',
+    finnic:                  '#7ac2c2',
   },
   tier: {
     verified: '#c4a35a',
