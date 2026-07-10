@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { IconMenu, IconClose } from '@/components/icons';
 
 const NAV_ITEMS = [
   { href: '/chat',     label: 'Query'    },
@@ -145,13 +146,12 @@ export default function NavBar() {
             {NAV_ITEMS.map(item => {
               const active = pathname?.startsWith(item.href);
               return (
-                <button key={item.href} onClick={() => router.push(item.href)} style={{
-                  background: active ? tokens.bg.raised : 'none',
-                  border: active ? `1px solid ${tokens.border.subtle}` : '1px solid transparent',
-                  color: active ? tokens.text.primary : tokens.text.secondary,
-                  fontFamily: tokens.font.mono, fontSize: 11,
-                  padding: '6px 12px', borderRadius: 3, cursor: 'pointer',
-                }}>{item.label}</button>
+                <button
+                  key={item.href}
+                  className="nav-link"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => router.push(item.href)}
+                >{item.label}</button>
               );
             })}
           </div>
@@ -169,11 +169,14 @@ export default function NavBar() {
         }}>{tier}</span>
 
         {mobile ? (
-          <button onClick={() => setMenuOpen(o => !o)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: tokens.text.secondary, fontSize: 20, padding: '4px 2px',
-            lineHeight: 1, fontFamily: tokens.font.mono,
-          }}>{menuOpen ? '✕' : '≡'}</button>
+          <button
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen(o => !o)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: tokens.text.secondary, padding: 6, lineHeight: 0,
+            }}
+          >{menuOpen ? <IconClose size={18} /> : <IconMenu size={18} />}</button>
         ) : (
           <div ref={avatarRef} style={{ position: 'relative' }}>
             <button
@@ -206,19 +209,10 @@ export default function NavBar() {
                 zIndex: 101,
                 overflow: 'hidden',
               }}>
-                <button role="menuitem" onClick={() => { setAvatarOpen(false); router.push('/account'); }} style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 14px', background: 'none', border: 'none',
+                <button role="menuitem" className="menu-item" onClick={() => { setAvatarOpen(false); router.push('/account'); }} style={{
                   borderBottom: `1px solid ${tokens.border.subtle}`,
-                  color: tokens.text.secondary,
-                  fontFamily: tokens.font.mono, fontSize: 11, cursor: 'pointer', letterSpacing: 1,
                 }}>Account</button>
-                <button role="menuitem" onClick={handleSignOut} style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 14px', background: 'none', border: 'none',
-                  color: tokens.text.secondary,
-                  fontFamily: tokens.font.mono, fontSize: 11, cursor: 'pointer', letterSpacing: 1,
-                }}>Sign out</button>
+                <button role="menuitem" className="menu-item" onClick={handleSignOut}>Sign out</button>
               </div>
             )}
           </div>
@@ -235,21 +229,15 @@ export default function NavBar() {
           {NAV_ITEMS.map(item => {
             const active = pathname?.startsWith(item.href);
             return (
-              <button key={item.href} onClick={() => { router.push(item.href); setMenuOpen(false); }} style={{
-                display: 'block', width: '100%', textAlign: 'left',
-                padding: '14px 20px', background: active ? tokens.bg.raised : 'none',
-                border: 'none', borderBottom: `1px solid ${tokens.border.subtle}`,
-                color: active ? tokens.text.accent : tokens.text.secondary,
-                fontFamily: tokens.font.mono, fontSize: 13, cursor: 'pointer', letterSpacing: 1,
+              <button key={item.href} className="menu-item" onClick={() => { router.push(item.href); setMenuOpen(false); }} style={{
+                padding: '14px 20px', fontSize: 13,
+                background: active ? tokens.bg.raised : undefined,
+                borderBottom: `1px solid ${tokens.border.subtle}`,
+                color: active ? tokens.text.accent : undefined,
               }}>{item.label}</button>
             );
           })}
-          <button onClick={handleSignOut} style={{
-            display: 'block', width: '100%', textAlign: 'left',
-            padding: '14px 20px', background: 'none', border: 'none',
-            color: tokens.text.secondary,
-            fontFamily: tokens.font.mono, fontSize: 13, cursor: 'pointer', letterSpacing: 1,
-          }}>Sign out</button>
+          <button className="menu-item" onClick={handleSignOut} style={{ padding: '14px 20px', fontSize: 13 }}>Sign out</button>
         </div>
       )}
     </nav>
