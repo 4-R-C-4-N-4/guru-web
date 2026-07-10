@@ -1,0 +1,20 @@
+{
+  "id": "bc7e4d93",
+  "type": "chore",
+  "state": "done",
+  "summary": "SHA-pin ci.yml actions and add npm audit signatures gate to both workflows",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T18:59:53.848Z",
+  "updated_at": "2026-07-10T19:03:02.690Z",
+  "relationships": {
+    "parent": "479c221f"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T19:03:02.690Z",
+    "resolved_by": "unknown",
+    "note": "ci.yml checkout/setup-node pinned to the same audited SHAs deploy.yml uses (v4.3.1 / v4.4.0); 'npm audit signatures' step added after npm ci in both workflows. Verified: YAML parses clean; the signatures command passes locally against the current lockfile (547 signed, 102 attested)."
+  }
+}

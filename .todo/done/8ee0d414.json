@@ -1,0 +1,26 @@
+{
+  "id": "8ee0d414",
+  "type": "chore",
+  "state": "done",
+  "summary": "Pin exact dependency versions in package.json and add .npmrc with save-exact",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T18:59:53.815Z",
+  "updated_at": "2026-07-10T19:01:55.594Z",
+  "relationships": {
+    "parent": "479c221f"
+  },
+  "work": {
+    "branch": "todo/479c221f",
+    "base_branch": "main",
+    "started_at": "2026-07-10T19:00:29.869Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T19:01:55.594Z",
+    "resolved_by": "unknown",
+    "note": "All deps pinned to lockfile-resolved exact versions; .npmrc save-exact keeps future installs exact; engines>=20 + engine-strict. Verified: npm install is a no-op beyond spec strings, npm ci --dry-run clean, npm audit signatures 547 verified, full test suite green (568 passed)."
+  }
+}
