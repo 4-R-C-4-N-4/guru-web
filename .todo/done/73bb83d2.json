@@ -1,0 +1,20 @@
+{
+  "id": "73bb83d2",
+  "type": "chore",
+  "state": "done",
+  "summary": "chat-view + citation: type scale, button/input states, study picker + banner restyle, verb button copy",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T20:20:15.070Z",
+  "updated_at": "2026-07-10T20:24:18.289Z",
+  "relationships": {
+    "parent": "2d0cbfab"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T20:24:18.289Z",
+    "resolved_by": "unknown",
+    "note": "Interactive elements in chat now give hover/focus feedback; smallest text is 10px. No behavior changes; suite 590 green."
+  }
+}
