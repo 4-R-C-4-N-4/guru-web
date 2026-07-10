@@ -41,6 +41,12 @@ jobs:
 
       - run: npm ci
 
+      # Verify every installed package against the npm registry's signing keys
+      # (and provenance attestations where publishers provide them). Catches a
+      # registry-tampered or lockfile-poisoned package before it ships.
+      - name: Verify registry signatures
+        run: npm audit signatures
+
       - name: Lint
         run: npm run lint
 
