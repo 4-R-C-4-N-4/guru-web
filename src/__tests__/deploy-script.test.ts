@@ -50,19 +50,53 @@ describe('deploy.sh self-update', () => {
     expect(SRC).toMatch(/exec\s+["']?\$SELF["']?\s+["']?\$@["']?/);
   });
 
-  it('runs after git fetch (so $RELEASE has the new version) and before npm ci', () => {
-    const fetchIdx = SRC.indexOf('git -C "$RELEASE" fetch');
+  it('runs after the tarball unpack (so $RELEASE has the new version) and before migrations', () => {
+    // Since todo:3ec0c41d the release arrives pre-built from CI — the
+    // self-update source is the unpacked tarball, not a git checkout.
+    const unpackIdx = SRC.search(/tar\s+-xzf\s+["']?\$TARBALL["']?/);
     const selfUpdateIdx = SRC.search(/cmp\s+-s\s+["']?\$SELF["']?/);
-    const npmCiIdx = SRC.indexOf('npm ci');
-    expect(fetchIdx).toBeGreaterThan(-1);
+    const migrateIdx = SRC.indexOf('apply migrations');
+    expect(unpackIdx).toBeGreaterThan(-1);
     expect(selfUpdateIdx).toBeGreaterThan(-1);
-    expect(npmCiIdx).toBeGreaterThan(-1);
-    expect(fetchIdx).toBeLessThan(selfUpdateIdx);
-    expect(selfUpdateIdx).toBeLessThan(npmCiIdx);
+    expect(migrateIdx).toBeGreaterThan(-1);
+    expect(unpackIdx).toBeLessThan(selfUpdateIdx);
+    expect(selfUpdateIdx).toBeLessThan(migrateIdx);
   });
 
   it('canonicalizes $0 via readlink -f so symlink invocations still resolve', () => {
     expect(SRC).toMatch(/readlink\s+-f\s+["']?\$0["']?/);
+  });
+});
+
+describe('deploy.sh supply-chain contract (todo:3ec0c41d)', () => {
+  // Comments legitimately mention git/npm (documenting what the script
+  // deliberately does NOT do) — match against comment-stripped code only.
+  const CODE = SRC.split('\n').filter(l => !l.trim().startsWith('#')).join('\n');
+
+  it('never talks to GitHub or npm — no git clone/fetch, no npm commands', () => {
+    expect(CODE).not.toMatch(/\bgit\s+(clone|fetch|checkout)\b/);
+    expect(CODE).not.toMatch(/\bnpm\s+(ci|install|run|prune)\b/);
+  });
+
+  it('fails loudly when the CI tarball is missing instead of rebuilding', () => {
+    const guardIdx = CODE.search(/\[\[\s*!\s*-f\s*["']?\$TARBALL["']?\s*\]\]/);
+    expect(guardIdx).toBeGreaterThan(-1);
+    const unpackIdx = CODE.search(/tar\s+-xzf\s+["']?\$TARBALL["']?/);
+    expect(guardIdx).toBeLessThan(unpackIdx);
+  });
+
+  it('wipes $RELEASE before extraction so retries and re-execs are idempotent', () => {
+    const rmIdx = CODE.search(/rm\s+-rf\s+["']?\$RELEASE["']?/);
+    const unpackIdx = CODE.search(/tar\s+-xzf\s+["']?\$TARBALL["']?/);
+    expect(rmIdx).toBeGreaterThan(-1);
+    expect(rmIdx).toBeLessThan(unpackIdx);
+  });
+
+  it('cleans consumed tarballs only after the restart verified', () => {
+    const verifyIdx = CODE.indexOf('is-active');
+    const cleanIdx = CODE.search(/rm\s+-f\s+["']?\$INCOMING["']?\/release-\*\.tar\.gz/);
+    expect(verifyIdx).toBeGreaterThan(-1);
+    expect(cleanIdx).toBeGreaterThan(verifyIdx);
   });
 });
 
