@@ -1,0 +1,17 @@
+{
+  "id": "195d1b2f",
+  "type": "chore",
+  "state": "open",
+  "summary": "Settings: redesign Corpus Scope — persist blockedTexts, autosave, spectrum bar, accessible rows",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T19:49:31.687Z",
+  "updated_at": "2026-07-10T19:49:31.770Z",
+  "relationships": {
+    "parent": "2c65c512",
+    "depends_on": [
+      "5b6d6a14"
+    ]
+  }
+}
