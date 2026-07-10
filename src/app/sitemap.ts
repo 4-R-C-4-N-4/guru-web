@@ -15,6 +15,11 @@ import type { MetadataRoute } from 'next';
 import { listPublishedCached } from '@/lib/blog-public';
 import { SITE_URL } from '@/lib/site';
 
+// Without this, Next prerenders sitemap.xml at build time (metadata routes
+// are cached by default) — the post list would freeze at deploy and the
+// build would need a live DB. Same convention as /, /blog, /atlas.
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await listPublishedCached();
 
