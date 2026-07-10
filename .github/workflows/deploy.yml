@@ -18,11 +18,17 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+
 jobs:
   deploy:
+    # Supply-chain posture (todo:732df0cd): this job builds the release
+    # artifact and ships it to the VPS as a tarball. The VPS never talks to
+    # GitHub or the npm registry — deploy/deploy.sh just unpacks, migrates,
+    # and swaps the symlink. Node 20 here matches the VPS runtime
+    # (vps-bootstrap.sh installs nodesource setup_20.x).
     runs-on: ubuntu-latest
-    # Match the VPS runtime — the build is re-run on the VPS by deploy.sh,
-    # but doing it here too is a sanity gate before SSHing.
     steps:
       # Third-party actions are pinned to commit SHAs (not floating tags) so a
       # tag re-point or upstream account compromise can't quietly swap the code
@@ -32,7 +38,7 @@ jobs:
         with:
           # Build/test/deploy the dispatched SHA when given; otherwise the
           # pushed commit (push) or the ref HEAD (dispatch with no input).
-          ref: ${{ github.event.inputs.sha || github.sha }}
+          ref: ${{ env.DEPLOY_SHA }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
@@ -56,9 +62,6 @@ jobs:
       - name: Tests
         run: npm test
 
-      - name: Build (CI gate)
-        run: npm run build
-
       # Join the tailnet as an ephemeral node — auto-cleans up after the run.
       # ACL restricts tag:ci to tag:server:tcp:22 only.
       - name: Tailscale
@@ -67,12 +70,81 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           tags: tag:ci
 
-      # SSH to the VPS over the tailnet (MagicDNS resolves guru-web-prod)
-      # and invoke the on-VPS deploy.sh with this commit's SHA.
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        with:
-          host: guru-web-prod
-          username: deploy
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: /srv/guru-web/deploy.sh ${{ github.event.inputs.sha || github.sha }}
+      # Plain ssh/scp instead of a wrapper action — one fewer third party in
+      # the deploy path. accept-new is fine here: the tailnet already
+      # authenticates the peer at the WireGuard layer, and MagicDNS resolves
+      # guru-web-prod inside the tailnet only.
+      - name: Configure SSH to the VPS
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          {
+            echo 'Host guru-web-prod'
+            echo '  User deploy'
+            echo '  IdentityFile ~/.ssh/deploy_key'
+            echo '  StrictHostKeyChecking accept-new'
+            echo '  ServerAliveInterval 30'
+          } >> ~/.ssh/config
+
+      # /etc/guru-web.public.env on the VPS stays the single source of truth
+      # for NEXT_PUBLIC_* build inputs (they're public — they ship in client
+      # JS — but must be present at build time or they compile to empty
+      # strings and sign-in/checkout break silently; see deploy/README.md).
+      - name: Fetch public build env from VPS
+        run: scp guru-web-prod:/etc/guru-web.public.env "$RUNNER_TEMP/guru-web.public.env"
+
+      # This is THE production build — the exact .next/ output that will run
+      # on the VPS. Telemetry disabled: the build phones home to Vercel
+      # otherwise, and this pipeline's whole point is no un-audited egress.
+      - name: Production build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          set -a
+          source "$RUNNER_TEMP/guru-web.public.env"
+          set +a
+          npm run build
+
+      # Runtime needs prod deps only (next + friends); dev deps are build/test
+      # tooling. Pruning shrinks the artifact and the amount of third-party
+      # code sitting on the prod box.
+      - name: Prune to production dependencies
+        run: npm prune --omit=dev
+
+      # Boot the exact tree we're about to ship. Catches a prune that removed
+      # something `next start` needs at runtime — before it takes down prod.
+      # No DB/secrets here, so any HTTP status proves the server process
+      # boots and serves; 000 means it never came up.
+      - name: Smoke-boot the pruned artifact
+        run: |
+          set -a
+          source "$RUNNER_TEMP/guru-web.public.env"
+          set +a
+          ./node_modules/.bin/next start -p 3210 &
+          code=000
+          for _ in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3210/ || true)
+            [ "$code" != "000" ] && break
+            sleep 1
+          done
+          kill %1 || true
+          echo "smoke-boot HTTP status: $code"
+          [ "$code" != "000" ]
+
+      - name: Pack release artifact
+        run: tar -C "$GITHUB_WORKSPACE" --exclude=.git -czf "$RUNNER_TEMP/release-$DEPLOY_SHA.tar.gz" .
+
+      # releases/ is deploy-owned (vps-bootstrap.sh), so the deploy user can
+      # create .incoming without extra sudo. Dotfile name keeps it out of the
+      # `ls -1t` release-prune in deploy.sh.
+      - name: Ship artifact to VPS
+        run: |
+          ssh guru-web-prod 'mkdir -p /srv/guru-web/releases/.incoming'
+          scp "$RUNNER_TEMP/release-$DEPLOY_SHA.tar.gz" guru-web-prod:/srv/guru-web/releases/.incoming/
+
+      # deploy.sh unpacks the tarball, applies migrations, swaps the symlink,
+      # restarts, and verifies. It self-updates from the shipped release, so
+      # deploy.sh changes take effect on the first deploy after they merge.
+      - name: Deploy on VPS
+        run: ssh guru-web-prod "/srv/guru-web/deploy.sh $DEPLOY_SHA"
