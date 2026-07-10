@@ -4,6 +4,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { headers } from 'next/headers';
 import { clerkAppearance } from '@/styles/clerk-appearance';
 import { TAILNET_HOST } from '@/lib/host';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 const display = Cormorant_Garamond({
@@ -22,6 +23,10 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  // metadataBase makes per-page canonical/OG URLs resolve absolute against
+  // the production origin instead of the request host (which would leak the
+  // tailnet hostname into crawlable markup on admin requests).
+  metadataBase: new URL(SITE_URL),
   title: 'Guru — Cross-Tradition Esoteric Research',
   description:
     'Discover the hidden threads between Gnostic aeons, Kabbalistic sefirot, Neoplatonic emanations, and Vedantic consciousness — traced to their sources, every claim cited.',
