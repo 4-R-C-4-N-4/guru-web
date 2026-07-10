@@ -1,0 +1,20 @@
+{
+  "id": "479c221f",
+  "type": "feature",
+  "state": "open",
+  "summary": "Supply-chain hardening: bundled deploys + locked dependency versioning",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-10T18:59:35.315Z",
+  "updated_at": "2026-07-10T19:00:00.192Z",
+  "description": "Harden against supply-chain attack surfaces. Scope agreed 2026-07-10: (1) CI builds the release artifact (source + node_modules + .next) and ships it to the VPS over the existing tailnet SSH hop — the VPS stops running git clone + npm ci + next build entirely; (2) versioning lockdown — exact pins in package.json, .npmrc save-exact, npm audit signatures gate in CI, SHA-pin the floating actions in ci.yml. Explicitly out of scope: pinning/self-hosting Clerk's clerk-js (user decision — newest releases carry bug fixes, lose-lose) and the CSP capstone which depended on it. Migration note: deploy.sh self-updates from the fetched release, so the first deploy after this change still runs the old clone-based script, which re-execs the new tarball-aware one.",
+  "relationships": {
+    "children": [
+      "8ee0d414",
+      "bc7e4d93",
+      "732df0cd",
+      "3ec0c41d"
+    ]
+  }
+}

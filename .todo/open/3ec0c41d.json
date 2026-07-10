@@ -1,0 +1,17 @@
+{
+  "id": "3ec0c41d",
+  "type": "chore",
+  "state": "open",
+  "summary": "deploy.sh: install release from shipped tarball, drop git clone + npm ci + on-VPS build",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T19:00:00.192Z",
+  "updated_at": "2026-07-10T19:00:06.411Z",
+  "relationships": {
+    "parent": "479c221f",
+    "depends_on": [
+      "732df0cd"
+    ]
+  }
+}
