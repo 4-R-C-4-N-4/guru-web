@@ -1,0 +1,21 @@
+{
+  "id": "2d0cbfab",
+  "type": "feature",
+  "state": "open",
+  "summary": "Phase 2 UI migration: nav, chat, landing, history/account onto the design foundation",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-10T20:20:14.937Z",
+  "updated_at": "2026-07-10T20:20:15.160Z",
+  "description": "Phase 2 of the look-and-feel pass, stacked on todo:2c65c512 (PR #101 — requires its globals.css primitives, tokensToCssVars, icons.tsx). Migrate the remaining app surfaces off static inline styles onto the foundation: hover/focus states via .btn/.row/.check classes, readable type scale (t-eyebrow/t-ui/t-data/t-body — tracked micro-mono for labels only), SVG icons replacing ASCII glyphs, copy register normalized to sentence case with verb buttons. Also close the tradition color-map gap: corpus now has 21 traditions, tokens.tradition covers 16 (celtic, finnic, norse, shinto, upanishads render fallback grey). Landing hero gets the corpus spectrum echo instead of the stock radial-glow-only treatment. Identity is unchanged: near-black, gold accent, Cormorant display + Plex Mono labels.",
+  "relationships": {
+    "children": [
+      "1282b2b5",
+      "5456d009",
+      "73bb83d2",
+      "e4056146",
+      "54188aa3"
+    ]
+  }
+}
