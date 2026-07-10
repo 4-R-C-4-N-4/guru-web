@@ -161,6 +161,16 @@ button:active { transform: scale(0.98); }
 }
 .check:hover .check-box { border-color: var(--check-hue, var(--text-secondary)); }
 
+/* Text inputs: pointer-focus affordance (keyboard focus already gets the
+   global ring). Border warms instead of the default blue outline. */
+.input {
+  transition: border-color 0.15s ease;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--border-medium);
+}
+
 /* Nav links + dropdown menu items */
 .menu-item {
   display: block;

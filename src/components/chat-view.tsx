@@ -25,6 +25,7 @@ import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { displayForModelId } from '@/lib/provider-display';
 import { hydrateCatalog, activeCount } from '@/lib/scope';
+import { IconClose } from '@/components/icons';
 import type { QueryExpansion } from '@/lib/types';
 
 interface CitationData {
@@ -430,13 +431,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               border: 'none',
               color: tokens.text.muted,
               cursor: 'pointer',
-              fontFamily: tokens.font.mono,
-              fontSize: 14,
-              padding: '0 4px',
-              lineHeight: 1,
+              padding: 4,
+              lineHeight: 0,
             }}
           >
-            ✕
+            <IconClose size={14} />
           </button>
         </div>
       )}
@@ -446,7 +445,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         {messages.length === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.6, padding: mobile ? '0 16px' : 0 }}>
             <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 24 : 32, color: tokens.text.accent, letterSpacing: 8, marginBottom: 12 }}>GURU</div>
-            <div style={{ fontFamily: tokens.font.mono, fontSize: mobile ? 10 : 11, color: tokens.text.muted, maxWidth: 400, textAlign: 'center', lineHeight: 1.8, marginBottom: 20 }}>
+            <div style={{ fontFamily: tokens.font.mono, fontSize: mobile ? 11 : 12, color: tokens.text.secondary, maxWidth: 420, textAlign: 'center', lineHeight: 1.8, marginBottom: 20 }}>
               Ask about concepts across traditions. Every claim is traced to its source.
             </div>
             {/* Study picker: implicit mode — empty select = chat, a picked
@@ -462,10 +461,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ fontFamily: tokens.font.mono, fontSize: 11, fontWeight: 700, letterSpacing: 3, color: tokens.text.accent }}>§ STUDY</span>
               </div>
-              <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, lineHeight: 1.6 }}>
+              <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted, lineHeight: 1.6 }}>
                 Deep dive into the structure and content of a specific text
               </div>
               <select
+                className="input"
                 aria-label="Study a text"
                 value={studyTextId}
                 onChange={e => {
@@ -507,7 +507,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
             msg.citations && msg.citations.length > 0 ? msg.citations : parsed?.citations ?? [];
           return (
           <div key={i} style={{ maxWidth: 680, margin: '0 auto', padding: mobile ? '0 14px' : '0 24px', marginBottom: mobile ? 18 : 24 }}>
-            <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: msg.role === 'user' ? tokens.text.accent : tokens.text.muted, letterSpacing: 2, marginBottom: 6, textTransform: 'uppercase' }}>
+            <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: msg.role === 'user' ? tokens.text.accent : tokens.text.muted, letterSpacing: 2, marginBottom: 6, textTransform: 'uppercase' }}>
               {msg.role === 'user' ? 'You' : 'Guru'}
             </div>
 
@@ -518,7 +518,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
             ) : (
               <div>
                 {msg.expansion && msg.expansion.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 0.5 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 0.5 }}>
                     {msg.expansion.map((e, k) => (
                       <span
                         key={k}
@@ -567,7 +567,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
 
         {loading && (
           <div style={{ maxWidth: 680, margin: '0 auto', padding: mobile ? '0 14px' : '0 24px' }}>
-            <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 2, marginBottom: 8 }}>GURU</div>
+            <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 8 }}>GURU</div>
             <div style={{ display: 'flex', gap: 4, padding: '14px 0' }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: tokens.text.accent, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`, opacity: 0.4 }} />
@@ -581,6 +581,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
       <div style={{ padding: mobile ? '12px 12px max(12px, env(safe-area-inset-bottom))' : '16px 24px', borderTop: `1px solid ${tokens.border.subtle}`, background: tokens.bg.surface }}>
         <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
+            className="input"
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -602,16 +603,18 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               maxHeight: inputMaxHeight, lineHeight: 1.45,
             } as React.CSSProperties}
           />
-          <button onClick={handleSend} disabled={sendDisabled}
+          <button
+            className={sendDisabled ? 'btn' : 'btn btn-primary'}
+            onClick={handleSend}
+            disabled={sendDisabled}
             title={overLimit ? `Query exceeds ${QUERY_MAX_CHARS}-character limit` : undefined}
             style={{
-              padding: mobile ? '13px 16px' : '12px 20px',
-              background: !sendDisabled ? tokens.text.accent : tokens.bg.raised,
-              border: 'none', borderRadius: 3,
-              color: !sendDisabled ? tokens.bg.deep : tokens.text.muted,
-              fontFamily: tokens.font.mono, fontSize: 11, cursor: !sendDisabled ? 'pointer' : 'default',
-              fontWeight: 600, letterSpacing: 1, flexShrink: 0,
-            }}>QUERY</button>
+              padding: mobile ? '13px 18px' : '12px 20px',
+              background: sendDisabled ? tokens.bg.raised : undefined,
+              border: sendDisabled ? '1px solid transparent' : undefined,
+              color: sendDisabled ? tokens.text.muted : undefined,
+              letterSpacing: 1, flexShrink: 0,
+            }}>Ask</button>
         </div>
         <div style={{ maxWidth: 680, margin: '5px auto 0', fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, display: 'flex', gap: mobile ? 8 : 16, flexWrap: 'wrap' }}>
           {scope && (

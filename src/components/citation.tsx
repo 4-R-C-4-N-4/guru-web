@@ -27,7 +27,7 @@ export default function Citation({ tradition, text, section, quote, tier }: Cita
       background: `${color}08`,
     }}>
       <div style={{
-        fontFamily: tokens.font.mono, fontSize: mobile ? 9 : 10, color: tokens.text.muted,
+        fontFamily: tokens.font.mono, fontSize: mobile ? 10 : 11, color: tokens.text.muted,
         marginBottom: 4, display: 'flex', alignItems: 'center', gap: mobile ? 4 : 6, flexWrap: 'wrap',
       }}>
         <span style={{ color: tierColor }}>{symbol}</span>
