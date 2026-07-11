@@ -7,12 +7,23 @@ import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { IconMenu, IconClose } from '@/components/icons';
 
+// Desktop bar is slim (todo:063efee7): Account lives in the avatar menu,
+// not the bar — five items with a duplicate read as unconsidered. "Ask"
+// matches the send button's verb (was "Query"; nav and button naming the
+// same action differently is exactly the cohesion break we're removing).
 const NAV_ITEMS = [
-  { href: '/chat',     label: 'Query'    },
+  { href: '/chat',     label: 'Ask'      },
   { href: '/history',  label: 'Sessions' },
   { href: '/settings', label: 'Scope'    },
   { href: '/blog',     label: 'Essays'   },
-  { href: '/account',  label: 'Account'  },
+];
+
+// Mobile has no avatar menu, so Account rides the hamburger dropdown —
+// dropping it entirely would leave URL-typing as the only mobile path
+// (todo:bddd1603 pinned that invariant when Account lived in NAV_ITEMS).
+const MOBILE_MENU_ITEMS = [
+  ...NAV_ITEMS,
+  { href: '/account', label: 'Account' },
 ];
 
 export default function NavBar() {
@@ -132,13 +143,16 @@ export default function NavBar() {
       background: tokens.bg.surface,
       position: 'sticky', top: 0, zIndex: 100,
     }}>
-      {/* Logo + desktop nav */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: mobile ? 10 : 20 }}>
+      {/* Logo + desktop nav. Baseline-aligned: the serif wordmark's optical
+          baseline rides higher than the mono links when flex-centered, which
+          made the row look permanently misaligned (todo:063efee7). The
+          negative margin swallows the wordmark's trailing letter-space so
+          the gap to the first link is the gap it appears to be. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: mobile ? 10 : 20 }}>
         <button onClick={() => router.push('/chat')} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
         }}>
-          <span style={{ fontFamily: tokens.font.display, fontSize: mobile ? 18 : 22, fontWeight: 600, color: tokens.text.accent, letterSpacing: 3 }}>GURU</span>
+          <span style={{ fontFamily: tokens.font.display, fontSize: mobile ? 18 : 22, fontWeight: 600, color: tokens.text.accent, letterSpacing: 3, marginRight: -3, lineHeight: 1 }}>GURU</span>
         </button>
 
         {!mobile && (
@@ -158,16 +172,10 @@ export default function NavBar() {
         )}
       </div>
 
-      {/* Right side: tier badge + avatar / hamburger */}
+      {/* Right side: avatar (tier rides it as a gold ring — the old 9px
+          chip was the last sub-10px text in the app and belonged to
+          neither the nav nor the avatar) / hamburger on mobile. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{
-          fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted,
-          padding: '3px 7px',
-          background: tier === 'pro' ? `${tokens.text.accent}15` : tokens.bg.raised,
-          border: `1px solid ${tier === 'pro' ? tokens.border.accent : tokens.border.subtle}`,
-          borderRadius: 2, textTransform: 'uppercase', letterSpacing: 1,
-        }}>{tier}</span>
-
         {mobile ? (
           <button
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -183,13 +191,17 @@ export default function NavBar() {
               aria-label="Account menu"
               aria-haspopup="menu"
               aria-expanded={avatarOpen}
+              title={`Signed in — ${tier}`}
               onClick={() => setAvatarOpen(o => !o)}
               style={{
                 width: 28, height: 28, borderRadius: '50%',
                 background: `linear-gradient(135deg, ${tokens.tradition.hermeticism}, ${tokens.tradition.gnosticism})`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontFamily: tokens.font.mono, color: tokens.bg.deep, fontWeight: 700,
-                border: 'none', padding: 0, cursor: 'pointer',
+                // Pro tier reads as a gold ring; transparent for free so the
+                // avatar never shifts layout when quota resolves.
+                border: `2px solid ${tier === 'pro' ? tokens.text.accent : 'transparent'}`,
+                padding: 0, cursor: 'pointer',
               }}
             >{avatarLabel ?? (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -209,6 +221,13 @@ export default function NavBar() {
                 zIndex: 101,
                 overflow: 'hidden',
               }}>
+                {/* Plan row: the tier used to be a chip in the bar; the ring
+                    carries it visually, this row spells it out. */}
+                <div aria-hidden style={{
+                  padding: '8px 14px', borderBottom: `1px solid ${tokens.border.subtle}`,
+                  fontFamily: tokens.font.mono, fontSize: 11, letterSpacing: 1,
+                  color: tier === 'pro' ? tokens.text.accent : tokens.text.muted,
+                }}>Plan — {tier}</div>
                 <button role="menuitem" className="menu-item" onClick={() => { setAvatarOpen(false); router.push('/account'); }} style={{
                   borderBottom: `1px solid ${tokens.border.subtle}`,
                 }}>Account</button>
@@ -226,7 +245,7 @@ export default function NavBar() {
           background: tokens.bg.surface,
           borderBottom: `1px solid ${tokens.border.subtle}`, zIndex: 99,
         }}>
-          {NAV_ITEMS.map(item => {
+          {MOBILE_MENU_ITEMS.map(item => {
             const active = pathname?.startsWith(item.href);
             return (
               <button key={item.href} className="menu-item" onClick={() => { router.push(item.href); setMenuOpen(false); }} style={{
@@ -234,7 +253,9 @@ export default function NavBar() {
                 background: active ? tokens.bg.raised : undefined,
                 borderBottom: `1px solid ${tokens.border.subtle}`,
                 color: active ? tokens.text.accent : undefined,
-              }}>{item.label}</button>
+              }}>{item.label}{item.href === '/account' ? (
+                <span style={{ float: 'right', color: tier === 'pro' ? tokens.text.accent : tokens.text.muted, fontSize: 11 }}>{tier}</span>
+              ) : null}</button>
             );
           })}
           <button className="menu-item" onClick={handleSignOut} style={{ padding: '14px 20px', fontSize: 13 }}>Sign out</button>

@@ -206,24 +206,37 @@ button:active { transform: scale(0.98); }
   color: var(--text-primary);
 }
 .nav-link {
+  position: relative;
   background: none;
-  border: 1px solid transparent;
+  border: none;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 12px;
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .nav-link:hover {
   color: var(--text-primary);
   background: var(--bg-raised);
 }
+/* Active page: a gold segment in the header's bottom border — the
+   spectrum-strip motif — instead of a pill. The -14px offset reaches
+   from the link's box down through the nav's 12px vertical padding to
+   overlap the 1px bottom border; coupled to nav-bar.tsx's desktop
+   padding (links are desktop-only). */
 .nav-link[aria-current='page'] {
-  background: var(--bg-raised);
-  border-color: var(--border-subtle);
   color: var(--text-primary);
+}
+.nav-link[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -14px;
+  height: 2px;
+  background: var(--text-accent);
 }
 
 /* Reveal-on-hover affordances (e.g. the per-tradition "only" action).

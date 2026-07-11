@@ -58,14 +58,19 @@ describe('nav-bar avatar dropdown', () => {
     expect(SRC).toMatch(/router\.push\(['"]\/account['"]\)/);
   });
 
-  it('NAV_ITEMS includes Account so the mobile menu surfaces it (todo:bddd1603)', () => {
-    // Mobile dropdown renders NAV_ITEMS.map; every item there is reachable
-    // on mobile. If Account is dropped from NAV_ITEMS the only mobile path
-    // to it would be typing the URL. Lock the entry in.
-    expect(SRC).toMatch(/href:\s*['"]\/account['"]\s*,\s*label:\s*['"]Account['"]/);
-    // And the mobile dropdown must actually map NAV_ITEMS rather than
-    // duplicating a hand-rolled subset (which is how this drift happens).
-    expect(SRC).toMatch(/mobile && menuOpen[\s\S]{0,400}NAV_ITEMS\.map/);
+  it('mobile menu surfaces Account even though the slim desktop bar dropped it (todo:bddd1603, todo:063efee7)', () => {
+    // Since the header rework the desktop bar is 4 items (Account lives in
+    // the avatar menu), but mobile has no avatar — MOBILE_MENU_ITEMS must
+    // append Account or the only mobile path to it is typing the URL.
+    expect(SRC).toMatch(/MOBILE_MENU_ITEMS\s*=\s*\[\s*\.\.\.NAV_ITEMS,\s*\{\s*href:\s*['"]\/account['"]\s*,\s*label:\s*['"]Account['"]/);
+    // And the mobile dropdown must actually map MOBILE_MENU_ITEMS rather
+    // than duplicating a hand-rolled subset (which is how this drift happens).
+    expect(SRC).toMatch(/mobile && menuOpen[\s\S]{0,400}MOBILE_MENU_ITEMS\.map/);
+  });
+
+  it('nav verb matches the send button: Ask, not Query (todo:063efee7)', () => {
+    expect(SRC).toMatch(/href:\s*['"]\/chat['"]\s*,\s*label:\s*['"]Ask['"]/);
+    expect(SRC).not.toMatch(/label:\s*['"]Query['"]/);
   });
 });
 
