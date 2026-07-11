@@ -1,0 +1,23 @@
+{
+  "id": "063efee7",
+  "type": "chore",
+  "state": "done",
+  "summary": "Header bar rework: slim 4-item nav, gold underline active state, tier on avatar",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-11T22:45:09.708Z",
+  "updated_at": "2026-07-11T22:48:46.515Z",
+  "work": {
+    "branch": "todo/063efee7",
+    "base_branch": "main",
+    "started_at": "2026-07-11T22:45:09.768Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-11T22:48:46.515Z",
+    "resolved_by": "unknown",
+    "note": "Guard tests updated: mobile Account reachability re-pinned to MOBILE_MENU_ITEMS mechanism, blog-nav Essays pin likewise; new Ask-verb pin. 601 tests green; hot-reloaded on dev for user visual approval before merge."
+  }
+}

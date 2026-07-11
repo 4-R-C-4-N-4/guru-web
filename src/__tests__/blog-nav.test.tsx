@@ -64,8 +64,11 @@ describe('blog reachable from the logged-in UI (todo:133d94d6)', () => {
     expect(NAV_SRC).toMatch(/href:\s*['"]\/blog['"]\s*,\s*label:\s*['"]Essays['"]/);
   });
 
-  it('mobile dropdown maps NAV_ITEMS, so the Essays entry is reachable on mobile too', () => {
-    expect(NAV_SRC).toMatch(/mobile && menuOpen[\s\S]{0,400}NAV_ITEMS\.map/);
+  it('mobile dropdown maps MOBILE_MENU_ITEMS (a NAV_ITEMS superset), so Essays is reachable on mobile too', () => {
+    // Since the header rework (todo:063efee7) mobile maps MOBILE_MENU_ITEMS,
+    // which spreads NAV_ITEMS — Essays still rides along.
+    expect(NAV_SRC).toMatch(/MOBILE_MENU_ITEMS\s*=\s*\[\s*\.\.\.NAV_ITEMS/);
+    expect(NAV_SRC).toMatch(/mobile && menuOpen[\s\S]{0,400}MOBILE_MENU_ITEMS\.map/);
   });
 });
 
