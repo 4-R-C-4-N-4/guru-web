@@ -598,7 +598,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               background: tokens.bg.deep, border: `1px solid ${tokens.border.subtle}`,
               borderRadius: 3, color: tokens.text.primary,
               fontFamily: tokens.font.display, fontSize: 16,
-              outline: 'none', WebkitAppearance: 'none', minWidth: 0, width: '100%',
+              WebkitAppearance: 'none', minWidth: 0, width: '100%',
               resize: 'none', overflowY: 'auto', overflowWrap: 'anywhere',
               maxHeight: inputMaxHeight, lineHeight: 1.45,
             } as React.CSSProperties}

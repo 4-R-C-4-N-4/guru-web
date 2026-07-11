@@ -173,14 +173,17 @@ button:active { transform: scale(0.98); }
   text-underline-offset: 3px;
 }
 
-/* Text inputs: pointer-focus affordance (keyboard focus already gets the
-   global ring). Border warms instead of the default blue outline. */
+/* Text inputs. Keyboard focus keeps the global :focus-visible ring —
+   the :not(:focus-visible) guard means pointer focus alone suppresses
+   the outline. Pointer focus gets a subtle box-shadow ring instead of
+   border-color: consumers set `border` as an inline shorthand, which
+   would always beat a stylesheet border-color (PR #102 review). */
 .input {
-  transition: border-color 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
-.input:focus {
+.input:focus:not(:focus-visible) {
   outline: none;
-  border-color: var(--border-medium);
+  box-shadow: 0 0 0 1px var(--border-medium);
 }
 
 /* Nav links + dropdown menu items */

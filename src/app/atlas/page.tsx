@@ -10,7 +10,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { listAtlasEditionsCached } from '@/lib/blog-public';
-import { listTraditions } from '@/lib/corpus';
+import { listTraditionsCached } from '@/lib/corpus';
 import EssayCard from '@/components/essay-card';
 import { tokens } from '@/styles/tokens';
 
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 export default async function AtlasIndexPage() {
   const [editions, traditions] = await Promise.all([
     listAtlasEditionsCached(),
-    listTraditions(),
+    listTraditionsCached(),
   ]);
 
   return (
