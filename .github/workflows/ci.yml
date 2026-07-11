@@ -10,7 +10,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions pinned to commit SHAs (not floating tags) so a tag re-point or
+      # upstream account compromise can't quietly swap the code we run — same
+      # policy and same SHAs as deploy.yml. Bump both files together.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       # corpus-schema.sql is the cross-repo integration contract and MUST stay
       # byte-identical with guru-pipeline's copy (handoff §1). This pins its hash
@@ -20,12 +23,21 @@ jobs:
       - name: Corpus schema integrity (byte-identical with pipeline)
         run: sha256sum -c schema/corpus-schema.sql.sha256
 
-      - uses: actions/setup-node@v4
+      # 22 here is deliberate drift from deploy.yml's 20: deploy builds and
+      # tests on the VPS's runtime major (what actually ships), while CI
+      # keeps the suite honest against the next LTS ahead of a VPS upgrade.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
           node-version: 22
           cache: npm
 
       - run: npm ci
+
+      # Verify every installed package against the npm registry's signing keys
+      # (and provenance attestations where publishers provide them). Catches a
+      # registry-tampered or lockfile-poisoned package before it runs.
+      - name: Verify registry signatures
+        run: npm audit signatures
 
       - name: Lint
         run: npm run lint

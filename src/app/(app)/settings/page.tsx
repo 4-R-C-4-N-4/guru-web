@@ -25,14 +25,14 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { IconCheck, IconChevronRight } from '@/components/icons';
+import { IconCheck, IconChevronRight, IconMinus } from '@/components/icons';
 // Import from curated-models (not model.ts) so the client bundle
 // doesn't pull in the OpenAI SDK that model.ts initialises.
 import { CURATED_MODELS, type CuratedSlug } from '@/lib/curated-models';
 import { PROVIDER_DISPLAY } from '@/lib/provider-display';
 import type { VoiceSlug } from '@/lib/types';
 
-import { hydrateCatalog, buildScopeSave, activeCount, type Catalog } from '@/lib/scope';
+import { hydrateCatalog, buildScopeSave, activeCount, scopeTotals, type Catalog } from '@/lib/scope';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -81,9 +81,14 @@ export default function SettingsPage() {
   const [voiceSaving, setVoiceSaving] = useState(false);
 
   // Autosave bookkeeping: skip the hydration setCatalog, debounce edits.
+  // pendingPayload holds the not-yet-persisted save so it can be flushed
+  // on unmount or retried after a failure; inFlight lets a newer save
+  // abort a superseded PUT so responses can't land out of order.
   const hydrated  = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPayload = useRef<ReturnType<typeof buildScopeSave> | null>(null);
+  const inFlight = useRef<AbortController | null>(null);
 
   // Fetch the corpus catalog + the user's scope prefs together so blocked
   // state lands in a single setState. Tier + preferred model/voice ride
@@ -137,31 +142,60 @@ export default function SettingsPage() {
   // blocked traditions; blockedTexts carries the member ids of partially
   // blocked ones (fully blocked traditions don't repeat their text ids —
   // the tradition filter already excludes them in retrieval).
+  const flushScopeSave = useCallback(async () => {
+    const payload = pendingPayload.current;
+    if (!payload) return;
+    pendingPayload.current = null;
+    // A superseded PUT must not land after this one — abort it. The
+    // aborted call sees its own signal flagged and yields saveState.
+    inFlight.current?.abort();
+    const ctrl = new AbortController();
+    inFlight.current = ctrl;
+    setSaveState('saving');
+    const res = await fetch('/api/preferences', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    }).catch(() => null);
+    if (ctrl.signal.aborted) return;
+    if (!res || !res.ok) {
+      // Surface the failure and keep the payload — the header offers a
+      // retry, the next edit resends, and unmount flushes it too.
+      pendingPayload.current = pendingPayload.current ?? payload;
+      setSaveState('error');
+      return;
+    }
+    setSaveState('saved');
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaveState('idle'), 2000);
+  }, []);
+
   useEffect(() => {
     if (status !== 'ready') return;
     if (!hydrated.current) { hydrated.current = true; return; }
 
+    pendingPayload.current = buildScopeSave(catalog);
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSaveState('saving');
-      const res = await fetch('/api/preferences', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(buildScopeSave(catalog)),
-      }).catch(() => null);
-      if (!res || !res.ok) {
-        // Surface the failure — the edit stays on screen but is NOT
-        // persisted; the next edit retries.
-        setSaveState('error');
-        return;
-      }
-      setSaveState('saved');
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-      savedTimer.current = setTimeout(() => setSaveState('idle'), 2000);
-    }, AUTOSAVE_MS);
+    saveTimer.current = setTimeout(flushScopeSave, AUTOSAVE_MS);
 
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [catalog, status]);
+  }, [catalog, status, flushScopeSave]);
+
+  // Unmount flush: an edit made inside the debounce window (or one whose
+  // save failed) must not be silently dropped when the user navigates
+  // away. keepalive lets the PUT outlive the page.
+  useEffect(() => () => {
+    const payload = pendingPayload.current;
+    if (!payload) return;
+    pendingPayload.current = null;
+    fetch('/api/preferences', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  }, []);
 
   const toggleTradition = useCallback((name: string) => {
     setCatalog(prev => {
@@ -244,23 +278,15 @@ export default function SettingsPage() {
     }
   };
 
-  const totals = useMemo(() => {
-    const all = Object.values(catalog);
-    return {
-      texts:        all.reduce((n, t) => n + t.texts.length, 0),
-      activeTexts:  all.reduce((n, t) => n + activeCount(t), 0),
-      traditions:   all.length,
-      activeTrads:  all.filter(t => activeCount(t) > 0).length,
-    };
-  }, [catalog]);
+  const totals = useMemo(() => scopeTotals(catalog), [catalog]);
 
   const anythingBlocked = totals.activeTexts < totals.texts;
 
   const saveLabel = {
     idle:   '',
     saving: 'saving…',
-    saved:  'saved ✓',
-    error:  'save failed — changes not stored',
+    saved:  'saved',
+    error:  '',  // error renders as a retry button instead
   }[saveState];
 
   const pad = mobile ? '12px 12px' : '10px 14px';
@@ -274,7 +300,22 @@ export default function SettingsPage() {
           <span className="t-eyebrow">Corpus Scope</span>
           <span className="t-data" aria-live="polite" style={{
             color: saveState === 'error' ? tokens.text.error : tokens.text.muted,
-          }}>{saveLabel}</span>
+          }}>
+            {saveState === 'error'
+              ? (
+                <button
+                  onClick={flushScopeSave}
+                  style={{
+                    background: 'none', border: 'none', padding: 0,
+                    font: 'inherit', color: 'inherit', cursor: 'pointer',
+                    textDecoration: 'underline', textUnderlineOffset: 2,
+                  }}
+                >
+                  save failed — retry
+                </button>
+              )
+              : saveLabel}
+          </span>
         </div>
 
         {status === 'loading' && <div className="t-ui">loading corpus…</div>}
@@ -309,7 +350,7 @@ export default function SettingsPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
               <span className="t-data">
-                {totals.activeTexts} of {totals.texts} texts · {totals.activeTrads} of {totals.traditions} traditions in scope
+                {totals.activeTexts} of {totals.texts} texts · {totals.activeTraditions} of {totals.traditions} traditions in scope
               </span>
               {anythingBlocked && (
                 <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={includeAll}>
@@ -326,6 +367,7 @@ export default function SettingsPage() {
               const active   = activeCount(t);
               const isOpen   = expanded.has(name);
               const someOn   = active > 0;
+              const partial  = someOn && active < t.texts.length;
               return (
                 <div
                   key={name}
@@ -337,11 +379,17 @@ export default function SettingsPage() {
                       <input
                         type="checkbox"
                         checked={someOn}
+                        // Partially scoped traditions read as "mixed" to AT
+                        // and show a dash, not a full check — a bare checked
+                        // box at 1/16 texts misstates what's in scope.
+                        ref={el => { if (el) el.indeterminate = partial; }}
                         onChange={() => toggleTradition(name)}
                         aria-label={`Include ${name.replace(/_/g, ' ')}`}
                       />
                       <span className="check-box" style={{ width: mobile ? 20 : 16, height: mobile ? 20 : 16 }}>
-                        <IconCheck size={mobile ? 13 : 11} strokeWidth={2} />
+                        {partial
+                          ? <IconMinus size={mobile ? 13 : 11} strokeWidth={2} />
+                          : <IconCheck size={mobile ? 13 : 11} strokeWidth={2} />}
                       </span>
                     </label>
 

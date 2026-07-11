@@ -36,6 +36,10 @@ export function IconChevronRight(props: IconProps & { style?: React.CSSPropertie
   return <svg {...base(rest)} style={style}><path d="M6 3.5 10.5 8 6 12.5" /></svg>;
 }
 
+export function IconMinus(props: IconProps) {
+  return <svg {...base(props)}><path d="M3.5 8h9" /></svg>;
+}
+
 export function IconClose(props: IconProps) {
   return <svg {...base(props)}><path d="M4 4l8 8M12 4l-8 8" /></svg>;
 }

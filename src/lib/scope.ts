@@ -26,6 +26,27 @@ export function activeCount(t: TraditionState): number {
   return t.texts.filter(x => x.active).length;
 }
 
+export interface ScopeTotals {
+  texts: number;
+  activeTexts: number;
+  traditions: number;
+  activeTraditions: number;
+}
+
+/**
+ * Aggregate counts for the scope summary line. Shared by the settings
+ * header and the chat footer so the two can never disagree.
+ */
+export function scopeTotals(catalog: Catalog): ScopeTotals {
+  const all = Object.values(catalog);
+  return {
+    texts:            all.reduce((n, t) => n + t.texts.length, 0),
+    activeTexts:      all.reduce((n, t) => n + activeCount(t), 0),
+    traditions:       all.length,
+    activeTraditions: all.filter(t => activeCount(t) > 0).length,
+  };
+}
+
 /**
  * Corpus catalog + saved prefs → checkbox state. A label is blocked when
  * its tradition is, or when ANY of its member ids appears in
