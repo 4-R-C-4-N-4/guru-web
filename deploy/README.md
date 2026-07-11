@@ -12,7 +12,7 @@ Operational playbook for the production VPS. Read this before paging anyone; mos
 | Tailnet hostname | `guru-web-prod` (MagicDNS) |
 | Domain | `guru-ai.org`, proxied through Cloudflare |
 | App systemd unit | `guru-web.service` (runs as `guru` user) |
-| App working dir | `/srv/guru-web/current` → symlink → `/srv/guru-web/releases/<sha>/.next/standalone/` |
+| App working dir | `/srv/guru-web/current` → symlink → `/srv/guru-web/releases/<sha>/` (pre-built release, unpacked from the CI tarball) |
 | App env (secrets, runtime-only) | `/etc/guru-web.env` (mode 600, root:guru) |
 | App env (`NEXT_PUBLIC_*`, build + runtime) | `/etc/guru-web.public.env` (mode 644, root:root) |
 | Bootstrap config | `/etc/guru-bootstrap.env` (mode 600, root:root) |
@@ -35,7 +35,7 @@ The app's environment lives in two files, separated by trust boundary:
 | `/etc/guru-web.env` | `600` | `root:guru` | secrets only | runtime (`guru` user) |
 | `/etc/guru-web.public.env` | `644` | `root:root` | `NEXT_PUBLIC_*` only | build (`deploy` user) **and** runtime |
 
-**Why split.** `next build` inlines `NEXT_PUBLIC_*` into the client JS that ships to every browser — those values are public the moment they ship, regardless of file permissions. `deploy.sh` runs as the `deploy` user, which has no read access to the secrets file (and shouldn't). The public file lets the build inline the publishable keys without expanding `deploy`'s read scope to your `STRIPE_SECRET_KEY` etc.
+**Why split.** `next build` inlines `NEXT_PUBLIC_*` into the client JS that ships to every browser — those values are public the moment they ship, regardless of file permissions. The build runs in CI (deploy.yml), which fetches the public file over the tailnet as the `deploy` user — a user with no read access to the secrets file (and shouldn't have it). The public file lets the build inline the publishable keys without expanding that read scope to your `STRIPE_SECRET_KEY` etc.
 
 **What goes where:**
 
@@ -58,7 +58,7 @@ STRIPE_PRO_PRICE_ID=price_...
 # OLLAMA_URL defaults to http://localhost:11434 — set only to override
 ```
 
-systemd merges both via two `EnvironmentFile=` lines in `guru-web.service`. `deploy.sh` sources only the public file before `npm run build`.
+systemd merges both via two `EnvironmentFile=` lines in `guru-web.service`. CI (deploy.yml) scps only the public file and sources it before `npm run build`; the built release then ships to the VPS as a tarball — `deploy.sh` never installs or builds anything (supply-chain hardening, todo:479c221f).
 
 If you ever see the app boot cleanly but Clerk/Stripe silently broken in the browser, that's the public file missing or unreadable when the build ran — see the troubleshooting note in the 502 incident section.
 
@@ -85,7 +85,7 @@ Decision tree based on what you see:
 Common crash causes (paste the relevant fix):
 
 - **`Failed to load environment files`** → one of the env files is missing or unreadable. Check `ls -la /etc/guru-web.env /etc/guru-web.public.env`. Should be `600 root:guru` and `644 root:root` respectively.
-- **App boots but sign-in/checkout silently broken (empty `publishableKey` in HTML)** → `/etc/guru-web.public.env` was missing or unreadable when `deploy.sh` ran `npm run build`. `NEXT_PUBLIC_*` are baked in at build time, so a runtime fix can't help; you must rebuild. Verify with `curl -s https://guru-ai.org/ | grep -oE 'publishableKey":"[^"]*"'` — empty string means the bundle is broken. Re-run `deploy.sh <last-good-sha>` after fixing the file.
+- **App boots but sign-in/checkout silently broken (empty `publishableKey` in HTML)** → `/etc/guru-web.public.env` was missing or unreadable when CI fetched it for `npm run build` (deploy.yml fails loudly on the scp now, so this mostly means someone shipped a hand-built tarball without sourcing it). `NEXT_PUBLIC_*` are baked in at build time, so a runtime fix can't help; you must rebuild. Verify with `curl -s https://guru-ai.org/ | grep -oE 'publishableKey":"[^"]*"'` — empty string means the bundle is broken. Fix the file, then redeploy (re-run the Deploy workflow for the last good SHA).
 - **`Check failed: 12 == errno` (V8 panic)** → systemd unit has `MemoryDenyWriteExecute=true`. V8 JIT needs writable+executable memory. Edit `/etc/systemd/system/guru-web.service`, remove that line, `systemctl daemon-reload && systemctl restart guru-web`. (Source unit in repo is correct — only an issue if the unit on disk is from before the fix.)
 - **Database connection refused** → Postgres down. `systemctl status postgresql`. Restart with `systemctl restart postgresql`.
 - **`relation "users" does not exist`** → migrations weren't applied. `for f in /srv/guru-web/releases/*/migrations/*.sql; do sudo -u postgres psql -d guru -f "$f"; done`
@@ -227,7 +227,7 @@ sudo systemctl restart guru-web
 ### Stripe / Clerk / OpenRouter keys
 - Generate new keys in each provider's dashboard.
 - **Secret keys** (`*_SECRET_KEY`, `*_WEBHOOK_SECRET`, `OPENROUTER_API_KEY`, `STRIPE_PRO_PRICE_ID`) → update `/etc/guru-web.env`. `systemctl restart guru-web` is enough.
-- **Publishable keys** (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) → update `/etc/guru-web.public.env`, then **trigger a redeploy** (push any no-op commit to `main`, or re-run `deploy.sh <sha>`). A restart alone won't help — these are baked into the client bundle at build time.
+- **Publishable keys** (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) → update `/etc/guru-web.public.env`, then **trigger a redeploy** (push any no-op commit to `main`, or re-run the Deploy workflow from the Actions tab — the build happens in CI, so re-running `deploy.sh` alone just re-unpacks the old bundle). A restart alone won't help — these are baked into the client bundle at build time.
 - `systemctl restart guru-web`.
 - For Stripe + Clerk webhooks: also update the webhook endpoint's signing secret in the dashboard if you regenerated it; copy back to `/etc/guru-web.env`.
 
@@ -845,10 +845,10 @@ attempt succeeds.
 - **Caddy can't read 600 root:root files** — it runs as the `caddy` user. Origin key needs `640 root:caddy`, dir needs `755`.
 - **AOP toggle is required, not optional.** Origin cert files alone aren't enough; CF won't present a client cert until you flip the toggle in the SSL/TLS → Origin Server tab.
 - **Stripe + OpenAI SDK constructors throw on missing API keys at module load.** All clients in `src/lib/` and `src/app/api/` must use the lazy-init pattern (construct on first call inside a function, not at module top level), or `next build` fails during page-data collection.
-- **Next.js standalone build excludes `scripts/` and `migrations/`.** That's why `deploy.sh` runs migrations from `$RELEASE/migrations/` (the full clone) instead of from the symlinked `current` (the standalone subset).
+- **Next.js standalone build excludes `scripts/` and `migrations/`.** Historical: that's why `deploy.sh` runs migrations from `$RELEASE/migrations/`. Moot twice over now — standalone output is off, and the CI tarball ships the whole workspace including `migrations/` — but the path stays `$RELEASE/migrations/` and works.
 - **Cloudflare DNS records: never gray-cloud them**, even briefly. Once your origin IP is in passive DNS databases, it's there forever and the "only allow CF IPs on 443" model has a hole.
 - **Tailscale node key expires every ~180 days by default.** Disable expiry on the VPS node in the admin console after bootstrap, or it'll silently fall off the tailnet.
-- **Never run `deploy.sh` as plain `sudo`** — git refuses operations on the deploy-owned repos with "dubious ownership", and any files created under that run end up root-owned, which the next prune can't remove. Always `sudo -u deploy /srv/guru-web/deploy.sh <sha>`. The script now self-heals via `sudo chown -R deploy:deploy /srv/guru-web/releases` at the top, so existing root-owned damage gets fixed on the next deploy — but only if `/etc/sudoers.d/deploy` includes the new chown rule (added by `vps-bootstrap.sh`; existing VPSes need the one-time hand-patch below).
+- **Never run `deploy.sh` as plain `sudo`** — files created under that run end up root-owned, which the next prune can't remove (pre-tarball, git also refused with "dubious ownership"). Always `sudo -u deploy /srv/guru-web/deploy.sh <sha>`. The script now self-heals via `sudo chown -R deploy:deploy /srv/guru-web/releases` at the top, so existing root-owned damage gets fixed on the next deploy — but only if `/etc/sudoers.d/deploy` includes the new chown rule (added by `vps-bootstrap.sh`; existing VPSes need the one-time hand-patch below).
 
 ### One-time sudoers patch (existing VPSes)
 
