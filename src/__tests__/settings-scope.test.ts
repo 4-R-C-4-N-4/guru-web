@@ -8,7 +8,7 @@
  * and hydrateCatalog must restore them, round-tripping exactly.
  */
 import { describe, it, expect } from 'vitest';
-import { hydrateCatalog, buildScopeSave } from '@/lib/scope';
+import { hydrateCatalog, buildScopeSave, scopeTotals } from '@/lib/scope';
 
 const CORPUS = {
   Taoism: {
@@ -111,5 +111,32 @@ describe('buildScopeSave', () => {
     const save = buildScopeSave(hydrateCatalog(CORPUS, OPEN_PREFS));
     expect(save.blockedTraditions).toEqual([]);
     expect(save.blockedTexts).toEqual([]);
+  });
+});
+
+describe('scopeTotals', () => {
+  // Shared by the settings header and the chat footer so the two lines
+  // can never disagree (review follow-up on todo:2c65c512).
+  it('counts texts and traditions, active and total', () => {
+    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
+    c.Taoism.texts[1].active = false;   // Zhuangzi off — Taoism partial
+    expect(scopeTotals(c)).toEqual({
+      texts: 3, activeTexts: 2, traditions: 2, activeTraditions: 2,
+    });
+  });
+
+  it('a fully blocked tradition leaves activeTraditions', () => {
+    const c = hydrateCatalog(CORPUS, {
+      scopeMode: 'blacklist', blockedTraditions: ['taoism'], blockedTexts: [],
+    });
+    expect(scopeTotals(c)).toEqual({
+      texts: 3, activeTexts: 1, traditions: 2, activeTraditions: 1,
+    });
+  });
+
+  it('empty catalog → all zeros (no fallback constants)', () => {
+    expect(scopeTotals({})).toEqual({
+      texts: 0, activeTexts: 0, traditions: 0, activeTraditions: 0,
+    });
   });
 });

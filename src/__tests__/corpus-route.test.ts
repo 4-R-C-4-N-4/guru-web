@@ -66,6 +66,9 @@ describe('GET /api/corpus', () => {
     const sql = mQuery.mock.calls[0][0] as string;
     expect(sql).toMatch(/count\(\*\)::int/i);
     expect(sql).toMatch(/GROUP BY\s+tradition,\s*text_id,\s*text_name/i);
+    // text_id in ORDER BY keeps the grouped-work pin id and `ids` order
+    // deterministic across requests.
+    expect(sql).toMatch(/ORDER BY\s+tradition,\s*text_name,\s*text_id/i);
   });
 
   it('surfaces an empty corpus as {} (no hardcoded fallback)', async () => {

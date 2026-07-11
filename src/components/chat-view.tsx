@@ -24,7 +24,7 @@ import Citation from '@/components/citation';
 import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { displayForModelId } from '@/lib/provider-display';
-import { hydrateCatalog, activeCount } from '@/lib/scope';
+import { hydrateCatalog, scopeTotals, type ScopeTotals } from '@/lib/scope';
 import type { QueryExpansion } from '@/lib/types';
 
 interface CitationData {
@@ -174,9 +174,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // uses, so the numbers always agree with what Scope shows. On fetch
   // failure or an empty corpus the line is simply omitted — no fallback
   // constants (feedback_no_fallbacks).
-  const [scope, setScope] = useState<{
-    activeTexts: number; totalTexts: number; activeTrads: number; totalTrads: number;
-  } | null>(null);
+  const [scope, setScope] = useState<ScopeTotals | null>(null);
   useEffect(() => {
     Promise.all([
       fetch('/api/corpus').then(r => r.ok ? r.json() : Promise.reject(new Error(`corpus ${r.status}`))),
@@ -186,15 +184,9 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         { traditions: Parameters<typeof hydrateCatalog>[0] },
         Parameters<typeof hydrateCatalog>[1],
       ]) => {
-        const catalog = hydrateCatalog(corpus.traditions, prefs);
-        const all = Object.values(catalog);
-        if (all.length === 0) return;   // empty corpus stays visible as absence
-        setScope({
-          totalTexts:  all.reduce((n, t) => n + t.texts.length, 0),
-          activeTexts: all.reduce((n, t) => n + activeCount(t), 0),
-          totalTrads:  all.length,
-          activeTrads: all.filter(t => activeCount(t) > 0).length,
-        });
+        const totals = scopeTotals(hydrateCatalog(corpus.traditions, prefs));
+        if (totals.traditions === 0) return;   // empty corpus stays visible as absence
+        setScope(totals);
       })
       .catch(() => { /* footer line omitted; chat still works */ });
   }, []);
@@ -620,9 +612,9 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               title="Adjust which sources Guru draws on"
               style={{ color: 'inherit', textDecoration: 'none' }}
             >
-              {scope.activeTexts < scope.totalTexts
-                ? `${scope.activeTexts}/${scope.totalTexts} texts · ${scope.activeTrads}/${scope.totalTrads} traditions in scope`
-                : `${scope.totalTexts} texts · ${scope.totalTrads} traditions`}
+              {scope.activeTexts < scope.texts
+                ? `${scope.activeTexts}/${scope.texts} texts · ${scope.activeTraditions}/${scope.traditions} traditions in scope`
+                : `${scope.texts} texts · ${scope.traditions} traditions`}
             </a>
           )}
           {/* Today's question count. We deliberately don't show a

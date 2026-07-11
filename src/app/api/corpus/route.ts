@@ -26,7 +26,7 @@ export async function GET() {
          FROM chunks
          WHERE tradition IS NOT NULL AND text_name IS NOT NULL
          GROUP BY tradition, text_id, text_name
-         ORDER BY tradition, text_name`,
+         ORDER BY tradition, text_name, text_id`,
     ),
     // Works are the study-mode unit (one dossier, one pin) — 52 entries,
     // not one per member text. The picker pins via the first member id,
