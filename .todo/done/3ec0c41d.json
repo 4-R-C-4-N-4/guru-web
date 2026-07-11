@@ -1,0 +1,23 @@
+{
+  "id": "3ec0c41d",
+  "type": "chore",
+  "state": "done",
+  "summary": "deploy.sh: install release from shipped tarball, drop git clone + npm ci + on-VPS build",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T19:00:00.192Z",
+  "updated_at": "2026-07-10T19:08:54.443Z",
+  "relationships": {
+    "parent": "479c221f",
+    "depends_on": [
+      "732df0cd"
+    ]
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T19:08:54.443Z",
+    "resolved_by": "unknown",
+    "note": "deploy.sh no longer touches GitHub or npm: unpack (wipe+extract, idempotent) -> self-update -> migrate -> swap -> restart -> verify -> tarball cleanup -> prune. Verified: bash -n clean; pack/unpack/self-update/prune-exclusion cycle simulated end-to-end in scratchpad (dotfiles + symlinks preserved, cmp detects changed script, .incoming invisible to ls -1t prune). Live proof is the first post-merge deploy."
+  }
+}

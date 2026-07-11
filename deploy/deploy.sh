@@ -6,14 +6,28 @@
 # Runs as user `deploy`. Needs sudo to restart guru-web (granted by
 # /etc/sudoers.d/deploy, installed by vps-bootstrap.sh).
 #
-# Behaviour: idempotent, atomic-ish (symlink swap), keeps last 5 releases
-# for rollback.
+# Supply-chain posture (todo:3ec0c41d): the release arrives PRE-BUILT as a
+# tarball from CI (deploy.yml packs source + pruned node_modules + .next and
+# scps it to releases/.incoming/ over the tailnet). This script never talks
+# to GitHub or the npm registry — it unpacks, migrates, swaps, restarts.
+# There is deliberately NO fallback to git clone + npm ci: a missing tarball
+# is a loud failure, not a quiet rebuild from the public internet.
 #
-# Self-updating: after fetching the new release, this script compares
+# Behaviour: idempotent, atomic-ish (symlink swap), keeps last 5 releases
+# for rollback. Roll back with the same two-step idiom the script uses
+# (plain `ln -sfn` onto an existing dir symlink drops the link *inside*
+# the target dir):
+#   ln -sfn /srv/guru-web/releases/<old-sha> /srv/guru-web/current.new
+#   mv -Tf /srv/guru-web/current.new /srv/guru-web/current
+#   sudo systemctl restart guru-web
+#
+# Self-updating: after unpacking the new release, this script compares
 # itself to $RELEASE/deploy/deploy.sh and re-execs with the repo version
 # if they differ.  That means changes to deploy.sh in the repo take
 # effect on the *first* deploy after the change — no need to re-run
-# vps-bootstrap.sh just to push a deploy-script update.
+# vps-bootstrap.sh just to push a deploy-script update. (This is also the
+# migration path that got us here: the last clone-based deploy.sh fetched
+# the release, saw this file differ, and re-exec'd into it.)
 
 set -euo pipefail
 
@@ -23,10 +37,22 @@ if [[ $# -ne 1 ]]; then
 fi
 
 SHA="$1"
+
+# $SHA names paths we rm -rf and arrives from a workflow_dispatch input via
+# a remote shell — insist it looks like a commit sha before building paths
+# from it. Rejects ../ traversal, shell metacharacters, and branch names
+# (which checkout would accept but which would mint oddly-named releases).
+if [[ ! "$SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
+    echo "deploy.sh: '$SHA' is not a commit sha (expected 7-40 lowercase hex chars)" >&2
+    exit 1
+fi
+
 ROOT=/srv/guru-web
 RELEASE="$ROOT/releases/$SHA"
 CURRENT="$ROOT/current"
-REPO_URL=https://github.com/4-R-C-4-N-4/guru-web.git   # public clone, no auth needed
+INCOMING="$ROOT/releases/.incoming"
+TARBALL="$INCOMING/release-$SHA.tar.gz"
+STAGING="$INCOMING/stage-$SHA"
 
 log() { printf '\n\033[1;34m==>\033[0m deploy.sh: %s\n' "$*"; }
 
@@ -39,21 +65,43 @@ log() { printf '\n\033[1;34m==>\033[0m deploy.sh: %s\n' "$*"; }
 log "self-heal ownership"
 sudo /bin/chown -R deploy:deploy "$ROOT/releases" || true
 
-# 1. Fetch the SHA into releases/<sha> (idempotent)
-log "fetching $SHA"
-if [[ -d "$RELEASE/.git" ]]; then
-    git -C "$RELEASE" fetch --depth=1 origin "$SHA"
-    git -C "$RELEASE" checkout --quiet "$SHA"
-else
-    git clone --depth=1 --no-single-branch "$REPO_URL" "$RELEASE"
-    git -C "$RELEASE" fetch --depth=1 origin "$SHA"
-    git -C "$RELEASE" checkout --quiet "$SHA"
+# 1. Unpack the CI-built artifact into releases/<sha>.
+#
+#    Extract into a staging dir first, then swap it into place. Extracting
+#    straight into $RELEASE would mean rm -rf'ing it for the duration of
+#    the unpack — and when the deployed SHA is the one `current` already
+#    points at (redeploy of last-good after an env fix, retried run), that
+#    is the tree the live app is lazily loading chunks from. The staging
+#    swap shrinks that window from "full extract" to a single rename.
+#
+#    Idempotent: staging is wiped before extract, $RELEASE is replaced
+#    wholesale — a retried deploy, the self-update re-exec below, or a
+#    leftover git clone from the pre-tarball flow all end up with exactly
+#    the tarball's contents. Staging lives under $INCOMING (a dotdir) so
+#    the `ls -1t` release-prune never sees it.
+#
+#    Deploying without CI (registry outage, lost artifact): build the
+#    tarball anywhere with the same steps deploy.yml runs (npm ci, source
+#    /etc/guru-web.public.env, npm run build, npm prune --omit=dev,
+#    tar --exclude=.git --exclude=.next/cache --exclude=node_modules/.cache
+#    -czf release-<sha>.tar.gz .) and scp it to $INCOMING/ yourself, then
+#    re-run this script.
+if [[ ! -f "$TARBALL" ]]; then
+    echo "deploy.sh: $TARBALL not found — CI ships it before invoking this script." >&2
+    echo "deploy.sh: no git/npm fallback by design (supply-chain hardening); see comment above for the manual path." >&2
+    exit 1
 fi
+log "unpacking release-$SHA.tar.gz"
+rm -rf "$STAGING"
+mkdir -p "$STAGING"
+tar -xzf "$TARBALL" -C "$STAGING"
+rm -rf "$RELEASE"
+mv "$STAGING" "$RELEASE"
 
 # 1a. Self-update.  vps-bootstrap.sh installs deploy.sh once and never
 # refreshes it, so changes to deploy/deploy.sh in the repo wouldn't reach
 # the VPS without this — every CI deploy would keep running the
-# bootstrap-era script.  After fetching the new release, compare its
+# bootstrap-era script.  After unpacking the new release, compare its
 # deploy.sh against $0; if they differ, copy it over and re-exec so this
 # run uses the new logic.  The re-exec lands here again, finds the files
 # identical, and proceeds — no infinite loop.
@@ -66,40 +114,14 @@ if [[ -f "$NEW_SCRIPT" ]] && ! cmp -s "$SELF" "$NEW_SCRIPT"; then
     exec "$SELF" "$@"
 fi
 
-# 2. Install prod deps + build.
-#
-# `next build` bakes NEXT_PUBLIC_* into the client bundle. Those vars must
-# be in env at build time — systemd's EnvironmentFile only feeds the
-# runtime process, not this build step. They live in
-# /etc/guru-web.public.env (mode 0644 — values are public anyway, they
-# ship in client JS) so the `deploy` user can read them without needing
-# read access to the secrets file (/etc/guru-web.env, mode 0600 root:guru).
-#
-# Bundler / output mode (post 2026-05-10 admin-on-tailnet outage):
-# - Build runs `next build --webpack`. Next 16's Turbopack does not
-#   reliably compile src/middleware.ts — the deployed manifest came
-#   back with a Clerk-default matcher even when our source had custom
-#   exclusions, and Turbopack treats proxy.ts as an SSR module rather
-#   than installing it as middleware. Webpack handles middleware.ts
-#   correctly. The flag is wired in package.json's "build" script.
-# - `output: "standalone"` is removed from next.config.ts — the
-#   standalone collector is incompatible with the proxy.ts convention
-#   (ENOENT on middleware.js.nft.json), and we don't need it now that
-#   the runtime tree is the whole release dir.
-log "npm ci + build"
-cd "$RELEASE"
-if [[ ! -r /etc/guru-web.public.env ]]; then
-    echo "deploy.sh: /etc/guru-web.public.env not readable — NEXT_PUBLIC_* would compile to empty strings" >&2
-    exit 1
-fi
-set -a
-# shellcheck disable=SC1091
-source /etc/guru-web.public.env
-set +a
-npm ci
-npm run build
+# (No install/build step: the tarball already contains the production
+# build. `next build` baked NEXT_PUBLIC_* into the client bundle in CI —
+# deploy.yml fetches /etc/guru-web.public.env from this box first, so that
+# file remains the single source of truth for those values. The bundler
+# rationale — webpack over Turbopack, no standalone output — lives in
+# package.json's build script comment history and deploy/README.md.)
 
-# 3. Apply app-schema migrations BEFORE swapping the symlink. If a migration
+# 2. Apply app-schema migrations BEFORE swapping the symlink. If a migration
 #    fails the old release stays live. Each file runs in a single transaction
 #    (-1) so partial application is impossible. Migrations use IF NOT EXISTS
 #    patterns so re-running on an already-migrated DB is a no-op.
@@ -129,14 +151,14 @@ for f in "$RELEASE"/migrations/*.sql; do
 done
 shopt -u nullglob
 
-# 4. Atomic symlink swap. `current` points at the release dir; the
+# 3. Atomic symlink swap. `current` points at the release dir; the
 # systemd unit runs `next start` from there using the in-tree
 # node_modules/.bin/next binary.
 log "symlink swap"
 ln -sfn "$RELEASE" "$CURRENT.new"
 mv -Tf "$CURRENT.new" "$CURRENT"
 
-# 5. Restart the app (sudoers permits this single command)
+# 4. Restart the app (sudoers permits this single command)
 log "restart guru-web"
 sudo /bin/systemctl restart guru-web
 
@@ -148,7 +170,21 @@ if ! /bin/systemctl is-active --quiet guru-web; then
     exit 1
 fi
 
-# 6. Prune old releases — keep newest 5 by mtime
+# 5. Clean up the consumed tarball — the unpacked releases/ dirs are the
+# rollback surface, so it has no further use. Only after the restart
+# verified, so a failed deploy keeps its tarball for retry. Delete ONLY
+# $TARBALL, not release-*.tar.gz: workflow_dispatch runs on different refs
+# aren't serialized by the concurrency group, so a glob here could eat a
+# parallel deploy's freshly-shipped artifact before its deploy.sh runs.
+# Week-old strays (failed runs never retried, abandoned staging dirs) get
+# swept separately.
+log "clean incoming tarball"
+rm -f "$TARBALL"
+find "$INCOMING" -maxdepth 1 -name 'release-*.tar.gz' -mtime +7 -delete 2>/dev/null || true
+find "$INCOMING" -maxdepth 1 -type d -name 'stage-*' -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+
+# 6. Prune old releases — keep newest 5 by mtime. (`ls -1t` skips
+# dotfiles, so releases/.incoming survives the prune.)
 log "prune to last 5 releases"
 cd "$ROOT/releases"
 # shellcheck disable=SC2012
