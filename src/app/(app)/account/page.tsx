@@ -65,7 +65,7 @@ export default function AccountPage() {
 
       {/* Plan cards */}
       <div style={{ background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`, borderRadius: 4, padding: mobile ? 14 : 20, marginBottom: 12 }}>
-        <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 2, marginBottom: 12, textTransform: 'uppercase' }}>Current Plan</div>
+        <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 12, textTransform: 'uppercase' }}>Current Plan</div>
         <div style={{ display: 'flex', gap: 10, flexDirection: mobile ? 'column' : 'row' }}>
           {PLANS.map(plan => (
             <div key={plan.id} style={{
@@ -78,31 +78,28 @@ export default function AccountPage() {
                 {plan.name}
                 {plan.price && <span style={{ fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.accent }}>{plan.price}</span>}
               </div>
-              <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, lineHeight: 1.8 }}>
+              <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted, lineHeight: 1.8 }}>
                 {plan.features.map((f, i) => <div key={i}>{f}</div>)}
               </div>
               {tier === plan.id
                 ? (
                   <>
-                    <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.accent, marginTop: 8, letterSpacing: 1 }}>CURRENT</div>
+                    <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.accent, marginTop: 8, letterSpacing: 1 }}>Current</div>
                     {plan.id === 'pro' && (
-                      <button onClick={handleManageSubscription} style={{
-                        marginTop: 10, fontFamily: tokens.font.mono, fontSize: 10,
+                      <button className="btn btn-ghost" onClick={handleManageSubscription} style={{
+                        marginTop: 10, fontSize: 11,
                         padding: mobile ? '10px 14px' : '6px 14px',
-                        background: 'none', color: tokens.text.link,
-                        border: `1px solid ${tokens.border.subtle}`,
-                        borderRadius: 2, cursor: 'pointer', letterSpacing: 1,
-                      }}>MANAGE SUBSCRIPTION</button>
+                        letterSpacing: 1,
+                      }}>Manage subscription</button>
                     )}
                   </>
                 )
                 : plan.id === 'pro' && (
-                  <button onClick={handleUpgrade} style={{
-                    marginTop: 10, fontFamily: tokens.font.mono, fontSize: 10,
+                  <button className="btn btn-primary" onClick={handleUpgrade} style={{
+                    marginTop: 10, fontSize: 11,
                     padding: mobile ? '10px 14px' : '6px 14px',
-                    background: tokens.text.accent, color: tokens.bg.deep,
-                    border: 'none', borderRadius: 2, cursor: 'pointer', fontWeight: 600, letterSpacing: 1,
-                  }}>UPGRADE</button>
+                    letterSpacing: 1,
+                  }}>Upgrade</button>
                 )
               }
             </div>
@@ -115,7 +112,7 @@ export default function AccountPage() {
           (the runaway-loop guard) misleads. Pro renders count-only without the
           progress bar; per-provider cap lives on /settings (todo:6e255bb7). */}
       <div style={{ background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`, borderRadius: 4, padding: mobile ? 14 : 20, marginBottom: 12 }}>
-        <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>Usage Today</div>
+        <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>Usage Today</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: tier === 'pro' ? 0 : 8 }}>
           <span style={{ fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.secondary }}>Queries</span>
           <span style={{ fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.primary }}>
@@ -139,7 +136,7 @@ export default function AccountPage() {
 
       {/* Account details */}
       <div style={{ background: tokens.bg.surface, border: `1px solid ${tokens.border.subtle}`, borderRadius: 4, padding: mobile ? 14 : 20 }}>
-        <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>Account Details</div>
+        <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>Account Details</div>
         {[
           { label: 'Email',        value: user?.primaryEmailAddress?.emailAddress ?? '—' },
           { label: 'Member since', value: memberSince },
@@ -151,11 +148,10 @@ export default function AccountPage() {
           </div>
         ))}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, flexDirection: mobile ? 'column' : 'row' }}>
-          <button onClick={() => openUserProfile()} style={{
-            fontFamily: tokens.font.mono, fontSize: 10, padding: mobile ? '12px 14px' : '6px 14px',
-            background: 'none', color: tokens.text.link, border: `1px solid ${tokens.border.subtle}`,
-            borderRadius: 2, cursor: 'pointer', textAlign: 'center', letterSpacing: 1,
-          }}>MANAGE PROFILE</button>
+          <button className="btn btn-ghost" onClick={() => openUserProfile()} style={{
+            fontSize: 11, padding: mobile ? '12px 14px' : '6px 14px',
+            textAlign: 'center', letterSpacing: 1,
+          }}>Manage profile</button>
         </div>
       </div>
     </div>

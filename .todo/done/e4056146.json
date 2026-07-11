@@ -1,0 +1,20 @@
+{
+  "id": "e4056146",
+  "type": "chore",
+  "state": "done",
+  "summary": "landing + atlas: hero spectrum echo, foundation classes, CTA hover states",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T20:20:15.108Z",
+  "updated_at": "2026-07-10T20:26:02.793Z",
+  "relationships": {
+    "parent": "2d0cbfab"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T20:26:02.793Z",
+    "resolved_by": "unknown",
+    "note": "Landing redirect guard (landing-page-redirect.test.ts) untouched and green; suite 590. Signed-out hero verified by inspection of markup structure; visual check rides the PR."
+  }
+}

@@ -10,6 +10,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { listAtlasEditionsCached } from '@/lib/blog-public';
+import { listTraditionsCached } from '@/lib/corpus';
 import EssayCard from '@/components/essay-card';
 import { tokens } from '@/styles/tokens';
 
@@ -22,7 +23,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AtlasIndexPage() {
-  const editions = await listAtlasEditionsCached();
+  const [editions, traditions] = await Promise.all([
+    listAtlasEditionsCached(),
+    listTraditionsCached(),
+  ]);
 
   return (
     <main style={{ minHeight: '100vh', background: tokens.bg.deep, padding: '64px 24px' }}>
@@ -53,6 +57,20 @@ export default async function AtlasIndexPage() {
           >
             State of the Atlas
           </div>
+          {/* Corpus spectrum echo — same band as the landing hero and the
+              scope page; the atlas reads this exact corpus. No corpus →
+              no strip (absence stays visible). */}
+          {traditions.length > 0 && (
+            <div aria-hidden style={{ display: 'flex', gap: 1, height: 2, width: 220, marginTop: 12, borderRadius: 1, overflow: 'hidden' }}>
+              {traditions.map(t => (
+                <div key={t} style={{
+                  flex: 1,
+                  background: tokens.tradition[t as keyof typeof tokens.tradition] ?? tokens.text.secondary,
+                  opacity: 0.8,
+                }} />
+              ))}
+            </div>
+          )}
         </header>
 
         <p

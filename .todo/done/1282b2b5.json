@@ -1,0 +1,26 @@
+{
+  "id": "1282b2b5",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add missing tradition colors: celtic, finnic, norse, shinto, upanishads",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T20:20:15.002Z",
+  "updated_at": "2026-07-10T20:21:17.932Z",
+  "relationships": {
+    "parent": "2d0cbfab"
+  },
+  "work": {
+    "branch": "todo/2d0cbfab",
+    "base_branch": "main",
+    "started_at": "2026-07-10T20:20:30.484Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T20:21:17.932Z",
+    "resolved_by": "unknown",
+    "note": "Coverage guard added to tradition-colors.test.ts pinning the five v4 slugs (from SELECT DISTINCT tradition on dev corpus). CSS-var bridge picks them up automatically (kebab-cased)."
+  }
+}

@@ -161,6 +161,71 @@ button:active { transform: scale(0.98); }
 }
 .check:hover .check-box { border-color: var(--check-hue, var(--text-secondary)); }
 
+/* Inline text links */
+.text-link {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.text-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Text inputs. Keyboard focus keeps the global :focus-visible ring —
+   the :not(:focus-visible) guard means pointer focus alone suppresses
+   the outline. Pointer focus gets a subtle box-shadow ring instead of
+   border-color: consumers set `border` as an inline shorthand, which
+   would always beat a stylesheet border-color (PR #102 review). */
+.input {
+  transition: box-shadow 0.15s ease;
+}
+.input:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--border-medium);
+}
+
+/* Nav links + dropdown menu items */
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.menu-item:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.nav-link {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-raised);
+}
+.nav-link[aria-current='page'] {
+  background: var(--bg-raised);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
 /* Reveal-on-hover affordances (e.g. the per-tradition "only" action).
    Always visible on coarse pointers — touch has no hover. */
 .reveal { opacity: 0; transition: opacity 0.15s ease; }

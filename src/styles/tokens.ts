@@ -45,9 +45,18 @@ export const tokens = {
     mandaean:                '#5ab0c2',
     hermeticism:             '#c4a35a',
     sufism:                  '#5ac2a0',
-    platonism:               '#7a9ec2',
+    // Lighter sky-blue, deliberately separated from neoplatonism's
+    // #5a8ac2 — at 23% of the corpus, neoplatonism dominates the spectrum
+    // bar and the old near-identical pair read as one tradition (user
+    // report, 2026-07-11). Also un-collides platonism from text.link.
+    platonism:               '#8ab8e0',
     buddhism:                '#d08a30',
     mesopotamian:            '#a85a3a',
+    upanishads:              '#d0a040',
+    shinto:                  '#c25a5a',
+    norse:                   '#8a9ab8',
+    celtic:                  '#6ab04a',
+    finnic:                  '#7ac2c2',
   },
   tier: {
     verified: '#c4a35a',

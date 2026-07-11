@@ -229,6 +229,54 @@ describe('walkGraph — chunks-query param alignment', () => {
     expect(params).toEqual([['chunk-1'], ['gnosticism'], 25]);
   });
 
+  it('with blacklisted TEXTS only, text_id filter lands in $2 and LIMIT in $3 (todo:2d0cbfab)', async () => {
+    // The per-text scope path the settings checkboxes feed on every chat
+    // query. Until 2026-07 no test passed a non-empty blockedTexts through
+    // walkGraph — the predicate existed but a param-slot regression would
+    // have shipped silently.
+    mockUpToChunksQuery();
+
+    const prefs: UserPreferences = {
+      scopeMode: 'blacklist',
+      blockedTraditions: [],
+      blockedTexts: ['dhp.1', 'dhp.2'],
+      whitelistedTraditions: [],
+      whitelistedTexts: [],
+      preferredModel: null,
+      preferredVoice: 'scholar',
+    };
+
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
+
+    const [sql, params] = chunksCall();
+    expect(sql).toMatch(/text_id <> ALL\(\$2::text\[\]\)/);
+    expect(sql).not.toMatch(/tradition <> ALL/);
+    expect(sql).toMatch(/LIMIT \$3\b/);
+    expect(params).toEqual([['chunk-1'], ['dhp.1', 'dhp.2'], 25]);
+  });
+
+  it('with blacklisted traditions AND texts, both predicates bind $2/$3 and LIMIT is $4', async () => {
+    mockUpToChunksQuery();
+
+    const prefs: UserPreferences = {
+      scopeMode: 'blacklist',
+      blockedTraditions: ['gnosticism'],
+      blockedTexts: ['kalevala'],
+      whitelistedTraditions: [],
+      whitelistedTexts: [],
+      preferredModel: null,
+      preferredVoice: 'scholar',
+    };
+
+    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
+
+    const [sql, params] = chunksCall();
+    expect(sql).toMatch(/tradition <> ALL\(\$2::text\[\]\)/);
+    expect(sql).toMatch(/text_id <> ALL\(\$3::text\[\]\)/);
+    expect(sql).toMatch(/LIMIT \$4\b/);
+    expect(params).toEqual([['chunk-1'], ['gnosticism'], ['kalevala'], 25]);
+  });
+
   it('with whitelisted traditions + texts, scope params occupy $2..$3 and LIMIT is $4', async () => {
     mockUpToChunksQuery();
 

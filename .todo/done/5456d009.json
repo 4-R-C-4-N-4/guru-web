@@ -1,0 +1,20 @@
+{
+  "id": "5456d009",
+  "type": "chore",
+  "state": "done",
+  "summary": "nav-bar: migrate to foundation — SVG menu/close icons, hover/focus states, row classes",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T20:20:15.035Z",
+  "updated_at": "2026-07-10T20:22:40.490Z",
+  "relationships": {
+    "parent": "2d0cbfab"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T20:22:40.490Z",
+    "resolved_by": "unknown",
+    "note": "Nav items and both dropdown menus now respond to hover and keyboard focus; hamburger is IconMenu/IconClose with aria-labels. Lint + type-check + suite (590) green."
+  }
+}

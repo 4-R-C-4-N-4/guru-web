@@ -43,15 +43,14 @@ export default function HistoryPage() {
       )}
 
       {!loading && sessions.length === 0 && (
-        <div style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted }}>
-          No sessions yet. <button onClick={() => router.push('/chat')} style={{ background: 'none', border: 'none', color: tokens.text.link, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>Start a query</button>
+        <div className="t-ui" style={{ color: tokens.text.muted }}>
+          No sessions yet. <button className="text-link" onClick={() => router.push('/chat')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0 }}>Ask your first question</button>
         </div>
       )}
 
       {sessions.map(s => (
-        <button key={s.id} onClick={() => router.push(`/chat/${s.id}`)} style={{
-          width: '100%', display: 'block', background: tokens.bg.surface,
-          border: `1px solid ${tokens.border.subtle}`, borderRadius: 4,
+        <button key={s.id} className="row" onClick={() => router.push(`/chat/${s.id}`)} style={{
+          width: '100%', display: 'block',
           padding: mobile ? 12 : 16, marginBottom: 6, cursor: 'pointer', textAlign: 'left',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
@@ -59,7 +58,7 @@ export default function HistoryPage() {
               <div style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 16, color: tokens.text.primary, marginBottom: 4 }}>
                 {s.title ?? 'Untitled session'}
               </div>
-              <div style={{ fontFamily: tokens.font.mono, fontSize: 9, color: tokens.text.muted, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 {s.mode === 'study' && (
                   <span style={{
                     color: tokens.text.accent, border: `1px solid ${tokens.text.accent}`,
