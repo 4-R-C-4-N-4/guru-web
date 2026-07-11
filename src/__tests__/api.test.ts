@@ -539,15 +539,15 @@ describe('GET /api/corpus', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('aggregates DISTINCT (tradition, text_id, text_name) chunk rows into the catalog shape', async () => {
+  it('aggregates grouped (tradition, text_id, text_name) chunk rows into the catalog shape', async () => {
     mockAuth.mockResolvedValueOnce(FREE_USER);
     mockQuery
       .mockResolvedValueOnce([
-        { tradition: 'Gnosticism', text_id: 'gospel-of-thomas', text_name: 'Gospel of Thomas' },
-        { tradition: 'Gnosticism', text_id: 'gospel-of-philip', text_name: 'Gospel of Philip' },
+        { tradition: 'Gnosticism', text_id: 'gospel-of-thomas', text_name: 'Gospel of Thomas', chunks: 12 },
+        { tradition: 'Gnosticism', text_id: 'gospel-of-philip', text_name: 'Gospel of Philip', chunks: 8 },
         // grouped-work members share a display label — must dedupe (review finding)
-        { tradition: 'Taoism',     text_id: 'tao-te-ching-legge', text_name: 'Tao Te Ching' },
-        { tradition: 'Taoism',     text_id: 'tao-te-ching-2', text_name: 'Tao Te Ching' },
+        { tradition: 'Taoism',     text_id: 'tao-te-ching-legge', text_name: 'Tao Te Ching', chunks: 30 },
+        { tradition: 'Taoism',     text_id: 'tao-te-ching-2', text_name: 'Tao Te Ching', chunks: 25 },
       ])
       .mockResolvedValueOnce([
         { id: 'gospel-of-thomas', label: 'Gospel of Thomas', tradition: 'Gnosticism',
@@ -573,18 +573,26 @@ describe('GET /api/corpus', () => {
       Gnosticism: {
         texts: ['Gospel of Thomas', 'Gospel of Philip'],
         text_items: [
-          { id: 'gospel-of-thomas', label: 'Gospel of Thomas' },
-          { id: 'gospel-of-philip', label: 'Gospel of Philip' },
+          { id: 'gospel-of-thomas', label: 'Gospel of Thomas', ids: ['gospel-of-thomas'] },
+          { id: 'gospel-of-philip', label: 'Gospel of Philip', ids: ['gospel-of-philip'] },
         ],
+        chunks: 20,
       },
       Taoism: {
         texts: ['Tao Te Ching'],
-        text_items: [{ id: 'tao-te-ching-legge', label: 'Tao Te Ching' }],
+        // dedup keeps one display item but accumulates EVERY member id —
+        // scope blocking filters on text_id (todo:5b6d6a14)
+        text_items: [{
+          id: 'tao-te-ching-legge',
+          label: 'Tao Te Ching',
+          ids: ['tao-te-ching-legge', 'tao-te-ching-2'],
+        }],
+        chunks: 55,
       },
     });
 
     const [sql] = mockQuery.mock.calls[0]!;
-    expect(sql).toMatch(/SELECT\s+DISTINCT\s+tradition,\s*text_id,\s*text_name\s+FROM\s+chunks/i);
+    expect(sql).toMatch(/GROUP BY\s+tradition,\s*text_id,\s*text_name/i);
   });
 
   it('returns an empty catalog when chunks is empty (no fallback)', async () => {

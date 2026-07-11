@@ -1,0 +1,23 @@
+{
+  "id": "195d1b2f",
+  "type": "chore",
+  "state": "done",
+  "summary": "Settings: redesign Corpus Scope — persist blockedTexts, autosave, spectrum bar, accessible rows",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T19:49:31.687Z",
+  "updated_at": "2026-07-10T20:02:31.401Z",
+  "relationships": {
+    "parent": "2c65c512",
+    "depends_on": [
+      "5b6d6a14"
+    ]
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T20:02:31.401Z",
+    "resolved_by": "unknown",
+    "note": "9 seam tests incl. round-trip hydrate(save(state))===state and grouped-work member-id persistence. Verified live: dev server serves /settings 200 with new markup; aggregate SQL validated against dev corpus DB. Lint + type-check + full suite green."
+  }
+}

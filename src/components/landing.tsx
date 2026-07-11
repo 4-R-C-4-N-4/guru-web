@@ -55,14 +55,6 @@ export default function Landing(
           filter: 'blur(60px)', pointerEvents: 'none',
         }} />
 
-        {/* Grid */}
-        <div style={{
-          position: 'absolute', inset: 0, opacity: 0.03,
-          backgroundImage: `linear-gradient(0deg, ${tokens.text.primary} 1px, transparent 1px),
-                            linear-gradient(90deg, ${tokens.text.primary} 1px, transparent 1px)`,
-          backgroundSize: mobile ? '40px 40px' : '80px 80px',
-        }} />
-
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, width: '100%', maxWidth: 560 }}>
           {/* Logo */}
           <div style={{
@@ -70,8 +62,26 @@ export default function Landing(
             color: tokens.text.accent, letterSpacing: mobile ? 10 : 16, marginBottom: 8,
           }}>GURU</div>
 
+          {/* Corpus spectrum echo — the same tradition-hue band the scope
+              page uses, rendered from the live tradition list (prominence
+              order). No corpus → no strip; absence stays visible. */}
+          {traditions.length > 0 && (
+            <div aria-hidden style={{
+              display: 'flex', gap: 1, height: 2, width: mobile ? 180 : 260,
+              margin: '0 auto 14px', borderRadius: 1, overflow: 'hidden',
+            }}>
+              {traditions.map(t => (
+                <div key={t} style={{
+                  flex: 1,
+                  background: tokens.tradition[t as keyof typeof tokens.tradition] ?? tokens.text.secondary,
+                  opacity: 0.8,
+                }} />
+              ))}
+            </div>
+          )}
+
           <div style={{
-            fontFamily: tokens.font.mono, fontSize: mobile ? 9 : 11, color: tokens.text.muted,
+            fontFamily: tokens.font.mono, fontSize: mobile ? 10 : 11, color: tokens.text.muted,
             letterSpacing: mobile ? 2 : 4, marginBottom: mobile ? 32 : 48, textTransform: 'uppercase',
           }}>Cross-Tradition Esoteric Analysis</div>
 
@@ -106,19 +116,15 @@ export default function Landing(
 
           {/* CTAs */}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexDirection: mobile ? 'column' : 'row', padding: mobile ? '0 24px' : 0 }}>
-            <Link href="/sign-up" style={{
-              fontFamily: tokens.font.mono, fontSize: 12, padding: mobile ? '14px 32px' : '12px 32px',
-              background: tokens.text.accent, color: tokens.bg.deep,
-              border: 'none', borderRadius: 2, cursor: 'pointer',
-              fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
+            <Link href="/sign-up" className="btn btn-primary" style={{
+              padding: mobile ? '14px 32px' : '12px 32px',
+              letterSpacing: 1, textTransform: 'uppercase',
               textDecoration: 'none', display: 'inline-block', textAlign: 'center',
             }}>Begin</Link>
-            <Link href="/sign-in" style={{
-              fontFamily: tokens.font.mono, fontSize: 12, padding: mobile ? '14px 32px' : '12px 32px',
-              background: 'none', color: tokens.text.secondary,
-              border: `1px solid ${tokens.border.medium}`, borderRadius: 2,
+            <Link href="/sign-in" className="btn btn-ghost" style={{
+              padding: mobile ? '14px 32px' : '12px 32px',
               letterSpacing: 1, textDecoration: 'none', display: 'inline-block', textAlign: 'center',
-            }}>Sign In</Link>
+            }}>Sign in</Link>
           </div>
         </div>
       </section>
@@ -143,9 +149,9 @@ export default function Landing(
               ))}
             </ul>
 
-            <Link href="/blog" style={{
-              fontFamily: tokens.font.mono, fontSize: 12, color: tokens.text.link,
-              letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase',
+            <Link href="/blog" className="text-link" style={{
+              fontFamily: tokens.font.mono, fontSize: 12,
+              letterSpacing: 1, textTransform: 'uppercase',
             }}>Read all essays →</Link>
           </div>
         </section>

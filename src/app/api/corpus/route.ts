@@ -18,11 +18,15 @@ export async function GET() {
   if (userOrResponse instanceof Response) return userOrResponse;
 
   const [rows, workRows] = await Promise.all([
-    query<{ tradition: string; text_id: string; text_name: string }>(
-      `SELECT DISTINCT tradition, text_id, text_name
+    // GROUP BY yields the same distinct (tradition, text_id, text_name)
+    // rows the old SELECT DISTINCT did, plus a chunk count per row — the
+    // per-tradition totals weight the scope spectrum bar (todo:5b6d6a14).
+    query<{ tradition: string; text_id: string; text_name: string; chunks: number }>(
+      `SELECT tradition, text_id, text_name, count(*)::int AS chunks
          FROM chunks
          WHERE tradition IS NOT NULL AND text_name IS NOT NULL
-         ORDER BY tradition, text_name`,
+         GROUP BY tradition, text_id, text_name
+         ORDER BY tradition, text_name, text_id`,
     ),
     // Works are the study-mode unit (one dossier, one pin) — 52 entries,
     // not one per member text. The picker pins via the first member id,
@@ -37,19 +41,32 @@ export async function GET() {
   // `texts` (names only) predates the study picker and is kept verbatim for
   // existing consumers; `text_items` adds the ids the picker POSTs as
   // study_text_id (summary-phase-w.md §W5).
-  // The finer DISTINCT (text_id added for the study picker) would emit one
+  // The finer grouping (text_id added for the study picker) would emit one
   // row per member text of a grouped work — 26× "The Dhammapada" — so both
-  // arrays dedupe on display label. Any member id pins the same work, so
-  // keeping the first id per label loses nothing for the picker.
-  const traditions: Record<string, { texts: string[]; text_items: { id: string; label: string }[] }> = {};
-  const seen = new Set<string>();
-  for (const { tradition, text_id, text_name } of rows) {
-    if (!traditions[tradition]) traditions[tradition] = { texts: [], text_items: [] };
+  // arrays dedupe on display label. `id` keeps the first member id (any
+  // member pins the same work for the picker); `ids` accumulates ALL member
+  // ids because scope blocking filters on text_id — blocking a label must
+  // block every member, or 25 of 26 Dhammapada texts stay retrievable
+  // (todo:5b6d6a14). `chunks` per tradition weights the scope spectrum bar.
+  const traditions: Record<string, {
+    texts: string[];
+    text_items: { id: string; label: string; ids: string[] }[];
+    chunks: number;
+  }> = {};
+  const itemByLabel = new Map<string, { id: string; label: string; ids: string[] }>();
+  for (const { tradition, text_id, text_name, chunks } of rows) {
+    if (!traditions[tradition]) traditions[tradition] = { texts: [], text_items: [], chunks: 0 };
+    traditions[tradition].chunks += chunks;
     const key = `${tradition}\u0000${text_name}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const existing = itemByLabel.get(key);
+    if (existing) {
+      existing.ids.push(text_id);
+      continue;
+    }
+    const item = { id: text_id, label: text_name, ids: [text_id] };
+    itemByLabel.set(key, item);
     traditions[tradition].texts.push(text_name);
-    traditions[tradition].text_items.push({ id: text_id, label: text_name });
+    traditions[tradition].text_items.push(item);
   }
 
   const works = workRows.map(w => ({

@@ -354,3 +354,34 @@ describe('chat-view URL-update contract', () => {
     expect(SRC).not.toMatch(/router\.push\s*\(\s*[`'"]\/chat\//);
   });
 });
+
+describe('chat-view live scope footer (todo:5bb914c1)', () => {
+  // Source-level guards, same pattern as above. The footer previously
+  // hardcoded "8 traditions" / "34 texts", which drifted from the corpus
+  // the moment it shipped — counts must derive from /api/corpus + prefs
+  // via the shared lib/scope seams, and vanish (no fallback constants)
+  // when the corpus is empty or the fetch fails.
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const SRC = readFileSync(
+    resolve(__dirname, '../components/chat-view.tsx'),
+    'utf8',
+  );
+
+  it('drops the hardcoded tradition/text counts', () => {
+    expect(SRC).not.toMatch(/>8 traditions</);
+    expect(SRC).not.toMatch(/>34 texts</);
+  });
+
+  it('derives the footer from the shared scope seams', () => {
+    expect(SRC).toMatch(/hydrateCatalog\(/);
+    expect(SRC).toMatch(/from '@\/lib\/scope'/);
+  });
+
+  it('renders the scope line only when data resolved (scope && …)', () => {
+    expect(SRC).toMatch(/\{scope && \(/);
+  });
+
+  it('links the scope line to /settings', () => {
+    expect(SRC).toMatch(/href="\/settings"[\s\S]{0,500}in scope/);
+  });
+});

@@ -1,0 +1,20 @@
+{
+  "id": "5b6d6a14",
+  "type": "chore",
+  "state": "done",
+  "summary": "Corpus API: return all member text ids per label + per-tradition chunk counts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T19:49:31.650Z",
+  "updated_at": "2026-07-10T19:56:16.867Z",
+  "relationships": {
+    "parent": "2c65c512"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T19:56:16.867Z",
+    "resolved_by": "unknown",
+    "note": "Route test pins the contract (4 tests: id accumulation, chunk summing, SQL grouping, empty-corpus honesty). Lint + type-check clean."
+  }
+}

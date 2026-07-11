@@ -28,6 +28,14 @@ describe('tokens.tradition keys are real corpus slugs', () => {
     }
   });
 
+  it('covers the corpus v4 additions (previously fell back to grey)', () => {
+    // SELECT DISTINCT tradition FROM corpus.chunks, 2026-07-10 — these
+    // five arrived with the schema_version=4 corpus (todo:1282b2b5).
+    for (const added of ['celtic', 'finnic', 'norse', 'shinto', 'upanishads']) {
+      expect(keys).toContain(added);
+    }
+  });
+
   it('every key is a lowercase/underscored slug and maps to a hex color', () => {
     for (const [k, v] of Object.entries(tokens.tradition)) {
       expect(k).toMatch(/^[a-z]+(_[a-z]+)*$/);

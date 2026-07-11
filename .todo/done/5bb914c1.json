@@ -1,0 +1,20 @@
+{
+  "id": "5bb914c1",
+  "type": "chore",
+  "state": "done",
+  "summary": "Chat: replace hardcoded '8 traditions / 34 texts' footer with live scope status",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-10T19:49:31.728Z",
+  "updated_at": "2026-07-10T20:06:27.774Z",
+  "relationships": {
+    "parent": "2c65c512"
+  },
+  "resolution": {
+    "commit": "HEAD",
+    "resolved_at": "2026-07-10T20:06:27.774Z",
+    "resolved_by": "unknown",
+    "note": "4 new source guards in chat-view.test.ts (no hardcoded counts, shared seams, conditional render, /settings link). Full suite 589 green; /chat serves 200 on dev with the scope line in markup."
+  }
+}

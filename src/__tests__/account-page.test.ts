@@ -72,10 +72,11 @@ describe('account page subscription management (todo:7854e1ba)', () => {
     expect(SRC).toMatch(/fetch\(\s*['"]\/api\/portal['"]\s*,\s*\{\s*method:\s*['"]POST['"]/);
   });
 
-  it('renders a MANAGE SUBSCRIPTION button on the Pro card for current Pro users', () => {
-    // The button text should be present, and it should be wired to the
-    // portal handler (not the upgrade handler).
-    expect(SRC).toMatch(/MANAGE SUBSCRIPTION/);
+  it('renders a Manage subscription button on the Pro card for current Pro users', () => {
+    // The button text should be present (sentence case since the phase-2
+    // copy pass, todo:54188aa3), and it should be wired to the portal
+    // handler (not the upgrade handler).
+    expect(SRC).toMatch(/Manage subscription/);
     expect(SRC).toMatch(/onClick=\{handleManageSubscription\}/);
   });
 });
