@@ -24,6 +24,8 @@ import { getShareBySlug } from '@/lib/chat-public';
 import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import Citation from '@/components/citation';
+import ContinueButton from '@/components/continue-button';
+import { clerkEnabled } from '@/lib/host';
 import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +47,11 @@ export default async function SharePage(
   const { slug } = await params;
   const share = await getShareBySlug(slug);
   if (!share) notFound();
+
+  // Continue-conversation needs Clerk (useUser + the sign-in bounce);
+  // on the tailnet host there's no ClerkProvider, so the button is
+  // simply absent — same gate as the layout's home button.
+  const clerk = await clerkEnabled();
 
   return (
     <main
@@ -128,6 +135,8 @@ export default async function SharePage(
             </section>
           );
         })}
+
+        {clerk && <ContinueButton slug={share.slug} />}
       </article>
     </main>
   );

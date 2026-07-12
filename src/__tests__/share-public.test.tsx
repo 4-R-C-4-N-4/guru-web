@@ -16,12 +16,23 @@ import { renderToStaticMarkup } from 'react-dom/server';
 // -- chat-public: gate at the query layer ----------------------------------
 
 vi.mock('@/lib/db', () => ({ one: vi.fn(), query: vi.fn(), exec: vi.fn() }));
+// Host gate + Clerk hooks: clerkEnabled defaults to false (tailnet shape —
+// no ContinueButton); the button test flips it on. useUser/useRouter are
+// stubbed because renderToStaticMarkup has no ClerkProvider/App Router.
+vi.mock('@/lib/host', () => ({ clerkEnabled: vi.fn(async () => false) }));
+vi.mock('@clerk/nextjs', () => ({ useUser: () => ({ isSignedIn: false }) }));
+vi.mock('next/navigation', async () => {
+  const actual = await vi.importActual<typeof import('next/navigation')>('next/navigation');
+  return { ...actual, useRouter: () => ({ push: vi.fn() }) };
+});
 
 import { one } from '@/lib/db';
+import { clerkEnabled } from '@/lib/host';
 import { getShareBySlug } from '@/lib/chat-public';
 import type { PublicShare } from '@/lib/chat-public';
 
 const mOne = one as MockedFunction<typeof one>;
+const mClerkEnabled = clerkEnabled as MockedFunction<typeof clerkEnabled>;
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -119,5 +130,48 @@ describe('share page', () => {
     const meta = await generateMetadata({ params: Promise.resolve({ slug: 'abc123' }) });
     expect(meta.robots).toEqual({ index: false, follow: false });
     expect(meta.title).toBe('Shared conversation — Guru');
+  });
+
+  it('omits the Continue button when Clerk is disabled (tailnet host)', async () => {
+    const html = await render(BASE); // clerkEnabled mock defaults to false
+    expect(html).not.toContain('Continue this conversation');
+  });
+
+  it('renders the Continue button when Clerk is enabled', async () => {
+    mClerkEnabled.mockResolvedValueOnce(true);
+    const html = await render(BASE);
+    expect(html).toContain('Continue this conversation');
+    expect(html).toContain('sign in'); // signed-out hint under the button
+  });
+});
+
+// -- continue-button auth-flow contracts --------------------------------------
+// The live behaviour (Clerk redirect, history.replaceState, sessionStorage)
+// needs a browser; what this file can defend is the source contract — the
+// same approach as sign-in-redirect-prop.test.ts.
+
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+describe('continue-button source contract', () => {
+  const src = readFileSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), '../components/continue-button.tsx'),
+    'utf8',
+  );
+
+  it('signed-out path bounces through /sign-in with a redirect back to ?continue=1', () => {
+    expect(src).toMatch(/\/share\/\$\{slug\}\?continue=1/);
+    expect(src).toMatch(/\/sign-in\?redirect_url=/);
+  });
+
+  it('auto-fork strips the param (refresh-safe) and dedupes via sessionStorage (bfcache-safe)', () => {
+    expect(src).toMatch(/params\.delete\('continue'\)/);
+    expect(src).toMatch(/history\.replaceState/);
+    expect(src).toMatch(/sessionStorage\.(get|set)Item/);
+  });
+
+  it('waits for Clerk to resolve before consuming the param', () => {
+    expect(src).toMatch(/if \(!isSignedIn\) return;/);
   });
 });
