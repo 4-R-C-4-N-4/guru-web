@@ -21,6 +21,7 @@ import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
+import ShareButton from '@/components/share-button';
 import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { displayForModelId } from '@/lib/provider-display';
@@ -431,6 +432,10 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
           </button>
         </div>
       )}
+
+      {/* Share strip (todo:8d6c6886) — only for persisted sessions with at
+          least one assistant turn; renders null otherwise. */}
+      <ShareButton sessionId={sessionId} hasTurns={messages.some(m => m.role === 'assistant')} />
 
       {/* Messages */}
       <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: mobile ? '16px 0' : '24px 0', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
