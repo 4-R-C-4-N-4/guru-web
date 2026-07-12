@@ -48,7 +48,7 @@ const PREFS = {
   preferredModel: 'anthropic',
   preferredVoice: 'woowoo' as const,
 };
-const SESSION_ROW = { id: 's1', voice: 'woowoo', mode: 'chat' as const, study_text_id: null };
+const SESSION_ROW = { id: 's1', title: 'On the Demiurge', voice: 'woowoo', mode: 'chat' as const, study_text_id: null };
 
 function req(method: string) {
   return new Request('http://test/api/sessions/s1/share', { method });
@@ -119,10 +119,11 @@ describe('POST /api/sessions/[id]/share', () => {
 
     const [insertSql, insertParams] = mockOne.mock.calls[2]!;
     expect(insertSql).toMatch(/INSERT INTO session_shares/);
-    const [slug, sessionId, userId, messagesJson, voice, mode, studyTextId, scopeJson] = insertParams as string[];
+    const [slug, sessionId, userId, title, messagesJson, voice, mode, studyTextId, scopeJson] = insertParams as string[];
     expect(slug).toMatch(/^[A-Za-z0-9_-]{20,24}$/); // 16 bytes base64url, unguessable
     expect(sessionId).toBe('s1');
     expect(userId).toBe('user_1');
+    expect(title).toBe('On the Demiurge');
     expect(voice).toBe('woowoo');
     expect(mode).toBe('chat');
     expect(studyTextId).toBeNull();

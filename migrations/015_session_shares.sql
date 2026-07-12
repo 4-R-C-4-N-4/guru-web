@@ -19,6 +19,8 @@
 --     self-contained and survives.
 --   user_id — the share's owner (Clerk user id, as everywhere).
 --     CASCADE: a hard-deleted user takes their shares with them.
+--   title — the session title at share time (nullable, like
+--     sessions.title); the public page's heading.
 --   messages — ordered turns incl. rich citation objects
 --     ({id,tradition,text_name,section,tier}), same shape as
 --     blog_posts.chunks_used (013). Snapshotted so the public page
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS session_shares (
     slug            TEXT        UNIQUE NOT NULL,
     session_id      TEXT        REFERENCES sessions(id) ON DELETE SET NULL,
     user_id         TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title           TEXT,
     messages        JSONB       NOT NULL,
     voice           TEXT        NOT NULL,
     mode            TEXT        NOT NULL,

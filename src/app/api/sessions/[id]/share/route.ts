@@ -52,11 +52,12 @@ export async function POST(
   // leak whether the id exists for someone else.
   const session = await one<{
     id: string;
+    title: string | null;
     voice: string;
     mode: 'chat' | 'study';
     study_text_id: string | null;
   }>(
-    `SELECT id, voice, mode, study_text_id FROM sessions WHERE id = $1 AND user_id = $2`,
+    `SELECT id, title, voice, mode, study_text_id FROM sessions WHERE id = $1 AND user_id = $2`,
     [id, user.id]
   );
   if (!session) {
@@ -126,13 +127,14 @@ export async function POST(
     try {
       const row = await one<{ slug: string; created_at: string }>(
         `INSERT INTO session_shares
-           (slug, session_id, user_id, messages, voice, mode, study_text_id, retrieval_scope)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           (slug, session_id, user_id, title, messages, voice, mode, study_text_id, retrieval_scope)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING slug, created_at`,
         [
           slug,
           id,
           user.id,
+          session.title,
           JSON.stringify(messages), // arrays must be stringified for jsonb — pg would treat a bare array as text[]
           session.voice,
           session.mode,
