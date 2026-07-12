@@ -108,16 +108,22 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // continue-button's ?continue=1) so refresh doesn't repeat it.
   const [voiceDowngradedFrom, setVoiceDowngradedFrom] = useState<string | null>(null);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const from = params.get('voiceDowngraded');
-    if (!from) return;
-    params.delete('voiceDowngraded');
-    const qs = params.toString();
-    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
-    // Deferred so the effect body only touches the external system (URL);
-    // the synchronous-setState-in-effect rule aside, this also lets the
-    // chat paint before the notice strip appears.
-    const t = setTimeout(() => setVoiceDowngradedFrom(from), 0);
+    // ALL the work lives inside the deferred tick, not the effect body:
+    // StrictMode's dev double-mount cancels the first timer via cleanup,
+    // and when the body stripped the param synchronously the second run
+    // found a clean URL and the notice was lost. Deferring wholesale is
+    // idempotent under the double-mount, keeps setState out of the
+    // effect body (react-hooks/set-state-in-effect), and lets the chat
+    // paint before the strip appears.
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const from = params.get('voiceDowngraded');
+      if (!from) return;
+      params.delete('voiceDowngraded');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      setVoiceDowngradedFrom(from);
+    }, 0);
     return () => clearTimeout(t);
   }, []);
   // Study picker (summary-phase-w.md §W5, reworked per UX review): mode is

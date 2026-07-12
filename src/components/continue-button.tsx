@@ -80,21 +80,23 @@ export default function ContinueButton({ slug }: { slug: string }) {
   // authed, and Clerk sent them back with ?continue=1.
   useEffect(() => {
     if (!isSignedIn) return; // undefined while Clerk loads — wait, don't consume the param
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('continue') !== '1') return;
-
-    params.delete('continue');
-    const qs = params.toString();
-    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
-
-    const guard = `guru:forked:${slug}`;
-    if (sessionStorage.getItem(guard)) return;
-    sessionStorage.setItem(guard, '1');
-    // Deferred: fork() opens with setBusy(true), and setState synchronously
-    // inside an effect body trips react-hooks/set-state-in-effect (and a
-    // pre-paint cascading render). The guard above is already recorded, so
-    // an unmount before the tick fires simply drops the auto-fork.
-    const t = setTimeout(() => { void fork(); }, 0);
+    // ALL the work lives inside the deferred tick, not the effect body:
+    // StrictMode's dev double-mount cancels the first timer via cleanup —
+    // when the body consumed the param and wrote the guard synchronously,
+    // the second run bailed and the auto-fork never fired. Deferring
+    // wholesale is idempotent under the double-mount and keeps fork()'s
+    // setBusy out of the effect body (react-hooks/set-state-in-effect).
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('continue') !== '1') return;
+      params.delete('continue');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      const guard = `guru:forked:${slug}`;
+      if (sessionStorage.getItem(guard)) return;
+      sessionStorage.setItem(guard, '1');
+      void fork();
+    }, 0);
     return () => clearTimeout(t);
   }, [isSignedIn, slug, fork]);
 
