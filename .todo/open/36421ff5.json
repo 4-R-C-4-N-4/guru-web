@@ -7,6 +7,17 @@
     "type": "agent"
   },
   "created_at": "2026-07-12T01:31:22.212Z",
-  "updated_at": "2026-07-12T01:31:22.249Z",
-  "description": "Snapshot-based public sharing for chat sessions. Owner shares a chat -> immutable snapshot (messages + rich citations + settings) behind a random slug at /share/[slug], viewable un-authed (modeled on public blog pages). Visitors hit Continue-conversation -> Clerk sign-in/up if needed -> fork endpoint copies the snapshot into a new session they own, with settings persisted (voice/mode/study_text_id copied; owner tradition/text scope snapshotted into sessions.scope_override JSONB, NULL for normal sessions) and accounting zeroed (tokens=0 cost_usd=0 model/tier NULL so backfill-cost.ts recomputes $0; avoids analytics double-count; user_budgets untouched by design). Voice is grandfathered on fork (no tier re-check, consistent with session-voice immutability). Study sessions shareable; missing study_text_id after corpus re-import surfaces as empty retrieval, no fallback. Design hashed out in Claude session 2026-07-11."
+  "updated_at": "2026-07-12T01:31:45.173Z",
+  "description": "Snapshot-based public sharing for chat sessions. Owner shares a chat -> immutable snapshot (messages + rich citations + settings) behind a random slug at /share/[slug], viewable un-authed (modeled on public blog pages). Visitors hit Continue-conversation -> Clerk sign-in/up if needed -> fork endpoint copies the snapshot into a new session they own, with settings persisted (voice/mode/study_text_id copied; owner tradition/text scope snapshotted into sessions.scope_override JSONB, NULL for normal sessions) and accounting zeroed (tokens=0 cost_usd=0 model/tier NULL so backfill-cost.ts recomputes $0; avoids analytics double-count; user_budgets untouched by design). Voice is grandfathered on fork (no tier re-check, consistent with session-voice immutability). Study sessions shareable; missing study_text_id after corpus re-import surfaces as empty retrieval, no fallback. Design hashed out in Claude session 2026-07-11.",
+  "relationships": {
+    "children": [
+      "5f35c4a7",
+      "9dde6667",
+      "131dbb82",
+      "47067537",
+      "8d6c6886",
+      "e13dd999",
+      "a4077cc9"
+    ]
+  }
 }

@@ -1,0 +1,22 @@
+{
+  "id": "a4077cc9",
+  "type": "chore",
+  "state": "open",
+  "summary": "Continue-conversation button on share page with Clerk sign-in redirect flow",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-12T01:31:45.173Z",
+  "updated_at": "2026-07-12T01:32:20.012Z",
+  "tags": [
+    "share-chat"
+  ],
+  "relationships": {
+    "parent": "36421ff5",
+    "depends_on": [
+      "47067537",
+      "e13dd999"
+    ]
+  },
+  "description": "Continue-conversation button on /share/[slug]. Signed-in: POST fork -> router.push(/chat/{sessionId}). Signed-out: Clerk sign-in/sign-up with redirect_url back to /share/[slug]?continue=1; on return, auto-trigger fork once (guard against double-fork on refresh). Hide/disable gracefully when Clerk is disabled (tailnet host). Done: manual verification of both auth paths + feature note; test the continue=1 guard if practical."
+}

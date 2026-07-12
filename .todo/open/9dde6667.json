@@ -1,0 +1,26 @@
+{
+  "id": "9dde6667",
+  "type": "chore",
+  "state": "open",
+  "summary": "Query route: honor sessions.scope_override as retrieval scope, falling back to user prefs",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-12T01:31:44.991Z",
+  "updated_at": "2026-07-12T01:32:19.762Z",
+  "files": [
+    {
+      "path": "src/app/api/query/route.ts"
+    }
+  ],
+  "tags": [
+    "share-chat"
+  ],
+  "relationships": {
+    "parent": "36421ff5",
+    "depends_on": [
+      "5f35c4a7"
+    ]
+  },
+  "description": "In src/app/api/query/route.ts: extend the ownership SELECT (~line 93) to also pull scope_override; when non-NULL, use it in place of loadPreferences() output for retrieve() scoping (scopeMode/blocked/whitelisted fields only — preferredModel/preferredVoice still come from live prefs/session as today). NULL scope_override = existing behavior, zero change for normal sessions. Done: test covering override-used vs fallback-to-prefs paths."
+}

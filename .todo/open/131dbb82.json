@@ -1,0 +1,21 @@
+{
+  "id": "131dbb82",
+  "type": "chore",
+  "state": "open",
+  "summary": "Share API: POST/DELETE /api/sessions/[id]/share creates/revokes snapshot share",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-12T01:31:45.026Z",
+  "updated_at": "2026-07-12T01:32:19.803Z",
+  "tags": [
+    "share-chat"
+  ],
+  "relationships": {
+    "parent": "36421ff5",
+    "depends_on": [
+      "5f35c4a7"
+    ]
+  },
+  "description": "New src/app/api/sessions/[id]/share/route.ts. POST: requireUser + ownership (WHERE id=$1 AND user_id=$2, 404 on miss like sessions/[id]); reject sessions with zero queries rows; build snapshot: all turns in order, rehydrate chunks_used bare ids -> rich citation objects via corpus.chunks JOIN AT SHARE TIME; snapshot session voice/mode/study_text_id + owner prefs scope into retrieval_scope; if an active (non-revoked) share exists for the session return it instead of minting a new slug. Returns {slug, url}. DELETE: sets revoked_at on the active share. Done: tests for ownership 404, snapshot shape incl rich citations, idempotent re-share, revoke."
+}
