@@ -31,12 +31,18 @@ import { randomBytes } from 'crypto';
 import { requireUser } from '@/lib/auth';
 import { one, query } from '@/lib/db';
 import { loadPreferences } from '@/lib/prefs';
+import { rateLimit } from '@/lib/rate-limit';
 import { rehydrateCitations } from '@/lib/corpus';
 import type { RetrievalScope } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
 const SLUG_INSERT_ATTEMPTS = 3;
+
+// The partial unique index enforcing one active share per session
+// (migration 015). Its 23505 means "someone else just shared this
+// session", not a slug collision — handled by re-reading, not retrying.
+const ACTIVE_SHARE_INDEX = 'idx_session_shares_session_active';
 
 export async function POST(
   _req: Request,
@@ -45,6 +51,16 @@ export async function POST(
   const userOrResponse = await requireUser();
   if (userOrResponse instanceof Response) return userOrResponse;
   const user = userOrResponse;
+
+  // Share builds a full snapshot (queries scan + corpus rehydration) —
+  // cheap to debounce, pointless to hammer.
+  const rl = await rateLimit(user.id, 'share', 3);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } },
+    );
+  }
 
   const { id } = await params;
 
@@ -147,7 +163,25 @@ export async function POST(
         { status: 201 }
       );
     } catch (err) {
-      const pgCode = (err as { code?: string }).code;
+      const { code: pgCode, constraint } = err as { code?: string; constraint?: string };
+      if (pgCode === '23505' && constraint === ACTIVE_SHARE_INDEX) {
+        // Lost a race with a concurrent POST for the same session — the
+        // idempotency contract says return the winner's link.
+        const winner = await one<{ slug: string; created_at: string }>(
+          `SELECT slug, created_at FROM session_shares
+           WHERE session_id = $1 AND revoked_at IS NULL`,
+          [id]
+        );
+        if (winner) {
+          return Response.json({
+            slug: winner.slug,
+            url: `/share/${winner.slug}`,
+            created_at: winner.created_at,
+            reused: true,
+          });
+        }
+        continue; // winner already revoked again — our next attempt can land
+      }
       if (pgCode === '23505') continue; // slug collision — mint another
       throw err;
     }

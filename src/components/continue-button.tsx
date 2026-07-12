@@ -51,7 +51,14 @@ export default function ContinueButton({ slug }: { slug: string }) {
         inFlight.current = false;
         return;
       }
-      router.push(`/chat/${(body as { sessionId: string }).sessionId}`);
+      // Say-but-downgrade (todo:36421ff5 review): when the fork dropped a
+      // pro voice for a non-pro forker, land on the chat with a one-time
+      // notice param; chat-view renders and strips it.
+      const forked = body as { sessionId: string; voiceDowngraded?: { from: string } };
+      const notice = forked.voiceDowngraded
+        ? `?voiceDowngraded=${encodeURIComponent(forked.voiceDowngraded.from)}`
+        : '';
+      router.push(`/chat/${forked.sessionId}${notice}`);
     } catch {
       setError('Could not continue — network error');
       inFlight.current = false;

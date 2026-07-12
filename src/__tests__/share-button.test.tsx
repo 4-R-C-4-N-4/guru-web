@@ -39,11 +39,18 @@ describe('ShareButton', () => {
 });
 
 describe('chat-view mount', () => {
+  const src = readFileSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), '../components/chat-view.tsx'),
+    'utf8',
+  );
+
   it('gates the strip on an assistant turn existing', () => {
-    const src = readFileSync(
-      resolve(dirname(fileURLToPath(import.meta.url)), '../components/chat-view.tsx'),
-      'utf8',
-    );
     expect(src).toMatch(/<ShareButton sessionId=\{sessionId\} hasTurns=\{messages\.some\(m => m\.role === 'assistant'\)\}/);
+  });
+
+  it('shows the fork voice-downgrade notice once and strips the param (say-but-downgrade)', () => {
+    expect(src).toMatch(/params\.get\('voiceDowngraded'\)/);
+    expect(src).toMatch(/params\.delete\('voiceDowngraded'\)/);
+    expect(src).toMatch(/voice-downgrade-notice/);
   });
 });

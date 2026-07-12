@@ -57,8 +57,16 @@ CREATE TABLE IF NOT EXISTS session_shares (
 );
 
 -- "Does this session already have an active share?" — the share API's
--- idempotency check and the chat header's share-state fetch.
-CREATE INDEX IF NOT EXISTS idx_session_shares_session
+-- idempotency check and the chat header's share-state fetch. UNIQUE:
+-- one active share per session is an invariant, not an app-side
+-- convention — two concurrent share POSTs would otherwise both pass the
+-- check-then-insert and mint two live slugs. The share route catches
+-- this index's 23505 and returns the winner's slug.
+-- (DROP the plain index 015 originally created — dev DBs that ran the
+-- earlier revision of this file upgrade in place; both statements are
+-- re-run no-ops.)
+DROP INDEX IF EXISTS idx_session_shares_session;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_session_shares_session_active
     ON session_shares (session_id)
     WHERE revoked_at IS NULL;
 
@@ -77,3 +85,14 @@ ALTER TABLE sessions
 
 ALTER TABLE sessions
     ADD COLUMN IF NOT EXISTS forked_from_share_id TEXT;
+
+-- Forked turns carry no generation metadata: the forker never generated
+-- these tokens, so the fork endpoint writes model_used/tier_used NULL
+-- with all counts and cost 0 (zero tokens keep backfill-cost.ts
+-- recomputing $0, and it skips NULL model_used rows anyway). 002 made
+-- both NOT NULL back when every queries row came from a live
+-- generation; that stops being true here. DROP NOT NULL is a no-op on
+-- re-runs.
+ALTER TABLE queries
+    ALTER COLUMN model_used DROP NOT NULL,
+    ALTER COLUMN tier_used  DROP NOT NULL;

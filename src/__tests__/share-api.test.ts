@@ -27,16 +27,22 @@ vi.mock('@/lib/corpus', () => ({
   rehydrateCitations: vi.fn(),
 }));
 
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn(),
+}));
+
 import * as db from '@/lib/db';
 import * as auth from '@/lib/auth';
 import * as prefs from '@/lib/prefs';
 import * as corpus from '@/lib/corpus';
+import * as rateLimitLib from '@/lib/rate-limit';
 
 const mockOne       = db.one                  as MockedFunction<typeof db.one>;
 const mockQuery     = db.query                as MockedFunction<typeof db.query>;
 const mockAuth      = auth.requireUser        as MockedFunction<typeof auth.requireUser>;
 const mockPrefs     = prefs.loadPreferences   as MockedFunction<typeof prefs.loadPreferences>;
 const mockRehydrate = corpus.rehydrateCitations as MockedFunction<typeof corpus.rehydrateCitations>;
+const mockRateLimit = rateLimitLib.rateLimit  as MockedFunction<typeof rateLimitLib.rateLimit>;
 
 const { POST: sharePOST, DELETE: shareDELETE } = await import('@/app/api/sessions/[id]/share/route');
 
@@ -58,9 +64,18 @@ const ctx = { params: Promise.resolve({ id: 's1' }) };
 beforeEach(() => {
   vi.clearAllMocks();
   mockAuth.mockResolvedValue(USER);
+  mockRateLimit.mockResolvedValue({ allowed: true });
 });
 
 describe('POST /api/sessions/[id]/share', () => {
+  it('429s with Retry-After when rate-limited, before any db work', async () => {
+    mockRateLimit.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 3 });
+    const res = await sharePOST(req('POST'), ctx);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('3');
+    expect(mockOne).not.toHaveBeenCalled();
+  });
+
   it('404s when the session belongs to another user, with user_id in the predicate', async () => {
     mockOne.mockResolvedValueOnce(null); // ownership SELECT misses
 
@@ -165,6 +180,31 @@ describe('POST /api/sessions/[id]/share', () => {
     const slug1 = (mockOne.mock.calls[2]![1] as string[])[0];
     const slug2 = (mockOne.mock.calls[3]![1] as string[])[0];
     expect(slug1).not.toBe(slug2);
+  });
+
+  it('returns the winner\'s link when a concurrent POST wins the one-active-share race', async () => {
+    mockOne
+      .mockResolvedValueOnce(SESSION_ROW)
+      .mockResolvedValueOnce(null); // no active share yet — but another request is in flight
+    mockQuery.mockResolvedValueOnce([
+      { query_text: 'q', response_text: 'r', chunks_used: null, created_at: 't' },
+    ]);
+    mockRehydrate.mockResolvedValueOnce(new Map());
+    mockPrefs.mockResolvedValueOnce(PREFS);
+    mockOne
+      // INSERT hits the partial unique index (migration 015), not the slug key
+      .mockRejectedValueOnce(Object.assign(new Error('dup'), {
+        code: '23505', constraint: 'idx_session_shares_session_active',
+      }))
+      // route re-reads the active share instead of retrying a slug
+      .mockResolvedValueOnce({ slug: 'winner-slug', created_at: 't' });
+
+    const res = await sharePOST(req('POST'), ctx);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ slug: 'winner-slug', url: '/share/winner-slug', reused: true });
+    expect(mockOne).toHaveBeenCalledTimes(4); // no second INSERT attempt
   });
 });
 

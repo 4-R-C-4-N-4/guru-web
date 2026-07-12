@@ -56,8 +56,14 @@ export async function getShareBySlug(slug: string): Promise<PublicShare | null> 
     [slug],
   );
   if (!row) return null;
+  // Normalize the JSONB payload so no consumer (page render, fork's
+  // citations.map) has to defend against a malformed row.
+  const messages = Array.isArray(row.messages) ? row.messages : [];
   return {
     ...row,
-    messages: Array.isArray(row.messages) ? row.messages : [],
+    messages: messages.map(m => ({
+      ...m,
+      citations: Array.isArray(m.citations) ? m.citations : [],
+    })),
   };
 }

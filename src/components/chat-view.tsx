@@ -101,6 +101,21 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // a pure compute (useMemo below) — keeps us out of the
   // react-hooks/set-state-in-effect rule.
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Fork voice downgrade notice (todo:36421ff5 review — say-but-downgrade):
+  // the fork endpoint drops a pro voice for a non-pro forker and
+  // continue-button lands here with ?voiceDowngraded=<from>. Show the
+  // notice once and strip the param (replaceState, same trick as
+  // continue-button's ?continue=1) so refresh doesn't repeat it.
+  const [voiceDowngradedFrom, setVoiceDowngradedFrom] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('voiceDowngraded');
+    if (!from) return;
+    params.delete('voiceDowngraded');
+    const qs = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    setVoiceDowngradedFrom(from);
+  }, []);
   // Study picker (summary-phase-w.md §W5, reworked per UX review): mode is
   // implicit — leave the work picker empty and it's a chat session; pick a
   // work and the session pins to it. No invalid state exists. The unit is
@@ -436,6 +451,39 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
       {/* Share strip (todo:8d6c6886) — only for persisted sessions with at
           least one assistant turn; renders null otherwise. */}
       <ShareButton sessionId={sessionId} hasTurns={messages.some(m => m.role === 'assistant')} />
+
+      {/* One-time fork notice: the shared chat used a pro voice this
+          account doesn't have — say-but-downgrade, never silent. */}
+      {voiceDowngradedFrom && (
+        <div
+          role="status"
+          data-testid="voice-downgrade-notice"
+          style={{
+            background: tokens.bg.surface,
+            borderBottom: `1px solid ${tokens.border.subtle}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '6px 24px',
+            fontFamily: tokens.font.mono,
+            fontSize: 11,
+            color: tokens.text.secondary,
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            This conversation was shared with the Pro &lsquo;{voiceDowngradedFrom}&rsquo; voice —
+            your copy continues in the standard voice.
+          </span>
+          <button
+            type="button"
+            onClick={() => setVoiceDowngradedFrom(null)}
+            style={{ background: 'none', border: 'none', color: tokens.text.muted, cursor: 'pointer', padding: 4, lineHeight: 0 }}
+            aria-label="Dismiss"
+          >
+            <IconClose size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: mobile ? '16px 0' : '24px 0', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>

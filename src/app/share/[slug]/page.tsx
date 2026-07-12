@@ -122,7 +122,7 @@ export default async function SharePage(
                 <div style={{ marginTop: 16 }}>
                   {cards.map((c, j) => (
                     <Citation
-                      key={'id' in c ? c.id : `${i}-${j}`}
+                      key={'id' in c ? `${c.id}-${j}` : `${i}-${j}`}
                       tradition={c.tradition}
                       text={c.text}
                       section={c.section}

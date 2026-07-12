@@ -55,6 +55,15 @@ describe('getShareBySlug', () => {
     const share = await getShareBySlug('s');
     expect(share?.messages).toEqual([]);
   });
+
+  it('normalizes per-message citations so consumers never see undefined', async () => {
+    mOne.mockResolvedValue({
+      slug: 's',
+      messages: [{ query_text: 'q', response_text: 'r', created_at: 't' }], // no citations key
+    } as never);
+    const share = await getShareBySlug('s');
+    expect(share?.messages[0]!.citations).toEqual([]);
+  });
 });
 
 // -- /share/[slug] page ------------------------------------------------------
@@ -173,5 +182,10 @@ describe('continue-button source contract', () => {
 
   it('waits for Clerk to resolve before consuming the param', () => {
     expect(src).toMatch(/if \(!isSignedIn\) return;/);
+  });
+
+  it('forwards a voice downgrade to the forked chat as a notice param (say-but-downgrade)', () => {
+    expect(src).toMatch(/voiceDowngraded/);
+    expect(src).toMatch(/\/chat\/\$\{forked\.sessionId\}\$\{notice\}/);
   });
 });
