@@ -1,0 +1,34 @@
+{
+  "id": "8d6c6886",
+  "type": "chore",
+  "state": "done",
+  "summary": "Share button in chat header: create link, copy URL, revoke",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-12T01:31:45.100Z",
+  "updated_at": "2026-07-12T02:04:11.377Z",
+  "files": [
+    {
+      "path": "src/components/chat-view.tsx"
+    }
+  ],
+  "tags": [
+    "share-chat"
+  ],
+  "relationships": {
+    "parent": "36421ff5",
+    "depends_on": [
+      "131dbb82"
+    ]
+  },
+  "description": "Share button in the chat header for existing sessions with >=1 completed turn (src/components/chat-view.tsx + chat/[sessionId]/page.tsx). Click -> POST /api/sessions/[id]/share -> dialog with full share URL, copy-to-clipboard, and revoke action (DELETE). Surface API errors as-is (no silent fallback). Done: feature note + manual verification; component test if cheap.",
+  "resolution": {
+    "commit": "ee617fe7a26cde0fc7261f7e3fbaf522d14c1b00",
+    "resolved_at": "2026-07-12T02:04:11.377Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/share-button.test.tsx",
+    "test_function": "offers Share as the initial state for an eligible session",
+    "note": "ShareButton client component renders a slim strip (study-strip idiom) above messages, only when sessionId exists AND >=1 assistant turn. POST on Share (server idempotent), panel with absolute URL + Copy (clipboard) + Revoke (DELETE) + Close. API/network errors render as-is via role=alert, no fallbacks. Interaction fetch paths covered by share-api tests; render contract + chat-view mount pinned in share-button.test.tsx. Suite 621 passed. Manual browser verification deferred to the end-to-end pass in child a4077cc9."
+  }
+}
