@@ -324,13 +324,15 @@ describe('GET /api/sessions/[id]', () => {
     expect(chunksLookupCall[1]).toEqual([expect.arrayContaining(['c.a.001', 'c.b.005'])]);
     expect((chunksLookupCall[1] as [string[]])[0]).toHaveLength(2);
 
-    // Citations attached per message in chunks_used order.
+    // Citations attached per message in chunks_used order. `id` rides along
+    // since the rehydrator was shared with the share-snapshot path
+    // (todo:131dbb82) — additive, clients that don't need it ignore it.
     expect(body.messages[0]!.citations).toEqual([
-      { tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78',  tier: 'verified' },
-      { tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1', tier: 'verified' },
+      { id: 'c.a.001', tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78',  tier: 'verified' },
+      { id: 'c.b.005', tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1', tier: 'verified' },
     ]);
     expect(body.messages[1]!.citations).toEqual([
-      { tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
+      { id: 'c.a.001', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
     ]);
   });
 
