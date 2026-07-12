@@ -114,7 +114,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
     params.delete('voiceDowngraded');
     const qs = params.toString();
     window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
-    setVoiceDowngradedFrom(from);
+    // Deferred so the effect body only touches the external system (URL);
+    // the synchronous-setState-in-effect rule aside, this also lets the
+    // chat paint before the notice strip appears.
+    const t = setTimeout(() => setVoiceDowngradedFrom(from), 0);
+    return () => clearTimeout(t);
   }, []);
   // Study picker (summary-phase-w.md §W5, reworked per UX review): mode is
   // implicit — leave the work picker empty and it's a chat session; pick a

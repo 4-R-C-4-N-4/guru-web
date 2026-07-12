@@ -90,7 +90,12 @@ export default function ContinueButton({ slug }: { slug: string }) {
     const guard = `guru:forked:${slug}`;
     if (sessionStorage.getItem(guard)) return;
     sessionStorage.setItem(guard, '1');
-    void fork();
+    // Deferred: fork() opens with setBusy(true), and setState synchronously
+    // inside an effect body trips react-hooks/set-state-in-effect (and a
+    // pre-paint cascading render). The guard above is already recorded, so
+    // an unmount before the tick fires simply drops the auto-fork.
+    const t = setTimeout(() => { void fork(); }, 0);
+    return () => clearTimeout(t);
   }, [isSignedIn, slug, fork]);
 
   return (
