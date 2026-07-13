@@ -1,0 +1,30 @@
+{
+  "id": "a4077cc9",
+  "type": "chore",
+  "state": "done",
+  "summary": "Continue-conversation button on share page with Clerk sign-in redirect flow",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-12T01:31:45.173Z",
+  "updated_at": "2026-07-12T02:10:12.678Z",
+  "tags": [
+    "share-chat"
+  ],
+  "relationships": {
+    "parent": "36421ff5",
+    "depends_on": [
+      "47067537",
+      "e13dd999"
+    ]
+  },
+  "description": "Continue-conversation button on /share/[slug]. Signed-in: POST fork -> router.push(/chat/{sessionId}). Signed-out: Clerk sign-in/sign-up with redirect_url back to /share/[slug]?continue=1; on return, auto-trigger fork once (guard against double-fork on refresh). Hide/disable gracefully when Clerk is disabled (tailnet host). Done: manual verification of both auth paths + feature note; test the continue=1 guard if practical.",
+  "resolution": {
+    "commit": "06d08b1f138c2ecac6cc802a8967b0ef99af0aef",
+    "resolved_at": "2026-07-12T02:10:12.678Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/share-public.test.tsx",
+    "test_function": "auto-fork strips the param (refresh-safe) and dedupes via sessionStorage (bfcache-safe)",
+    "note": "ContinueButton: signed-in click forks + router.push(/chat/[id]); signed-out bounces /sign-in?redirect_url=/share/[slug]?continue=1 (redirect_url wins over fallbackRedirectUrl per todo:7069e9aa); on return the effect waits for isSignedIn, strips the param via replaceState, dedupes via sessionStorage, forks once. Page renders it only when clerkEnabled() (tailnet-safe). E2E smoke on dev server (port 3210, real DB): share page 200 with snapshot content + citation card + noindex + CITATIONS tail stripped; unknown + revoked slug 404; unauthed share/fork POST 401. Signed-in Clerk round-trip needs a browser — left for the user's pass."
+  }
+}

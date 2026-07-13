@@ -36,6 +36,7 @@ import { computeCost } from '@/lib/cost';
 import { loadPreferences } from '@/lib/prefs';
 import { rateLimit } from '@/lib/rate-limit';
 import { one, exec } from '@/lib/db';
+import type { RetrievalScope } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -89,9 +90,16 @@ export async function POST(req: Request) {
   let sessionVoice: string | null = null;
   let sessionMode: 'chat' | 'study' = 'chat';
   let studyTextId: string | null = null;
+  let scopeOverride: RetrievalScope | null = null;
   if (sessionId) {
-    const owned = await one<{ id: string; voice: string; mode: 'chat' | 'study'; study_text_id: string | null }>(
-      `SELECT id, voice, mode, study_text_id FROM sessions WHERE id = $1 AND user_id = $2`,
+    const owned = await one<{
+      id: string;
+      voice: string;
+      mode: 'chat' | 'study';
+      study_text_id: string | null;
+      scope_override: RetrievalScope | null;
+    }>(
+      `SELECT id, voice, mode, study_text_id, scope_override FROM sessions WHERE id = $1 AND user_id = $2`,
       [sessionId, user.id]
     );
     if (!owned) {
@@ -100,11 +108,20 @@ export async function POST(req: Request) {
     sessionVoice = owned.voice;
     sessionMode = owned.mode ?? 'chat';
     studyTextId = owned.study_text_id;
+    scopeOverride = owned.scope_override ?? null;
   }
 
   // 3. Retrieve + build prompt (before budget reservation — failed retrieval
   // shouldn't consume quota)
   const prefs = await loadPreferences(user.id);
+
+  // Sessions forked from a public share carry the scope the shared
+  // conversation was held under (sessions.scope_override, migration 015).
+  // The spread keeps live prefs as the base so a partial/legacy override
+  // can't drop fields; NULL (every non-forked session) means live prefs
+  // stay authoritative. preferredModel/preferredVoice below deliberately
+  // keep reading `prefs` — only retrieval scoping is frozen.
+  const scopedPrefs = scopeOverride ? { ...prefs, ...scopeOverride } : prefs;
 
   // Load prior turns so the model can resolve referents like "it" / "that"
   // across turns. Empty when no sessionId (auto-create path) — the first
@@ -125,16 +142,16 @@ export async function POST(req: Request) {
   const isStudy = sessionMode === 'study' && !!studyTextId;
   const [chunks, expansion, dossier] = await Promise.all([
     isStudy
-      ? retrieve(queryText, prefs, 15, 'study', studyTextId)
-      : retrieve(queryText, prefs),
+      ? retrieve(queryText, scopedPrefs, 15, 'study', studyTextId)
+      : retrieve(queryText, scopedPrefs),
     summarizeExpansion(queryText),
     isStudy ? getDossierForText(studyTextId!) : Promise.resolve(null),
   ]);
   // Reserve room for history in the chunk-fitting budget so long sessions
   // retrieve fewer chunks rather than blowing the context window.
   const prompt = isStudy
-    ? buildStudyPrompt(queryText, chunks, dossier, prefs, user.tier, historyTokens)
-    : buildPrompt(queryText, chunks, prefs, user.tier, historyTokens);
+    ? buildStudyPrompt(queryText, chunks, dossier, scopedPrefs, user.tier, historyTokens)
+    : buildPrompt(queryText, chunks, scopedPrefs, user.tier, historyTokens);
 
   // 4. Estimate cost + reserve budget atomically.
   //

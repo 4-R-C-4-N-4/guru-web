@@ -324,13 +324,15 @@ describe('GET /api/sessions/[id]', () => {
     expect(chunksLookupCall[1]).toEqual([expect.arrayContaining(['c.a.001', 'c.b.005'])]);
     expect((chunksLookupCall[1] as [string[]])[0]).toHaveLength(2);
 
-    // Citations attached per message in chunks_used order.
+    // Citations attached per message in chunks_used order. `id` rides along
+    // since the rehydrator was shared with the share-snapshot path
+    // (todo:131dbb82) — additive, clients that don't need it ignore it.
     expect(body.messages[0]!.citations).toEqual([
-      { tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78',  tier: 'verified' },
-      { tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1', tier: 'verified' },
+      { id: 'c.a.001', tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78',  tier: 'verified' },
+      { id: 'c.b.005', tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1', tier: 'verified' },
     ]);
     expect(body.messages[1]!.citations).toEqual([
-      { tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
+      { id: 'c.a.001', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
     ]);
   });
 
@@ -700,6 +702,56 @@ describe('POST /api/query', () => {
     expect(mockRetrieve).toHaveBeenCalledWith('q', DEFAULT_PREFS);
     expect(mockGetDossier).not.toHaveBeenCalled();
     expect(mockBuildStudy).not.toHaveBeenCalled();
+  });
+
+  // Sessions forked from a public share carry sessions.scope_override
+  // (migration 015, todo:9dde6667): retrieval + prompt building must run
+  // under the frozen scope, not the forker's live preferences. Same
+  // 429-after-assertion-surface trick as the study tests.
+  it('scope_override on a forked session drives retrieval scoping, not live prefs', async () => {
+    const override = {
+      scopeMode: 'whitelist' as const,
+      blockedTraditions: [], blockedTexts: [],
+      whitelistedTraditions: ['gnosticism'], whitelistedTexts: [],
+    };
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({
+      id: 's1', voice: 'scholar', mode: 'chat', study_text_id: null,
+      scope_override: override,
+    });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS); // live prefs say scopeMode 'all'
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+
+    const scoped = { ...DEFAULT_PREFS, ...override };
+    expect(mockRetrieve).toHaveBeenCalledWith('q', scoped);
+    expect(mockBuild).toHaveBeenCalledWith('q', [], scoped, 'free', 0);
+  });
+
+  it('NULL scope_override falls back to live prefs (every non-forked session)', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({
+      id: 's1', voice: 'scholar', mode: 'chat', study_text_id: null,
+      scope_override: null,
+    });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    expect(mockRetrieve).toHaveBeenCalledWith('q', DEFAULT_PREFS);
   });
 
   it('returns 429 with reason=usd when spend cap would overrun (same user-facing message)', async () => {

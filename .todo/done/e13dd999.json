@@ -1,0 +1,30 @@
+{
+  "id": "e13dd999",
+  "type": "chore",
+  "state": "done",
+  "summary": "Fork endpoint: POST /api/shares/[slug]/fork copies snapshot into new session, zeroed accounting",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-12T01:31:45.135Z",
+  "updated_at": "2026-07-12T02:06:01.302Z",
+  "tags": [
+    "share-chat"
+  ],
+  "relationships": {
+    "parent": "36421ff5",
+    "depends_on": [
+      "9dde6667",
+      "131dbb82"
+    ]
+  },
+  "description": "New src/app/api/shares/[slug]/fork/route.ts POST: requireUser; load active share (404 if missing/revoked); INSERT sessions row owned by visitor copying voice (grandfathered, NO tier re-check), mode, study_text_id, scope_override=retrieval_scope, forked_from_share_id=share.id, title from original; INSERT queries rows materialized from messages JSONB: query_text/response_text/chunks_used (bare chunk ids extracted from rich snapshot objects), user_id=visitor, accounting ZEROED: input_tokens=0, output_tokens=0, cached_input_tokens=0, cost_usd=0, model_used=NULL, tier_used=NULL (0-token rows are backfill-cost.ts-safe: recompute yields $0; avoids analytics double-count; user_budgets untouched — fork consumes no quota). Returns {sessionId}. Done: tests for zeroed accounting, settings/scope_override copied, revoked-share 404.",
+  "resolution": {
+    "commit": "78ed66fe6ba2e0b880c96acf3337eb3c30ffb300",
+    "resolved_at": "2026-07-12T02:06:01.302Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/share-fork.test.ts",
+    "test_function": "persists copied turns with zeroed accounting and bare chunk ids",
+    "note": "POST /api/shares/[slug]/fork: requireUser; getShareBySlug (revoked=404); INSERT sessions copying title/voice(grandfathered, no tier re-check)/mode/study_text_id + scope_override=retrieval_scope + forked_from_share_id; per-turn queries INSERT with model/tier NULL and tokens/cost 0 as SQL literals (backfill-cost-safe: 0 tokens reprice to $0), chunks_used = bare ids from snapshot citations, original created_at preserved for ordering. user_budgets untouched. 3 tests; suite 624 passed."
+  }
+}

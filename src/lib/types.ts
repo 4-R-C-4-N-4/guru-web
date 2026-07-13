@@ -129,6 +129,24 @@ export interface UserPreferences {
   preferredVoice: VoiceSlug;
 }
 
+/**
+ * The retrieval-scoping subset of UserPreferences — what
+ * sessions.scope_override (migration 015) freezes onto a session forked
+ * from a public share, so the fork keeps retrieving under the scope the
+ * shared conversation was held under. Deliberately excludes
+ * preferredModel/preferredVoice: those stay live (voice has its own
+ * per-session snapshot in sessions.voice).
+ * Spec: todo:36421ff5.
+ */
+export type RetrievalScope = Pick<
+  UserPreferences,
+  | 'scopeMode'
+  | 'blockedTraditions'
+  | 'blockedTexts'
+  | 'whitelistedTraditions'
+  | 'whitelistedTexts'
+>;
+
 /** Billing-health flag (todo:33d44563). Tracks Stripe's retry state
  *  independent of tier so a paying user with a temporary card decline
  *  keeps Pro access during Stripe's smart-retry window while seeing a

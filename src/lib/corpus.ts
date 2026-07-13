@@ -39,3 +39,48 @@ export const listTraditionsCached = unstable_cache(
   ['corpus:listTraditions'],
   { revalidate: 3600, tags: ['corpus-traditions'] },
 );
+
+/**
+ * Rehydrate bare chunk/summary-node ids into citation display fields via one
+ * batched UNION lookup — chunks and study-mode summary nodes in a single
+ * round-trip (summary-phase-w.md §W5). Extracted from the sessions/[id] GET
+ * so the share-snapshot path (todo:131dbb82) doesn't grow a second copy of
+ * the SQL. Ids no longer present in the corpus are simply absent from the
+ * map — same graceful-drop the session view has always had.
+ *
+ * Values carry the source id so snapshot writers (session_shares.messages)
+ * can persist it; Citation-shaped consumers just ignore the extra field.
+ */
+export async function rehydrateCitations(
+  chunkIds: string[],
+): Promise<Map<string, { id: string; tradition: string; text: string; section: string; tier: 'verified' | 'summary' }>> {
+  const map = new Map<string, { id: string; tradition: string; text: string; section: string; tier: 'verified' | 'summary' }>();
+  if (chunkIds.length === 0) return map;
+
+  const rows = await query<{ id: string; tradition: string; text_name: string; section: string; src: string }>(
+    `SELECT id, tradition, text_name, section, 'chunk' AS src
+     FROM corpus.chunks
+     WHERE id = ANY($1::text[])
+     UNION ALL
+     SELECT s.id,
+            s.tradition,
+            COALESCE(tx.label, w.label)            AS text_name,
+            COALESCE(s.section_span, 'Whole work') AS section,
+            'summary' AS src
+     FROM corpus.summary_nodes s
+     JOIN corpus.works w       ON w.id = s.work_id
+     LEFT JOIN corpus.texts tx ON tx.id = s.text_id
+     WHERE s.id = ANY($1::text[])`,
+    [chunkIds],
+  );
+  for (const r of rows) {
+    map.set(r.id, {
+      id: r.id,
+      tradition: r.tradition,
+      text: r.text_name,
+      section: r.section, // identical to the live X-Citations path; tier carries the summary signal
+      tier: r.src === 'summary' ? 'summary' : 'verified',
+    });
+  }
+  return map;
+}

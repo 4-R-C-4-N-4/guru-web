@@ -21,6 +21,7 @@ import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
+import ShareButton from '@/components/share-button';
 import { parseCitationsBlock } from '@/lib/citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { displayForModelId } from '@/lib/provider-display';
@@ -100,6 +101,31 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // a pure compute (useMemo below) — keeps us out of the
   // react-hooks/set-state-in-effect rule.
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Fork voice downgrade notice (todo:36421ff5 review — say-but-downgrade):
+  // the fork endpoint drops a pro voice for a non-pro forker and
+  // continue-button lands here with ?voiceDowngraded=<from>. Show the
+  // notice once and strip the param (replaceState, same trick as
+  // continue-button's ?continue=1) so refresh doesn't repeat it.
+  const [voiceDowngradedFrom, setVoiceDowngradedFrom] = useState<string | null>(null);
+  useEffect(() => {
+    // ALL the work lives inside the deferred tick, not the effect body:
+    // StrictMode's dev double-mount cancels the first timer via cleanup,
+    // and when the body stripped the param synchronously the second run
+    // found a clean URL and the notice was lost. Deferring wholesale is
+    // idempotent under the double-mount, keeps setState out of the
+    // effect body (react-hooks/set-state-in-effect), and lets the chat
+    // paint before the strip appears.
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const from = params.get('voiceDowngraded');
+      if (!from) return;
+      params.delete('voiceDowngraded');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      setVoiceDowngradedFrom(from);
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
   // Study picker (summary-phase-w.md §W5, reworked per UX review): mode is
   // implicit — leave the work picker empty and it's a chat session; pick a
   // work and the session pins to it. No invalid state exists. The unit is
@@ -426,6 +452,43 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
               padding: 4,
               lineHeight: 0,
             }}
+          >
+            <IconClose size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Share strip (todo:8d6c6886) — only for persisted sessions with at
+          least one assistant turn; renders null otherwise. */}
+      <ShareButton sessionId={sessionId} hasTurns={messages.some(m => m.role === 'assistant')} />
+
+      {/* One-time fork notice: the shared chat used a pro voice this
+          account doesn't have — say-but-downgrade, never silent. */}
+      {voiceDowngradedFrom && (
+        <div
+          role="status"
+          data-testid="voice-downgrade-notice"
+          style={{
+            background: tokens.bg.surface,
+            borderBottom: `1px solid ${tokens.border.subtle}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '6px 24px',
+            fontFamily: tokens.font.mono,
+            fontSize: 11,
+            color: tokens.text.secondary,
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            This conversation was shared with the Pro &lsquo;{voiceDowngradedFrom}&rsquo; voice —
+            your copy continues in the standard voice.
+          </span>
+          <button
+            type="button"
+            onClick={() => setVoiceDowngradedFrom(null)}
+            style={{ background: 'none', border: 'none', color: tokens.text.muted, cursor: 'pointer', padding: 4, lineHeight: 0 }}
+            aria-label="Dismiss"
           >
             <IconClose size={14} />
           </button>
