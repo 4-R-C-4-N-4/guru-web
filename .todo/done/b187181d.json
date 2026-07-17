@@ -1,0 +1,26 @@
+{
+  "id": "b187181d",
+  "type": "feature",
+  "state": "done",
+  "summary": "Add tradition-group preset picker to scope page",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-17T15:06:45.392Z",
+  "updated_at": "2026-07-17T15:17:37.523Z",
+  "description": "The scope page (src/app/(app)/settings/page.tsx, nav-labelled Scope) renders 21 traditions as a flat one-at-a-time toggle list, which got tedious as the corpus grew. Add a preset picker above the tradition list that pre-selects texts in broad strokes.\n\nPresets (curated slug-lists — corpus.traditions carries no era/region/family metadata, so grouping is editorial and lives in code), 3 axes / 10 chips, non-exclusive, members overlap freely:\n- Era: Ancient / Medieval / Modern (Modern = print-era: renaissance_hermeticism, western_esoteric, finnic)\n- Region: Western / Eastern / Near Eastern / Indigenous (egyptian in BOTH Near Eastern and Indigenous, per user)\n- Current: Hermetic / Platonic / Abrahamic\n\nDecisions (user, 2026-07-17): egyptian in both region groups; no single-member presets; carry all three axes.\n\nBehavior: each chip is tri-state mirroring the tradition rows (check=all in scope, dash=partial, plain=off). Off/partial click pulls all member traditions into scope; full click removes them. Absolute set (not a flip) so overlapping presets stay predictable. Flows through existing setCatalog -> debounced autosave; no new save path. Members absent from the live corpus are filtered out and a zero-member preset drops its chip, so adding/removing a tradition later can't leave a dead button.\n\nImplementation (already built on working tree):\n- src/lib/scope-presets.ts — PRESET_AXES data + pure presetState / applyPreset helpers\n- src/app/(app)/settings/page.tsx — import, applyPresetToCatalog handler, picker JSX above the rows\n- src/__tests__/scope-presets.test.ts — 10 tests (state derivation, apply, integrity: every member slug is a real tradition hue key; no <2-member preset)\n\nDone contract: tsc clean; scope-presets tests pass; /settings compiles and serves 200. Full click-through is behind Clerk auth (user to browser-verify layout).",
+  "work": {
+    "branch": "todo/b187181d",
+    "base_branch": "main",
+    "started_at": "2026-07-17T15:17:10.462Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "7a3c1e1b17c96a11236d66bdc5bd33c86be4be4d",
+    "resolved_at": "2026-07-17T15:17:37.523Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/scope-presets.test.ts",
+    "test_function": "presetState",
+    "note": "Preset picker shipped: 3 axes / 10 chips above the tradition list, tri-state, absolute-set apply through existing autosave. tsc clean; 10 preset tests + 12 existing scope tests pass; /settings serves 200. Layout browser-verify pending (Clerk-gated)."
+  }
+}
