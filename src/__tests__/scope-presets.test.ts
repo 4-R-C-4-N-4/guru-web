@@ -1,15 +1,16 @@
 /**
  * src/__tests__/scope-presets.test.ts
  *
- * Tradition-group presets for the scope picker (2026-07-17). Covers the
- * two pure seams the settings UI drives: presetState (chip tri-state) and
- * applyPreset (group toggle). Also guards that every member slug shipped
- * in PRESET_AXES is a real corpus tradition, since presets are curated by
- * hand and a typo would just render a dead chip.
+ * Tradition-group presets for the scope picker (2026-07-17). Presets are a
+ * filter you build up: chips are grey until armed, and the scope is the
+ * union of armed presets (none armed → full corpus). Covers the two pure
+ * seams the settings UI drives — armedMembers (union) and scopeFromArmed
+ * (union → catalog scope) — plus an integrity guard that every curated
+ * member slug is a real corpus tradition.
  */
 import { describe, it, expect } from 'vitest';
-import { hydrateCatalog } from '@/lib/scope';
-import { PRESET_AXES, presetState, applyPreset } from '@/lib/scope-presets';
+import { hydrateCatalog, activeCount } from '@/lib/scope';
+import { PRESET_AXES, armedMembers, scopeFromArmed } from '@/lib/scope-presets';
 import { tokens } from '@/styles/tokens';
 
 const CORPUS = {
@@ -31,57 +32,52 @@ const CORPUS = {
 };
 
 const OPEN_PREFS = { scopeMode: 'all', blockedTraditions: [], blockedTexts: [] };
+const scopedNames = (c: ReturnType<typeof hydrateCatalog>) =>
+  Object.keys(c).filter(n => activeCount(c[n]) > 0).sort();
 
-describe('presetState', () => {
-  it('off when no member text is active', () => {
-    const c = applyPreset(hydrateCatalog(CORPUS, OPEN_PREFS), ['taoism', 'buddhism'], false);
-    expect(presetState(c, ['taoism', 'buddhism'])).toBe('off');
+describe('armedMembers', () => {
+  it('unions the members of every armed preset', () => {
+    // 'eastern' = buddhism/taoism/upanishads/shinto; 'platonic' adds platonism.
+    const u = armedMembers(['eastern', 'platonic']);
+    expect(u.has('taoism')).toBe(true);
+    expect(u.has('buddhism')).toBe(true);
+    expect(u.has('platonism')).toBe(true);
+    expect(u.has('norse')).toBe(false);
   });
 
-  it('on when every member text is active', () => {
-    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
-    expect(presetState(c, ['taoism', 'buddhism'])).toBe('on');
-  });
-
-  it('partial when some member texts are active', () => {
-    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
-    c.taoism.texts[1].active = false; // Zhuangzi off
-    expect(presetState(c, ['taoism', 'buddhism'])).toBe('partial');
-  });
-
-  it('counts only members present in the catalog (absent slugs ignored)', () => {
-    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
-    // 'sufism' isn't in CORPUS — presence-filtered out, taoism decides.
-    expect(presetState(c, ['taoism', 'sufism'])).toBe('on');
-  });
-
-  it('off when no member is present at all', () => {
-    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
-    expect(presetState(c, ['sufism', 'norse'])).toBe('off');
+  it('skips unknown preset ids', () => {
+    expect(armedMembers(['eastern', 'nope']).has('taoism')).toBe(true);
+    expect([...armedMembers(['nope'])]).toEqual([]);
   });
 });
 
-describe('applyPreset', () => {
-  it('turns member traditions on without touching non-members', () => {
-    const c = applyPreset(hydrateCatalog(CORPUS, OPEN_PREFS), ['taoism', 'buddhism', 'platonism'], false);
-    const next = applyPreset(c, ['taoism', 'buddhism'], true);
-    expect(next.taoism.texts.every(t => t.active)).toBe(true);
-    expect(next.buddhism.texts[0].active).toBe(true);
-    expect(next.platonism.texts[0].active).toBe(false); // untouched
+describe('scopeFromArmed', () => {
+  it('no preset armed → full corpus in scope', () => {
+    const c = scopeFromArmed(hydrateCatalog(CORPUS, OPEN_PREFS), []);
+    expect(scopedNames(c)).toEqual(['buddhism', 'platonism', 'taoism']);
   });
 
-  it('turns member traditions off', () => {
-    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
-    const next = applyPreset(c, ['taoism'], false);
-    expect(next.taoism.texts.every(t => !t.active)).toBe(true);
-    expect(next.buddhism.texts[0].active).toBe(true);
+  it('one preset armed → only its present members are in scope', () => {
+    // 'eastern' includes buddhism + taoism (and absent shinto/upanishads).
+    const c = scopeFromArmed(hydrateCatalog(CORPUS, OPEN_PREFS), ['eastern']);
+    expect(scopedNames(c)).toEqual(['buddhism', 'taoism']);
   });
 
-  it('is an absolute set — re-applying on top of a partial fully fills it', () => {
-    const c = hydrateCatalog(CORPUS, OPEN_PREFS);
-    c.taoism.texts[1].active = false; // partial
-    const next = applyPreset(c, ['taoism'], true);
-    expect(next.taoism.texts.every(t => t.active)).toBe(true);
+  it('arming a second preset widens to the union', () => {
+    const c = scopeFromArmed(hydrateCatalog(CORPUS, OPEN_PREFS), ['eastern', 'platonic']);
+    expect(scopedNames(c)).toEqual(['buddhism', 'platonism', 'taoism']);
+  });
+
+  it('is an absolute set — fully fills every member tradition', () => {
+    const c = scopeFromArmed(hydrateCatalog(CORPUS, OPEN_PREFS), ['eastern']);
+    expect(c.taoism.texts.every(t => t.active)).toBe(true); // both texts on
+    expect(c.platonism.texts.every(t => !t.active)).toBe(true); // out of scope
+  });
+
+  it('absent member slugs are harmless (no throw, ignored)', () => {
+    // 'indigenous' = finnic/celtic/norse/egyptian, none present in CORPUS.
+    const c = scopeFromArmed(hydrateCatalog(CORPUS, OPEN_PREFS), ['indigenous']);
+    expect(scopedNames(c)).toEqual([]); // nothing in scope, but no error
   });
 });
 
@@ -95,6 +91,11 @@ describe('PRESET_AXES integrity', () => {
         }
       }
     }
+  });
+
+  it('preset ids are unique across all axes', () => {
+    const ids = PRESET_AXES.flatMap(a => a.presets.map(p => p.id));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('no preset is left with fewer than two members', () => {

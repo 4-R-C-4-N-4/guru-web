@@ -25,7 +25,7 @@
  * in node with no DOM — same seam pattern as scope.ts.
  */
 
-import { activeCount, type Catalog } from './scope';
+import type { Catalog } from './scope';
 
 export interface Preset {
   id: string;
@@ -123,41 +123,41 @@ export const PRESET_AXES: PresetAxis[] = [
   },
 ];
 
-export type PresetState = 'on' | 'partial' | 'off';
+const ALL_PRESETS: Preset[] = PRESET_AXES.flatMap(a => a.presets);
+const BY_ID: Record<string, Preset> = Object.fromEntries(ALL_PRESETS.map(p => [p.id, p]));
 
 /**
- * A preset's tri-state, derived from member texts present in the catalog.
- * 'on' = every member text is active, 'off' = none is (also the case when
- * no member is present), 'partial' = some are. Mirrors the tradition row's
- * own tri-state so a chip and its rows never contradict each other.
+ * The union of every member tradition across the armed presets. Unknown
+ * ids are skipped; the result may include slugs absent from any given
+ * catalog (scopeFromArmed only reads it as a membership test, so absent
+ * slugs are harmless).
  */
-export function presetState(catalog: Catalog, members: string[]): PresetState {
-  let total = 0;
-  let active = 0;
-  for (const name of members) {
-    const t = catalog[name];
-    if (!t) continue;
-    total += t.texts.length;
-    active += activeCount(t);
+export function armedMembers(armed: Iterable<string>): Set<string> {
+  const union = new Set<string>();
+  for (const id of armed) {
+    const p = BY_ID[id];
+    if (p) for (const m of p.members) union.add(m);
   }
-  if (total === 0 || active === 0) return 'off';
-  if (active === total) return 'on';
-  return 'partial';
+  return union;
 }
 
 /**
- * Set every member tradition's texts to `active`, leaving non-members
- * untouched. Off/partial chips turn members fully on; on chips turn them
- * fully off — same click semantics as toggleTradition, extended to a
- * group. Overlapping presets stay predictable because each apply is an
- * absolute set, not a relative flip.
+ * Compute the catalog scope from the armed preset ids. Presets act as an
+ * additive filter you build up: a tradition is in scope iff it belongs to
+ * at least one armed preset, everything else is out. NO preset armed means
+ * the full corpus (the picker isn't constraining anything) — not an empty
+ * scope. This is an absolute set at tradition granularity, so partial
+ * per-text selections don't survive a chip click, by design: chips are the
+ * broad-strokes control, the rows below are the fine-tuning.
  */
-export function applyPreset(catalog: Catalog, members: string[], active: boolean): Catalog {
-  const set = new Set(members);
+export function scopeFromArmed(catalog: Catalog, armed: Iterable<string>): Catalog {
+  const ids = [...armed];
+  const union = ids.length === 0 ? null : armedMembers(ids);
+  const inScope = union === null ? () => true : (name: string) => union.has(name);
   return Object.fromEntries(
     Object.entries(catalog).map(([name, t]) => [
       name,
-      set.has(name) ? { ...t, texts: t.texts.map(x => ({ ...x, active })) } : t,
+      { ...t, texts: t.texts.map(x => ({ ...x, active: inScope(name) })) },
     ]),
   );
 }
