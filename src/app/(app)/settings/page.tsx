@@ -33,6 +33,7 @@ import { PROVIDER_DISPLAY } from '@/lib/provider-display';
 import type { VoiceSlug } from '@/lib/types';
 
 import { hydrateCatalog, buildScopeSave, activeCount, scopeTotals, type Catalog } from '@/lib/scope';
+import { PRESET_AXES, presetState, applyPreset } from '@/lib/scope-presets';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -236,6 +237,13 @@ export default function SettingsPage() {
     }])));
   }, []);
 
+  // Apply a tradition-group preset: an off/partial chip turns all its
+  // member traditions fully on, an on chip turns them fully off. Absolute
+  // set (not a flip) so overlapping presets stay predictable.
+  const applyPresetToCatalog = useCallback((members: string[], active: boolean) => {
+    setCatalog(prev => applyPreset(prev, members, active));
+  }, []);
+
   const toggleExpand = useCallback((name: string) => {
     setExpanded(prev => {
       const next = new Set(prev);
@@ -361,6 +369,54 @@ export default function SettingsPage() {
             <p className="t-ui" style={{ color: tokens.text.muted, margin: '0 0 14px' }}>
               Sources you exclude are never retrieved or cited.
             </p>
+
+            {/* Preset picker: broad tradition groupings so common scopes
+                are one click instead of many. Chips are tri-state like the
+                rows below (on / partial / off); axes and members overlap
+                freely. Presets whose members are all absent from this
+                corpus are dropped so no dead chip renders. */}
+            <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {PRESET_AXES.map(({ axis, presets }) => {
+                const live = presets.filter(p => p.members.some(m => catalog[m]));
+                if (live.length === 0) return null;
+                return (
+                  <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span className="t-data" style={{ fontSize: 10, color: tokens.text.muted, minWidth: 52, textTransform: 'uppercase', letterSpacing: 1 }}>
+                      {axis}
+                    </span>
+                    {live.map(p => {
+                      const present = p.members.filter(m => catalog[m]);
+                      const state   = presetState(catalog, present);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => applyPresetToCatalog(present, state !== 'on')}
+                          aria-pressed={state === 'on'}
+                          title={present.map(m => m.replace(/_/g, ' ')).join(', ')}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: mobile ? '6px 11px' : '4px 10px',
+                            minHeight: mobile ? 34 : 'auto',
+                            borderRadius: 999, cursor: 'pointer',
+                            fontFamily: 'var(--font-mono)', fontSize: 11,
+                            background: state === 'on'
+                              ? `${tokens.text.accent}22`
+                              : 'none',
+                            border: `1px solid ${state === 'off' ? tokens.border.medium : `${tokens.text.accent}88`}`,
+                            color: state === 'off' ? tokens.text.secondary : tokens.text.accent,
+                            transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+                          }}
+                        >
+                          {state === 'on'  && <IconCheck size={10} strokeWidth={2} />}
+                          {state === 'partial' && <IconMinus size={10} strokeWidth={2} />}
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
 
             {Object.entries(catalog).map(([name, t]) => {
               const color    = traditionColor(name);
