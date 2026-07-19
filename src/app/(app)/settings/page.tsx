@@ -33,6 +33,7 @@ import { PROVIDER_DISPLAY } from '@/lib/provider-display';
 import type { VoiceSlug } from '@/lib/types';
 
 import { hydrateCatalog, buildScopeSave, activeCount, scopeTotals, type Catalog } from '@/lib/scope';
+import { PRESET_AXES, scopeFromArmed } from '@/lib/scope-presets';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -74,6 +75,11 @@ export default function SettingsPage() {
   const [status,   setStatus]   = useState<LoadStatus>('loading');
   const [saveState, setSaveState] = useState<SaveStatus>('idle');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Armed preset chips. Ephemeral UI selection — NOT persisted and NOT
+  // derived from the saved scope. Chips build up an additive filter (scope
+  // = union of armed presets); any manual row edit clears them so a chip's
+  // highlight can never contradict the actual per-tradition state.
+  const [armed, setArmed] = useState<Set<string>>(new Set());
   const [tier,     setTier]     = useState<'free' | 'pro' | null>(null);
   const [preferredModel, setPreferredModel] = useState<CuratedSlug | null>(null);
   const [modelSaving, setModelSaving] = useState(false);
@@ -198,6 +204,7 @@ export default function SettingsPage() {
   }, []);
 
   const toggleTradition = useCallback((name: string) => {
+    setArmed(new Set());
     setCatalog(prev => {
       const wasActive = activeCount(prev[name]) > 0;
       return {
@@ -211,6 +218,7 @@ export default function SettingsPage() {
   }, []);
 
   const toggleText = useCallback((name: string, label: string) => {
+    setArmed(new Set());
     setCatalog(prev => ({
       ...prev,
       [name]: {
@@ -223,6 +231,7 @@ export default function SettingsPage() {
   // Solo: keep only this tradition in scope. The mixer-console move for
   // "compare X against nothing else".
   const soloTradition = useCallback((name: string) => {
+    setArmed(new Set());
     setCatalog(prev => Object.fromEntries(Object.entries(prev).map(([n, t]) => [n, {
       ...t,
       texts: t.texts.map(x => ({ ...x, active: n === name })),
@@ -230,11 +239,22 @@ export default function SettingsPage() {
   }, []);
 
   const includeAll = useCallback(() => {
+    setArmed(new Set());
     setCatalog(prev => Object.fromEntries(Object.entries(prev).map(([n, t]) => [n, {
       ...t,
       texts: t.texts.map(x => ({ ...x, active: true })),
     }])));
   }, []);
+
+  // Arm/disarm a preset chip. The scope becomes the union of all armed
+  // presets (empty → full corpus). Chips are grey until armed; clicking
+  // one narrows to that group, clicking another widens to the union.
+  const togglePreset = useCallback((presetId: string) => {
+    const next = new Set(armed);
+    if (next.has(presetId)) next.delete(presetId); else next.add(presetId);
+    setArmed(next);
+    setCatalog(cat => scopeFromArmed(cat, next));
+  }, [armed]);
 
   const toggleExpand = useCallback((name: string) => {
     setExpanded(prev => {
@@ -361,6 +381,51 @@ export default function SettingsPage() {
             <p className="t-ui" style={{ color: tokens.text.muted, margin: '0 0 14px' }}>
               Sources you exclude are never retrieved or cited.
             </p>
+
+            {/* Preset picker: broad tradition groupings as a filter you
+                build up. Chips are grey until armed; arming one narrows the
+                scope to that group, arming more widens to the union, and
+                clearing them all reopens the full corpus. Any manual row
+                edit disarms every chip. Presets whose members are all
+                absent from this corpus are dropped so no dead chip renders. */}
+            <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {PRESET_AXES.map(({ axis, presets }) => {
+                const live = presets.filter(p => p.members.some(m => catalog[m]));
+                if (live.length === 0) return null;
+                return (
+                  <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span className="t-data" style={{ fontSize: 10, color: tokens.text.muted, minWidth: 52, textTransform: 'uppercase', letterSpacing: 1 }}>
+                      {axis}
+                    </span>
+                    {live.map(p => {
+                      const on = armed.has(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => togglePreset(p.id)}
+                          aria-pressed={on}
+                          title={p.members.filter(m => catalog[m]).map(m => m.replace(/_/g, ' ')).join(', ')}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: mobile ? '6px 11px' : '4px 10px',
+                            minHeight: mobile ? 34 : 'auto',
+                            borderRadius: 999, cursor: 'pointer',
+                            fontFamily: 'var(--font-mono)', fontSize: 11,
+                            background: on ? `${tokens.text.accent}22` : 'none',
+                            border: `1px solid ${on ? `${tokens.text.accent}88` : tokens.border.medium}`,
+                            color: on ? tokens.text.accent : tokens.text.secondary,
+                            transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+                          }}
+                        >
+                          {on && <IconCheck size={10} strokeWidth={2} />}
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
 
             {Object.entries(catalog).map(([name, t]) => {
               const color    = traditionColor(name);
