@@ -1,13 +1,13 @@
 {
   "id": "7b60b6fb",
   "type": "feature",
-  "state": "open",
+  "state": "active",
   "summary": "Ask-about-this-passage: chunk page button that opens chat pre-scoped to the text/passage",
   "source": {
     "type": "human"
   },
   "created_at": "2026-07-23T15:26:30.167Z",
-  "updated_at": "2026-07-23T15:26:30.200Z",
+  "updated_at": "2026-07-23T22:02:24.670Z",
   "files": [
     {
       "path": "src/app/read/[tradition]/[textId]/[n]/page.tsx"

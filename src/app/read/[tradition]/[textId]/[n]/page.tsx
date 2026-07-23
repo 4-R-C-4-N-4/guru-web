@@ -18,7 +18,7 @@ import {
   getChunkPage, getChunkTags, getRelatedPassages,
   type ChunkNav, type RelatedPassage,
 } from '@/lib/reader';
-import { pathToChunkId, chunkIdToPath } from '@/lib/read-path';
+import { pathToChunkId, chunkIdToPath, askAboutHref } from '@/lib/read-path';
 import { tokens, type Tier } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
@@ -154,6 +154,21 @@ export default async function ChunkPage({ params }: { params: Params }) {
         >
           {chunk.body}
         </div>
+
+        {/* The funnel loop-closer (todo:7b60b6fb): reader → chat, pinned to
+            this passage's work in study mode with the question prefilled. */}
+        <Link
+          href={askAboutHref(chunk.pin_text_id, chunk.text_label, chunk.section)}
+          style={{
+            display: 'inline-block', marginTop: 18,
+            fontFamily: tokens.font.mono, fontSize: 11, letterSpacing: 1,
+            textTransform: 'uppercase', textDecoration: 'none',
+            color: tokens.text.accent, border: `1px solid ${tokens.border.accent}`,
+            padding: '8px 14px', borderRadius: 3,
+          }}
+        >
+          § Ask Guru about this passage →
+        </Link>
 
         {tags.length > 0 && (
           <section style={{ marginTop: 36 }}>

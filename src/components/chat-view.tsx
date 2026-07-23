@@ -123,11 +123,25 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
     const t = setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
       const from = params.get('voiceDowngraded');
-      if (!from) return;
+      // Ask-about-this-passage deep link from the reader (todo:7b60b6fb):
+      // ?study=<member text id> pins the session to the passage's work and
+      // ?q= prefills (never auto-sends) the question — the user stays in
+      // control of the first message. Params strip like voiceDowngraded so
+      // refresh doesn't re-seed over an ongoing session.
+      const study = params.get('study');
+      const seedQ = params.get('q');
+      if (!from && !study && !seedQ) return;
       params.delete('voiceDowngraded');
+      params.delete('study');
+      params.delete('q');
       const qs = params.toString();
       window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
-      setVoiceDowngradedFrom(from);
+      if (from) setVoiceDowngradedFrom(from);
+      if (study) {
+        setStudyTextId(study);
+        setStudyLabel('study session'); // refined once /api/corpus works load
+      }
+      if (seedQ) setInput(seedQ);
     }, 0);
     return () => clearTimeout(t);
   }, []);
@@ -158,6 +172,13 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
     }
     return m;
   }, [works]);
+  // A ?study= deep link sets the pin before the works list arrives; refine
+  // the placeholder label once the matching work is known (todo:7b60b6fb).
+  useEffect(() => {
+    if (!studyTextId || works.length === 0) return;
+    const w = works.find(x => x.pin_text_id === studyTextId);
+    if (w) setStudyLabel(w.label);
+  }, [works, studyTextId]);
   const mode: 'chat' | 'study' = studyTextId || initialMode === 'study' ? 'study' : 'chat';
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
