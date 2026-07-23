@@ -106,6 +106,14 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // a pure compute (useMemo below) — keeps us out of the
   // react-hooks/set-state-in-effect rule.
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Study-pin state, declared ahead of the param-strip effect below which
+  // seeds it from ?study= (todo:7b60b6fb). Picker UI + works fetch live
+  // further down with the rest of the study section.
+  interface StudyWork { id: string; label: string; tradition: string; members: number; pin_text_id: string }
+  const [studyTextId, setStudyTextId] = useState<string>('');
+  const [studyLabel, setStudyLabel] = useState<string | null>(
+    initialMode === 'study' ? (studyToc?.work_label ?? 'study session') : null);
+  const [works, setWorks] = useState<StudyWork[]>([]);
   // Fork voice downgrade notice (todo:36421ff5 review — say-but-downgrade):
   // the fork endpoint drops a pro voice for a non-pro forker and
   // continue-button lands here with ?voiceDowngraded=<from>. Show the
@@ -149,12 +157,8 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   // implicit — leave the work picker empty and it's a chat session; pick a
   // work and the session pins to it. No invalid state exists. The unit is
   // the WORK (52 entries grouped by tradition), pinned via its first member
-  // text id (the server resolves any member to the same work).
-  interface StudyWork { id: string; label: string; tradition: string; members: number; pin_text_id: string }
-  const [studyTextId, setStudyTextId] = useState<string>('');
-  const [studyLabel, setStudyLabel] = useState<string | null>(
-    initialMode === 'study' ? (studyToc?.work_label ?? 'study session') : null);
-  const [works, setWorks] = useState<StudyWork[]>([]);
+  // text id (the server resolves any member to the same work). State is
+  // declared above the param-strip effect (todo:7b60b6fb seeds it).
   useEffect(() => {
     if (sessionId || works.length > 0) return;
     fetch('/api/corpus')
@@ -172,13 +176,14 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
     }
     return m;
   }, [works]);
-  // A ?study= deep link sets the pin before the works list arrives; refine
-  // the placeholder label once the matching work is known (todo:7b60b6fb).
-  useEffect(() => {
-    if (!studyTextId || works.length === 0) return;
-    const w = works.find(x => x.pin_text_id === studyTextId);
-    if (w) setStudyLabel(w.label);
-  }, [works, studyTextId]);
+  // A ?study= deep link sets the pin before the works list arrives; the
+  // display label derives from the works list when resolvable, falling back
+  // to whatever was set (picker onChange / the seed placeholder). Pure
+  // compute — no setState-in-effect (todo:7b60b6fb).
+  const resolvedStudyLabel = useMemo(
+    () => (studyTextId ? works.find(x => x.pin_text_id === studyTextId)?.label : undefined) ?? studyLabel,
+    [works, studyTextId, studyLabel],
+  );
   const mode: 'chat' | 'study' = studyTextId || initialMode === 'study' ? 'study' : 'chat';
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
@@ -409,7 +414,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
       {/* Studying strip (W5 + UX review): the persistent mode indicator for
           study sessions — visible from the first message, not just on resume.
           Expands to the dossier TOC when GET /api/sessions/[id] shipped one. */}
-      {mode === 'study' && (studyLabel || studyToc) && (
+      {mode === 'study' && (resolvedStudyLabel || studyToc) && (
         <details data-testid="study-toc" style={{
           background: tokens.bg.surface,
           borderBottom: `1px solid ${tokens.border.subtle}`,
@@ -417,7 +422,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
           fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.secondary,
         }}>
           <summary style={{ cursor: 'pointer', color: tokens.text.accent, letterSpacing: 1 }}>
-            § STUDYING — {studyToc?.work_label ?? studyLabel}
+            § STUDYING — {studyToc?.work_label ?? resolvedStudyLabel}
             {studyToc ? ` · contents (${studyToc.entries.length})` : ''}
           </summary>
           {studyToc ? (
@@ -672,7 +677,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
                 handleSend();
               }
             }}
-            placeholder={studyLabel ? `Ask about ${studyLabel}...` : "Ask across traditions..."}
+            placeholder={resolvedStudyLabel ? `Ask about ${resolvedStudyLabel}...` : "Ask across traditions..."}
             rows={1}
             style={{
               flex: 1, padding: mobile ? '13px 12px' : '12px 16px',
