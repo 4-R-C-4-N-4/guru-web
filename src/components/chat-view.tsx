@@ -23,6 +23,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import Citation from '@/components/citation';
 import ShareButton from '@/components/share-button';
 import { parseCitationsBlock } from '@/lib/citations';
+import { remarkCiteLinks } from '@/lib/remark-citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import { displayForModelId } from '@/lib/provider-display';
 import { hydrateCatalog, scopeTotals, type ScopeTotals } from '@/lib/scope';
@@ -30,6 +31,10 @@ import { IconClose } from '@/components/icons';
 import type { QueryExpansion } from '@/lib/types';
 
 interface CitationData {
+  /** Chunk or summary-node id — present on server-built citations
+   *  (X-Citations, rehydrate), absent on parsed-block fallbacks. Links the
+   *  card and inline brackets into the /read source library. */
+  id?: string;
   tradition: string;
   text: string;
   section: string;
@@ -586,7 +591,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
                   </div>
                 )}
                 <div className="md" style={{ fontFamily: tokens.font.display, fontSize: mobile ? 14 : 15, color: tokens.text.primary, lineHeight: 1.7, marginBottom: cards.length ? 14 : 0, overflowWrap: 'anywhere' }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkCiteLinks(cards)]} components={MD_COMPONENTS}>
                     {bodyText}
                   </ReactMarkdown>
                 </div>

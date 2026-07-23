@@ -396,6 +396,7 @@ export async function POST(req: Request) {
   const citationsHeader = chunks.length > 0
     ? encodeURIComponent(JSON.stringify(
         chunks.map(c => ({
+          id: c.id, // reader deep-link (/read) — citationHref maps chunk and sum: ids
           tradition: c.tradition,
           text: c.text_name,
           section: c.section,

@@ -935,8 +935,8 @@ describe('POST /api/query', () => {
     const header = res.headers.get('X-Citations');
     expect(header).toBeTruthy();
     expect(JSON.parse(decodeURIComponent(header!))).toEqual([
-      { tradition: 'neoplatonism', text: 'Enneads', section: 'V.1', tier: 'verified' },
-      { tradition: 'taoism', text: 'Tao Te Ching', section: '1', tier: 'proposed' },
+      { id: 'c1', tradition: 'neoplatonism', text: 'Enneads', section: 'V.1', tier: 'verified' },
+      { id: 'c2', tradition: 'taoism', text: 'Tao Te Ching', section: '1', tier: 'proposed' },
     ]);
     await res.text();
   });

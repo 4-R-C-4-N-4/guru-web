@@ -129,8 +129,10 @@ describe('chat-view markdown rendering', () => {
 
   it('wraps the assistant text in <ReactMarkdown> with remarkGfm', () => {
     // The assistant render path uses ReactMarkdown; remarkGfm is passed
-    // in remarkPlugins so tables/strikethrough/task lists/autolinks work.
-    expect(SRC).toMatch(/<ReactMarkdown[^>]*remarkPlugins=\{\[remarkGfm\]\}/);
+    // in remarkPlugins so tables/strikethrough/task lists/autolinks work,
+    // followed by remarkCiteLinks(cards) so inline [Trad | Text | Section]
+    // brackets link into the /read source library.
+    expect(SRC).toMatch(/<ReactMarkdown[^>]*remarkPlugins=\{\[remarkGfm,\s*remarkCiteLinks\(cards\)\]\}/);
     // The child is the CITATIONS-stripped body (bodyText), not the raw msg.text
     // — the raw tail is rendered as styled cards instead (todo:50b9a90a).
     expect(SRC).toMatch(/\{bodyText\}\s*<\/ReactMarkdown>/);

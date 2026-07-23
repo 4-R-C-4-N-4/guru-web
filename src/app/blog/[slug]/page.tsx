@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getPublishedBySlug } from '@/lib/blog-public';
 import { parseCitationsBlock } from '@/lib/citations';
+import { remarkCiteLinks } from '@/lib/remark-citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import Citation from '@/components/citation';
 import { tokens } from '@/styles/tokens';
@@ -47,8 +48,8 @@ export default async function BlogPostPage(
   const parsed = post.chunks_used.length > 0 ? null : parseCitationsBlock(post.content);
   const bodyContent = parsed ? parsed.body : post.content;
   const sources = post.chunks_used.length > 0
-    ? post.chunks_used.map(s => ({ key: s.id, tradition: s.tradition, text: s.text_name, section: s.section, tier: s.tier, quote: undefined as string | undefined }))
-    : (parsed?.citations ?? []).map((c, i) => ({ key: `c${i}`, tradition: c.tradition, text: c.text, section: c.section, tier: c.tier, quote: c.quote }));
+    ? post.chunks_used.map(s => ({ key: s.id, id: s.id as string | undefined, tradition: s.tradition, text: s.text_name, section: s.section, tier: s.tier, quote: undefined as string | undefined }))
+    : (parsed?.citations ?? []).map((c, i) => ({ key: `c${i}`, id: undefined as string | undefined, tradition: c.tradition, text: c.text, section: c.section, tier: c.tier, quote: c.quote }));
 
   return (
     <main
@@ -108,7 +109,7 @@ export default async function BlogPostPage(
             lineHeight: 1.8,
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkCiteLinks(sources)]} components={MD_COMPONENTS}>
             {bodyContent}
           </ReactMarkdown>
         </div>
@@ -130,6 +131,7 @@ export default async function BlogPostPage(
             {sources.map(src => (
               <Citation
                 key={src.key}
+                id={src.id}
                 tradition={src.tradition}
                 text={src.text}
                 section={src.section}
