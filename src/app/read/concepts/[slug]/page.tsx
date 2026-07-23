@@ -138,9 +138,7 @@ export default async function ConceptPage(
         <nav style={{ marginBottom: 24 }}>
           <Link href="/read" style={crumbStyle}>Library</Link>
           <span style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted }}> / </span>
-          <span style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.muted, letterSpacing: 1, textTransform: 'uppercase' }}>
-            Concept
-          </span>
+          <Link href="/read/concepts" style={crumbStyle}>Concepts</Link>
         </nav>
 
         <header style={{ marginBottom: 12 }}>
