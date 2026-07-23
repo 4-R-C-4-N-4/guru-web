@@ -64,11 +64,21 @@ jobs:
 
       # Join the tailnet as an ephemeral node — auto-cleans up after the run.
       # ACL restricts tag:ci to tag:server:tcp:22 only.
+      # OAuth client (scoped to auth_keys write + tag:ci) instead of a static
+      # authkey: authkeys hard-expire at 90 days and take deploys down with
+      # them. The action mints a fresh ephemeral, preauthorized key per run.
       - name: Tailscale
         uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade  # v3.3.0
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
+
+      # The action's retry loop doesn't fail the step when every attempt
+      # fails (bit us 2026-07-23: dead authkey surfaced two steps later as a
+      # confusing MagicDNS resolution error). Fail fast, at the source.
+      - name: Verify tailnet join
+        run: tailscale status --peers=false
 
       # Plain ssh/scp instead of a wrapper action — one fewer third party in
       # the deploy path. accept-new is fine here: the tailnet already
