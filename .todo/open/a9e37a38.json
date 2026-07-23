@@ -1,0 +1,22 @@
+{
+  "id": "a9e37a38",
+  "type": "feature",
+  "state": "open",
+  "summary": "Concept index at /read/concepts: domain→family→concept browse page",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-23T15:26:30.084Z",
+  "updated_at": "2026-07-23T15:26:30.120Z",
+  "files": [
+    {
+      "path": "src/app/read/concepts/[slug]/page.tsx"
+    }
+  ],
+  "tags": [
+    "reader",
+    "concepts",
+    "seo"
+  ],
+  "description": "The 110 concept constellation pages shipped in PR #106 are only reachable through chunk-page tag chips — there is no index. Add /read/concepts: a browse page over the domain→family→concept hierarchy (api/hierarchy and the concept_families tables already expose it), each entry linking to its constellation page with passage counts. Makes the concept layer a first-class entrance to the library and adds a strong landing page; add it to the sitemap alongside the 110 concept URLs already listed."
+}
