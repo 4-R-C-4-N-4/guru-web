@@ -13,7 +13,7 @@
  */
 import type { MetadataRoute } from 'next';
 import { listPublishedCached } from '@/lib/blog-public';
-import { query } from '@/lib/db';
+import { listSitemapCorpusCached } from '@/lib/reader';
 import { chunkIdToPath } from '@/lib/read-path';
 import { SITE_URL } from '@/lib/site';
 
@@ -23,14 +23,12 @@ import { SITE_URL } from '@/lib/site';
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Reader URLs: every tradition, text TOC and chunk page (~5,150 URLs,
-  // well under the 50k sitemap cap). Two cheap id-only scans; the corpus
-  // only changes on operator re-import, and crawler fetches of the reader
-  // pages themselves are the expensive part, not this listing.
-  const [posts, textRows, chunks] = await Promise.all([
+  // Reader URLs: every tradition, text TOC and chunk page (~4.6k URLs,
+  // well under the 50k sitemap cap). Both reads are cached (60s posts,
+  // 3600s corpus scans) so crawler fetches don't add query load.
+  const [posts, { texts: textRows, chunks }] = await Promise.all([
     listPublishedCached(),
-    query<{ id: string; tradition: string }>(`SELECT id, tradition FROM texts ORDER BY id`),
-    query<{ id: string }>(`SELECT id FROM chunks ORDER BY id`),
+    listSitemapCorpusCached(),
   ]);
   const traditions = [...new Set(textRows.map(t => t.tradition))];
 

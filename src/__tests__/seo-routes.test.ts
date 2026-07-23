@@ -10,20 +10,18 @@
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 
 vi.mock('@/lib/blog-public', () => ({ listPublishedCached: vi.fn() }));
-vi.mock('@/lib/db', () => ({ query: vi.fn(), one: vi.fn(), exec: vi.fn() }));
+vi.mock('@/lib/reader', () => ({ listSitemapCorpusCached: vi.fn() }));
 
 import robots from '@/app/robots';
 import sitemap from '@/app/sitemap';
 import { listPublishedCached } from '@/lib/blog-public';
-import { query } from '@/lib/db';
+import { listSitemapCorpusCached } from '@/lib/reader';
 
 const mList = listPublishedCached as MockedFunction<typeof listPublishedCached>;
-const mQuery = query as MockedFunction<typeof query>;
+const mCorpus = listSitemapCorpusCached as MockedFunction<typeof listSitemapCorpusCached>;
 
-// sitemap issues two reader scans: texts (id, tradition) then chunks (id).
 function mockCorpus(texts: { id: string; tradition: string }[], chunks: { id: string }[]) {
-  mQuery.mockImplementation(async (sql: string) =>
-    (/FROM texts/.test(sql) ? texts : chunks) as never);
+  mCorpus.mockResolvedValue({ texts, chunks });
 }
 
 beforeEach(() => vi.clearAllMocks());

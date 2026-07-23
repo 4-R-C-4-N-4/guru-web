@@ -15,6 +15,7 @@
  * order across the texts of a grouped work is works.member_text_ids.
  */
 
+import { unstable_cache } from 'next/cache';
 import { query, one } from './db';
 
 /* ---------------------------------- types --------------------------------- */
@@ -396,6 +397,29 @@ export async function getChunkSections(chunkIds: string[]): Promise<{ id: string
     [chunkIds],
   );
 }
+
+/* --------------------------------- sitemap -------------------------------- */
+
+/** Id-only scans backing the reader's sitemap entries. */
+export async function listSitemapCorpus(): Promise<{
+  texts: { id: string; tradition: string }[];
+  chunks: { id: string }[];
+}> {
+  const [texts, chunks] = await Promise.all([
+    query<{ id: string; tradition: string }>(`SELECT id, tradition FROM texts ORDER BY id`),
+    query<{ id: string }>(`SELECT id FROM chunks ORDER BY id`),
+  ]);
+  return { texts, chunks };
+}
+
+/** Cached for the sitemap route: the corpus only changes on operator
+ *  re-import, so crawler fetches of /sitemap.xml share one scan instead of
+ *  re-reading ~4.4k ids per hit — same contract as listTraditionsCached. */
+export const listSitemapCorpusCached = unstable_cache(
+  () => listSitemapCorpus(),
+  ['reader:listSitemapCorpus'],
+  { revalidate: 3600, tags: ['corpus-traditions'] },
+);
 
 /** Member texts of a work with labels, in reading order — the child list
  *  for whole-work (level-2) summary pages. */

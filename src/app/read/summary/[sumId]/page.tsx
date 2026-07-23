@@ -20,9 +20,16 @@ export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ sumId: string }>;
 
+/** Route params arrive percent-decoded from the App Router; this second
+ *  decode only matters for clients that double-encode. A stray raw `%` in
+ *  the segment must 404, not throw a URIError into a 500. */
+function decodeSumId(raw: string): string {
+  try { return decodeURIComponent(raw); } catch { return raw; }
+}
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { sumId } = await params;
-  const node = await getSummaryPage(decodeURIComponent(sumId));
+  const node = await getSummaryPage(decodeSumId(sumId));
   if (!node) return { title: 'Not found — Guru' };
   const scope = node.level === 2 ? node.work_label : `${node.text_label}${node.section_span ? `, ${node.section_span}` : ''}`;
   return {
@@ -34,7 +41,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function SummaryPage({ params }: { params: Params }) {
   const { sumId } = await params;
-  const id = decodeURIComponent(sumId);
+  const id = decodeSumId(sumId);
   if (!id.startsWith('sum:')) notFound();
   const node = await getSummaryPage(id);
   if (!node) notFound();
