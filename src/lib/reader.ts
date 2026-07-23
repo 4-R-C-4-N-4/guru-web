@@ -404,20 +404,25 @@ export async function getChunkSections(chunkIds: string[]): Promise<{ id: string
 export async function listSitemapCorpus(): Promise<{
   texts: { id: string; tradition: string }[];
   chunks: { id: string }[];
+  concepts: { id: string }[];
 }> {
-  const [texts, chunks] = await Promise.all([
+  const [texts, chunks, concepts] = await Promise.all([
     query<{ id: string; tradition: string }>(`SELECT id, tradition FROM texts ORDER BY id`),
     query<{ id: string }>(`SELECT id FROM chunks ORDER BY id`),
+    query<{ id: string }>(`SELECT id FROM concepts ORDER BY id`),
   ]);
-  return { texts, chunks };
+  return { texts, chunks, concepts };
 }
 
 /** Cached for the sitemap route: the corpus only changes on operator
  *  re-import, so crawler fetches of /sitemap.xml share one scan instead of
- *  re-reading ~4.4k ids per hit — same contract as listTraditionsCached. */
+ *  re-reading ~4.4k ids per hit — same contract as listTraditionsCached.
+ *  The cache key carries a shape version: unstable_cache persists across
+ *  deploys (.next/cache), so changing the return shape WITHOUT bumping the
+ *  key serves stale-shaped data for up to `revalidate` and 500s the route. */
 export const listSitemapCorpusCached = unstable_cache(
   () => listSitemapCorpus(),
-  ['reader:listSitemapCorpus'],
+  ['reader:listSitemapCorpus:v2'],
   { revalidate: 3600, tags: ['corpus-traditions'] },
 );
 

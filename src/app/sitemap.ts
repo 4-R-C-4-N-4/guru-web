@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Reader URLs: every tradition, text TOC and chunk page (~4.6k URLs,
   // well under the 50k sitemap cap). Both reads are cached (60s posts,
   // 3600s corpus scans) so crawler fetches don't add query load.
-  const [posts, { texts: textRows, chunks }] = await Promise.all([
+  const [posts, { texts: textRows, chunks, concepts }] = await Promise.all([
     listPublishedCached(),
     listSitemapCorpusCached(),
   ]);
@@ -56,6 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/read/${t.tradition}/${t.id}`,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
+    })),
+    ...concepts.map(c => ({
+      url: `${SITE_URL}/read/concepts/${c.id.replace(/^concept\./, '')}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
     })),
     ...chunks.flatMap(c => {
       const path = chunkIdToPath(c.id);

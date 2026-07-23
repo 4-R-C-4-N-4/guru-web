@@ -20,8 +20,12 @@ import { listSitemapCorpusCached } from '@/lib/reader';
 const mList = listPublishedCached as MockedFunction<typeof listPublishedCached>;
 const mCorpus = listSitemapCorpusCached as MockedFunction<typeof listSitemapCorpusCached>;
 
-function mockCorpus(texts: { id: string; tradition: string }[], chunks: { id: string }[]) {
-  mCorpus.mockResolvedValue({ texts, chunks });
+function mockCorpus(
+  texts: { id: string; tradition: string }[],
+  chunks: { id: string }[],
+  concepts: { id: string }[] = [],
+) {
+  mCorpus.mockResolvedValue({ texts, chunks, concepts });
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -37,6 +41,7 @@ describe('robots.txt route', () => {
     // The public content pages must NOT be disallowed.
     expect(rule?.disallow).not.toContain('/blog');
     expect(rule?.disallow).not.toContain('/atlas');
+    expect(rule?.disallow).not.toContain('/read');
   });
 });
 
@@ -64,12 +69,14 @@ describe('sitemap.xml route', () => {
     mockCorpus(
       [{ id: 'gospel-of-thomas', tradition: 'gnosticism' }],
       [{ id: 'gnosticism.gospel-of-thomas.001' }],
+      [{ id: 'concept.pleroma' }],
     );
     const urls = (await sitemap()).map(e => e.url);
     expect(urls).toContain('https://guru-ai.org/read');
     expect(urls).toContain('https://guru-ai.org/read/gnosticism');
     expect(urls).toContain('https://guru-ai.org/read/gnosticism/gospel-of-thomas');
     expect(urls).toContain('https://guru-ai.org/read/gnosticism/gospel-of-thomas/001');
+    expect(urls).toContain('https://guru-ai.org/read/concepts/pleroma');
   });
 
   it('surfaces an empty published list as-is (no phantom entries)', async () => {

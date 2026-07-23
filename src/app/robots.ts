@@ -9,7 +9,8 @@
  *
  * Disallowed paths are the authed app surface (they redirect to sign-in for
  * anonymous crawlers anyway) plus /api and /admin. The public content
- * surface — /, /blog, /blog/[slug], /atlas — stays crawlable.
+ * surface — /, /blog, /blog/[slug], /atlas, and the /read source library —
+ * stays crawlable; the sitemap enumerates every reader URL.
  */
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/site';
