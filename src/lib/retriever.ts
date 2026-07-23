@@ -234,7 +234,10 @@ async function corpusRarity(): Promise<Map<string, number>> {
 // Vector search
 // ---------------------------------------------------------------------------
 
-async function vectorSearch(
+// Exported for the public /read/search page (todo:3c342f3b), which runs the
+// vector + lexical legs without retrieve()'s graph walk and quality filter.
+// Same not-public-API caveat as lexicalSearch.
+export async function vectorSearch(
   queryText: string,
   prefs: UserPreferences,
   limit: number

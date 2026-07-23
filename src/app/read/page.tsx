@@ -81,6 +81,13 @@ export default async function ReadIndexPage() {
           retriever cites, with its themes and cross-tradition parallels.
         </p>
 
+        <Link
+          href="/read/search"
+          style={{ display: 'inline-block', marginBottom: 48, fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.accent, letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase' }}
+        >
+          Search the corpus →
+        </Link>
+
         {traditions.length === 0 ? (
           <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.secondary, fontStyle: 'italic' }}>
             The corpus is not loaded.
