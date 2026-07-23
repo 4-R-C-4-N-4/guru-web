@@ -105,3 +105,27 @@ describe('PRESET_AXES integrity', () => {
     }
   });
 });
+
+// Coverage contract — the future-proofing for a hand-curated list. A new
+// tradition added to tokens.tradition but not assigned here fails one of
+// these, naming the orphaned slug, instead of silently vanishing from the
+// picker in production. See the MAINTENANCE note in scope-presets.ts.
+describe('PRESET_AXES corpus coverage', () => {
+  const known = Object.keys(tokens.tradition).sort();
+  const membersOf = (axis: string) =>
+    PRESET_AXES.find(a => a.axis === axis)!.presets.flatMap(p => p.members);
+
+  it('Era partitions the corpus — every tradition in exactly one era', () => {
+    const era = membersOf('Era');
+    // Disjoint: no slug listed in two eras (would inflate the count).
+    expect(era.length, 'a tradition is assigned to two eras').toBe(new Set(era).size);
+    // Total: sorted-array compare so a failure names the missing/extra slug.
+    expect([...new Set(era)].sort()).toEqual(known);
+  });
+
+  it('Region covers the corpus — every tradition in at least one region', () => {
+    // A cover, not a partition (egyptian is deliberately in two regions),
+    // so we only assert the union equals the full corpus.
+    expect([...new Set(membersOf('Region'))].sort()).toEqual(known);
+  });
+});
