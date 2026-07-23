@@ -1,0 +1,24 @@
+{
+  "id": "6adfbb6b",
+  "type": "feature",
+  "state": "done",
+  "summary": "Source material browser: public /read library (traditions→texts→chunk viewer with tags, parallels, summaries) + citation deep-links from chat/blog/share",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-23T12:29:15.576Z",
+  "updated_at": "2026-07-23T14:48:16.625Z",
+  "tags": [
+    "reader",
+    "citations",
+    "corpus"
+  ],
+  "resolution": {
+    "commit": "e7b5ed5",
+    "resolved_at": "2026-07-23T14:48:16.625Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/reader.test.ts",
+    "test_function": "getChunkPage",
+    "note": "Shipped in PR #106: public /read library (traditions→texts→chunk viewer with tags/parallels/summaries), concept constellation pages, citation deep-links across chat/blog/share, sitemap+robots crawl surface. 674 tests green."
+  }
+}

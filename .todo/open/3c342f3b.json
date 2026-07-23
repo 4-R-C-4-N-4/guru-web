@@ -1,0 +1,22 @@
+{
+  "id": "3c342f3b",
+  "type": "feature",
+  "state": "open",
+  "summary": "Advanced search over corpus chunks (/read/search): hybrid vector+lexical with tradition/text filters",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-23T15:26:30.008Z",
+  "updated_at": "2026-07-23T15:26:30.047Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "reader",
+    "search",
+    "pgvector"
+  ],
+  "description": "Public semantic search page for the source library. The brains already exist: chunks.embedding (nomic-embed 768d, HNSW index), Ollama on the VPS embeds chat queries today, and retriever.ts already does hybrid vector+lexical retrieval with scope filters. Plan: /read/search server page — embed query via local Ollama (no API cost) → pgvector cosine top-k filtered by tradition/text (reuse the scope-section filter SQL) → optionally blend a websearch_to_tsquery lexical leg for exact-phrase queries. Results render as chunk cards linking into the reader. Public + unauthenticated, so add a simple per-IP rate limit to protect the VPS. No LLM in the loop — cost is one local embed per search."
+}
