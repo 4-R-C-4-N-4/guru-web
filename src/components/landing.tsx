@@ -149,10 +149,16 @@ export default function Landing(
               ))}
             </ul>
 
-            <Link href="/blog" className="text-link" style={{
-              fontFamily: tokens.font.mono, fontSize: 12,
-              letterSpacing: 1, textTransform: 'uppercase',
-            }}>Read all essays →</Link>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              <Link href="/blog" className="text-link" style={{
+                fontFamily: tokens.font.mono, fontSize: 12,
+                letterSpacing: 1, textTransform: 'uppercase',
+              }}>Read all essays →</Link>
+              <Link href="/read" className="text-link" style={{
+                fontFamily: tokens.font.mono, fontSize: 12,
+                letterSpacing: 1, textTransform: 'uppercase',
+              }}>Browse the source library →</Link>
+            </div>
           </div>
         </section>
       )}

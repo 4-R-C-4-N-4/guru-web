@@ -32,7 +32,19 @@ export const MD_COMPONENTS: Components = {
   ol: (p) => <ol style={{ margin: '4px 0 10px', paddingLeft: 22, lineHeight: 1.7 }} {...p} />,
   li: (p) => <li style={{ marginBottom: 2 }} {...p} />,
   blockquote: (p) => <blockquote style={{ margin: '8px 0', padding: '4px 12px', borderLeft: `2px solid ${tokens.text.accent}`, color: tokens.text.secondary, fontStyle: 'italic' }} {...p} />,
-  a: (p) => <a target="_blank" rel="noreferrer" style={{ color: tokens.text.link, textDecoration: 'underline', textDecorationColor: 'rgba(122,158,194,0.4)' }} {...p} />,
+  // Internal links (inline citations → /read) navigate in-tab so browser
+  // back retraces the reading chain; external links keep the new-tab default.
+  a: ({ href, ...p }) => {
+    const internal = typeof href === 'string' && href.startsWith('/');
+    return (
+      <a
+        href={href}
+        {...(internal ? {} : { target: '_blank', rel: 'noreferrer' })}
+        style={{ color: tokens.text.link, textDecoration: 'underline', textDecorationColor: 'rgba(122,158,194,0.4)' }}
+        {...p}
+      />
+    );
+  },
   code: ({ className, children, ...rest }) => {
     // Block-level code (```lang) gets a className; inline code does not.
     const inline = !className;

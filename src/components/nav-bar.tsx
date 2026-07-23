@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/chat',     label: 'Ask'      },
   { href: '/history',  label: 'Sessions' },
   { href: '/settings', label: 'Scope'    },
+  { href: '/read',     label: 'Library'  },
   { href: '/blog',     label: 'Essays'   },
 ];
 

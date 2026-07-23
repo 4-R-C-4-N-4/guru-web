@@ -1,0 +1,16 @@
+{
+  "id": "6adfbb6b",
+  "type": "feature",
+  "state": "open",
+  "summary": "Source material browser: public /read library (traditions→texts→chunk viewer with tags, parallels, summaries) + citation deep-links from chat/blog/share",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-23T12:29:15.576Z",
+  "updated_at": "2026-07-23T12:29:15.576Z",
+  "tags": [
+    "reader",
+    "citations",
+    "corpus"
+  ]
+}

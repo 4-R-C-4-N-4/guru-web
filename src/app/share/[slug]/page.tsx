@@ -22,6 +22,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getShareBySlug } from '@/lib/chat-public';
 import { parseCitationsBlock } from '@/lib/citations';
+import { remarkCiteLinks } from '@/lib/remark-citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
 import Citation from '@/components/citation';
 import ContinueButton from '@/components/continue-button';
@@ -114,7 +115,7 @@ export default async function SharePage(
                   lineHeight: 1.8,
                 }}
               >
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkCiteLinks(cards.map(c => ({ id: 'id' in c ? c.id : undefined, text: c.text, section: c.section })))]} components={MD_COMPONENTS}>
                   {parsed.body}
                 </ReactMarkdown>
               </div>
@@ -123,6 +124,7 @@ export default async function SharePage(
                   {cards.map((c, j) => (
                     <Citation
                       key={'id' in c ? `${c.id}-${j}` : `${i}-${j}`}
+                      id={'id' in c ? c.id : undefined}
                       tradition={c.tradition}
                       text={c.text}
                       section={c.section}

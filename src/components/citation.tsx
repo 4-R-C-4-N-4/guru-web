@@ -1,9 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { citationHref } from '@/lib/read-path';
 
 interface CitationProps {
+  /** Chunk or summary-node id. When present and resolvable, the card links
+   *  into the /read source library; absent (parsed-block fallbacks, legacy
+   *  snapshots) the card renders exactly as before — unlinked. */
+  id?: string;
   tradition: string;
   text: string;
   section: string;
@@ -13,13 +19,14 @@ interface CitationProps {
 
 const TIER_SYMBOL = { verified: '◆', proposed: '◇', inferred: '○', summary: '§' } as const;
 
-export default function Citation({ tradition, text, section, quote, tier }: CitationProps) {
+export default function Citation({ id, tradition, text, section, quote, tier }: CitationProps) {
   const mobile = useIsMobile();
   const color  = tokens.tradition[tradition.toLowerCase() as keyof typeof tokens.tradition] ?? tokens.text.secondary;
   const symbol = TIER_SYMBOL[tier] ?? '○';
   const tierColor = tokens.tier[tier] ?? tokens.tier.inferred;
+  const href = citationHref(id);
 
-  return (
+  const card = (
     <div style={{
       borderLeft: `2px solid ${color}`,
       padding: mobile ? '6px 10px' : '8px 12px',
@@ -36,6 +43,7 @@ export default function Citation({ tradition, text, section, quote, tier }: Cita
         <span>{text}</span>
         <span style={{ opacity: 0.4 }}>|</span>
         <span>{section}</span>
+        {href && <span style={{ marginLeft: 'auto', color: tokens.text.link }}>read →</span>}
       </div>
       {quote && (
         <div style={{
@@ -44,5 +52,12 @@ export default function Citation({ tradition, text, section, quote, tier }: Cita
         }}>&ldquo;{quote}&rdquo;</div>
       )}
     </div>
+  );
+
+  if (!href) return card;
+  return (
+    <Link href={href} style={{ textDecoration: 'none', display: 'block' }} title="Read in the source library">
+      {card}
+    </Link>
   );
 }
