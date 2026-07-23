@@ -23,6 +23,20 @@
  *
  * Pure data + pure helpers so the apply/derive contract is unit-testable
  * in node with no DOM — same seam pattern as scope.ts.
+ *
+ * MAINTENANCE — this list is hand-curated, not algorithmic. When a new
+ * tradition is added to the corpus it will NOT appear in any chip until it
+ * is placed here by hand. To keep that from silently happening, the axes
+ * carry a coverage contract enforced by scope-presets.test.ts against the
+ * canonical `tokens.tradition` slug set:
+ *   - Era MUST partition the corpus — every tradition in exactly one era.
+ *   - Region MUST cover the corpus — every tradition in >= one region
+ *     (a cover, not a partition: egyptian is deliberately in two).
+ *   - Current is intentionally partial (editorial "schools"), so it has
+ *     no coverage guard — a tradition may belong to no current.
+ * Add a tradition to tokens.tradition without assigning it an Era and a
+ * Region and CI fails, naming the orphaned slug — that's the future-proofing
+ * for an editorial list that can't be derived from corpus metadata.
  */
 
 import type { Catalog } from './scope';
