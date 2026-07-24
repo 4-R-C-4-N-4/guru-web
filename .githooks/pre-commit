@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# Pre-commit — mirrors CI's per-commit checks (.github/workflows: schema
+# hash, lint, type-check, tests) so a commit that would fail CI fails HERE.
+# Installed via package.json "prepare" (git config core.hooksPath .githooks).
+# Escape hatch for WIP commits: git commit --no-verify.
+# (CI's npm ci + registry-signature verification are install-time checks
+# with no commit-time equivalent — deliberately not mirrored.)
+set -e
+
+echo "pre-commit: corpus schema hash"
+sha256sum -c schema/corpus-schema.sql.sha256 >/dev/null
+
+echo "pre-commit: lint"
+npm run --silent lint
+
+echo "pre-commit: type-check"
+# Stale generated route types from a dev server on another branch break tsc
+# with phantom module errors; they are derived artifacts — safe to clear.
+rm -rf .next/dev/types .next/types
+npm run --silent type-check
+
+echo "pre-commit: tests"
+npm test --silent
+
+echo "pre-commit: all CI checks green"
