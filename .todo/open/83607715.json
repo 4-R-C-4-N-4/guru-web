@@ -1,0 +1,20 @@
+{
+  "id": "83607715",
+  "type": "chore",
+  "state": "open",
+  "summary": "Snapshot: attach deduped work-dossier capsules (label, summary, context, resolved themes) for every work behind cited exemplars and contrasts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-24T13:55:55.175Z",
+  "updated_at": "2026-07-24T13:56:17.616Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "885b6e90"
+  },
+  "description": "New snapshot section dossierCapsules: for the deduped set of works behind citedChunks passages (longRangeCases exemplars + contrasts), attach {work_id, work_label, summary, context, themes} from corpus.work_dossiers. Join path: chunks.text_id -> texts.work_id -> work_dossiers (same PK-shaped path as lib/dossier.ts; note atlas.ts CHUNK_COLS must start selecting text_id, or select w.id directly in the exemplar queries). Resolve theme concept ids to labels like dossier.ts does. Missing dossier = omit capsule (normal partial coverage, never an error — W0 finding 4). Done: atlas.test.ts covers dedupe + missing-dossier omission."
+}
