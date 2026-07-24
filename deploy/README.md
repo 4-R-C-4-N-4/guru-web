@@ -924,3 +924,25 @@ sudo -u postgres psql -d guru -c "
 # Every row should show tableowner = guru. Any showing 'postgres' means
 # the DO block didn't catch it — check for typos in the SQL above.
 ```
+
+## Local manual deploy (deploy-local.sh)
+
+`deploy/deploy-local.sh` ships a release from your workstation over the
+tailnet, skipping the Actions queue. It is strictly additive — deploy.yml
+stays canonical — and strictly manual: it stops at five gates (sudo
+human-presence auth, node 20 parity, sha == origin/main, all check-runs
+green, a typed `deploy` confirmation) and builds in a detached worktree of
+the sha so working-tree files can never leak into the artifact.
+
+One-time setup:
+1. `~/.ssh/config` entry (your key, not the CI secret):
+   ```
+   Host guru-web-prod
+     User deploy
+     IdentityFile ~/.ssh/id_ed25519
+   ```
+2. Authorize that key on the VPS: append its .pub to
+   `/home/deploy/.ssh/authorized_keys` (via your admin access).
+3. `nvm install 20` — the script refuses any other major.
+
+Then: `deploy/deploy-local.sh` (optionally `DEPLOY_HOST=<alias>`).
