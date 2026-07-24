@@ -31,6 +31,7 @@ const CAPSULE_ROW = {
   work_id: 'enneads', work_label: 'The Enneads', tradition: 'neoplatonism',
   summary: 'Plotinus systematized.', context: 'Third-century Rome.',
   themes: ['concept.emanation', 'concept.unknown_stale'],
+  text_ids: ['enneads'],
 };
 
 beforeEach(() => {
@@ -106,6 +107,7 @@ describe('computeAtlasSnapshot', () => {
       work_id: 'enneads', work_label: 'The Enneads', tradition: 'neoplatonism',
       summary: 'Plotinus systematized.', context: 'Third-century Rome.',
       themes: ['Emanation', 'concept.unknown_stale'],
+      text_ids: ['enneads'],
     }]);
   });
 

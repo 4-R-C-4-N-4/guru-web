@@ -125,7 +125,9 @@ export interface AtlasDossierCapsule {
   tradition: string;
   summary: string;
   context: string;
-  themes: string[];  // concept ids resolved to display labels
+  themes: string[];   // concept ids resolved to display labels
+  text_ids: string[]; // the cited texts this work covers — lets the prompt drop
+                      // capsules whose passages fell out of the token budget
 }
 
 // Tradition pairs with little-to-no historical contact: the strongest evidence
@@ -387,14 +389,16 @@ async function dossierCapsules(textIds: string[]): Promise<AtlasDossierCapsule[]
   if (textIds.length === 0) return [];
   const rows = await query<{
     work_id: string; work_label: string; tradition: string;
-    summary: string; context: string; themes: unknown;
+    summary: string; context: string; themes: unknown; text_ids: string[];
   }>(
-    `SELECT DISTINCT w.id AS work_id, w.label AS work_label, w.tradition,
-            d.summary, d.context, d.themes
+    `SELECT w.id AS work_id, w.label AS work_label, w.tradition,
+            d.summary, d.context, d.themes,
+            array_agg(DISTINCT t.id) AS text_ids
      FROM corpus.texts t
      JOIN corpus.works w         ON w.id = t.work_id
      JOIN corpus.work_dossiers d ON d.work_id = w.id
      WHERE t.id = ANY($1::text[])
+     GROUP BY w.id, d.work_id
      ORDER BY work_label`,
     [textIds],
   );

@@ -37,6 +37,7 @@ const SNAP: AtlasSnapshot = {
     work_id: 'enneads', work_label: 'The Enneads', tradition: 'neoplatonism',
     summary: 'Plotinus systematized late-antique Platonism.', context: 'Third-century Rome.',
     themes: ['Emanation', 'The One'],
+    text_ids: ['a1-text', 'c2-text'],
   }],
 };
 
@@ -99,6 +100,30 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toContain('— The Enneads (neoplatonism) [themes: Emanation, The One]');
     expect(prompt).toContain('Plotinus systematized late-antique Platonism.');
     expect(prompt).toContain('Context: Third-century Rome.');
+  });
+  it('drops capsules whose works are no longer quoted after passage fitting', () => {
+    const snap: AtlasSnapshot = {
+      ...SNAP,
+      dossierCapsules: [
+        ...SNAP.dossierCapsules,
+        // A work whose only passage never made it into SOURCE PASSAGES.
+        {
+          work_id: 'ghost', work_label: 'The Ghost Work', tradition: 'taoism',
+          summary: 'Never quoted.', context: 'Nowhere.', themes: [],
+          text_ids: ['zz-text'],
+        },
+        // Legacy capsule without text_ids (snapshot stored before the field
+        // existed) — unverifiable, so it stays.
+        {
+          work_id: 'legacy', work_label: 'The Legacy Work', tradition: 'taoism',
+          summary: 'From an older snapshot.', context: 'Unknown.', themes: [],
+        } as unknown as AtlasSnapshot['dossierCapsules'][number],
+      ],
+    };
+    const p = buildAtlasPrompt(snap);
+    expect(p).toContain('— The Enneads (neoplatonism)');
+    expect(p).not.toContain('The Ghost Work');
+    expect(p).toContain('— The Legacy Work (taoism)');
   });
   it('omits the dossier block and layer line on a pre-v4/undossiered snapshot', () => {
     const old = { ...SNAP, documentLayer: undefined, dossierCapsules: undefined } as unknown as AtlasSnapshot;

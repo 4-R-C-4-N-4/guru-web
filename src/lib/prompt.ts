@@ -548,10 +548,10 @@ export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
   // Curated capsules for the quoted works (absent on pre-v4 snapshots or an
   // undossiered corpus — the block simply doesn't render).
   const capsules = snapshot.dossierCapsules ?? [];
-  const dossierBlock =
-    capsules.length > 0
+  const renderDossierBlock = (caps: typeof capsules) =>
+    caps.length > 0
       ? `WORK DOSSIERS (curated capsules for the works quoted in SOURCE PASSAGES — framing, not citable evidence):\n\n` +
-        capsules
+        caps
           .map(c => {
             const themes = c.themes.length > 0 ? ` [themes: ${c.themes.join(", ")}]` : "";
             return `— ${c.work_label} (${c.tradition})${themes}\n  ${c.summary}\n  Context: ${c.context}`;
@@ -572,8 +572,10 @@ export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
   }
   for (const ct of snapshot.contrasts) { push(ct.a); push(ct.b); }
 
-  // Fit to the pro window, reserving room for the FACTS + dossier blocks + the response.
-  const factsTokens = Math.ceil((facts.length + dossierBlock.length) / 4);
+  // Fit to the pro window, reserving room for the FACTS + dossier blocks + the
+  // response. Reserve for the full capsule set — a slight over-reserve if
+  // fitting then drops a work, which only errs toward shorter prompts.
+  const factsTokens = Math.ceil((facts.length + renderDossierBlock(capsules).length) / 4);
   const budget = makeBudget("pro", factsTokens);
   let used = 0;
   const fitted: AtlasChunk[] = [];
@@ -582,6 +584,14 @@ export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
     used += c.token_count;
     fitted.push(c);
   }
+
+  // Keep only capsules for works still quoted after fitting, so the block
+  // never frames a passage the budget dropped. Older capsules without
+  // text_ids can't be checked — keep them.
+  const fittedTextIds = new Set(fitted.map(c => c.text_id));
+  const dossierBlock = renderDossierBlock(
+    capsules.filter(c => !c.text_ids || c.text_ids.some(id => fittedTextIds.has(id))),
+  );
 
   const passagesBlock =
     fitted.length > 0
