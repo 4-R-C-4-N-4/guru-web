@@ -92,6 +92,15 @@ export interface AtlasSnapshot {
     domain: string;
     families: Array<{ id: string; label: string; concepts: string[] }>;
   }>;
+  // The v4 document-knowledge layer at a glance: how much of the corpus is
+  // covered by curated works/dossiers and generated hierarchical summaries.
+  // Older stored snapshots (pre-v4 editions) simply lack this field.
+  documentLayer: {
+    works: number;
+    dossiers: number;            // works with a curated dossier
+    summaryNodesL1: number;      // section-span summaries
+    summaryNodesL2: number;      // whole-work summaries
+  };
   // Low-historical-contact pairs that still resonate — the evidential crux.
   longRangeCases: Array<{
     a: string;
@@ -152,6 +161,25 @@ async function headline(): Promise<AtlasSnapshot['headline']> {
     parallelsVerified: Number(row?.parallels_verified ?? 0),
     parallelsProposed: Number(row?.parallels_proposed ?? 0),
     contrasts: Number(row?.contrasts ?? 0),
+  };
+}
+
+/** Document-knowledge layer counts (v4): works, dossier coverage, summary nodes. */
+async function documentLayer(): Promise<AtlasSnapshot['documentLayer']> {
+  const row = await one<{
+    works: number; dossiers: number; summaries_l1: number; summaries_l2: number;
+  }>(
+    `SELECT
+       (SELECT COUNT(*) FROM corpus.works)                          AS works,
+       (SELECT COUNT(*) FROM corpus.work_dossiers)                  AS dossiers,
+       (SELECT COUNT(*) FROM corpus.summary_nodes WHERE level = 1)  AS summaries_l1,
+       (SELECT COUNT(*) FROM corpus.summary_nodes WHERE level = 2)  AS summaries_l2`,
+  );
+  return {
+    works: Number(row?.works ?? 0),
+    dossiers: Number(row?.dossiers ?? 0),
+    summaryNodesL1: Number(row?.summaries_l1 ?? 0),
+    summaryNodesL2: Number(row?.summaries_l2 ?? 0),
   };
 }
 
@@ -343,8 +371,9 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     `SELECT value FROM corpus.corpus_metadata WHERE key = 'schema_version'`,
   );
 
-  const [head, matrix, central, bridges, families, hier, contrastRows] = await Promise.all([
+  const [head, docLayer, matrix, central, bridges, families, hier, contrastRows] = await Promise.all([
     headline(),
+    documentLayer(),
     traditionMatrix(),
     centrality(),
     bridgeConcepts(),
@@ -368,6 +397,7 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     generatedAt,
     schemaVersion: meta?.value ?? 'unknown',
     headline: head,
+    documentLayer: docLayer,
     traditionMatrix: matrix,
     centrality: central,
     bridgeConcepts: bridges,

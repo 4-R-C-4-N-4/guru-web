@@ -32,6 +32,7 @@ function snapshot(parallelsVerified = 4252) {
   return {
     generatedAt: '2026-06-06T00:00:00Z', schemaVersion: '3',
     headline: { traditions: 16, concepts: 95, families: 28, parallelsVerified, parallelsProposed: 382, contrasts: 8 },
+    documentLayer: { works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 },
     traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322 }],
     centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9 }],
     bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],

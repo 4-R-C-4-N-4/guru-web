@@ -32,6 +32,9 @@ beforeEach(() => {
     if (sql.includes('parallels_verified')) {
       return { traditions: 16, concepts: 95, families: 28, parallels_verified: 4252, parallels_proposed: 382, contrasts: 8 } as never;
     }
+    if (sql.includes('summary_nodes')) {
+      return { works: 52, dossiers: 52, summaries_l1: 214, summaries_l2: 52 } as never;
+    }
     return null as never;
   });
   mQuery.mockImplementation(async (sql: string) => {
@@ -77,6 +80,16 @@ describe('computeAtlasSnapshot', () => {
     expect(snap.longRangeCases[0].exemplars[0].b.tradition).toBe('taoism');
     expect(snap.contrasts.length).toBe(1);
     expect(snap.contrasts[0].annotation).toMatch(/diverge on structure/);
+    expect(snap.documentLayer).toEqual({ works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 });
+  });
+
+  it('documentLayer degrades to zeros on an empty/uncovered corpus', async () => {
+    mOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('corpus_metadata')) return { value: '4' } as never;
+      return null as never;
+    });
+    const snap = await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    expect(snap.documentLayer).toEqual({ works: 0, dossiers: 0, summaryNodesL1: 0, summaryNodesL2: 0 });
   });
 
   it('uses the EXPRESSES edge for bridge concepts', async () => {
