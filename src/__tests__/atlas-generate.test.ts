@@ -25,7 +25,7 @@ const mStream = completeStream as MockedFunction<typeof completeStream>;
 const mCost = computeCost as MockedFunction<typeof computeCost>;
 
 const ch = (id: string, tradition: string) => ({
-  id, tradition, text_name: 'T', section: 'I.1', translator: null, tier: 'verified', body: 'passage', token_count: 4,
+  id, text_id: `${id}-text`, tradition, text_name: 'T', section: 'I.1', translator: null, tier: 'verified', body: 'passage', token_count: 4,
 });
 
 function snapshot(parallelsVerified = 4252) {
@@ -40,6 +40,7 @@ function snapshot(parallelsVerified = 4252) {
     hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology'] }] }],
     longRangeCases: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, exemplars: [{ a: ch('a1', 'neoplatonism'), b: ch('b1', 'taoism') }] }],
     contrasts: [{ a: ch('c1', 'zoroastrianism'), b: ch('c2', 'neoplatonism'), annotation: 'They diverge on duality.' }],
+    dossierCapsules: [],
   } as never;
 }
 

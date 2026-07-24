@@ -11,7 +11,7 @@ import { getAtlasSystemPrompt, buildAtlasPrompt } from '@/lib/prompt';
 import type { AtlasSnapshot, AtlasChunk } from '@/lib/atlas';
 
 const chunk = (id: string, tradition: string, text: string, body: string): AtlasChunk => ({
-  id, tradition, text_name: text, section: 'I.1', translator: null, tier: 'verified', body, token_count: 6,
+  id, text_id: `${id}-text`, tradition, text_name: text, section: 'I.1', translator: null, tier: 'verified', body, token_count: 6,
 });
 
 const SNAP: AtlasSnapshot = {
@@ -32,6 +32,11 @@ const SNAP: AtlasSnapshot = {
     a: chunk('c1', 'zoroastrianism', 'Gathas', 'Two primal spirits.'),
     b: chunk('c2', 'neoplatonism', 'Enneads', 'The One is beyond duality.'),
     annotation: 'A asserts an irreducible dual; B asserts an undivided One.',
+  }],
+  dossierCapsules: [{
+    work_id: 'enneads', work_label: 'The Enneads', tradition: 'neoplatonism',
+    summary: 'Plotinus systematized late-antique Platonism.', context: 'Third-century Rome.',
+    themes: ['Emanation', 'The One'],
   }],
 };
 

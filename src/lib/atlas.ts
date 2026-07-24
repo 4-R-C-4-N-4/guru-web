@@ -23,6 +23,7 @@ import { query, one } from './db';
 // A primary-source passage behind a cataloged association — enough to cite.
 export interface AtlasChunk {
   id: string;
+  text_id: string;
   tradition: string;
   text_name: string;
   section: string;
@@ -111,6 +112,20 @@ export interface AtlasSnapshot {
   // The explicit divergences (rare — 8 in the current corpus), each with its
   // curated annotation describing how the two passages diverge.
   contrasts: AtlasContrast[];
+  // One capsule per work behind the cited exemplar/contrast passages (deduped):
+  // the curated dossier's framing of what each work IS. Apparatus for the
+  // essayist to situate quotes — never itself citable evidence. Works without
+  // a dossier are simply absent (normal partial coverage, phase-w W0 f.4).
+  dossierCapsules: AtlasDossierCapsule[];
+}
+
+export interface AtlasDossierCapsule {
+  work_id: string;
+  work_label: string;
+  tradition: string;
+  summary: string;
+  context: string;
+  themes: string[];  // concept ids resolved to display labels
 }
 
 // Tradition pairs with little-to-no historical contact: the strongest evidence
@@ -137,7 +152,7 @@ const EXEMPLARS_PER_CASE = 2;
 const TARGET_CHUNK_TOKENS = 150;
 
 const CHUNK_COLS = (alias: string) =>
-  `${alias}.id, ${alias}.tradition, ${alias}.text_name, ${alias}.section,
+  `${alias}.id, ${alias}.text_id, ${alias}.tradition, ${alias}.text_name, ${alias}.section,
    ${alias}.translator, ${alias}.body, ${alias}.token_count`;
 
 /** Headline counts — the corpus at a glance. */
@@ -308,7 +323,7 @@ async function hierarchy(): Promise<AtlasSnapshot['hierarchy']> {
 async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasParallel[]> {
   const rows = await query<Record<string, unknown>>(
     `SELECT ${CHUNK_COLS('cs')},
-            ct.id AS b_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
+            ct.id AS b_id, ct.text_id AS b_text_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
             ct.section AS b_section, ct.translator AS b_translator, ct.body AS b_body,
             ct.token_count AS b_token_count, e.tier AS edge_tier
      FROM corpus.edges e
@@ -330,6 +345,7 @@ async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasP
 function chunkFrom(r: Record<string, unknown>, prefix: string, tier: string): AtlasChunk {
   return {
     id: String(r[`${prefix}id`]),
+    text_id: String(r[`${prefix}text_id`]),
     tradition: String(r[`${prefix}tradition`]),
     text_name: String(r[`${prefix}text_name`]),
     section: String(r[`${prefix}section`]),
@@ -344,7 +360,7 @@ function chunkFrom(r: Record<string, unknown>, prefix: string, tier: string): At
 async function contrasts(limit = 8): Promise<AtlasContrast[]> {
   const rows = await query<Record<string, unknown>>(
     `SELECT ${CHUNK_COLS('cs')},
-            ct.id AS b_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
+            ct.id AS b_id, ct.text_id AS b_text_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
             ct.section AS b_section, ct.translator AS b_translator, ct.body AS b_body,
             ct.token_count AS b_token_count, e.tier AS edge_tier, e.annotation AS annotation
      FROM corpus.edges e
@@ -360,6 +376,46 @@ async function contrasts(limit = 8): Promise<AtlasContrast[]> {
     b: chunkFrom(r, 'b_', String(r.edge_tier)),
     annotation: (r.annotation as string | null) ?? null,
   }));
+}
+
+/**
+ * Dossier capsules for the works behind the given cited passages, deduped by
+ * work. Same PK-shaped path as lib/dossier.ts (chunks.text_id → texts.work_id →
+ * work_dossiers); the inner join drops undossiered works silently.
+ */
+async function dossierCapsules(textIds: string[]): Promise<AtlasDossierCapsule[]> {
+  if (textIds.length === 0) return [];
+  const rows = await query<{
+    work_id: string; work_label: string; tradition: string;
+    summary: string; context: string; themes: unknown;
+  }>(
+    `SELECT DISTINCT w.id AS work_id, w.label AS work_label, w.tradition,
+            d.summary, d.context, d.themes
+     FROM corpus.texts t
+     JOIN corpus.works w         ON w.id = t.work_id
+     JOIN corpus.work_dossiers d ON d.work_id = w.id
+     WHERE t.id = ANY($1::text[])
+     ORDER BY work_label`,
+    [textIds],
+  );
+  // themes is JSONB NOT NULL but not shape-constrained (same guard as
+  // lib/dossier.ts): a malformed export must degrade, not crash the snapshot.
+  const capsules = rows.map(r => ({
+    ...r,
+    themes: Array.isArray(r.themes) ? (r.themes as string[]) : [],
+  }));
+  // Resolve theme concept ids ('concept.cosmic_dualism') to display labels;
+  // unresolvable ids fall back to the id itself.
+  const themeIds = [...new Set(capsules.flatMap(c => c.themes))];
+  if (themeIds.length > 0) {
+    const labels = await query<{ id: string; label: string }>(
+      `SELECT id, label FROM corpus.concepts WHERE id = ANY($1::text[])`,
+      [themeIds],
+    );
+    const byId = new Map(labels.map(l => [l.id, l.label]));
+    for (const c of capsules) c.themes = c.themes.map(t => byId.get(t) ?? t);
+  }
+  return capsules;
 }
 
 /**
@@ -393,6 +449,18 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     longRangeCases.push({ a, b, parallels: cell?.parallels ?? exemplars.length, exemplars });
   }
 
+  // Capsules for every work behind a cited passage (exemplars + contrasts).
+  const citedTextIds = new Set<string>();
+  for (const lc of longRangeCases) for (const ex of lc.exemplars) {
+    citedTextIds.add(ex.a.text_id);
+    citedTextIds.add(ex.b.text_id);
+  }
+  for (const ct of contrastRows) {
+    citedTextIds.add(ct.a.text_id);
+    citedTextIds.add(ct.b.text_id);
+  }
+  const capsules = await dossierCapsules([...citedTextIds]);
+
   return {
     generatedAt,
     schemaVersion: meta?.value ?? 'unknown',
@@ -405,5 +473,6 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     hierarchy: hier,
     longRangeCases,
     contrasts: contrastRows,
+    dossierCapsules: capsules,
   };
 }
