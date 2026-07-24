@@ -1,0 +1,29 @@
+{
+  "id": "4f532f04",
+  "type": "chore",
+  "state": "done",
+  "summary": "buildAtlasPrompt: filter dossier capsules to works actually quoted after passage fitting",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-24T14:51:39.011Z",
+  "updated_at": "2026-07-24T14:53:39.758Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "atlas",
+    "prompt",
+    "cleanup"
+  ],
+  "resolution": {
+    "commit": "d5b15445a694f02876faddc1e9bba75351197c81",
+    "resolved_at": "2026-07-24T14:53:39.758Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas-prompt.test.ts",
+    "test_function": "drops capsules whose works are no longer quoted after passage fitting",
+    "note": "dossierCapsules() returns matched text_ids per work; buildAtlasPrompt filters capsules to fitted passages before rendering, reserve computed from unfiltered set. Verified live: dry-run + print-prompt render 15 capsules unchanged; full suite 658 passed."
+  }
+}
