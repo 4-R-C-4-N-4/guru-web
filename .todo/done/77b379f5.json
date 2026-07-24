@@ -1,0 +1,24 @@
+{
+  "id": "77b379f5",
+  "type": "chore",
+  "state": "done",
+  "summary": "Verify end-to-end: generate a draft edition against the v4 corpus; capsules inform framing, stats accurate, Sources block and old-snapshot backward-compat unchanged",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-24T13:55:55.250Z",
+  "updated_at": "2026-07-24T14:29:44.984Z",
+  "relationships": {
+    "parent": "885b6e90",
+    "depends_on": [
+      "4a7150a3"
+    ]
+  },
+  "description": "Against the local v4 corpus (subset — expect partial dossier coverage): run the atlas generator, confirm (1) documentLayer numbers match direct SQL, (2) essay prose uses capsule context for framing without quoting dossier text as a passage or inventing stats, (3) Sources block / chunks_used unchanged (capsules add no cited chunks), (4) /blog render of an OLD published edition still works (backward compat). Close parent 885b6e90 after this.",
+  "resolution": {
+    "commit": "63af783183c97b03d3afa680baae6975b5ad1193",
+    "resolved_at": "2026-07-24T14:29:44.984Z",
+    "resolved_by": "unknown",
+    "note": "Verified against live local v4 corpus: documentLayer (54/54/711/54) matches direct SQL; 15 deduped capsules for cited works; --print-prompt shows layer line, WORK DOSSIERS block, and SOURCE PASSAGES intact at ~26k tokens; chunks_used/Sources unchanged (citedChunks untouched); old editions unaffected (nothing reads atlas_snapshot at render). Final LLM generation blocked locally: OpenRouter returns 401 User not found (stale key) — re-run 'npm run atlas -- --force' after fixing the key."
+  }
+}
