@@ -10,11 +10,13 @@
  *   npm run atlas -- --model=anthropic
  *   npm run atlas -- --force       # mint one even if a draft is already in flight
  *   npm run atlas -- --dry-run     # compute + print the snapshot only (no LLM, no write)
+ *   npm run atlas -- --print-prompt  # compute + print the full model prompt (no LLM, no write)
  */
 
 import 'dotenv/config';
 import { computeAtlasSnapshot } from '../src/lib/atlas';
 import { generateAtlasEdition } from '../src/lib/atlas-generate';
+import { getAtlasSystemPrompt, buildAtlasPrompt } from '../src/lib/prompt';
 
 function flag(name: string): boolean {
   return process.argv.includes(`--${name}`);
@@ -36,11 +38,24 @@ function printSnapshotSummary(s: Awaited<ReturnType<typeof computeAtlasSnapshot>
   console.log(`  Bridge concepts:`);
   for (const b of s.bridgeConcepts.slice(0, 5)) console.log(`    ${b.label}${b.family ? ` [${b.family}]` : ''}: ${b.traditions} traditions`);
   console.log(`  Long-range cases: ${s.longRangeCases.map(l => `${l.a}↔${l.b} (${l.parallels})`).join(', ') || 'none'}`);
+  const dl = s.documentLayer;
+  console.log(`  Document layer: ${dl.works} works · ${dl.dossiers} dossiers · ${dl.summaryNodesL1} L1 + ${dl.summaryNodesL2} L2 summaries`);
+  console.log(`  Dossier capsules for cited works: ${s.dossierCapsules.map(c => c.work_label).join(', ') || 'none'}`);
 }
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set (check .env)');
   const generatedAt = new Date().toISOString();
+
+  if (flag('print-prompt')) {
+    console.log('atlas: printing the full model prompt (no model call, no write).');
+    const snapshot = await computeAtlasSnapshot(generatedAt);
+    console.log('\n════ SYSTEM ════\n');
+    console.log(getAtlasSystemPrompt());
+    console.log('\n════ USER ════\n');
+    console.log(buildAtlasPrompt(snapshot));
+    return;
+  }
 
   if (flag('dry-run')) {
     console.log('atlas: dry run — computing snapshot only (no model call, no write).');
