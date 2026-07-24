@@ -83,6 +83,6 @@ describe('sitemap.xml route', () => {
     mList.mockResolvedValue([]);
     mockCorpus([], []);
     const entries = await sitemap();
-    expect(entries).toHaveLength(5); // just the static pages (incl. /read + /read/concepts)
+    expect(entries).toHaveLength(6); // just the static pages (incl. /read + /read/search + /read/concepts)
   });
 });
