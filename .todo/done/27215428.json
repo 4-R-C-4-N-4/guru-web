@@ -1,0 +1,26 @@
+{
+  "id": "27215428",
+  "type": "chore",
+  "state": "done",
+  "summary": "Snapshot: add documentLayer stats (works count, dossier coverage, summary-node counts by level) to AtlasSnapshot",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-24T13:55:55.137Z",
+  "updated_at": "2026-07-24T14:24:15.037Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "885b6e90"
+  },
+  "description": "Extend computeAtlasSnapshot (src/lib/atlas.ts) with a documentLayer section: works count, dossier coverage (n dossiers / n works), summary_nodes counts by level (L1 section-span, L2 whole-work). Pure SQL over corpus.works / corpus.work_dossiers / corpus.summary_nodes, same style as headline(). Add the field to AtlasSnapshot; it is generation-time-only (nothing renders stored snapshots), so older stored atlas_snapshot JSON needs no migration — but type it as a required field of the NEW snapshot and let old rows simply lack it. Done: atlas.test.ts covers the new section (counts + zero-coverage corpus).",
+  "resolution": {
+    "commit": "7614d45c068ff7b5f4a5b6752d01b2bd42468ae6",
+    "resolved_at": "2026-07-24T14:24:15.037Z",
+    "resolved_by": "unknown",
+    "note": "documentLayer section on AtlasSnapshot (works/dossiers/summaryNodesL1+L2), pure SQL like headline(); covered by atlas.test.ts shape + zero-coverage tests"
+  }
+}

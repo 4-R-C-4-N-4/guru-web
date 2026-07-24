@@ -25,13 +25,14 @@ const mStream = completeStream as MockedFunction<typeof completeStream>;
 const mCost = computeCost as MockedFunction<typeof computeCost>;
 
 const ch = (id: string, tradition: string) => ({
-  id, tradition, text_name: 'T', section: 'I.1', translator: null, tier: 'verified', body: 'passage', token_count: 4,
+  id, text_id: `${id}-text`, tradition, text_name: 'T', section: 'I.1', translator: null, tier: 'verified', body: 'passage', token_count: 4,
 });
 
 function snapshot(parallelsVerified = 4252) {
   return {
     generatedAt: '2026-06-06T00:00:00Z', schemaVersion: '3',
     headline: { traditions: 16, concepts: 95, families: 28, parallelsVerified, parallelsProposed: 382, contrasts: 8 },
+    documentLayer: { works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 },
     traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322 }],
     centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9 }],
     bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],
@@ -39,6 +40,7 @@ function snapshot(parallelsVerified = 4252) {
     hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology'] }] }],
     longRangeCases: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, exemplars: [{ a: ch('a1', 'neoplatonism'), b: ch('b1', 'taoism') }] }],
     contrasts: [{ a: ch('c1', 'zoroastrianism'), b: ch('c2', 'neoplatonism'), annotation: 'They diverge on duality.' }],
+    dossierCapsules: [],
   } as never;
 }
 

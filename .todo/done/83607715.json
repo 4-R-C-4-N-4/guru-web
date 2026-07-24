@@ -1,0 +1,26 @@
+{
+  "id": "83607715",
+  "type": "chore",
+  "state": "done",
+  "summary": "Snapshot: attach deduped work-dossier capsules (label, summary, context, resolved themes) for every work behind cited exemplars and contrasts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-24T13:55:55.175Z",
+  "updated_at": "2026-07-24T14:26:28.958Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts"
+    }
+  ],
+  "relationships": {
+    "parent": "885b6e90"
+  },
+  "description": "New snapshot section dossierCapsules: for the deduped set of works behind citedChunks passages (longRangeCases exemplars + contrasts), attach {work_id, work_label, summary, context, themes} from corpus.work_dossiers. Join path: chunks.text_id -> texts.work_id -> work_dossiers (same PK-shaped path as lib/dossier.ts; note atlas.ts CHUNK_COLS must start selecting text_id, or select w.id directly in the exemplar queries). Resolve theme concept ids to labels like dossier.ts does. Missing dossier = omit capsule (normal partial coverage, never an error — W0 finding 4). Done: atlas.test.ts covers dedupe + missing-dossier omission.",
+  "resolution": {
+    "commit": "8bde03a68ab7b03547e4b1f3aa4b18dfd6b4cec5",
+    "resolved_at": "2026-07-24T14:26:28.958Z",
+    "resolved_by": "unknown",
+    "note": "AtlasChunk carries text_id; dossierCapsules() joins texts->works->work_dossiers with inner-join omission for undossiered works, theme ids resolved to labels; dedupe + omission + zero-cite covered in atlas.test.ts"
+  }
+}

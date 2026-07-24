@@ -18,11 +18,20 @@ const mQuery = query as MockedFunction<typeof query>;
 const mOne = one as MockedFunction<typeof one>;
 
 const EXEMPLAR_ROW = {
-  id: 'a1', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1',
+  id: 'a1', text_id: 'enneads', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1',
   translator: null, body: 'The One overflows.', token_count: 5,
-  b_id: 'b1', b_tradition: 'taoism', b_text_name: 'Chuang Tzu', b_section: 'Bk 1',
+  b_id: 'b1', b_text_id: 'chuang-tzu', b_tradition: 'taoism', b_text_name: 'Chuang Tzu', b_section: 'Bk 1',
   b_translator: null, b_body: 'The uncarved block.', b_token_count: 5, edge_tier: 'verified',
   annotation: 'A asserts emanation; B asserts the uncarved simple — they diverge on structure.',
+};
+
+// One dossier capsule row: only the Enneads' work is dossiered — chuang-tzu's
+// work drops out of the inner join (normal partial coverage, never an error).
+const CAPSULE_ROW = {
+  work_id: 'enneads', work_label: 'The Enneads', tradition: 'neoplatonism',
+  summary: 'Plotinus systematized.', context: 'Third-century Rome.',
+  themes: ['concept.emanation', 'concept.unknown_stale'],
+  text_ids: ['enneads'],
 };
 
 beforeEach(() => {
@@ -31,6 +40,9 @@ beforeEach(() => {
     if (sql.includes('corpus_metadata')) return { value: '3' } as never;
     if (sql.includes('parallels_verified')) {
       return { traditions: 16, concepts: 95, families: 28, parallels_verified: 4252, parallels_proposed: 382, contrasts: 8 } as never;
+    }
+    if (sql.includes('summary_nodes')) {
+      return { works: 52, dossiers: 52, summaries_l1: 214, summaries_l2: 52 } as never;
     }
     return null as never;
   });
@@ -42,6 +54,8 @@ beforeEach(() => {
     if (sql.includes('co.label')) return [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }] as never;
     if (sql.includes("edge_type='CONTRASTS'")) return [EXEMPLAR_ROW] as never;
     if (sql.includes('cs.tradition=$1')) return [EXEMPLAR_ROW] as never; // exemplarsForPair
+    if (sql.includes('work_dossiers')) return [CAPSULE_ROW] as never; // dossierCapsules
+    if (sql.includes('FROM corpus.concepts WHERE id = ANY')) return [{ id: 'concept.emanation', label: 'Emanation' }] as never;
     return [] as never;
   });
 });
@@ -77,6 +91,41 @@ describe('computeAtlasSnapshot', () => {
     expect(snap.longRangeCases[0].exemplars[0].b.tradition).toBe('taoism');
     expect(snap.contrasts.length).toBe(1);
     expect(snap.contrasts[0].annotation).toMatch(/diverge on structure/);
+    expect(snap.documentLayer).toEqual({ works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 });
+  });
+
+  it('fetches dossier capsules for the deduped cited works, resolving theme labels', async () => {
+    const snap = await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    // Every long-range case and the contrast reuse the same two text ids —
+    // the capsule query must receive them deduped.
+    const capsuleCall = mQuery.mock.calls.find(c => (c[0] as string).includes('work_dossiers'));
+    expect(capsuleCall).toBeDefined();
+    expect((capsuleCall![1] as string[][])[0].sort()).toEqual(['chuang-tzu', 'enneads']);
+    // Only the dossiered work comes back (inner join omission), themes resolved
+    // to labels with unresolvable ids falling back to the raw id.
+    expect(snap.dossierCapsules).toEqual([{
+      work_id: 'enneads', work_label: 'The Enneads', tradition: 'neoplatonism',
+      summary: 'Plotinus systematized.', context: 'Third-century Rome.',
+      themes: ['Emanation', 'concept.unknown_stale'],
+      text_ids: ['enneads'],
+    }]);
+  });
+
+  it('skips the capsule query entirely when nothing is cited', async () => {
+    mQuery.mockImplementation(async () => [] as never);
+    const snap = await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    expect(snap.dossierCapsules).toEqual([]);
+    const capsuleCall = mQuery.mock.calls.find(c => (c[0] as string).includes('work_dossiers'));
+    expect(capsuleCall).toBeUndefined();
+  });
+
+  it('documentLayer degrades to zeros on an empty/uncovered corpus', async () => {
+    mOne.mockImplementation(async (sql: string) => {
+      if (sql.includes('corpus_metadata')) return { value: '4' } as never;
+      return null as never;
+    });
+    const snap = await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    expect(snap.documentLayer).toEqual({ works: 0, dossiers: 0, summaryNodesL1: 0, summaryNodesL2: 0 });
   });
 
   it('uses the EXPRESSES edge for bridge concepts', async () => {
