@@ -73,13 +73,20 @@ export default async function ReadIndexPage() {
             color: tokens.text.secondary,
             lineHeight: 1.7,
             fontStyle: 'italic',
-            marginBottom: 48,
+            marginBottom: 16,
             maxWidth: 600,
           }}
         >
           The complete corpus, readable passage by passage — every text the
           retriever cites, with its themes and cross-tradition parallels.
         </p>
+
+        <Link
+          href="/read/concepts"
+          style={{ display: 'inline-block', marginBottom: 48, fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.accent, letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase' }}
+        >
+          Browse by concept →
+        </Link>
 
         {traditions.length === 0 ? (
           <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.secondary, fontStyle: 'italic' }}>

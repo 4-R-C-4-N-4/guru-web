@@ -356,6 +356,47 @@ export async function getRelatedPassages(chunkId: string): Promise<RelatedPassag
 
 /* -------------------------------- concepts -------------------------------- */
 
+export interface ConceptIndexEntry {
+  id: string;
+  label: string;
+  definition: string | null;
+  family_id: string | null;
+  passages: number;
+}
+
+export interface ConceptFamilyRow {
+  id: string;
+  parent_id: string | null;
+  label: string;
+  definition: string | null;
+}
+
+/** The domain→family→concept browse surface for /read/concepts, with live
+ *  passage counts (EXPRESSES fan-in). Mirrors api/hierarchy's placement
+ *  rule — concepts sit under their PRIMARY family — but is public (the
+ *  hierarchy route is requireUser-gated) and count-bearing. Concepts with
+ *  no family are returned too (family_id NULL) so all of them stay
+ *  reachable; the page groups those under an "Unclassified" tail. */
+export async function listConceptIndex(): Promise<{
+  families: ConceptFamilyRow[];
+  concepts: ConceptIndexEntry[];
+}> {
+  const [families, concepts] = await Promise.all([
+    query<ConceptFamilyRow>(
+      `SELECT id, parent_id, label, definition FROM concept_families ORDER BY id`,
+    ),
+    query<ConceptIndexEntry>(
+      `SELECT co.id, co.label, co.definition, co.family_id,
+              COUNT(e.source)::int AS passages
+         FROM concepts co
+         LEFT JOIN edges e ON e.target = co.id AND e.edge_type = 'EXPRESSES'
+        GROUP BY co.id, co.label, co.definition, co.family_id
+        ORDER BY co.label`,
+    ),
+  ]);
+  return { families, concepts };
+}
+
 export async function getConcept(conceptId: string): Promise<ConceptRow | null> {
   return one<ConceptRow>(
     `SELECT id, label, domain, definition FROM concepts WHERE id = $1`,
