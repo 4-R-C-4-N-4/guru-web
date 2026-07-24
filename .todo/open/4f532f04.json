@@ -1,0 +1,21 @@
+{
+  "id": "4f532f04",
+  "type": "chore",
+  "state": "open",
+  "summary": "buildAtlasPrompt: filter dossier capsules to works actually quoted after passage fitting",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-24T14:51:39.011Z",
+  "updated_at": "2026-07-24T14:51:39.011Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts"
+    }
+  ],
+  "tags": [
+    "atlas",
+    "prompt",
+    "cleanup"
+  ]
+}
