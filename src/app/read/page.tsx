@@ -73,7 +73,7 @@ export default async function ReadIndexPage() {
             color: tokens.text.secondary,
             lineHeight: 1.7,
             fontStyle: 'italic',
-            marginBottom: 48,
+            marginBottom: 16,
             maxWidth: 600,
           }}
         >
@@ -81,12 +81,20 @@ export default async function ReadIndexPage() {
           retriever cites, with its themes and cross-tradition parallels.
         </p>
 
-        <Link
-          href="/read/search"
-          style={{ display: 'inline-block', marginBottom: 48, fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.accent, letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase' }}
-        >
-          Search the corpus →
-        </Link>
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 48 }}>
+          <Link
+            href="/read/search"
+            style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.accent, letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase' }}
+          >
+            Search the corpus →
+          </Link>
+          <Link
+            href="/read/concepts"
+            style={{ fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.accent, letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase' }}
+          >
+            Browse by concept →
+          </Link>
+        </div>
 
         {traditions.length === 0 ? (
           <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.secondary, fontStyle: 'italic' }}>

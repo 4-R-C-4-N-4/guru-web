@@ -6,6 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "dev": "next dev",
     "predev": "tsx scripts/dev-setup.ts",
     "dev:setup": "tsx scripts/dev-setup.ts",

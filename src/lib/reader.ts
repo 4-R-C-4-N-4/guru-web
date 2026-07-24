@@ -93,6 +93,8 @@ export interface ChunkPage {
   source_url: string | null;
   sections_format: string | null;
   work_id: string;
+  /** First member text of the work — what the chat study picker pins by. */
+  pin_text_id: string;
   pos: number;
   total: number;
   prev: ChunkNav | null;
@@ -298,7 +300,12 @@ export async function getChunkPage(chunkId: string): Promise<ChunkPage | null> {
     ),
   ]);
 
+  // pin_text_id: the work's FIRST member — the id the chat study picker
+  // pins by (chat-view pins works via pin_text_id; the server resolves any
+  // member, but the picker UI only recognises the first). Used by the
+  // ask-about-this-passage link (todo:7b60b6fb).
   const { member_text_ids, ...rest } = chunk;
+  const pin_text_id = member_text_ids[0] ?? chunk.text_id;
   const [prev, next] = await Promise.all([
     prevRow
       ? Promise.resolve<ChunkNav>({ ...prevRow, textLabel: null, crossText: false })
@@ -308,7 +315,7 @@ export async function getChunkPage(chunkId: string): Promise<ChunkPage | null> {
       : adjacentTextBoundary(member_text_ids, chunk.text_id, 1),
   ]);
 
-  return { ...rest, pos: posRow?.pos ?? 1, total: posRow?.total ?? 1, prev, next };
+  return { ...rest, pin_text_id, pos: posRow?.pos ?? 1, total: posRow?.total ?? 1, prev, next };
 }
 
 /** Live concept tags for a chunk — EXPRESSES edges joined to concepts,
@@ -348,6 +355,47 @@ export async function getRelatedPassages(chunkId: string): Promise<RelatedPassag
 }
 
 /* -------------------------------- concepts -------------------------------- */
+
+export interface ConceptIndexEntry {
+  id: string;
+  label: string;
+  definition: string | null;
+  family_id: string | null;
+  passages: number;
+}
+
+export interface ConceptFamilyRow {
+  id: string;
+  parent_id: string | null;
+  label: string;
+  definition: string | null;
+}
+
+/** The domain→family→concept browse surface for /read/concepts, with live
+ *  passage counts (EXPRESSES fan-in). Mirrors api/hierarchy's placement
+ *  rule — concepts sit under their PRIMARY family — but is public (the
+ *  hierarchy route is requireUser-gated) and count-bearing. Concepts with
+ *  no family are returned too (family_id NULL) so all of them stay
+ *  reachable; the page groups those under an "Unclassified" tail. */
+export async function listConceptIndex(): Promise<{
+  families: ConceptFamilyRow[];
+  concepts: ConceptIndexEntry[];
+}> {
+  const [families, concepts] = await Promise.all([
+    query<ConceptFamilyRow>(
+      `SELECT id, parent_id, label, definition FROM concept_families ORDER BY id`,
+    ),
+    query<ConceptIndexEntry>(
+      `SELECT co.id, co.label, co.definition, co.family_id,
+              COUNT(e.source)::int AS passages
+         FROM concepts co
+         LEFT JOIN edges e ON e.target = co.id AND e.edge_type = 'EXPRESSES'
+        GROUP BY co.id, co.label, co.definition, co.family_id
+        ORDER BY co.label`,
+    ),
+  ]);
+  return { families, concepts };
+}
 
 export async function getConcept(conceptId: string): Promise<ConceptRow | null> {
   return one<ConceptRow>(
