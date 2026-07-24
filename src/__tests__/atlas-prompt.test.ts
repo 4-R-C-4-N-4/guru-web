@@ -57,6 +57,12 @@ describe('getAtlasSystemPrompt', () => {
     expect(sys).toMatch(/DEK:/);
     expect(sys).toMatch(/CITATIONS:/);
   });
+  it('marks work dossiers as framing apparatus, never citable or a source of numbers', () => {
+    expect(sys).toMatch(/WORK DOSSIERS DISCIPLINE/);
+    expect(sys.toLowerCase()).toMatch(/not evidence/);
+    expect(sys.toLowerCase()).toMatch(/never quote dossier text as if it were a primary passage/);
+    expect(sys.toLowerCase()).toMatch(/never derive a number/);
+  });
 });
 
 describe('buildAtlasPrompt', () => {
@@ -84,5 +90,21 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toMatch(/neoplatonism \| Enneads \| I\.1/);
     // Tier is explicit (copyable into CITATIONS), not just a glyph.
     expect(prompt).toMatch(/\| Enneads \| I\.1 \| TIER: verified/);
+  });
+  it('renders the document-knowledge layer line in FACTS', () => {
+    expect(prompt).toMatch(/Document-knowledge layer: 52 works, 52 with curated dossiers, 214 section summaries \+ 52 whole-work summaries/);
+  });
+  it('renders WORK DOSSIERS as a distinct block with capsule content', () => {
+    expect(prompt).toMatch(/WORK DOSSIERS \(curated capsules/);
+    expect(prompt).toContain('— The Enneads (neoplatonism) [themes: Emanation, The One]');
+    expect(prompt).toContain('Plotinus systematized late-antique Platonism.');
+    expect(prompt).toContain('Context: Third-century Rome.');
+  });
+  it('omits the dossier block and layer line on a pre-v4/undossiered snapshot', () => {
+    const old = { ...SNAP, documentLayer: undefined, dossierCapsules: undefined } as unknown as AtlasSnapshot;
+    const p = buildAtlasPrompt(old);
+    expect(p).not.toMatch(/Document-knowledge layer/);
+    expect(p).not.toMatch(/WORK DOSSIERS/);
+    expect(p).toMatch(/SOURCE PASSAGES:/); // the rest still renders
   });
 });

@@ -400,9 +400,10 @@ shows, with the restraint of a scholar who knows a map is not the territory.`;
 // resemblance not equation, citation block) and adds two atlas-specific
 // disciplines: a mandatory methodology opening, and absolute fidelity to the
 // supplied FACTS — the model narrates numbers, it never produces them.
-const ATLAS_RULES = `You are given two things: a FACTS block (deterministic statistics computed
-directly from the corpus) and SOURCE PASSAGES (the primary-text passages behind
-the associations the FACTS summarize).
+const ATLAS_RULES = `You are given a FACTS block (deterministic statistics computed directly from
+the corpus), SOURCE PASSAGES (the primary-text passages behind the associations
+the FACTS summarize), and — when coverage allows — WORK DOSSIERS (curated
+capsules describing the works those passages come from).
 
 METHODOLOGY — OPEN WITH THIS, PLAINLY:
   - The associations are proposed by a language model tagging primary sources,
@@ -430,6 +431,15 @@ GROUNDING (as in every essay here):
   CONTRASTS) real weight — an essay that only shows convergence is advocacy, not
   analysis.
   - Distinguish what the data shows from what you are inferring about why.
+
+WORK DOSSIERS DISCIPLINE:
+  - A dossier is curated apparatus, not evidence. Use it only to situate a
+  quoted passage: what the work is, where it sits historically, what its
+  curators say it is about. A quote framed by its work reads as scholarship;
+  a bare quote reads as a fortune cookie.
+  - Never quote dossier text as if it were a primary passage, never list a
+  dossier in CITATIONS, and never derive a number from one — every statistic
+  still comes only from FACTS.
 
 ESSAY SHAPE:
   - Open with methodology, then the question the aggregate poses. Map the
@@ -499,6 +509,17 @@ function formatFacts(s: AtlasSnapshot): string {
     `Scale: ${h.traditions} traditions, ${h.concepts} concepts in ${h.families} families, ` +
       `${h.parallelsVerified} verified cross-tradition parallels (+${h.parallelsProposed} proposed, not used here), ` +
       `${h.contrasts} explicit contrasts. All parallels are cross-tradition by construction.`,
+    // Guard: snapshots stored by pre-v4 editions lack the document layer.
+    ...(s.documentLayer
+      ? [
+          ``,
+          `Document-knowledge layer: ${s.documentLayer.works} works, ` +
+            `${s.documentLayer.dossiers} with curated dossiers, ` +
+            `${s.documentLayer.summaryNodesL1} section summaries + ` +
+            `${s.documentLayer.summaryNodesL2} whole-work summaries. ` +
+            `Apparatus over the same primary chunks — summaries are not graph nodes and never count toward parallels.`,
+        ]
+      : []),
     ``,
     `Top cross-tradition pairs (verified parallels):\n${matrix}`,
     ``,
@@ -524,6 +545,20 @@ function formatFacts(s: AtlasSnapshot): string {
 export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
   const facts = formatFacts(snapshot);
 
+  // Curated capsules for the quoted works (absent on pre-v4 snapshots or an
+  // undossiered corpus — the block simply doesn't render).
+  const capsules = snapshot.dossierCapsules ?? [];
+  const dossierBlock =
+    capsules.length > 0
+      ? `WORK DOSSIERS (curated capsules for the works quoted in SOURCE PASSAGES — framing, not citable evidence):\n\n` +
+        capsules
+          .map(c => {
+            const themes = c.themes.length > 0 ? ` [themes: ${c.themes.join(", ")}]` : "";
+            return `— ${c.work_label} (${c.tradition})${themes}\n  ${c.summary}\n  Context: ${c.context}`;
+          })
+          .join("\n\n")
+      : "";
+
   // Flatten exemplar + contrast passages, dedup by chunk id.
   const seen = new Set<string>();
   const passages: AtlasChunk[] = [];
@@ -537,8 +572,8 @@ export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
   }
   for (const ct of snapshot.contrasts) { push(ct.a); push(ct.b); }
 
-  // Fit to the pro window, reserving room for the FACTS block + the response.
-  const factsTokens = Math.ceil(facts.length / 4);
+  // Fit to the pro window, reserving room for the FACTS + dossier blocks + the response.
+  const factsTokens = Math.ceil((facts.length + dossierBlock.length) / 4);
   const budget = makeBudget("pro", factsTokens);
   let used = 0;
   const fitted: AtlasChunk[] = [];
@@ -559,5 +594,6 @@ export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
     `claim in the SOURCE PASSAGES, and open with the methodology. Use ONLY the figures ` +
     `given in FACTS.`;
 
-  return `${facts}\n\n---\n\n${passagesBlock}\n\n---\n\n${brief}`;
+  const blocks = [facts, ...(dossierBlock ? [dossierBlock] : []), passagesBlock, brief];
+  return blocks.join("\n\n---\n\n");
 }
