@@ -93,6 +93,8 @@ export interface ChunkPage {
   source_url: string | null;
   sections_format: string | null;
   work_id: string;
+  /** First member text of the work — what the chat study picker pins by. */
+  pin_text_id: string;
   pos: number;
   total: number;
   prev: ChunkNav | null;
@@ -298,7 +300,12 @@ export async function getChunkPage(chunkId: string): Promise<ChunkPage | null> {
     ),
   ]);
 
+  // pin_text_id: the work's FIRST member — the id the chat study picker
+  // pins by (chat-view pins works via pin_text_id; the server resolves any
+  // member, but the picker UI only recognises the first). Used by the
+  // ask-about-this-passage link (todo:7b60b6fb).
   const { member_text_ids, ...rest } = chunk;
+  const pin_text_id = member_text_ids[0] ?? chunk.text_id;
   const [prev, next] = await Promise.all([
     prevRow
       ? Promise.resolve<ChunkNav>({ ...prevRow, textLabel: null, crossText: false })
@@ -308,7 +315,7 @@ export async function getChunkPage(chunkId: string): Promise<ChunkPage | null> {
       : adjacentTextBoundary(member_text_ids, chunk.text_id, 1),
   ]);
 
-  return { ...rest, pos: posRow?.pos ?? 1, total: posRow?.total ?? 1, prev, next };
+  return { ...rest, pin_text_id, pos: posRow?.pos ?? 1, total: posRow?.total ?? 1, prev, next };
 }
 
 /** Live concept tags for a chunk — EXPRESSES edges joined to concepts,

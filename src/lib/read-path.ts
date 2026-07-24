@@ -56,3 +56,12 @@ export const SECTION_FORMAT_LABELS: Record<string, string> = {
 export function sectionFormatLabel(format: string | null): string {
   return (format && SECTION_FORMAT_LABELS[format]) || 'Sections';
 }
+
+/** Ask-about-this-passage deep link (todo:7b60b6fb): opens chat pinned to
+ *  the passage's work (study mode, via the work's pin text id) with a
+ *  prefilled — never auto-sent — question naming the passage. */
+export function askAboutHref(pinTextId: string, textLabel: string, section: string | null): string {
+  const passage = section ? `"${section}" in ${textLabel}` : textLabel;
+  const q = `What is the meaning of ${passage}?`;
+  return `/chat?study=${encodeURIComponent(pinTextId)}&q=${encodeURIComponent(q)}`;
+}
