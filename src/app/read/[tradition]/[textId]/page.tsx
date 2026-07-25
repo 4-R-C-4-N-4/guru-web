@@ -10,6 +10,7 @@
  * URL and mistyped traditions 404 instead of duplicating pages.
  */
 
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -19,15 +20,19 @@ import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
 
+// Deduped across generateMetadata and the page render (todo:17621cef).
+const getTextTocCached = cache(getTextToc);
+
 export async function generateMetadata(
   { params }: { params: Promise<{ tradition: string; textId: string }> },
 ): Promise<Metadata> {
   const { tradition, textId } = await params;
-  const data = await getTextToc(textId);
+  const data = await getTextTocCached(textId);
   if (!data || data.text.tradition !== tradition) return { title: 'Not found — Guru' };
   return {
     title: `${data.text.label} — Source Library — Guru`,
     description: `${data.text.label} (${data.text.tradition_label}), readable passage by passage${data.text.translator ? `, translated by ${data.text.translator}` : ''}.`,
+    alternates: { canonical: `/read/${tradition}/${textId}` },
   };
 }
 
@@ -39,7 +44,7 @@ export default async function TextTocPage(
   { params }: { params: Promise<{ tradition: string; textId: string }> },
 ) {
   const { tradition, textId } = await params;
-  const data = await getTextToc(textId);
+  const data = await getTextTocCached(textId);
   if (!data || data.text.tradition !== tradition || data.toc.length === 0) notFound();
   const { text, toc, spans, workSummary } = data;
 

@@ -54,6 +54,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label} — Guru`,
     description: chunkMetaDescription(chunk, tags, related),
     openGraph: { type: 'article', title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label}` },
+    // Rebuilt from the chunk's own id (not the request params) — the page
+    // 404s on any tradition/text mismatch, so this is the one true URL.
+    alternates: { canonical: chunkIdToPath(chunk.id) ?? undefined },
   };
 }
 

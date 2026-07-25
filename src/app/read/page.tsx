@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: 'Source Library — Guru',
   description:
     'Browse the primary sources behind every answer: complete texts from 21 contemplative traditions, readable passage by passage with cross-tradition parallels.',
+  alternates: { canonical: '/read' },
 };
 
 export default async function ReadIndexPage() {
