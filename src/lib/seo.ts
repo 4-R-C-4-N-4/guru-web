@@ -14,6 +14,25 @@
 
 import type { ChunkPage, ChunkTag, RelatedPassage } from '@/lib/reader';
 
+/**
+ * Tradition landing pages below this passage count are noindexed (plan #8:
+ * /read/shinto has 1 passage, /read/upanishads 2 — thin pages dilute
+ * crawl-quality signals while the corpus grows). They stay linked, visible,
+ * and follow-able; the threshold only gates the index directive, and the
+ * sitemap drops them so we never advertise a URL we ask crawlers not to
+ * index. Individual passages of a thin tradition remain indexable — the
+ * passage is real content, the near-empty listing page is not.
+ */
+export const THIN_TRADITION_MIN_PASSAGES = 10;
+
+export function thinTraditionRobots(
+  totalPassages: number,
+): { index: false; follow: true } | undefined {
+  return totalPassages < THIN_TRADITION_MIN_PASSAGES
+    ? { index: false, follow: true }
+    : undefined;
+}
+
 /** Soft cap for description length. Google truncates around ~160 chars;
  *  we cut at a word boundary rather than let the SERP ellipsize mid-word. */
 const DESC_MAX = 220;

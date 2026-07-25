@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { listTextsForTradition, listTraditionsForReader } from '@/lib/reader';
+import { thinTraditionRobots } from '@/lib/seo';
 import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
@@ -23,13 +24,19 @@ export async function generateMetadata(
   { params }: { params: Promise<{ tradition: string }> },
 ): Promise<Metadata> {
   const { tradition } = await params;
-  const traditions = await listTraditionsForReaderCached();
+  const [traditions, works] = await Promise.all([
+    listTraditionsForReaderCached(),
+    listTextsForTraditionCached(tradition),
+  ]);
   const t = traditions.find(x => x.id === tradition);
   if (!t) return { title: 'Not found — Guru' };
+  const totalPassages = works.reduce(
+    (n, w) => n + w.texts.reduce((m, tx) => m + tx.chunks, 0), 0);
   return {
     title: `${t.label} — Source Library — Guru`,
     description: t.description ?? `Primary sources of the ${t.label} tradition, readable passage by passage.`,
     alternates: { canonical: `/read/${tradition}` },
+    robots: thinTraditionRobots(totalPassages),
   };
 }
 

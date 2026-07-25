@@ -8,7 +8,9 @@
  * turned it into garbage SERP copy.
  */
 import { describe, it, expect } from 'vitest';
-import { chunkMetaDescription } from '@/lib/seo';
+import {
+  chunkMetaDescription, thinTraditionRobots, THIN_TRADITION_MIN_PASSAGES,
+} from '@/lib/seo';
 
 const CHUNK = {
   section: 'Ch. 1',
@@ -75,5 +77,18 @@ describe('chunkMetaDescription (todo:17621cef)', () => {
     expect(desc).not.toMatch(/ {2}/);
     expect(desc.length).toBeLessThanOrEqual(220);
     expect(desc.endsWith('…')).toBe(true);
+  });
+});
+
+describe('thinTraditionRobots (todo:17621cef)', () => {
+  it('noindex-follows tradition pages below the passage threshold', () => {
+    expect(thinTraditionRobots(1)).toEqual({ index: false, follow: true });
+    expect(thinTraditionRobots(THIN_TRADITION_MIN_PASSAGES - 1))
+      .toEqual({ index: false, follow: true });
+  });
+
+  it('leaves substantial tradition pages indexable (no directive at all)', () => {
+    expect(thinTraditionRobots(THIN_TRADITION_MIN_PASSAGES)).toBeUndefined();
+    expect(thinTraditionRobots(805)).toBeUndefined();
   });
 });
