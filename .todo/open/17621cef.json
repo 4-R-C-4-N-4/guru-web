@@ -1,0 +1,25 @@
+{
+  "id": "17621cef",
+  "type": "chore",
+  "state": "open",
+  "summary": "SEO mechanical batch: home link, canonicals, chapter descriptions, thin-page noindex",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-25T21:32:04.049Z",
+  "updated_at": "2026-07-25T21:32:04.049Z",
+  "files": [
+    {
+      "path": "src/components/blog-home-button.tsx",
+      "lines": [
+        16,
+        16
+      ]
+    }
+  ],
+  "tags": [
+    "seo",
+    "metadata",
+    "reader"
+  ]
+}
