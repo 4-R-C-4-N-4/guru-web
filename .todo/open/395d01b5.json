@@ -2,12 +2,12 @@
   "id": "395d01b5",
   "type": "chore",
   "state": "open",
-  "summary": "Refresh curated model lineup: sonnet-4.6 → sonnet-5, gpt-5.4 → gpt-5.6-terra; evaluate adding gemini-3.6-flash and a budget tier (deepseek-v4-flash / glm / kimi)",
+  "summary": "Refresh curated model lineup: sonnet-4.6 → sonnet-5, gpt-5.4 → gpt-5.6-terra; add google/gemini-3.6-flash; evaluate glm-5.2 + minimax-m3 as free-tier alternate slugs",
   "source": {
     "type": "human"
   },
   "created_at": "2026-07-25T02:04:53.064Z",
-  "updated_at": "2026-07-25T02:04:53.064Z",
+  "updated_at": "2026-07-25T02:21:54.005Z",
   "files": [
     {
       "path": "src/lib/curated-models.ts"
@@ -17,5 +17,6 @@
     "models",
     "pricing",
     "openrouter"
-  ]
+  ],
+  "description": "Agreed swaps: anthropic → claude-sonnet-5 ($2/$10, cheaper AND newer than 4.6), openai → gpt-5.6-terra ($2.50/$15, same price as 5.4, current gen). Add google/gemini-3.6-flash ($1.50/$7.50, cache read $0.15) as fifth provider slug. Kimi excluded (users expect k3, which is Sonnet-priced at $3/$15). deepseek slug already on v4-pro flagship — no change. Candidate free-tier alternates: z-ai/glm-5.2 ($0.82/$2.57, AA index 51 vs v4-pro 44, stronger on agentic/SWE) and minimax/minimax-m3 ($0.30/$1.20, AA 44 ≈ v4-pro, multimodal, cheaper per query than deepseek at typical workload). Both same-tier-or-better vs deepseek, cache-capable on OpenRouter. NOTE: free-tier alternates require tier-aware picker filtering — free users currently always get DEFAULT_CURATED_SLUG with no picker (BRD-model-selection §1, §4.1) — that is a product change, consider todo-plan split. Each new slug needs: CURATED_MODELS entry, FALLBACK_PRICING row, PROVIDER_META name/color, PREFERRED_PROVIDER verified against /api/v1/models/{id}/endpoints, npm run sync-pricing."
 }
