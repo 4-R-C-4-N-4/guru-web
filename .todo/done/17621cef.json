@@ -1,0 +1,39 @@
+{
+  "id": "17621cef",
+  "type": "chore",
+  "state": "done",
+  "summary": "SEO mechanical batch: home link, canonicals, chapter descriptions, thin-page noindex",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-25T21:32:04.049Z",
+  "updated_at": "2026-07-25T21:44:23.708Z",
+  "files": [
+    {
+      "path": "src/components/blog-home-button.tsx",
+      "lines": [
+        16,
+        16
+      ]
+    }
+  ],
+  "tags": [
+    "seo",
+    "metadata",
+    "reader"
+  ],
+  "work": {
+    "branch": "todo/17621cef",
+    "base_branch": "main",
+    "started_at": "2026-07-25T21:32:17.542Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "42a845d",
+    "resolved_at": "2026-07-25T21:44:23.708Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/seo.test.ts",
+    "test_function": "chunkMetaDescription",
+    "note": "4 commits on todo/17621cef: home link -> /, annotation-first chunk descriptions (lib/seo.ts), rel=canonical on all 11 indexable public page types, thin-tradition noindex + sitemap exclusion. Smoke-tested on local dev (worktree, port 3055): canonical + description + noindex all verified in served HTML. Deploy note: www.guru-ai.org 301 (Cloudflare) still pending, done outside repo."
+  }
+}
