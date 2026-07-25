@@ -1,13 +1,13 @@
 {
   "id": "17621cef",
   "type": "chore",
-  "state": "open",
+  "state": "active",
   "summary": "SEO mechanical batch: home link, canonicals, chapter descriptions, thin-page noindex",
   "source": {
     "type": "human"
   },
   "created_at": "2026-07-25T21:32:04.049Z",
-  "updated_at": "2026-07-25T21:32:04.049Z",
+  "updated_at": "2026-07-25T21:32:17.542Z",
   "files": [
     {
       "path": "src/components/blog-home-button.tsx",
@@ -21,5 +21,11 @@
     "seo",
     "metadata",
     "reader"
-  ]
+  ],
+  "work": {
+    "branch": "todo/17621cef",
+    "base_branch": "main",
+    "started_at": "2026-07-25T21:32:17.542Z",
+    "started_by": "Backend Engineer"
+  }
 }
