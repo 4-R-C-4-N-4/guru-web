@@ -1,13 +1,13 @@
 {
   "id": "8c9bb8db",
   "type": "bug",
-  "state": "open",
+  "state": "wontfix",
   "summary": "iat ceiling has zero clock-skew tolerance — add 60-120s skew",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-04T22:52:49.162Z",
-  "updated_at": "2026-05-04T22:52:49.162Z",
+  "updated_at": "2026-07-25T15:18:52.847Z",
   "files": [
     {
       "path": "src/middleware.ts",

@@ -1,0 +1,31 @@
+{
+  "id": "a57b36b4",
+  "type": "chore",
+  "state": "done",
+  "summary": "Three terms for one artifact (chat / session / query) — pick one user-facing word",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-05-04T22:52:29.944Z",
+  "updated_at": "2026-07-25T15:18:52.808Z",
+  "files": [
+    {
+      "path": "src/components/nav-bar.tsx",
+      "lines": [
+        1,
+        1
+      ]
+    }
+  ],
+  "tags": [
+    "ui",
+    "naming",
+    "copy"
+  ],
+  "resolution": {
+    "commit": "3d1d8eb",
+    "resolved_at": "2026-07-25T15:18:52.808Z",
+    "resolved_by": "unknown",
+    "note": "Artifact naming consolidated to 'session' ('Sessions' nav, 'Session History', 'Untitled session'); action is 'Ask' (3d1d8eb header rework). Residual 'queries' in account copy denotes the billing unit, a distinct concept — no remaining ambiguity."
+  }
+}
