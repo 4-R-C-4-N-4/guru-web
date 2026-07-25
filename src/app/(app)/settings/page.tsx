@@ -43,7 +43,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 // attribution badge (todo:e8105324). Sorted DeepSeek first because
 // it's the default; remainder by descending capacity so the
 // tradeoff is visible at a glance.
-const PICKER_ORDER: CuratedSlug[] = ['deepseek', 'xai', 'anthropic', 'openai'];
+const PICKER_ORDER: CuratedSlug[] = ['deepseek', 'xai', 'google', 'anthropic', 'openai'];
 
 // Voice picker order + display copy. The slug → overlay mapping lives in
 // src/lib/prompt.ts; the user-facing name + one-line description live

@@ -53,6 +53,7 @@ export interface ProviderDisplay {
 const PROVIDER_META: Record<CuratedSlug, { name: string; color: string }> = {
   deepseek:  { name: 'DeepSeek',  color: '#5a8ac2' }, // muted blue
   xai:       { name: 'X.AI',      color: '#c2785a' }, // rust
+  google:    { name: 'Google',    color: '#8a5ac2' }, // muted violet
   anthropic: { name: 'Anthropic', color: '#c4a35a' }, // amber
   openai:    { name: 'OpenAI',    color: '#5ac27a' }, // muted green
 };
@@ -95,6 +96,7 @@ function computeQuestionsPerDay(slug: CuratedSlug): number {
 export const PROVIDER_DISPLAY: Record<CuratedSlug, ProviderDisplay> = {
   deepseek:  { ...PROVIDER_META.deepseek,  questionsPerDay: computeQuestionsPerDay('deepseek')  },
   xai:       { ...PROVIDER_META.xai,       questionsPerDay: computeQuestionsPerDay('xai')       },
+  google:    { ...PROVIDER_META.google,    questionsPerDay: computeQuestionsPerDay('google')    },
   anthropic: { ...PROVIDER_META.anthropic, questionsPerDay: computeQuestionsPerDay('anthropic') },
   openai:    { ...PROVIDER_META.openai,    questionsPerDay: computeQuestionsPerDay('openai')    },
 };
@@ -112,6 +114,7 @@ export function providerSlugFromModelId(modelId: string): CuratedSlug | null {
   switch (prefix) {
     case 'deepseek':  return 'deepseek';
     case 'x-ai':      return 'xai';
+    case 'google':    return 'google';
     case 'anthropic': return 'anthropic';
     case 'openai':    return 'openai';
     default:          return null;

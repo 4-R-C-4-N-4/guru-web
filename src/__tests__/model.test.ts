@@ -19,9 +19,9 @@ import {
 } from '@/lib/curated-models';
 
 describe('CURATED_MODELS', () => {
-  it('has exactly four picker entries — one per provider', () => {
+  it('has exactly five picker entries — one per provider', () => {
     expect(Object.keys(CURATED_MODELS).sort()).toEqual([
-      'anthropic', 'deepseek', 'openai', 'xai',
+      'anthropic', 'deepseek', 'google', 'openai', 'xai',
     ]);
   });
 
@@ -48,8 +48,9 @@ describe('resolveCuratedModel()', () => {
   it('returns the OpenRouter id for each slug', () => {
     expect(resolveCuratedModel('deepseek')).toBe('deepseek/deepseek-v4-pro');
     expect(resolveCuratedModel('xai')).toBe('x-ai/grok-4.3');
-    expect(resolveCuratedModel('anthropic')).toBe('anthropic/claude-sonnet-4.6');
-    expect(resolveCuratedModel('openai')).toBe('openai/gpt-5.4');
+    expect(resolveCuratedModel('google')).toBe('google/gemini-3.6-flash');
+    expect(resolveCuratedModel('anthropic')).toBe('anthropic/claude-sonnet-5');
+    expect(resolveCuratedModel('openai')).toBe('openai/gpt-5.6-terra');
   });
 
   it('throws on a slug not in the map (defensive against stale prefs)', () => {
@@ -79,7 +80,7 @@ describe('isCuratedSlug()', () => {
     if (isCuratedSlug(v)) {
       // Compile-time: v is now CuratedSlug, indexable into the map.
       const id: string = CURATED_MODELS[v];
-      expect(id).toBe('anthropic/claude-sonnet-4.6');
+      expect(id).toBe('anthropic/claude-sonnet-5');
     }
   });
 });
