@@ -11,6 +11,7 @@
  * history answers "how did I get here".
  */
 
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -19,7 +20,15 @@ import {
   type ChunkNav, type RelatedPassage,
 } from '@/lib/reader';
 import { pathToChunkId, chunkIdToPath, askAboutHref } from '@/lib/read-path';
+import { chunkMetaDescription } from '@/lib/seo';
 import { tokens, type Tier } from '@/styles/tokens';
+
+// generateMetadata and the page body both need chunk + tags + related (the
+// meta description is annotation-first, todo:17621cef); cache() dedupes the
+// queries within a request so metadata doesn't double the DB round-trips.
+const getChunkPageCached = cache(getChunkPage);
+const getChunkTagsCached = cache(getChunkTags);
+const getRelatedPassagesCached = cache(getRelatedPassages);
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +39,20 @@ type Params = Promise<{ tradition: string; textId: string; n: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { tradition, textId, n } = await params;
-  const chunk = await getChunkPage(pathToChunkId(tradition, textId, n));
+  const chunkId = pathToChunkId(tradition, textId, n);
+  const [chunk, tags, related] = await Promise.all([
+    getChunkPageCached(chunkId),
+    getChunkTagsCached(chunkId),
+    getRelatedPassagesCached(chunkId),
+  ]);
   if (!chunk) return { title: 'Not found — Guru' };
+  // Annotation-first description (todo:17621cef): the passage body is
+  // public-domain text hosted on many sites — as a description it read as a
+  // duplicate, and chunks opening with translator apparatus produced garbage
+  // SERP copy. The concept/parallel layer is the page's unique content.
   return {
     title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label} — Guru`,
-    description: chunk.body.slice(0, 160),
+    description: chunkMetaDescription(chunk, tags, related),
     openGraph: { type: 'article', title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label}` },
   };
 }
@@ -99,9 +117,9 @@ export default async function ChunkPage({ params }: { params: Params }) {
   const { tradition, textId, n } = await params;
   const chunkId = pathToChunkId(tradition, textId, n);
   const [chunk, tags, related] = await Promise.all([
-    getChunkPage(chunkId),
-    getChunkTags(chunkId),
-    getRelatedPassages(chunkId),
+    getChunkPageCached(chunkId),
+    getChunkTagsCached(chunkId),
+    getRelatedPassagesCached(chunkId),
   ]);
   // The URL tradition/text must be the chunk's own (single canonical URL).
   if (!chunk || chunk.tradition !== tradition || chunk.text_id !== textId) notFound();
