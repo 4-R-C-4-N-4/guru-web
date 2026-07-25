@@ -41,6 +41,26 @@ export const FALLBACK_PRICING: Record<string, ModelPrice> = {
     output_per_mtok: 2.50,
     cached_input_per_mtok: 0.20,
   },
+  'google/gemini-3.6-flash': {
+    input_per_mtok: 1.50,
+    output_per_mtok: 7.50,
+    cached_input_per_mtok: 0.15,
+  },
+  'anthropic/claude-sonnet-5': {
+    input_per_mtok: 2.0,
+    output_per_mtok: 10.0,
+    cached_input_per_mtok: 0.20,
+  },
+  'openai/gpt-5.6-terra': {
+    input_per_mtok: 2.50,
+    output_per_mtok: 15.00,
+    cached_input_per_mtok: 0.25,
+  },
+
+  // One-release safety net: sonnet-4.6 and gpt-5.4 stay so any
+  // queries already in flight against the previous picker defaults
+  // still cost-out correctly when the network sync hasn't run yet.
+  // Drop on the next bump.
   'anthropic/claude-sonnet-4.6': {
     input_per_mtok: 3.0,
     output_per_mtok: 15.0,
@@ -50,20 +70,5 @@ export const FALLBACK_PRICING: Record<string, ModelPrice> = {
     input_per_mtok: 2.50,
     output_per_mtok: 15.00,
     cached_input_per_mtok: 0.25,
-  },
-
-  // One-release safety net: deepseek-chat and sonnet-4.5 stay so any
-  // queries already in flight against the previous tier defaults
-  // still cost-out correctly when the network sync hasn't run yet.
-  // Drop on the next bump after launch.
-  'deepseek/deepseek-chat': {
-    input_per_mtok: 0.14,
-    output_per_mtok: 0.28,
-    cached_input_per_mtok: null,
-  },
-  'anthropic/claude-sonnet-4.5': {
-    input_per_mtok: 3.0,
-    output_per_mtok: 15.0,
-    cached_input_per_mtok: 0.30,
   },
 };

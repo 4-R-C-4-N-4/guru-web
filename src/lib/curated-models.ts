@@ -21,8 +21,9 @@
 export const CURATED_MODELS = {
   deepseek:  'deepseek/deepseek-v4-pro',
   xai:       'x-ai/grok-4.3',
-  anthropic: 'anthropic/claude-sonnet-4.6',
-  openai:    'openai/gpt-5.4',
+  google:    'google/gemini-3.6-flash',
+  anthropic: 'anthropic/claude-sonnet-5',
+  openai:    'openai/gpt-5.6-terra',
 } as const;
 
 export type CuratedSlug = keyof typeof CURATED_MODELS;
@@ -76,6 +77,10 @@ export function isCuratedSlug(value: unknown): value is CuratedSlug {
 export const PREFERRED_PROVIDER: Record<CuratedSlug, string> = {
   deepseek:  'DeepSeek',
   xai:       'xAI',
+  // Gemini's first-party endpoints are 'Google AI Studio' (developer
+  // API) and 'Google' (Vertex); pin AI Studio, Vertex stays reachable
+  // via allow_fallbacks.
+  google:    'Google AI Studio',
   anthropic: 'Anthropic',
   openai:    'OpenAI',
 };

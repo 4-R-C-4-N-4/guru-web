@@ -77,6 +77,8 @@ describe('PROVIDER_DISPLAY', () => {
     expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeLessThanOrEqual(40);
     expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeGreaterThanOrEqual(8);
     expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeLessThanOrEqual(15);
+    expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeGreaterThanOrEqual(4);
+    expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeLessThanOrEqual(8);
     expect(PROVIDER_DISPLAY.anthropic.questionsPerDay).toBeGreaterThanOrEqual(2);
     expect(PROVIDER_DISPLAY.anthropic.questionsPerDay).toBeLessThanOrEqual(6);
     expect(PROVIDER_DISPLAY.openai.questionsPerDay).toBeGreaterThanOrEqual(2);
@@ -98,7 +100,7 @@ describe('providerSlugFromModelId()', () => {
 
   it('returns null for unknown providers', () => {
     expect(providerSlugFromModelId('meta-llama/llama-3.3-70b')).toBeNull();
-    expect(providerSlugFromModelId('google/gemini-2.5-pro')).toBeNull();
+    expect(providerSlugFromModelId('qwen/qwen3-max')).toBeNull();
     expect(providerSlugFromModelId('not/a/real/id')).toBeNull();
     expect(providerSlugFromModelId('')).toBeNull();
   });
@@ -109,6 +111,7 @@ describe('providerSlugFromModelId()', () => {
     expect(providerSlugFromModelId('anthropic/claude-sonnet-99')).toBe('anthropic');
     expect(providerSlugFromModelId('openai/gpt-99-future')).toBe('openai');
     expect(providerSlugFromModelId('deepseek/deepseek-v99-pro')).toBe('deepseek');
+    expect(providerSlugFromModelId('google/gemini-99-flash')).toBe('google');
   });
 });
 
