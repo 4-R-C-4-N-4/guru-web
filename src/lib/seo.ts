@@ -93,9 +93,14 @@ export function chunkMetaDescription(
   if (concepts.length > 0) parts.push(concepts.join(', '));
   if (related.length > 0) {
     const shown = partnerTraditions.slice(0, MAX_PARTNER_TRADITIONS);
+    // The count branch fires only when every partner shares the chunk's own
+    // tradition (that is the only way partnerTraditions ends up empty here),
+    // so it must not claim "cross-tradition" — unreachable today (the
+    // pipeline stages PARALLELS/CONTRASTS across traditions only), but the
+    // SQL doesn't enforce that and this copy shouldn't lie if it ever fires.
     parts.push(shown.length > 0
-      ? `parallels in ${shown.join(' and ')}${partnerTraditions.length > shown.length ? ' and beyond' : ''}`
-      : `${related.length} cross-tradition ${related.length === 1 ? 'parallel' : 'parallels'}`);
+      ? `parallels in ${partnerTraditions.length > shown.length ? `${shown.join(', ')}, and beyond` : shown.join(' and ')}`
+      : `${related.length} linked ${related.length === 1 ? 'parallel' : 'parallels'}`);
   }
 
   return singleLine(truncateAtWord(

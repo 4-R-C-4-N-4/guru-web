@@ -45,13 +45,15 @@ describe('chunkMetaDescription (todo:17621cef)', () => {
     );
     expect(desc).toContain('a, b, c;');
     expect(desc).not.toContain(', d');
-    expect(desc).toContain('parallels in Buddhism and Gnosticism and beyond');
+    expect(desc).toContain('parallels in Buddhism, Gnosticism, and beyond');
     expect(desc).not.toContain('Hermeticism');
   });
 
   it('drops same-tradition partners and counts parallels when none remain', () => {
+    // All partners share the chunk's tradition here, so the copy must not
+    // claim "cross-tradition" — that's the only case this branch can fire.
     const desc = chunkMetaDescription(CHUNK, [], [rel('taoism'), rel('taoism')]);
-    expect(desc).toBe('Ch. 1 of Tao Te Ching (Taoism) — 2 cross-tradition parallels. Every connection cited.');
+    expect(desc).toBe('Ch. 1 of Tao Te Ching (Taoism) — 2 linked parallels. Every connection cited.');
   });
 
   it('uses the passage position when the chunk has no section label', () => {

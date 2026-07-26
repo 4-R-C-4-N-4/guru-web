@@ -35,11 +35,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // thinTraditionRobots) — advertising them here would contradict that
   // directive, so they're dropped. Their text/chunk URLs stay listed.
   // Chunk ids are `<tradition>.<textId>.<NNN>`, so the per-tradition passage
-  // count falls out of the id list without widening the cached query.
+  // count falls out of the id list without widening the cached query. Only
+  // ids chunkIdToPath would accept are counted — anything else (sum: nodes,
+  // malformed ids) never lists as a passage URL, and counting it here could
+  // flip a boundary tradition out of agreement with thinTraditionRobots.
   const passagesByTradition = new Map<string, number>();
   for (const c of chunks) {
-    const tradition = c.id.slice(0, c.id.indexOf('.'));
-    passagesByTradition.set(tradition, (passagesByTradition.get(tradition) ?? 0) + 1);
+    const parts = c.id.split('.');
+    if (parts.length !== 3) continue;
+    passagesByTradition.set(parts[0], (passagesByTradition.get(parts[0]) ?? 0) + 1);
   }
   const traditions = [...new Set(textRows.map(t => t.tradition))]
     .filter(t => (passagesByTradition.get(t) ?? 0) >= THIN_TRADITION_MIN_PASSAGES);
