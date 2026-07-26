@@ -18,6 +18,7 @@
  * "concept." prefix.
  */
 
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -33,13 +34,17 @@ const SECTION_CAP = 8;
 type Params = Promise<{ slug: string }>;
 type Search = Promise<{ t?: string | string[] }>;
 
+// Deduped across generateMetadata and the page render (todo:17621cef).
+const getConceptCached = cache(getConcept);
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const concept = await getConcept(`concept.${slug}`);
+  const concept = await getConceptCached(`concept.${slug}`);
   if (!concept) return { title: 'Not found — Guru' };
   return {
     title: `${concept.label} — Source Library — Guru`,
     description: concept.definition ?? `Passages expressing ${concept.label} across the corpus.`,
+    alternates: { canonical: `/read/concepts/${slug}` },
   };
 }
 
@@ -111,7 +116,7 @@ export default async function ConceptPage(
   const expanded = typeof t === 'string' ? t : undefined;
   const conceptId = `concept.${slug}`;
   const [concept, chunks] = await Promise.all([
-    getConcept(conceptId),
+    getConceptCached(conceptId),
     listChunksExpressing(conceptId),
   ]);
   if (!concept) notFound();

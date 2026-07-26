@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   title: 'Concepts — Source Library — Guru',
   description:
     'Browse the concept layer of the corpus: every theme the traditions express, organized by domain and family, each linking to its passages across 21 traditions.',
+  alternates: { canonical: '/read/concepts' },
 };
 
 const crumbStyle = {

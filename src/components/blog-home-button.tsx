@@ -6,14 +6,16 @@ import { tokens } from '@/styles/tokens';
 
 /**
  * Auth-aware exit from the otherwise-isolated public blog (todo:3eb7c659).
- * Signed-in readers return to the app (/chat); anonymous visitors land on
- * the sign-in page. While Clerk is still loading isSignedIn is undefined, so
- * we default to /sign-in — that page redirects already-authenticated users
- * onward to /chat, so the fallback is never a dead end.
+ * Signed-in readers return to the app (/chat); anonymous visitors go to the
+ * landing page — NOT /sign-in (todo:17621cef): "Home" is the most repeated
+ * link on every public page, and pointing it at an auth wall was both a
+ * dead end for search visitors and a bad internal-link signal. While Clerk
+ * is loading isSignedIn is undefined, so we default to /; a signed-in user
+ * who clicks during that window still has the app nav to get back.
  */
 export default function BlogHomeButton() {
   const { isSignedIn } = useUser();
-  const href = isSignedIn ? '/chat' : '/sign-in';
+  const href = isSignedIn ? '/chat' : '/';
 
   return (
     <Link

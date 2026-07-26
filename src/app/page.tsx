@@ -8,11 +8,17 @@
  * never statically prerendered).
  */
 
+import type { Metadata } from 'next';
 import { listPublishedCached } from '@/lib/blog-public';
 import { listTraditionsCached } from '@/lib/corpus';
 import Landing from '@/components/landing';
 
 export const dynamic = 'force-dynamic';
+
+// Title/description inherit from the root layout; the canonical is here
+// because alternates don't belong in a layout (they'd apply to every page
+// that forgets its own — todo:17621cef).
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 export default async function HomePage() {
   // Cached reads: the page still renders per request (force-dynamic for the

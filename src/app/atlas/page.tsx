@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   title: 'State of the Atlas — Guru',
   description:
     'A recurring, data-led reading of the whole corpus: what the aggregate of cross-tradition resonances says, grounded in primary sources and honest about its method.',
+  alternates: { canonical: '/atlas' },
 };
 
 export default async function AtlasIndexPage() {

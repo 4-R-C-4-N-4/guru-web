@@ -12,6 +12,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { cache } from 'react';
 import { getPublishedBySlug } from '@/lib/blog-public';
 import { parseCitationsBlock } from '@/lib/citations';
 import { remarkCiteLinks } from '@/lib/remark-citations';
@@ -21,15 +22,19 @@ import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
 
+// Deduped across generateMetadata and the page render (todo:17621cef).
+const getPublishedBySlugCached = cache(getPublishedBySlug);
+
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPublishedBySlug(slug);
+  const post = await getPublishedBySlugCached(slug);
   if (!post) return { title: 'Not found — Guru' };
   return {
     title: `${post.title} — Guru`,
     description: post.dek ?? undefined,
+    alternates: { canonical: `/blog/${slug}` },
   };
 }
 
@@ -37,7 +42,7 @@ export default async function BlogPostPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const post = await getPublishedBySlug(slug);
+  const post = await getPublishedBySlugCached(slug);
   if (!post) notFound();
 
   // LLM-generated posts strip their CITATIONS tail at generation time and store
