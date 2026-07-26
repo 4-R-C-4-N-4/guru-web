@@ -1,0 +1,27 @@
+{
+  "id": "368e954f",
+  "type": "feature",
+  "state": "done",
+  "summary": "Manual local deploy script (deploy/deploy-local.sh): sudo-gated, CI-green-gated, additive to Actions",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-07-24T13:02:15.708Z",
+  "updated_at": "2026-07-24T13:03:53.882Z",
+  "files": [
+    {
+      "path": "deploy/deploy-local.sh"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "tooling"
+  ],
+  "description": "GH Actions deploy queue is slow (cold runner + npm ci ~6-8 min per merge). deploy.sh on the VPS only consumes pre-built tarballs over the tailnet, so a local builder is contract-compatible. Requirements from user: sudo-gated (human-presence authorization), strictly manual, does NOT displace deploy.yml (stays canonical/fallback). Guards: sudo -v; node major must match deploy.yml's 20; sha = origin/main HEAD only (fetched fresh); all GitHub check-runs for that sha successful via gh api; explicit confirm prompt. Hygiene: builds in a detached git worktree of the sha (never the working tree), mirrors deploy.yml exactly — fetch /etc/guru-web.public.env from VPS, NEXT_TELEMETRY_DISABLED build, npm prune --omit=dev, smoke-boot on :3210, tar with the same excludes, scp to releases/.incoming, ssh deploy.sh <sha>.",
+  "resolution": {
+    "commit": "de48a7c6bd30318d7b8145a8635bc691cb628324",
+    "resolved_at": "2026-07-24T13:03:53.882Z",
+    "resolved_by": "unknown",
+    "note": "Gates verified piecemeal (CI query green 2/2, node gate fires on v22, tailnet host reachable); no deploy executed — awaiting operator ssh setup"
+  }
+}
