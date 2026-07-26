@@ -930,9 +930,16 @@ sudo -u postgres psql -d guru -c "
 `deploy/deploy-local.sh` ships a release from your workstation over the
 tailnet, skipping the Actions queue. It is strictly additive — deploy.yml
 stays canonical — and strictly manual: it stops at five gates (sudo
-human-presence auth, node 20 parity, sha == origin/main, all check-runs
-green, a typed `deploy` confirmation) and builds in a detached worktree of
-the sha so working-tree files can never leak into the artifact.
+human-presence auth with the cached-timestamp escape closed, node parity
+with deploy.yml's setup-node at the deployed sha, sha == origin/main, CI
+green — the `check` run must have passed; the Actions `deploy` run is
+excluded from the count but a deploy in flight is a refusal — and a typed
+`deploy` confirmation). It builds in a detached worktree of the sha so
+working-tree files can never leak into the artifact, re-runs the full
+deploy.yml verify chain on that worktree (`npm audit signatures`, lint,
+type-check, tests — on the runtime node major, which CI's node-22 run
+doesn't cover), and keeps the fetched env + tarball in a 0700 staging dir
+outside the build tree so neither can ship in or linger after a crash.
 
 One-time setup:
 1. `~/.ssh/config` entry (your key, not the CI secret):
@@ -943,6 +950,8 @@ One-time setup:
    ```
 2. Authorize that key on the VPS: append its .pub to
    `/home/deploy/.ssh/authorized_keys` (via your admin access).
-3. `nvm install 20` — the script refuses any other major.
+3. `nvm install 20` — the script refuses any major other than the one
+   deploy.yml's setup-node pins (currently 20; parsed at run time from the
+   deployed sha, so this stays correct across VPS runtime bumps).
 
 Then: `deploy/deploy-local.sh` (optionally `DEPLOY_HOST=<alias>`).
