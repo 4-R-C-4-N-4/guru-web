@@ -66,9 +66,12 @@ describe('sitemap.xml route', () => {
 
   it('lists the reader surface: /read, traditions, text TOCs and chunk pages', async () => {
     mList.mockResolvedValue([]);
+    // 10 chunks — at the thin-tradition threshold, so the landing page lists.
     mockCorpus(
       [{ id: 'gospel-of-thomas', tradition: 'gnosticism' }],
-      [{ id: 'gnosticism.gospel-of-thomas.001' }],
+      Array.from({ length: 10 }, (_, i) => (
+        { id: `gnosticism.gospel-of-thomas.${String(i + 1).padStart(3, '0')}` }
+      )),
       [{ id: 'concept.pleroma' }],
     );
     const urls = (await sitemap()).map(e => e.url);
@@ -77,6 +80,21 @@ describe('sitemap.xml route', () => {
     expect(urls).toContain('https://guru-ai.org/read/gnosticism/gospel-of-thomas');
     expect(urls).toContain('https://guru-ai.org/read/gnosticism/gospel-of-thomas/001');
     expect(urls).toContain('https://guru-ai.org/read/concepts/pleroma');
+  });
+
+  it('drops thin-tradition landing pages (noindexed) but keeps their texts and chunks', async () => {
+    // todo:17621cef: /read/shinto-style pages below the passage threshold are
+    // robots-noindexed, so advertising them in the sitemap would contradict
+    // the directive. The underlying content URLs stay listed.
+    mList.mockResolvedValue([]);
+    mockCorpus(
+      [{ id: 'kojiki', tradition: 'shinto' }],
+      [{ id: 'shinto.kojiki.001' }],
+    );
+    const urls = (await sitemap()).map(e => e.url);
+    expect(urls).not.toContain('https://guru-ai.org/read/shinto');
+    expect(urls).toContain('https://guru-ai.org/read/shinto/kojiki');
+    expect(urls).toContain('https://guru-ai.org/read/shinto/kojiki/001');
   });
 
   it('surfaces an empty published list as-is (no phantom entries)', async () => {

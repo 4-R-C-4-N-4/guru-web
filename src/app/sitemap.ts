@@ -15,6 +15,7 @@ import type { MetadataRoute } from 'next';
 import { listPublishedCached } from '@/lib/blog-public';
 import { listSitemapCorpusCached } from '@/lib/reader';
 import { chunkIdToPath } from '@/lib/read-path';
+import { THIN_TRADITION_MIN_PASSAGES } from '@/lib/seo';
 import { SITE_URL } from '@/lib/site';
 
 // Without this, Next prerenders sitemap.xml at build time (metadata routes
@@ -30,7 +31,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listPublishedCached(),
     listSitemapCorpusCached(),
   ]);
-  const traditions = [...new Set(textRows.map(t => t.tradition))];
+  // Thin tradition landing pages are noindexed (todo:17621cef, see
+  // thinTraditionRobots) — advertising them here would contradict that
+  // directive, so they're dropped. Their text/chunk URLs stay listed.
+  // Chunk ids are `<tradition>.<textId>.<NNN>`, so the per-tradition passage
+  // count falls out of the id list without widening the cached query. Only
+  // ids chunkIdToPath would accept are counted — anything else (sum: nodes,
+  // malformed ids) never lists as a passage URL, and counting it here could
+  // flip a boundary tradition out of agreement with thinTraditionRobots.
+  const passagesByTradition = new Map<string, number>();
+  for (const c of chunks) {
+    const parts = c.id.split('.');
+    if (parts.length !== 3) continue;
+    passagesByTradition.set(parts[0], (passagesByTradition.get(parts[0]) ?? 0) + 1);
+  }
+  const traditions = [...new Set(textRows.map(t => t.tradition))]
+    .filter(t => (passagesByTradition.get(t) ?? 0) >= THIN_TRADITION_MIN_PASSAGES);
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: 'weekly', priority: 1 },

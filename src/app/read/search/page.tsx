@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   title: 'Search — Source Library — Guru',
   description:
     'Search the corpus by meaning, not just words — passages from 21 traditions, filtered by tradition, each linking into the reader.',
+  alternates: { canonical: '/read/search' },
 };
 
 const SEARCH_LIMIT_PER_MIN = 15;

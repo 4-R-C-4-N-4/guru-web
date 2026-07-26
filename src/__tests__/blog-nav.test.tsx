@@ -3,7 +3,8 @@
  *
  * Guards for connecting the isolated blog to the main site (todo:25ec2f4c):
  *  - BlogHomeButton is auth-aware: signed-in readers return to /chat, anonymous
- *    visitors land on /sign-in (todo:3eb7c659).
+ *    visitors land on the public landing page (todo:3eb7c659, retargeted to /
+ *    by todo:17621cef — "Home" must never point at an auth wall).
  *  - NAV_ITEMS exposes an Essays -> /blog entry so a logged-in user can reach
  *    the blog from the nav; the array drives both the desktop row and the
  *    mobile dropdown (todo:133d94d6).
@@ -34,11 +35,12 @@ import BlogHomeButton from '@/components/blog-home-button';
 import BlogLayout from '@/app/blog/layout';
 import { TAILNET_HOST } from '@/lib/host';
 
-describe('BlogHomeButton auth-aware target (todo:3eb7c659)', () => {
-  it('points anonymous visitors at /sign-in', () => {
+describe('BlogHomeButton auth-aware target (todo:3eb7c659, todo:17621cef)', () => {
+  it('points anonymous visitors at the landing page, never the auth wall', () => {
     mockAuth.isSignedIn = false;
     const html = renderToStaticMarkup(<BlogHomeButton />);
-    expect(html).toContain('href="/sign-in"');
+    expect(html).toContain('href="/"');
+    expect(html).not.toContain('href="/sign-in"');
     expect(html).not.toContain('href="/chat"');
   });
 
@@ -48,10 +50,11 @@ describe('BlogHomeButton auth-aware target (todo:3eb7c659)', () => {
     expect(html).toContain('href="/chat"');
   });
 
-  it('defaults to /sign-in while Clerk is still loading (isSignedIn undefined)', () => {
+  it('defaults to / while Clerk is still loading (isSignedIn undefined)', () => {
     mockAuth.isSignedIn = undefined;
     const html = renderToStaticMarkup(<BlogHomeButton />);
-    expect(html).toContain('href="/sign-in"');
+    expect(html).toContain('href="/"');
+    expect(html).not.toContain('href="/sign-in"');
   });
 });
 

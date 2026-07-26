@@ -6,24 +6,37 @@
  * render as a card with ordered parts. Unknown tradition slugs 404.
  */
 
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { listTextsForTradition, listTraditionsForReader } from '@/lib/reader';
+import { thinTraditionRobots } from '@/lib/seo';
 import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
+
+// Deduped across generateMetadata and the page render (todo:17621cef).
+const listTraditionsForReaderCached = cache(listTraditionsForReader);
+const listTextsForTraditionCached = cache(listTextsForTradition);
 
 export async function generateMetadata(
   { params }: { params: Promise<{ tradition: string }> },
 ): Promise<Metadata> {
   const { tradition } = await params;
-  const traditions = await listTraditionsForReader();
+  const [traditions, works] = await Promise.all([
+    listTraditionsForReaderCached(),
+    listTextsForTraditionCached(tradition),
+  ]);
   const t = traditions.find(x => x.id === tradition);
   if (!t) return { title: 'Not found — Guru' };
+  const totalPassages = works.reduce(
+    (n, w) => n + w.texts.reduce((m, tx) => m + tx.chunks, 0), 0);
   return {
     title: `${t.label} — Source Library — Guru`,
     description: t.description ?? `Primary sources of the ${t.label} tradition, readable passage by passage.`,
+    alternates: { canonical: `/read/${tradition}` },
+    robots: thinTraditionRobots(totalPassages),
   };
 }
 
@@ -32,8 +45,8 @@ export default async function TraditionPage(
 ) {
   const { tradition } = await params;
   const [works, traditions] = await Promise.all([
-    listTextsForTradition(tradition),
-    listTraditionsForReader(),
+    listTextsForTraditionCached(tradition),
+    listTraditionsForReaderCached(),
   ]);
   const meta = traditions.find(t => t.id === tradition);
   if (works.length === 0 || !meta) notFound();

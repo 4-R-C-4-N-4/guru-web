@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: 'Essays — Guru',
   description:
     'Grounded essays tracing resonances across esoteric traditions, every claim cited to its source.',
+  alternates: { canonical: '/blog' },
 };
 
 export default async function BlogIndexPage() {
