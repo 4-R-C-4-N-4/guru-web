@@ -1,13 +1,13 @@
 {
   "id": "d034b6b8",
   "type": "bug",
-  "state": "open",
+  "state": "wontfix",
   "summary": "queries.model_used has no FK to model_pricing — silent under-charging on rename",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-04T22:52:12.911Z",
-  "updated_at": "2026-05-04T22:52:12.911Z",
+  "updated_at": "2026-07-25T15:18:52.932Z",
   "files": [
     {
       "path": "migrations/006_cost_and_budgets.sql",

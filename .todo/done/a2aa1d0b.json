@@ -1,13 +1,13 @@
 {
   "id": "a2aa1d0b",
   "type": "bug",
-  "state": "open",
+  "state": "wontfix",
   "summary": "Two middleware.ts files — src/middleware.ts admin gate is dead code",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-05-04T22:51:53.152Z",
-  "updated_at": "2026-05-04T22:51:53.152Z",
+  "updated_at": "2026-07-25T15:18:52.887Z",
   "files": [
     {
       "path": "src/middleware.ts",

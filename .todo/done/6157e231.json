@@ -1,0 +1,24 @@
+{
+  "id": "6157e231",
+  "type": "feature",
+  "state": "done",
+  "summary": "Phase C: Schema & boot — vendor corpus-schema.sql, HNSW index, boot.ts validation (§5.1, §11 Phase 3)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-04-20T17:30:05.517Z",
+  "updated_at": "2026-07-25T15:18:52.752Z",
+  "relationships": {
+    "children": [
+      "4a2be462",
+      "ac806656",
+      "77aa7477"
+    ]
+  },
+  "resolution": {
+    "commit": "981f9343ca381b22969f45527788a171897d760d",
+    "resolved_at": "2026-07-25T15:18:52.752Z",
+    "resolved_by": "unknown",
+    "note": "Phase C deliverables shipped: corpus-schema.sql vendored with sha256 CI guard, boot.ts validates schema_version/env/embed-dims (boot.ts:110-127). Children C8/C10 closed earlier, C9 closed by contract."
+  }
+}

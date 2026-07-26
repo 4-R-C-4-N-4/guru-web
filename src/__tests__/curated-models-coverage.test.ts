@@ -71,6 +71,7 @@ describe('CURATED_MODELS ↔ PREFERRED_PROVIDER coverage', () => {
   it('preferredProviderFor returns the canonical name for each slug', () => {
     expect(preferredProviderFor('deepseek')).toBe('DeepSeek');
     expect(preferredProviderFor('xai')).toBe('xAI');
+    expect(preferredProviderFor('google')).toBe('Google AI Studio');
     expect(preferredProviderFor('anthropic')).toBe('Anthropic');
     expect(preferredProviderFor('openai')).toBe('OpenAI');
   });
