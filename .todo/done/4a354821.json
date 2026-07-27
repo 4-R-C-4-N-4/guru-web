@@ -1,0 +1,35 @@
+{
+  "id": "4a354821",
+  "type": "bug",
+  "state": "done",
+  "summary": "sync-pricing.service broken on VPS: tsx and dotenv are devDependencies but deploy tarball is pruned with --omit=dev, so npx tsx scripts/sync-pricing.ts fails in releases/<sha> (compounded by guru user having no writable HOME for the npm cache). Fix: move tsx+dotenv to dependencies; consider npm_config_cache/CacheDirectory in the unit.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-07-27T12:32:06.797Z",
+  "updated_at": "2026-07-27T15:06:54.943Z",
+  "files": [
+    {
+      "path": "package.json"
+    }
+  ],
+  "tags": [
+    "deploy",
+    "sync-pricing",
+    "vps"
+  ],
+  "work": {
+    "branch": "todo/4a354821",
+    "base_branch": "main",
+    "started_at": "2026-07-27T15:05:11.302Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "af8f406ae26f31201aa7168d1271ea65a164ef48",
+    "resolved_at": "2026-07-27T15:06:54.943Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/sync-pricing.test.ts",
+    "test_function": "deploy runtime dependencies (todo:4a354821)",
+    "note": "tsx+dotenv moved to dependencies so the pruned release tarball ships them; runner now execs release-local node_modules/.bin/tsx instead of npx (guru user has no writable HOME for the npm cache)"
+  }
+}
