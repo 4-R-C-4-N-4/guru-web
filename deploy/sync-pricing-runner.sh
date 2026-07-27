@@ -7,9 +7,14 @@
 #
 # Why a wrapper: Next.js standalone build excludes scripts/, so
 # /srv/guru-web/current (which symlinks to .../standalone) doesn't
-# include the script. The full clone lives at
-# /srv/guru-web/releases/<sha>/. We grab the most recent release
-# and exec there.
+# include the script. The unpacked release tarball (source + pruned
+# node_modules) lives at /srv/guru-web/releases/<sha>/. We grab the
+# most recent release and exec there.
+#
+# Uses the release's own node_modules/.bin/tsx, NOT npx: the guru
+# service user has no writable HOME, so any npx download/log write
+# fails (todo:4a354821). tsx and dotenv are runtime dependencies so
+# the pruned tarball ships them.
 #
 # Idempotent. Safe to run by hand:
 #   sudo systemctl start sync-pricing
@@ -30,11 +35,17 @@ fi
 
 RELEASE="$ROOT/releases/$LATEST_SHA"
 SCRIPT="$RELEASE/scripts/sync-pricing.ts"
+TSX="$RELEASE/node_modules/.bin/tsx"
 
 if [[ ! -f "$SCRIPT" ]]; then
     echo "sync-pricing: script missing at $SCRIPT" >&2
     exit 1
 fi
 
+if [[ ! -x "$TSX" ]]; then
+    echo "sync-pricing: tsx missing at $TSX — release built before tsx moved to dependencies?" >&2
+    exit 1
+fi
+
 cd "$RELEASE"
-exec /usr/bin/npx tsx "$SCRIPT"
+exec "$TSX" "$SCRIPT"

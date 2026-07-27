@@ -5,6 +5,8 @@
  * DB and network are not exercised — those are tested manually against a
  * real OpenRouter response when the operator runs the script.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { extractPricing, findMissingCuratedIds, pricingMatches } from '../../scripts/sync-pricing';
 
@@ -94,6 +96,22 @@ describe('extractPricing', () => {
       ],
     }, PROVIDERS);
     expect(out).toEqual({});
+  });
+});
+
+describe('deploy runtime dependencies (todo:4a354821)', () => {
+  // sync-pricing.service runs this script on the VPS from the release
+  // tarball, whose node_modules is `npm prune --omit=dev`'d. Every
+  // module the script needs at runtime must therefore live in
+  // "dependencies" — a devDependency vanishes from the release and the
+  // daily timer fails.
+  const pkg = JSON.parse(
+    readFileSync(join(__dirname, '../../package.json'), 'utf8'),
+  ) as { dependencies: Record<string, string>; devDependencies: Record<string, string> };
+
+  it.each(['tsx', 'dotenv'])('%s survives the release prune', (name) => {
+    expect(pkg.dependencies).toHaveProperty(name);
+    expect(pkg.devDependencies).not.toHaveProperty(name);
   });
 });
 
