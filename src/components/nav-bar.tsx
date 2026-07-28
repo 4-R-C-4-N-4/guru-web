@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
@@ -150,23 +151,21 @@ export default function NavBar() {
           negative margin swallows the wordmark's trailing letter-space so
           the gap to the first link is the gap it appears to be. */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: mobile ? 10 : 20 }}>
-        <button onClick={() => router.push('/chat')} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-        }}>
+        <Link href="/chat" style={{ textDecoration: 'none' }}>
           <span style={{ fontFamily: tokens.font.display, fontSize: mobile ? 18 : 22, fontWeight: 600, color: tokens.text.accent, letterSpacing: 3, marginRight: -3, lineHeight: 1 }}>GURU</span>
-        </button>
+        </Link>
 
         {!mobile && (
           <div style={{ display: 'flex', gap: 4 }}>
             {NAV_ITEMS.map(item => {
               const active = pathname?.startsWith(item.href);
               return (
-                <button
+                <Link
                   key={item.href}
+                  href={item.href}
                   className="nav-link"
                   aria-current={active ? 'page' : undefined}
-                  onClick={() => router.push(item.href)}
-                >{item.label}</button>
+                >{item.label}</Link>
               );
             })}
           </div>
@@ -229,9 +228,9 @@ export default function NavBar() {
                   fontFamily: tokens.font.mono, fontSize: 11, letterSpacing: 1,
                   color: tier === 'pro' ? tokens.text.accent : tokens.text.muted,
                 }}>Plan — {tier}</div>
-                <button role="menuitem" className="menu-item" onClick={() => { setAvatarOpen(false); router.push('/account'); }} style={{
+                <Link role="menuitem" className="menu-item" href="/account" onClick={() => setAvatarOpen(false)} style={{
                   borderBottom: `1px solid ${tokens.border.subtle}`,
-                }}>Account</button>
+                }}>Account</Link>
                 <button role="menuitem" className="menu-item" onClick={handleSignOut}>Sign out</button>
               </div>
             )}
@@ -249,14 +248,14 @@ export default function NavBar() {
           {MOBILE_MENU_ITEMS.map(item => {
             const active = pathname?.startsWith(item.href);
             return (
-              <button key={item.href} className="menu-item" onClick={() => { router.push(item.href); setMenuOpen(false); }} style={{
+              <Link key={item.href} className="menu-item" href={item.href} onClick={() => setMenuOpen(false)} style={{
                 padding: '14px 20px', fontSize: 13,
                 background: active ? tokens.bg.raised : undefined,
                 borderBottom: `1px solid ${tokens.border.subtle}`,
                 color: active ? tokens.text.accent : undefined,
               }}>{item.label}{item.href === '/account' ? (
                 <span style={{ float: 'right', color: tier === 'pro' ? tokens.text.accent : tokens.text.muted, fontSize: 11 }}>{tier}</span>
-              ) : null}</button>
+              ) : null}</Link>
             );
           })}
           <button className="menu-item" onClick={handleSignOut} style={{ padding: '14px 20px', fontSize: 13 }}>Sign out</button>

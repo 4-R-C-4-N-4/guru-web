@@ -186,7 +186,10 @@ button:active { transform: scale(0.98); }
   box-shadow: 0 0 0 1px var(--border-medium);
 }
 
-/* Nav links + dropdown menu items */
+/* Nav links + dropdown menu items. Shared by <Link> anchors (nav
+   destinations) and <button>s (actions like Sign out), so both the
+   button resets (background/border) and the anchor resets
+   (text-decoration) are needed. */
 .menu-item {
   display: block;
   width: 100%;
@@ -194,6 +197,8 @@ button:active { transform: scale(0.98); }
   padding: 10px 14px;
   background: none;
   border: none;
+  box-sizing: border-box;
+  text-decoration: none;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -207,8 +212,10 @@ button:active { transform: scale(0.98); }
 }
 .nav-link {
   position: relative;
+  display: inline-block;
   background: none;
   border: none;
+  text-decoration: none;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 12px;

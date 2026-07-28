@@ -74,6 +74,41 @@ describe('nav-bar avatar dropdown', () => {
   });
 });
 
+describe('nav-bar destinations are real links (todo:4d2b3997)', () => {
+  const CSS = readFileSync(resolve(__dirname, '../app/globals.css'), 'utf8');
+
+  it('imports Link from next/link', () => {
+    expect(SRC).toMatch(/import\s+Link\s+from\s+['"]next\/link['"]/);
+  });
+
+  it('desktop nav items render <Link href> — middle-click/ctrl+click must work', () => {
+    expect(SRC).toMatch(/NAV_ITEMS\.map[\s\S]{0,300}<Link[\s\S]{0,100}href=\{item\.href\}/);
+  });
+
+  it('mobile menu items render <Link href>', () => {
+    expect(SRC).toMatch(/MOBILE_MENU_ITEMS\.map[\s\S]{0,300}<Link[\s\S]{0,100}href=\{item\.href\}/);
+  });
+
+  it('logo links to /chat', () => {
+    expect(SRC).toMatch(/<Link\s+href="\/chat"/);
+  });
+
+  it('avatar-menu Account item is a Link, still role=menuitem', () => {
+    expect(SRC).toMatch(/<Link\s+role="menuitem"[^>]*href="\/account"/);
+  });
+
+  it('no nav destination is a router.push button', () => {
+    // router.push(item.href) was the old pattern that broke new-tab
+    // opening; the only remaining push is the past-due banner CTA.
+    expect(SRC).not.toMatch(/router\.push\(item\.href\)/);
+  });
+
+  it('shared classes reset anchor text-decoration', () => {
+    expect(CSS).toMatch(/\.nav-link\s*\{[^}]*text-decoration:\s*none/);
+    expect(CSS).toMatch(/\.menu-item\s*\{[^}]*text-decoration:\s*none/);
+  });
+});
+
 describe('nav-bar avatar label fallback (todo:11310d03)', () => {
   it("does not fall back to the literal '?' character", () => {
     // The old fallback was `... .join('') || '?';`. Either an empty-string
