@@ -1,0 +1,23 @@
+{
+  "id": "76219c57",
+  "type": "feature",
+  "state": "open",
+  "summary": "Ask-about-passage: pass chunk id through to the model and genericize the prefilled question",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-02T14:32:50.503Z",
+  "updated_at": "2026-08-02T14:33:05.092Z",
+  "files": [
+    {
+      "path": "src/lib/read-path.ts"
+    }
+  ],
+  "tags": [
+    "chat",
+    "reader",
+    "retrieval",
+    "study-mode"
+  ],
+  "description": "The \"Ask guru about this passage\" link (askAboutHref, src/lib/read-path.ts:63) drops the chunk id — it only carries ?study=<pin_text_id> and a prefilled question quoting the internal section label (e.g. 'Section 13 (part 64)'). Study-mode retrieval in /api/query is pure semantic search (retrieve(), top-15) and the section label has no overlap with the chunk body, so the referenced passage routinely never reaches the model (observed live: Golden Verses chunk 097 / Theogony — model answered \"the passages simply aren't here\").\n\nFix, one addition per hop:\n1. askAboutHref (src/lib/read-path.ts): add &chunk=<chunk.id> — reader page already has chunk.id in hand (read/[tradition]/[textId]/[n]/page.tsx:182).\n2. chat-view.tsx (~line 139): capture ?chunk= alongside ?study=/?q=, send as pinned_chunk_id with the FIRST query only; follow-ups revert to normal retrieval.\n3. api/query/route.ts (~line 145): SELECT the chunk by id, prepend to retrieve() results before buildStudyPrompt — dedupe if retrieval already found it, count it in the token-fitting budget, include in chunks_used/citations. Tag it in the prompt as \"the passage the user is reading\". Fail-open: unknown id → skip injection, keep today's behavior.\n\nAlso: reword the prefilled q in askAboutHref to be generic — with the chunk guaranteed in context, the question should not reference internal chunk/section notation (not meaningful to the text or the model). Something like \"What is the meaning of this passage from <text_label>?\".\n\nSide observation while investigating: the pythagorean-golden-verses dossier says Section 13 has eleven parts, but chunk 097's section label is \"Section 13 (part 64)\" — dossier likely predates current chunking; separate ticket if confirmed."
+}
