@@ -113,6 +113,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   const [studyTextId, setStudyTextId] = useState<string>('');
   const [studyLabel, setStudyLabel] = useState<string | null>(
     initialMode === 'study' ? (studyToc?.work_label ?? 'study session') : null);
+  // One-shot passage pin (todo:76219c57): ?chunk= from the reader's
+  // ask-about-this-passage link. Sent as pinned_chunk_id with the FIRST
+  // query only — follow-ups revert to plain retrieval — so it clears as
+  // soon as a send consumes it.
+  const [pinnedChunkId, setPinnedChunkId] = useState<string | null>(null);
   const [works, setWorks] = useState<StudyWork[]>([]);
   // Fork voice downgrade notice (todo:36421ff5 review — say-but-downgrade):
   // the fork endpoint drops a pro voice for a non-pro forker and
@@ -138,10 +143,12 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
       // refresh doesn't re-seed over an ongoing session.
       const study = params.get('study');
       const seedQ = params.get('q');
-      if (!from && !study && !seedQ) return;
+      const chunk = params.get('chunk');
+      if (!from && !study && !seedQ && !chunk) return;
       params.delete('voiceDowngraded');
       params.delete('study');
       params.delete('q');
+      params.delete('chunk');
       const qs = params.toString();
       window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
       if (from) setVoiceDowngradedFrom(from);
@@ -150,6 +157,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         setStudyLabel('study session'); // refined once /api/corpus works load
       }
       if (seedQ) setInput(seedQ);
+      if (chunk) setPinnedChunkId(chunk);
     }, 0);
     return () => clearTimeout(t);
   }, []);
@@ -310,10 +318,23 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         try { window.history.replaceState({}, '', `/chat/${sid}`); } catch { /* ignore */ }
       }
 
+      // One-shot passage pin (todo:76219c57): rides this query, but only
+      // counts as spent once the server accepts it (non-429, below). A 429
+      // here is the 1s debounce or the daily cap — no model call happened,
+      // so an immediate retry of the SAME first question must still carry
+      // the passage; consuming pre-fetch would silently reproduce the exact
+      // retrieval miss this pin exists to fix. A network failure (fetch
+      // throw) likewise leaves the pin intact.
+      const pinned = pinnedChunkId;
+
       const res = await fetch('/api/query', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: queryText, sessionId: sid }),
+        body: JSON.stringify({
+          query: queryText,
+          sessionId: sid,
+          ...(pinned ? { pinned_chunk_id: pinned } : {}),
+        }),
       });
 
       if (res.status === 429) {
@@ -328,6 +349,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         setLoading(false);
         return;
       }
+
+      // Server accepted the query — the pin is spent. Follow-ups (and any
+      // stream error past this point: the query DID run) revert to plain
+      // retrieval rather than re-injecting a passage the user moved past.
+      if (pinned) setPinnedChunkId(null);
 
       const used = res.headers.get('X-Quota-Used');
       if (used) setQuotaUsed(parseInt(used, 10));
@@ -402,7 +428,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId, tier, mode, studyTextId]);
+  }, [input, loading, sessionId, tier, mode, studyTextId, pinnedChunkId]);
 
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;

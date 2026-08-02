@@ -182,6 +182,7 @@ interface FormattableChunk {
   section: string;
   body: string;
   tier?: string;
+  pinned?: boolean;
 }
 
 function formatChunk(chunk: FormattableChunk, index: number): string {
@@ -192,8 +193,14 @@ function formatChunk(chunk: FormattableChunk, index: number): string {
   // format so the tier is read, not guessed.
   const tier = chunk.tier ?? "inferred";
   const translator = chunk.translator ? ` (trans. ${chunk.translator})` : "";
+  // Pinned = the passage the user was reading when they clicked "Ask guru
+  // about this passage" (todo:76219c57) — flag it so the model treats it as
+  // the anchor of the question, not one candidate among fifteen.
+  const pinnedMark = chunk.pinned
+    ? ` | THE PASSAGE THE USER IS READING — anchor your answer here`
+    : "";
   return (
-    `[${index + 1}] ${tierSymbol(tier)} ${chunk.tradition} | ${chunk.text_name}${translator} | ${chunk.section} | TIER: ${tier}\n` +
+    `[${index + 1}] ${tierSymbol(tier)} ${chunk.tradition} | ${chunk.text_name}${translator} | ${chunk.section} | TIER: ${tier}${pinnedMark}\n` +
     `${chunk.body}`
   );
 }

@@ -61,6 +61,13 @@ export interface RetrievedChunk extends Chunk {
    * serialised by existing routes.
    */
   conceptMatchWeight?: number;
+  /**
+   * Set on the passage the user was reading when they clicked "Ask guru about
+   * this passage" (todo:76219c57). The query route injects that chunk ahead of
+   * retrieval results and formatChunk marks it in the prompt. Internal signal —
+   * not serialised by existing routes.
+   */
+  pinned?: boolean;
 }
 
 /**

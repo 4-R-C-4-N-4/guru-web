@@ -18,7 +18,7 @@
  */
 
 import { requireUser } from '@/lib/auth';
-import { retrieve } from '@/lib/retriever';
+import { retrieve, getChunkById } from '@/lib/retriever';
 import { summarizeExpansion } from '@/lib/graph';
 import { buildPrompt, buildStudyPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { VoiceSlug } from '@/lib/types';
@@ -60,13 +60,22 @@ export async function POST(req: Request) {
   // 2. Parse body
   let queryText: string;
   let sessionId: string | null;
+  let pinnedChunkId: string | null;
   try {
-    const body = await req.json() as { query?: unknown; sessionId?: unknown };
+    const body = await req.json() as { query?: unknown; sessionId?: unknown; pinned_chunk_id?: unknown };
     if (typeof body.query !== 'string' || !body.query.trim()) {
       return Response.json({ error: 'query is required' }, { status: 400 });
     }
     queryText = body.query.trim();
     sessionId = typeof body.sessionId === 'string' ? body.sessionId : null;
+    // Ask-about-this-passage pin (todo:76219c57): the chunk the user was
+    // reading rides the first query so it's guaranteed to reach the model —
+    // semantic retrieval routinely misses it (the question references the
+    // passage, not its content). One-shot by client contract; advisory here,
+    // so a bogus id degrades to plain retrieval rather than erroring.
+    pinnedChunkId = typeof body.pinned_chunk_id === 'string' && body.pinned_chunk_id.length <= 200
+      ? body.pinned_chunk_id
+      : null;
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
@@ -140,13 +149,23 @@ export async function POST(req: Request) {
   // (W3) and the work dossier (W4); the dossier fetch is one PK-shaped query
   // and independent of retrieval, so it joins the parallel batch.
   const isStudy = sessionMode === 'study' && !!studyTextId;
-  const [chunks, expansion, dossier] = await Promise.all([
+  const [retrieved, expansion, dossier, pinnedChunk] = await Promise.all([
     isStudy
       ? retrieve(queryText, scopedPrefs, 15, 'study', studyTextId)
       : retrieve(queryText, scopedPrefs),
     summarizeExpansion(queryText),
     isStudy ? getDossierForText(studyTextId!) : Promise.resolve(null),
+    // Pinned-passage fetch (todo:76219c57) is one PK lookup, independent of
+    // retrieval — joins the parallel batch. Null (no pin / stale id after a
+    // corpus swap) falls through to plain retrieval.
+    pinnedChunkId ? getChunkById(pinnedChunkId) : Promise.resolve(null),
   ]);
+  // Prepend the pinned passage ahead of retrieval results: first in line for
+  // the token-fitting budget, marked in the prompt by formatChunk, and it
+  // flows into chunks_used + the citations header like any retrieved chunk.
+  const chunks = pinnedChunk
+    ? [pinnedChunk, ...retrieved.filter(c => c.id !== pinnedChunk.id)]
+    : retrieved;
   // Reserve room for history in the chunk-fitting budget so long sessions
   // retrieve fewer chunks rather than blowing the context window.
   const prompt = isStudy
