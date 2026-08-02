@@ -192,6 +192,19 @@ describe('buildPrompt', () => {
     expect(result).toContain('orphan query');
   });
 
+  // Ask-about-this-passage pin (todo:76219c57): the injected chunk is marked
+  // in its header so the model anchors on it instead of treating it as one
+  // candidate among fifteen. Unpinned chunks must stay marker-free.
+  it('marks a pinned chunk as the passage the user is reading', () => {
+    const pinned = { ...makeChunk('c1', 'greek_mystery'), pinned: true };
+    const result = buildPrompt('what does this mean?', [pinned, makeChunk('c2', 'taoism')], DEFAULT_PREFS, 'free');
+    expect(result).toContain('THE PASSAGE THE USER IS READING');
+    const lines = result.split('\n');
+    expect(lines.filter(l => l.includes('THE PASSAGE THE USER IS READING'))).toHaveLength(1);
+    expect(lines.find(l => l.startsWith('[1]'))).toContain('THE PASSAGE THE USER IS READING');
+    expect(lines.find(l => l.startsWith('[2]'))).not.toContain('THE PASSAGE THE USER IS READING');
+  });
+
   it('pro tier allows more chunks than free tier', () => {
     // Create enough chunks to overflow a free budget but fit a pro budget
     const chunks = Array.from({ length: 30 }, (_, i) =>

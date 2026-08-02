@@ -113,6 +113,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
   const [studyTextId, setStudyTextId] = useState<string>('');
   const [studyLabel, setStudyLabel] = useState<string | null>(
     initialMode === 'study' ? (studyToc?.work_label ?? 'study session') : null);
+  // One-shot passage pin (todo:76219c57): ?chunk= from the reader's
+  // ask-about-this-passage link. Sent as pinned_chunk_id with the FIRST
+  // query only — follow-ups revert to plain retrieval — so it clears as
+  // soon as a send consumes it.
+  const [pinnedChunkId, setPinnedChunkId] = useState<string | null>(null);
   const [works, setWorks] = useState<StudyWork[]>([]);
   // Fork voice downgrade notice (todo:36421ff5 review — say-but-downgrade):
   // the fork endpoint drops a pro voice for a non-pro forker and
@@ -138,10 +143,12 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
       // refresh doesn't re-seed over an ongoing session.
       const study = params.get('study');
       const seedQ = params.get('q');
-      if (!from && !study && !seedQ) return;
+      const chunk = params.get('chunk');
+      if (!from && !study && !seedQ && !chunk) return;
       params.delete('voiceDowngraded');
       params.delete('study');
       params.delete('q');
+      params.delete('chunk');
       const qs = params.toString();
       window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
       if (from) setVoiceDowngradedFrom(from);
@@ -150,6 +157,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         setStudyLabel('study session'); // refined once /api/corpus works load
       }
       if (seedQ) setInput(seedQ);
+      if (chunk) setPinnedChunkId(chunk);
     }, 0);
     return () => clearTimeout(t);
   }, []);
@@ -310,10 +318,21 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         try { window.history.replaceState({}, '', `/chat/${sid}`); } catch { /* ignore */ }
       }
 
+      // Consume the one-shot passage pin (todo:76219c57) before the fetch:
+      // whether this send succeeds or 429s, the pin belongs to the first
+      // attempt only — retries fall back to plain retrieval rather than
+      // re-injecting a passage the user may have moved past.
+      const pinned = pinnedChunkId;
+      if (pinned) setPinnedChunkId(null);
+
       const res = await fetch('/api/query', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: queryText, sessionId: sid }),
+        body: JSON.stringify({
+          query: queryText,
+          sessionId: sid,
+          ...(pinned ? { pinned_chunk_id: pinned } : {}),
+        }),
       });
 
       if (res.status === 429) {
@@ -402,7 +421,7 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
     } finally {
       setLoading(false);
     }
-  }, [input, loading, sessionId, tier, mode, studyTextId]);
+  }, [input, loading, sessionId, tier, mode, studyTextId, pinnedChunkId]);
 
   const overLimit      = input.length > QUERY_MAX_CHARS;
   const showCounter    = input.length >= QUERY_WARN_CHARS;

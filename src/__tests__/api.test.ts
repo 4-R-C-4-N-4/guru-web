@@ -43,6 +43,7 @@ vi.mock('@/lib/cost', () => ({
 
 vi.mock('@/lib/retriever', () => ({
   retrieve: vi.fn(),
+  getChunkById: vi.fn(),
 }));
 
 vi.mock('@/lib/prompt', async () => {
@@ -109,6 +110,7 @@ const mockReserveBudget  = spend.reserveBudget  as MockedFunction<typeof spend.r
 const mockFinalizeBudget = spend.finalizeBudget as MockedFunction<typeof spend.finalizeBudget>;
 const mockComputeCost    = cost.computeCost     as MockedFunction<typeof cost.computeCost>;
 const mockRetrieve = retriever.retrieve   as MockedFunction<typeof retriever.retrieve>;
+const mockGetChunkById = retriever.getChunkById as MockedFunction<typeof retriever.getChunkById>;
 const mockBuild  = prompt.buildPrompt     as MockedFunction<typeof prompt.buildPrompt>;
 const mockBuildStudy = prompt.buildStudyPrompt as MockedFunction<typeof prompt.buildStudyPrompt>;
 const mockGetDossier = dossierLib.getDossierForText as MockedFunction<typeof dossierLib.getDossierForText>;
@@ -684,6 +686,77 @@ describe('POST /api/query', () => {
     expect(mockGetDossier).toHaveBeenCalledWith('plato-republic-7-0');
     expect(mockBuildStudy).toHaveBeenCalledWith('the cave', [], dossierFixture, DEFAULT_PREFS, 'free', 0);
     expect(mockBuild).not.toHaveBeenCalled();
+  });
+
+  // Ask-about-this-passage pin (todo:76219c57): a pinned_chunk_id in the body
+  // must fetch that chunk by id and prepend it ahead of retrieval results —
+  // semantic retrieval alone routinely misses the passage the user is reading.
+  // Same 429-after-assertion-surface trick as the study tests.
+  it('pinned_chunk_id prepends the fetched chunk ahead of retrieval results, deduped', async () => {
+    const pinned = { id: 'gm.golden-verses.097', body: 'theogony', pinned: true };
+    const other  = { id: 'gm.golden-verses.001', body: 'precepts' };
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({
+      id: 's9', voice: 'scholar', mode: 'study', study_text_id: 'golden-verses-0',
+    });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    // Retrieval happens to find the pinned chunk too — it must not appear twice.
+    mockRetrieve.mockResolvedValueOnce([other, { id: 'gm.golden-verses.097', body: 'theogony' }] as never);
+    mockGetChunkById.mockResolvedValueOnce(pinned as never);
+    mockGetDossier.mockResolvedValueOnce(null);
+    mockBuildStudy.mockReturnValueOnce('study prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    const res = await queryPOST(req('POST', '/api/query', {
+      query: 'what does this mean?', sessionId: 's9',
+      pinned_chunk_id: 'gm.golden-verses.097',
+    }));
+    expect(res.status).toBe(429); // deliberate stop after the assertion surface
+
+    expect(mockGetChunkById).toHaveBeenCalledWith('gm.golden-verses.097');
+    expect(mockBuildStudy).toHaveBeenCalledWith(
+      'what does this mean?', [pinned, other], null, DEFAULT_PREFS, 'free', 0);
+  });
+
+  it('a stale pinned_chunk_id degrades to plain retrieval (fail-open)', async () => {
+    const other = { id: 'gm.golden-verses.001', body: 'precepts' };
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1', voice: 'scholar', mode: 'chat', study_text_id: null });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([other] as never);
+    mockGetChunkById.mockResolvedValueOnce(null); // id vanished in a corpus swap
+    mockBuild.mockReturnValueOnce('prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    const res = await queryPOST(req('POST', '/api/query', {
+      query: 'q', sessionId: 's1', pinned_chunk_id: 'gone.text.999',
+    }));
+    expect(res.status).toBe(429);
+    expect(mockBuild).toHaveBeenCalledWith('q', [other], DEFAULT_PREFS, 'free', 0);
+  });
+
+  it('no pinned_chunk_id means no chunk lookup at all', async () => {
+    mockAuth.mockResolvedValueOnce(FREE_USER);
+    mockOne.mockResolvedValueOnce({ id: 's1', voice: 'scholar', mode: 'chat', study_text_id: null });
+    mockPrefs.mockResolvedValueOnce(DEFAULT_PREFS);
+    mockRetrieve.mockResolvedValueOnce([]);
+    mockBuild.mockReturnValueOnce('prompt');
+    mockComputeCost.mockResolvedValueOnce(DEFAULT_COST);
+    mockReserveBudget.mockResolvedValueOnce({
+      allowed: false, reason: 'queries',
+      queries_used: 10, usd_used: 0, query_limit: 10, usd_limit: null,
+    });
+
+    await queryPOST(req('POST', '/api/query', { query: 'q', sessionId: 's1' }));
+    expect(mockGetChunkById).not.toHaveBeenCalled();
   });
 
   it('chat session never touches the dossier or study prompt', async () => {

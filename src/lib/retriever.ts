@@ -126,6 +126,28 @@ export async function retrieve(
 }
 
 // ---------------------------------------------------------------------------
+// Pinned-passage fetch (todo:76219c57)
+// ---------------------------------------------------------------------------
+
+/**
+ * Direct chunk lookup for the reader's ask-about-this-passage pin. Column-
+ * compatible with the vector leg so the prompt builder and citations header
+ * need no special cases; `pinned` marks it for formatChunk. Fail-open: an
+ * unknown id (corpus swap since the link was minted) returns null and the
+ * caller proceeds with plain retrieval.
+ */
+export async function getChunkById(id: string): Promise<RetrievedChunk | null> {
+  const row = await one<RetrievedChunk>(
+    `SELECT id, text_id, tradition, text_name, section, translator, body, token_count,
+            'vector' AS source
+     FROM chunks
+     WHERE id = $1`,
+    [id]
+  );
+  return row ? { ...row, pinned: true } : null;
+}
+
+// ---------------------------------------------------------------------------
 // Summary leg (study mode; summary-phase-w.md §W3)
 // ---------------------------------------------------------------------------
 

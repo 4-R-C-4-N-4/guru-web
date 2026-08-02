@@ -177,9 +177,11 @@ export default async function ChunkPage({ params }: { params: Params }) {
         </div>
 
         {/* The funnel loop-closer (todo:7b60b6fb): reader → chat, pinned to
-            this passage's work in study mode with the question prefilled. */}
+            this passage's work in study mode with the question prefilled and
+            the chunk id carried so the passage itself reaches the model
+            (todo:76219c57). */}
         <Link
-          href={askAboutHref(chunk.pin_text_id, chunk.text_label, chunk.section)}
+          href={askAboutHref(chunk.pin_text_id, chunk.text_label, chunk.id)}
           style={{
             display: 'inline-block', marginTop: 18,
             fontFamily: tokens.font.mono, fontSize: 11, letterSpacing: 1,

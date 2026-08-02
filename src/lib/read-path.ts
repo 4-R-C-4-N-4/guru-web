@@ -57,11 +57,15 @@ export function sectionFormatLabel(format: string | null): string {
   return (format && SECTION_FORMAT_LABELS[format]) || 'Sections';
 }
 
-/** Ask-about-this-passage deep link (todo:7b60b6fb): opens chat pinned to
- *  the passage's work (study mode, via the work's pin text id) with a
- *  prefilled — never auto-sent — question naming the passage. */
-export function askAboutHref(pinTextId: string, textLabel: string, section: string | null): string {
-  const passage = section ? `"${section}" in ${textLabel}` : textLabel;
-  const q = `What is the meaning of ${passage}?`;
-  return `/chat?study=${encodeURIComponent(pinTextId)}&q=${encodeURIComponent(q)}`;
+/** Ask-about-this-passage deep link (todo:7b60b6fb; chunk pin todo:76219c57):
+ *  opens chat pinned to the passage's work (study mode, via the work's pin
+ *  text id) with a prefilled — never auto-sent — question. The chunk id rides
+ *  along so the first query injects the passage itself into the model's
+ *  context: semantic retrieval alone routinely misses it, because section
+ *  labels ("Section 13 (part 64)") are metadata with no overlap with the
+ *  chunk body. The question is deliberately generic for the same reason —
+ *  internal section notation means nothing to the text or the model. */
+export function askAboutHref(pinTextId: string, textLabel: string, chunkId: string): string {
+  const q = `What is the meaning of this passage from ${textLabel}?`;
+  return `/chat?study=${encodeURIComponent(pinTextId)}&q=${encodeURIComponent(q)}&chunk=${encodeURIComponent(chunkId)}`;
 }
