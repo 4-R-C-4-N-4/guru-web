@@ -318,12 +318,14 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         try { window.history.replaceState({}, '', `/chat/${sid}`); } catch { /* ignore */ }
       }
 
-      // Consume the one-shot passage pin (todo:76219c57) before the fetch:
-      // whether this send succeeds or 429s, the pin belongs to the first
-      // attempt only — retries fall back to plain retrieval rather than
-      // re-injecting a passage the user may have moved past.
+      // One-shot passage pin (todo:76219c57): rides this query, but only
+      // counts as spent once the server accepts it (non-429, below). A 429
+      // here is the 1s debounce or the daily cap — no model call happened,
+      // so an immediate retry of the SAME first question must still carry
+      // the passage; consuming pre-fetch would silently reproduce the exact
+      // retrieval miss this pin exists to fix. A network failure (fetch
+      // throw) likewise leaves the pin intact.
       const pinned = pinnedChunkId;
-      if (pinned) setPinnedChunkId(null);
 
       const res = await fetch('/api/query', {
         method: 'POST',
@@ -347,6 +349,11 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
         setLoading(false);
         return;
       }
+
+      // Server accepted the query — the pin is spent. Follow-ups (and any
+      // stream error past this point: the query DID run) revert to plain
+      // retrieval rather than re-injecting a passage the user moved past.
+      if (pinned) setPinnedChunkId(null);
 
       const used = res.headers.get('X-Quota-Used');
       if (used) setQuotaUsed(parseInt(used, 10));

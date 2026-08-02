@@ -7,7 +7,8 @@
  * question; getChunkPage exposes that pin (the work's first member — a
  * chunk in Dhammapada ch. 5 must pin ch. 1); chat-view consumes ?study=,
  * ?q= and ?chunk= in its param-strip effect without auto-sending, and
- * spends the chunk pin on the first query only.
+ * spends the chunk pin on the first query the server accepts (a 429 or
+ * network failure leaves it intact for the retry).
  */
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -16,6 +17,7 @@ import { askAboutHref } from '@/lib/read-path';
 vi.mock('@/lib/db', () => ({ query: vi.fn(), one: vi.fn(), exec: vi.fn() }));
 
 import { getChunkPage } from '@/lib/reader';
+import { getChunkById } from '@/lib/retriever';
 import { one } from '@/lib/db';
 
 const mOne = one as MockedFunction<typeof one>;
@@ -58,6 +60,30 @@ describe('getChunkPage pin_text_id', () => {
   });
 });
 
+describe('getChunkById (pinned-passage fetch)', () => {
+  const ROW = {
+    id: 'greek_mystery.pythagorean-golden-verses.097', text_id: 'golden-verses-0',
+    tradition: 'greek_mystery', text_name: 'The Golden Verses of Pythagoras',
+    section: 'Section 13 (part 64)', translator: null, body: 'theogony',
+    token_count: 3, source: 'vector',
+  };
+
+  it("tags the row pinned and tier 'inferred' — same as any vector hit", async () => {
+    mOne.mockResolvedValueOnce(ROW as never);
+    const out = await getChunkById(ROW.id);
+    expect(out?.pinned).toBe(true);
+    // Without an explicit tier, the citations header's `?? 'verified'`
+    // fallback would stamp the pin with the highest-trust label while
+    // formatChunk shows 'inferred' in the prompt.
+    expect(out?.tier).toBe('inferred');
+  });
+
+  it('fail-open: an unknown id returns null', async () => {
+    mOne.mockResolvedValueOnce(null as never);
+    expect(await getChunkById('gone.text.999')).toBeNull();
+  });
+});
+
 describe('chat-view seed handling (source shape)', () => {
   const SRC = readFileSync('src/components/chat-view.tsx', 'utf8');
 
@@ -70,14 +96,19 @@ describe('chat-view seed handling (source shape)', () => {
     expect(SRC).toMatch(/params\.delete\('chunk'\)/);
   });
 
-  it('sends the pin as pinned_chunk_id and consumes it before the fetch (one-shot)', () => {
+  it('sends the pin as pinned_chunk_id and spends it only when the server accepts (one-shot, non-429)', () => {
     expect(SRC).toMatch(/pinned_chunk_id: pinned/);
-    // The pin must clear BEFORE the /api/query fetch so retries and
-    // follow-ups fall back to plain retrieval.
+    // The pin must survive a 429 (1s debounce or daily cap — no model call
+    // happened, so a retry of the SAME first question still needs the
+    // passage) and a network failure. So consumption comes AFTER the fetch
+    // and AFTER the 429 early-return; from there follow-ups revert to
+    // plain retrieval.
     const consumeAt = SRC.indexOf('setPinnedChunkId(null)');
     const fetchAt   = SRC.indexOf("fetch('/api/query'");
+    const deny429At = SRC.indexOf('res.status === 429');
     expect(consumeAt).toBeGreaterThan(-1);
-    expect(consumeAt).toBeLessThan(fetchAt);
+    expect(consumeAt).toBeGreaterThan(fetchAt);
+    expect(consumeAt).toBeGreaterThan(deny429At);
   });
 
   it('prefills the input but never auto-sends', () => {

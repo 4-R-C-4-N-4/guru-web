@@ -132,9 +132,16 @@ export async function retrieve(
 /**
  * Direct chunk lookup for the reader's ask-about-this-passage pin. Column-
  * compatible with the vector leg so the prompt builder and citations header
- * need no special cases; `pinned` marks it for formatChunk. Fail-open: an
- * unknown id (corpus swap since the link was minted) returns null and the
- * caller proceeds with plain retrieval.
+ * need no special cases; `pinned` marks it for formatChunk, and `tier` is set
+ * to 'inferred' exactly as mergeAndRerank tags vector hits — without it the
+ * citations header's `?? 'verified'` fallback would stamp the pin with the
+ * highest-trust label. Fail-open: an unknown id (corpus swap since the link
+ * was minted) returns null and the caller proceeds with plain retrieval.
+ *
+ * Deliberately unscoped: this bypasses blacklist/whitelist prefs and the
+ * study-work member filter, because the pin is the user's own explicit
+ * navigation — they were just reading this chunk in the open reader. If
+ * corpus content ever becomes access-gated, this needs a scope check.
  */
 export async function getChunkById(id: string): Promise<RetrievedChunk | null> {
   const row = await one<RetrievedChunk>(
@@ -144,7 +151,7 @@ export async function getChunkById(id: string): Promise<RetrievedChunk | null> {
      WHERE id = $1`,
     [id]
   );
-  return row ? { ...row, pinned: true } : null;
+  return row ? { ...row, tier: 'inferred', pinned: true } : null;
 }
 
 // ---------------------------------------------------------------------------
