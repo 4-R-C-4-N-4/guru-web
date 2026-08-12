@@ -1,0 +1,23 @@
+{
+  "note": "SCHEMA REFERENCE, not corpus truth — the underscore prefix keeps it out of the loader. Real files are named <work>.json where <work> is a corpus.works id. Authoring rules live in docs/golden-queries.md: recall probes paraphrase the chunk's distinctive vocabulary (copied words make FTS hits self-fulfilling) and assert only tradition/work survival; relevance queries assert nothing and are graded post-hoc from the manifest. provenanceChunkIds record the chunks a query was drafted from — audit trail only, never asserted. frozenEval is the work-level train/eval partition: true = frozen eval subset, false = eligible for the fine-tune query distribution; the choice is one-way.",
+  "work": "example-work",
+  "tradition": "example_tradition",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why does the teacher say a student must empty themselves before wisdom can enter",
+      "provenanceChunkIds": ["example_tradition.example-work-01.007"],
+      "mustIncludeTraditions": ["example_tradition"],
+      "mustIncludeWork": true,
+      "note": "Drafted from a chunk about the full-cup parable; 'cup', 'overflowing', 'pour' deliberately paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "what happens to the soul at the moment of death",
+      "provenanceChunkIds": ["example_tradition.example-work-02.014"],
+      "note": "This work answers it, but so do half the traditions in the corpus — no asserted target; graded under the (query, chunk) frame."
+    }
+  ]
+}
