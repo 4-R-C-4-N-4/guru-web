@@ -1,0 +1,20 @@
+{
+  "id": "3b2b548d",
+  "type": "chore",
+  "state": "done",
+  "summary": "Pilot: draft golden-queries files for three works from their chunks, for owner ratification in PR review",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T13:49:01.418Z",
+  "updated_at": "2026-08-12T14:18:01.814Z",
+  "relationships": {
+    "parent": "a8559033"
+  },
+  "resolution": {
+    "commit": "15659b4582e0ce94409f56f0530cc6a2c6d4eeb0",
+    "resolved_at": "2026-08-12T14:18:01.814Z",
+    "resolved_by": "unknown",
+    "note": "Three pilots drafted from live corpus v50 chunks: 12 recall probes (4 per work, provenance recorded) + 6 relevance queries. All probes verified surviving top-15 via the integration gate; 4 first drafts that missed top-15 were retuned with reader-honest name anchors, recorded in note fields. corpus-hermeticum marked frozenEval for the work-disjoint eval subset."
+  }
+}
