@@ -1,0 +1,14 @@
+{
+  "id": "f8610bc9",
+  "type": "chore",
+  "state": "open",
+  "summary": "Define fixtures/golden-queries/<work>.json schema: recall-probe and relevance kinds, provenance chunk ids, frozen-eval flag; example file + schema validation test",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T13:48:50.562Z",
+  "updated_at": "2026-08-12T13:48:50.562Z",
+  "relationships": {
+    "parent": "a8559033"
+  }
+}
