@@ -1,0 +1,20 @@
+{
+  "id": "69f9ec16",
+  "type": "chore",
+  "state": "done",
+  "summary": "Document the ritual in docs/golden-queries.md: authoring rules (paraphrase anti-circularity, two kinds, provenance, work-disjoint frozen eval), draft-then-ratify flow, corpus-update hook",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T13:48:50.624Z",
+  "updated_at": "2026-08-12T14:19:32.558Z",
+  "relationships": {
+    "parent": "a8559033"
+  },
+  "resolution": {
+    "commit": "a258dbfd49036f3d1a1def91380d36ed33c81202",
+    "resolved_at": "2026-08-12T14:19:32.558Z",
+    "resolved_by": "unknown",
+    "note": "docs/golden-queries.md: two kinds kept separate, paraphrase anti-circularity with reader-honest anchors, provenance-never-asserted, verify-before-ship with honest iteration rule, one-way work-disjoint frozenEval partition, draft-then-ratify flow, corpus-update hook."
+  }
+}
