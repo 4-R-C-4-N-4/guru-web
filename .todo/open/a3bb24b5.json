@@ -1,0 +1,15 @@
+{
+  "id": "a3bb24b5",
+  "type": "chore",
+  "state": "active",
+  "summary": "Backfill golden-queries files for all remaining works (55 of 58): same shape as the tradition-scoped goldens, drafted from chunks, verified against live retrieval; ritual covers new works going forward",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T14:49:10.468Z",
+  "updated_at": "2026-08-12T14:49:10.543Z",
+  "tags": [
+    "retrieval",
+    "golden-set"
+  ]
+}

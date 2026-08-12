@@ -1,0 +1,39 @@
+{
+  "work": "paracelsus-tincture-of-philosophers",
+  "tradition": "renaissance_hermeticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Paracelsus taunting the sophists who mock his rustic Swiss birth, boasting of a hidden treasure at an inn that neither pope nor emperor could buy with all their wealth",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-tincture-of-philosophers.001",
+        "renaissance_hermeticism.paracelsus-tincture-of-philosophers.002"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The polemical preface; 'rude Helvetia', 'wormy and lousy Sophist', 'monarch of arcana', and the names Leo of Rome and Charles the German paraphrased into pope and emperor; Paracelsus kept as the author's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the short recipe for the philosophers' tincture: join the red essence drawn from the lion with the white gum of the eagle and thicken them by the old process",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-tincture-of-philosophers.005"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The core prescription; 'rose-coloured blood', 'gluten', 'coagulate' paraphrased into essence, gum, thicken; the lion and eagle kept as cover-names any reader of alchemical literature knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "is there a single medicine that could cure every disease and prolong human life",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-tincture-of-philosophers.008",
+        "renaissance_hermeticism.paracelsus-tincture-of-philosophers.010"
+      ],
+      "note": "The tincture as Catholicum granting long life; universal-elixir claims are answered by many traditions. No target — graded post-hoc."
+    }
+  ]
+}

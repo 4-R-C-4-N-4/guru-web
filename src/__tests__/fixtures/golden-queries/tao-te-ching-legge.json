@@ -1,0 +1,45 @@
+{
+  "work": "tao-te-ching-legge",
+  "tradition": "taoism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable. Legge translation. Probes deliberately anchored in specific chapters (water, supple/rigid, the small state) to stay clear of the existing tradition-anchored golden 'the tao and the way of wu wei'.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why the Tao Te Ching holds up water as the image of highest goodness, pooling in the low spots people scorn while nourishing everything without contending",
+      "provenanceChunkIds": ["taoism.tao-te-ching-legge.008"],
+      "mustIncludeTraditions": ["taoism"],
+      "mustIncludeWork": true,
+      "note": "Chapter 8; 'benefiting all things' and 'occupying, without striving, the low place which all men dislike' paraphrased to pooling/scorned low spots; title kept as reader-honest anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Tao Te Ching's advice to deal with things while they are still small, since a tree you cannot wrap your arms around began as a seedling, a towering building as a basket of soil, and a journey of a thousand miles beneath one's feet",
+      "provenanceChunkIds": ["taoism.tao-te-ching-legge.064"],
+      "mustIncludeTraditions": ["taoism"],
+      "mustIncludeWork": true,
+      "note": "Chapter 64; 'the tree which fills the arms grew from the tiniest sprout', 'tower of nine storeys rose from a heap of earth', 'journey of a thousand li commenced with a single step' paraphrased to seedling / basket of soil / beneath one's feet. This slot burned two earlier passages honestly: ch 76 (supple-alive vs stiff-dead, three wordings) kept landing in Dhammapada ch 2 and funerary texts, and ch 42's cosmogony drowned in hermetic/kabbalist emanation chunks — both recorded as recall gaps."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Lao-tzu's ideal of a small simple state in the Tao Te Ching whose people leave boats, wagons, and armor unused and, though they hear the roosters and dogs of the neighboring land, grow old without ever visiting it",
+      "provenanceChunkIds": ["taoism.tao-te-ching-legge.080"],
+      "mustIncludeTraditions": ["taoism"],
+      "mustIncludeWork": true,
+      "note": "Chapter 80; 'boats and carriages... no occasion to ride in them' and 'buff coats and sharp weapons' paraphrased to boats/wagons/armor; roosters-and-dogs cited from reader knowledge of the famous close. First draft without the title anchor missed top-15 (native_american, finnic, sufism came back)."
+    },
+    {
+      "kind": "relevance",
+      "query": "can the ultimate source of all things be named or described in words",
+      "provenanceChunkIds": ["taoism.tao-te-ching-legge.001"],
+      "note": "The opening chapter's question, but the upanishads' neti-neti and Buddhist ineffability press it just as hard. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why does giving away what you have leave you richer than hoarding it",
+      "provenanceChunkIds": ["taoism.tao-te-ching-legge.081"],
+      "note": "Chapter 81's sage who possesses more the more he expends for others; Christian and Buddhist generosity teachings answer the same. No target — graded post-hoc."
+    }
+  ]
+}

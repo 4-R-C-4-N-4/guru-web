@@ -1,0 +1,53 @@
+{
+  "work": "dionysius-divine-names",
+  "tradition": "christian_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Many chunks are Rolt's editorial commentary rather than Dionysius's text; probes drafted from passages that are clearly the treatise itself.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Dionysius's image of many lamps burning in a single room, their light blending into one glow while each flame stays distinct, explaining how the divine persons are united yet differentiated",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-divine-names-2.005"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The lamps-in-one-house simile for Undifference and Differentiation; 'wholly interpenetrating one another', 'by their distinctions united into one' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Divine Names argument that evil has no real being of its own: it is only a weakness and lack of goodness, since the Good can no more produce what is bad than heat can produce cold",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-divine-names-4.018", "christian_mysticism.dionysius-divine-names-4.027"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "Evil as privation in chapter 4; 'even as fire cannot cool us' recast as heat/cold, 'impotence and weakness and an inharmonious mingling' paraphrased away; the treatise's title kept as anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Dionysius on divine yearning as ecstatic: love carries lovers out of themselves so they belong to the beloved, and even the maker of all is drawn beyond himself toward his creatures",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-divine-names-4.011", "christian_mysticism.dionysius-divine-names-4.014"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The ecstasy of the Divine Yearning in chapter 4; 'not allowing them that are touched thereby to belong unto themselves', 'yearneth after all things ... through excess of Goodness' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why scripture gives God many titles drawn from his gifts and workings, though the Godhead itself stands beyond every name and description",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-divine-names-1.005", "christian_mysticism.dionysius-divine-names-1.009", "christian_mysticism.dionysius-divine-names-1.010"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "Chapter 1 on the Names as symbolic revelations of the Emanations; 'beneficent Emanations', the catalogue of scriptural titles, 'Nameless Goodness' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "if everything flows from a single good source, where does evil come from",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-divine-names-4.017"],
+      "note": "The origin-of-evil problem chapter 4 wrestles with; zoroastrian, gnostic, vedantic and other material answers it too. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "do all things long to return to the source from which they came",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-divine-names-4.011", "christian_mysticism.dionysius-divine-names-4.015"],
+      "note": "The circle of yearning from the Good back to the Good; the return-to-source motif is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

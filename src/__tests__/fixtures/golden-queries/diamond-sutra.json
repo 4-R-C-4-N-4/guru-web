@@ -1,0 +1,31 @@
+{
+  "work": "diamond-sutra",
+  "tradition": "buddhism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset. Müller translation with inline philological footnotes — chunks 002 and 004 are mostly apparatus (Pali glosses, Burnouf citations); probes drawn from dialogue chunks.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the Buddha's instruction to Subhuti that a bodhisattva must vow to bring every being to liberation while understanding that no being whatsoever is liberated",
+      "provenanceChunkIds": ["buddhism.diamond-sutra.013"],
+      "mustIncludeTraditions": ["buddhism"],
+      "mustIncludeWork": true,
+      "note": "'All beings must be delivered by me in the perfect world of Nirvana; and yet... no being has been delivered' — 'delivered' paraphrased to liberation; Buddha/Subhuti/bodhisattva kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Diamond Sutra dialogue in which the Buddha asks Subhuti whether a Tathagata can be known by his physical body or by the thirty-two marks, and Subhuti answers that he cannot",
+      "provenanceChunkIds": ["buddhism.diamond-sutra.016", "buddhism.diamond-sutra.018"],
+      "mustIncludeTraditions": ["buddhism"],
+      "mustIncludeWork": true,
+      "note": "'Not to be seen (known) by the shape of his visible body' / 'through the possession of signs' — paraphrased to physical body / thirty-two marks (the standard doctrinal term, reader knowledge; Müller's chunk says only 'signs'). First draft without Buddha and with vaguer wording missed top-15, returning neoplatonism and platonism."
+    },
+    {
+      "kind": "relevance",
+      "query": "does a gift earn more merit when given without attachment or any expectation of return",
+      "provenanceChunkIds": ["buddhism.diamond-sutra.003", "buddhism.diamond-sutra.011"],
+      "note": "The sutra's gift given 'without believing in anything' — but the Gita's three kinds of gifts and Christian almsgiving answer the same question. No target — graded post-hoc."
+    }
+  ]
+}

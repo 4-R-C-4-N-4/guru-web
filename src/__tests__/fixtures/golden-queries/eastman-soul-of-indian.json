@@ -1,0 +1,45 @@
+{
+  "work": "eastman-soul-of-indian",
+  "tradition": "native_american",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: this work's queries never feed the fine-tune distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the Sioux worshiper's daily rite with the long pipe, silently offering the first smoke upward to the sky-father and downward to the earth",
+      "provenanceChunkIds": ["native_american.eastman-soul-of-indian.015"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "The ceremonial of the pipe; 'pulverized weed', 'aromatic bark of the red willow', 'stone pipe' paraphrased away; 'pipe' kept — it names the chapter's subject."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "in the Sioux story of beginnings, the spider trickster warns the animal people that the growing Little Boy Man will one day rule them all",
+      "provenanceChunkIds": ["native_american.eastman-soul-of-indian.021", "native_american.eastman-soul-of-indian.022"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "Unk-to-mee's counsel against the First-Born's brother; 'make an end of him', 'master of us all' paraphrased; 'Little Boy Man' kept as the tale's own name for him."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "mourning custom of keeping a lock of the dead one's hair for a year, setting out a dish for the spirit at meals, and ending with a feast where the keepsakes are given away",
+      "provenanceChunkIds": ["native_american.eastman-soul-of-indian.026", "native_american.eastman-soul-of-indian.027"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "The sacred lock of hair; 'invited in to partake of the food', 'interred with appropriate ceremonies' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "can a people be spiritually poor while materially rich",
+      "provenanceChunkIds": ["native_american.eastman-soul-of-indian.004", "native_american.eastman-soul-of-indian.018"],
+      "note": "Eastman's critique of professed religion serving the lust for wealth; the wealth-versus-spirit question is answered across the corpus. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how should a person prepare to meet death without fear",
+      "provenanceChunkIds": ["native_american.eastman-soul-of-indian.026"],
+      "note": "Death met 'with simplicity and perfect calm'; facing death is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

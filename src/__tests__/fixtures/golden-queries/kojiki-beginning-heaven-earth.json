@@ -1,0 +1,23 @@
+{
+  "work": "kojiki-beginning-heaven-earth",
+  "tradition": "shinto",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Single-chunk work; shinto's only work in the corpus. Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the opening of the Japanese Kojiki: the first three deities who came into existence alone in the Plain of High Heaven when heaven and earth began, then hid themselves",
+      "provenanceChunkIds": ["shinto.kojiki-beginning-heaven-earth.001"],
+      "mustIncludeTraditions": ["shinto"],
+      "mustIncludeWork": true,
+      "note": "'Born alone', 'hid their persons', the deities' full august names and the reed-shoot simile paraphrased away; 'Kojiki', 'Plain of High Heaven' and the section title 'beginning of heaven and earth' kept as reader-honest anchors. First draft without the Kojiki/Japanese anchors missed top-15 entirely (western_esoteric, christian_mysticism, celtic came back)."
+    },
+    {
+      "kind": "relevance",
+      "query": "how did the first gods and the cosmos take shape out of formlessness",
+      "provenanceChunkIds": ["shinto.kojiki-beginning-heaven-earth.001"],
+      "note": "Primordial cosmogony is answered by nearly every tradition in the corpus. No target — graded post-hoc."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "work": "descent-of-inanna",
+  "tradition": "mesopotamian",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why Ishtar must surrender a piece of her attire at each of the seven gates as she goes down to her sister Ereshkigal, queen of the dead",
+      "provenanceChunkIds": ["mesopotamian.descent-of-inanna.001", "mesopotamian.descent-of-inanna.002"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "The seven-gate stripping; 'land of no return', 'loin-cloth', 'spangles', 'girdle studded with birth-stones' paraphrased away; Ishtar and Ereshkigal kept as names."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can someone imprisoned in the realm of the dead be released and restored",
+      "provenanceChunkIds": ["mesopotamian.descent-of-inanna.003"],
+      "note": "The waters of life and the return through the gates; release from the underworld is answered by many traditions. No target — graded post-hoc."
+    }
+  ]
+}

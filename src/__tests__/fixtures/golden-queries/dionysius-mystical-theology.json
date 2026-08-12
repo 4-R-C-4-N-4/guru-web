@@ -1,0 +1,31 @@
+{
+  "work": "dionysius-mystical-theology",
+  "tradition": "christian_mysticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset. Small work (11 chunks); several chunks are the modern editor's commentary rather than Dionysius's text.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the counsel of Dionysius's Mystical Theology: pray to enter the divine darkness, where giving up both seeing and knowing is itself the truest way of seeing God",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-mystical-theology.001", "christian_mysticism.dionysius-mystical-theology.003"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The prayer to enter the Darkness beyond Light; 'Gloom', 'emptying of our faculties', 'loss of sight and knowledge' paraphrased away. First draft anchored only on 'Dionysius' passed tradition but the work itself missed top-15 (Boehme and neoplatonist works came back); the treatise title added as anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why the Mystical Theology grows briefer as it climbs: descending from God the concepts multiply, but the upward path sheds words until the ascent ends in complete silence",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-mystical-theology.006"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The contracting-terminology passage; 'ever-widening number of conceptions', 'contracts its terminology', 'totally dumb' paraphrased away; the treatise's title kept as a reader-honest anchor."
+    },
+    {
+      "kind": "relevance",
+      "query": "can the ultimate reality be described in words at all, or only pointed to by denial",
+      "provenanceChunkIds": ["christian_mysticism.dionysius-mystical-theology.002"],
+      "note": "Ineffability and the negative way; answered by daoist, vedantic, buddhist and sufi material too. No target — graded post-hoc."
+    }
+  ]
+}

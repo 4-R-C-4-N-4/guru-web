@@ -1,0 +1,53 @@
+{
+  "work": "transcendental-magic",
+  "tradition": "western_esoteric",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Work spans two texts (doctrine + ritual).",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "what Levi identifies as the single hidden medium behind magnetism, visions, and every magical operation — the Astral Light the old chemists concealed under other names",
+      "provenanceChunkIds": ["western_esoteric.transcendental-magic-doctrine.055", "western_esoteric.transcendental-magic-doctrine.029"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The Magic Chain chapter; 'Great Magical Agent', 'soul of the earth', 'Azoth and Magnesia', 'key of all empire' paraphrased; Astral Light kept — the work's signature concept."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Levi's three emblems of the true initiate — a lamp, a mantle, and a staff tied to Trismegistus, Apollonius, and the patriarchs — standing for illumined reason, self-possession, and steadiness",
+      "provenanceChunkIds": ["western_esoteric.transcendental-magic-doctrine.049"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The Initiation chapter; the glosses 'reason illuminated by science', 'full and complete self-possession' reworded; the emblem names kept as proper-noun anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Levi reads the horned idol of the sorcerers' sabbath not as a real devil but as a misunderstood symbol, magic dividing into a path of the sanctuary and a path of the wilderness",
+      "provenanceChunkIds": ["western_esoteric.transcendental-magic-ritual.069", "western_esoteric.transcendental-magic-ritual.070", "western_esoteric.transcendental-magic-ritual.071"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The Sabbath of the Sorcerers chapter; 'immolated and emissary goat', 'White and Black Church', 'monster throned upon an altar' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the daily austerities Levi prescribes for tempering a would-be magician's will: rising at a fixed early hour, washing at a spring before daybreak, and freely chosen denials to harden oneself against those that come unbidden",
+      "provenanceChunkIds": ["western_esoteric.transcendental-magic-ritual.012"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The Preparations chapter; 'voluntary privations, that you may be better able to bear those which come without seeking' recast; 'never wear soiled clothes' dropped."
+    },
+    {
+      "kind": "relevance",
+      "query": "what is the philosopher's stone really — a literal substance or a symbol of inner perfection",
+      "provenanceChunkIds": ["western_esoteric.transcendental-magic-doctrine.007", "western_esoteric.transcendental-magic-doctrine.010"],
+      "note": "The introduction's claim that the Stone and Universal Medicine are terms to be understood in their proper sense; inner-alchemy readings recur across traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "does evil come from a second hostile power or from imbalance within a single force",
+      "provenanceChunkIds": ["western_esoteric.transcendental-magic-doctrine.025", "western_esoteric.transcendental-magic-ritual.071"],
+      "note": "The impure duad and the misconstrued doctrine of Zoroaster; the dualism question is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

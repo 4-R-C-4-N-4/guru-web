@@ -1,0 +1,31 @@
+{
+  "work": "kabbalah-unveiled-intro",
+  "tradition": "jewish_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Drafted from chunks (todo/a8559033). Trainable: eligible for the fine-tune query distribution. NB: despite the work id, these chunks are Siphra Dtzenioutha ch. I-IV with Mathers' commentary, not the translator's Introduction proper.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why did the primordial kings of Edom die before creation could stand, and how was the restored world built out of the wreck of the world that was destroyed",
+      "provenanceChunkIds": ["jewish_mysticism.kabbalah-unveiled-intro.001", "jewish_mysticism.kabbalah-unveiled-intro.004"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The dead Edomite kings and the equilibrium of balance (Siphra Dtzenioutha ch. I); 'countenance beheld not countenance', 'their crowns were found no more', 'the earth was desolate' paraphrased away; 'Edom' kept as a name any Zohar reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the great dragon coiled about the lower emanations of the queen on every side, whose demonic realm mirrors the Sephiroth in inverted form, kept concealed until justice requires a destroyer",
+      "provenanceChunkIds": ["jewish_mysticism.kabbalah-unveiled-intro.006", "jewish_mysticism.kabbalah-unveiled-intro.007"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The serpent and the shells in Mathers' commentary; 'Qlipoth', 'distorted and averse', 'encompasseth the seven inferior emanations after the manner of a serpent', the leviathan and watch-wheel comparisons paraphrased away; corpus-native 'Sephiroth' spelling kept."
+    },
+    {
+      "kind": "relevance",
+      "query": "why must opposing forces be held in balance for a world to exist at all",
+      "provenanceChunkIds": ["jewish_mysticism.kabbalah-unveiled-intro.002"],
+      "note": "Equilibrium versus the two scales of the balance; cosmic polarity is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

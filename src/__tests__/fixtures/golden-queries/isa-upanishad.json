@@ -1,0 +1,23 @@
+{
+  "work": "isa-upanishad",
+  "tradition": "upanishads",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable. Two chunks only, and 002 is a two-line tail fragment (verse 18's continuation) — chunk 001 is effectively the work's whole presence in the corpus.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the Isha Upanishad's warning that devotion to mere works leads into gloom, devotion to knowledge alone into a gloom deeper still, and that only one who holds the two together passes over death",
+      "provenanceChunkIds": ["upanishads.isa-upanishad.001"],
+      "mustIncludeTraditions": ["upanishads"],
+      "mustIncludeWork": true,
+      "note": "Verses 9-11; 'enter into blind darkness... enter, as it were, into greater darkness' paraphrased to gloom / deeper gloom; 'overcomes death... obtains immortality' compressed. First draft on the Self-in-all-beings verses (6-7) missed top-15 — that theme is corpus-wide (Gita ch V, Eckhart, Rumi came back instead)."
+    },
+    {
+      "kind": "relevance",
+      "query": "can a person act in the world for a whole lifetime without being bound by their deeds",
+      "provenanceChunkIds": ["upanishads.isa-upanishad.001"],
+      "note": "Verse 2's hundred years of works that do not cling — but the Gita's karma-yoga and taoist non-action answer the same question. No target — graded post-hoc."
+    }
+  ]
+}

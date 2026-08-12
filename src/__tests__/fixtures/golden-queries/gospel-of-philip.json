@@ -1,0 +1,31 @@
+{
+  "work": "gospel-of-philip",
+  "tradition": "gnosticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "how the world's rulers deceived humanity by swapping labels, attaching honorable words to worthless things and shameful words to good ones, so that language itself binds people",
+      "provenanceChunkIds": ["gnosticism.gospel-of-philip.002"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "The 'Rulers' section on names; 'took the names of the good and gave them to the not good', 'trick and rope us' paraphrased into swapping labels / binding through language."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the savior visits a dyer's workshop, throws seventy-two different colors into the vat, and draws them all out white",
+      "provenanceChunkIds": ["gnosticism.gospel-of-philip.005"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "The dye works of Levi episode; 'dye works of Levi', 'the earthly son has come as a dyer' paraphrased into dyer's workshop; the number seventy-two kept as a fact of the scene."
+    },
+    {
+      "kind": "relevance",
+      "query": "will the physical body rise again after death, or only the spirit",
+      "provenanceChunkIds": ["gnosticism.gospel-of-philip.003"],
+      "note": "The flesh-resurrection polemic; bodily versus spiritual resurrection is debated across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

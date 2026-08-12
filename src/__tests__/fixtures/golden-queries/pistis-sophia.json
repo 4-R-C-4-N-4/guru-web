@@ -1,0 +1,53 @@
+{
+  "work": "pistis-sophia",
+  "tradition": "gnosticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "after rising from the dead the savior teaches his circle for eleven years, until on the Mount of Olives a dazzling garment of light is sent down to him and he ascends through the heavens",
+      "provenanceChunkIds": ["gnosticism.pistis-sophia.001", "gnosticism.pistis-sophia.004"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Opening frame of the book; 'vesture', 'twenty-fourth mystery', 'First Mystery', 'Places of the First precept' paraphrased away; 'eleven years' and 'Mount of Olives' kept as facts any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Pistis Sophia is found all alone beneath the thirteenth aeon, mourning because the lion-faced power robbed her of her light",
+      "provenanceChunkIds": ["gnosticism.pistis-sophia.017", "gnosticism.pistis-sophia.019"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Sophia's fall; 'sitting at that place grieving and making lament', 'emanations of the Self-willed', 'Ruler of face of lion' paraphrased; 'Pistis Sophia', 'thirteenth aeon', 'lion-faced power' kept as the work's famous furniture any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the disciples take turns, each one stepping forward to interpret one of fallen wisdom's songs of repentance as foretold in a psalm of David — Peter, Martha, Mary Magdalene among them",
+      "provenanceChunkIds": ["gnosticism.pistis-sophia.024", "gnosticism.pistis-sophia.025", "gnosticism.pistis-sophia.070"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "The repentance-explanation frame that structures the first two books; 'hymning unto the Height', 'explanation of her repentance', specific psalm numbers paraphrased away; disciple names kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the teaching that the outer darkness is really an enormous dragon whose body contains twelve chambers of torment, each ruled by an archon with beast faces",
+      "provenanceChunkIds": ["gnosticism.pistis-sophia.129", "gnosticism.pistis-sophia.130"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "The dragon of the outer darkness; 'seven heads of dragon', 'seven heads of cat', ruler names like Xarmarokh paraphrased away; 'outer darkness' kept — the doctrine's own name."
+    },
+    {
+      "kind": "relevance",
+      "query": "how many times can someone who falls back into sin be forgiven after repenting",
+      "provenanceChunkIds": ["gnosticism.pistis-sophia.123", "gnosticism.pistis-sophia.126"],
+      "note": "Mary's questions on repeated forgiveness for lapsed initiates; limits of repentance are answered across many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "does the soul return to live again in another body, and what decides when its round of lives is complete",
+      "provenanceChunkIds": ["gnosticism.pistis-sophia.131", "gnosticism.pistis-sophia.132"],
+      "note": "The 'number of cycles in the changes of the body' and the Virgin of Light's judgment; rebirth cycles are pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

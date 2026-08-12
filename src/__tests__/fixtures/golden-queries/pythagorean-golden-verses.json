@@ -1,0 +1,52 @@
+{
+  "work": "pythagorean-golden-verses",
+  "tradition": "greek_mystery",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen: part of the work-disjoint eval subset.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the Pythagorean rule of reviewing each day before sleep, asking what wrong was committed, what was accomplished, and what duty was left undone",
+      "provenanceChunkIds": ["greek_mystery.pythagorean-golden-verses.004", "greek_mystery.pythagorean-golden-verses.005"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "mustIncludeWork": true,
+      "note": "The nightly examination; 'Wherein have I done amiss? What have I done? What have I omitted that I ought to have done?' reworded, 'reprimand thyself severely' dropped."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Hierocles dividing the Golden Verses into a part that shapes decent human beings through practical virtue and a part that lifts them toward godhood through contemplation",
+      "provenanceChunkIds": ["greek_mystery.pythagorean-golden-verses.006"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "mustIncludeWork": true,
+      "note": "'The making of Good Men' / 'make Good Men into Gods' paraphrased; Hierocles and the work's title kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Pythagorean symbol forbidding one to cut fire with a sword, read as a warning not to provoke a wrathful man with stinging words",
+      "provenanceChunkIds": ["greek_mystery.pythagorean-golden-verses.026"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "mustIncludeWork": true,
+      "note": "Symbol 9; the maxim itself kept as a title any reader knows, the explanation's 'opposing sharp words to a man full of fire and wrath' reworded."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why the sentences of Sextus hold it perilous to discuss divinity before the multitude, even to say what is true",
+      "provenanceChunkIds": ["greek_mystery.pythagorean-golden-verses.022"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "note": "'Speak not of God to every man', 'the danger is not small' paraphrased; Sextus kept as the collection's name."
+    },
+    {
+      "kind": "relevance",
+      "query": "what daily disciplines train the soul toward virtue",
+      "provenanceChunkIds": ["greek_mystery.pythagorean-golden-verses.017"],
+      "note": "The Stobaeus ethical sentences answer this, but so does nearly every tradition. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "can a human being become like God through wisdom and right living",
+      "provenanceChunkIds": ["greek_mystery.pythagorean-golden-verses.020", "greek_mystery.pythagorean-golden-verses.022"],
+      "note": "Sextus: the wise man resembles God; deification through virtue is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

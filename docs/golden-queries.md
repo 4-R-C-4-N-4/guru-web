@@ -68,7 +68,14 @@ alone.
 
 1. Draft the file from the work's chunks (read them; don't write queries from
    memory of the work).
-2. Verify locally:
+2. Verify locally. While iterating on one work, the author-side verifier
+   checks just that file against live retrieval:
+
+   ```sh
+   npx tsx scripts/verify-golden-queries.ts <work> [<work>...]
+   ```
+
+   Before the PR, run the real gates:
 
    ```sh
    npx vitest run src/__tests__/golden-queries-schema.test.ts   # shape, CI-safe

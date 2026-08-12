@@ -1,0 +1,31 @@
+{
+  "work": "gathas",
+  "tradition": "zoroastrianism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Known-gap caution: 'Ahura Mazda and the Gathas' missed top-15 at corpus v27 in the frozen golden gate. Probes here anchor hard on Zarathustra/Ahura Mazda; failures reported honestly.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Zarathustra's declaration of the two primal spirits and the choice every person must make between truth and the lie",
+      "provenanceChunkIds": ["zoroastrianism.yasna-30.001", "zoroastrianism.yasna-45.001"],
+      "mustIncludeTraditions": ["zoroastrianism"],
+      "mustIncludeWork": true,
+      "note": "Yasna 30 and 45 on the twin spirits; 'hear ye with your ears', 'bright flames', 'false teacher shall not slay our life a second time' paraphrased away; 'two primal spirits' is standard comparative-religion vocabulary, Zarathustra kept as the prophet's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the soul of the cow crying out to Ahura Mazda against violence and raiding, asking who was made to protect her, and receiving only the prophet Zarathustra",
+      "provenanceChunkIds": ["zoroastrianism.yasna-29.001", "zoroastrianism.yasna-29.002"],
+      "mustIncludeTraditions": ["zoroastrianism"],
+      "mustIncludeWork": true,
+      "note": "Yasna 29, the Kine's complaint; 'Soul of the Kine', 'pasture-giver', 'good tillage for the fields' paraphrased away; Ahura Mazda and Zarathustra kept as names."
+    },
+    {
+      "kind": "relevance",
+      "query": "how should a prophet respond when rulers and kinsmen reject his message",
+      "provenanceChunkIds": ["zoroastrianism.yasna-46.001"],
+      "note": "Yasna 46's 'to what land shall I turn'; prophetic rejection is answered across traditions. No target — graded post-hoc."
+    }
+  ]
+}

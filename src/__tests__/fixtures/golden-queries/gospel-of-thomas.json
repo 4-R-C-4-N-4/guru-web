@@ -1,0 +1,52 @@
+{
+  "work": "gospel-of-thomas",
+  "tradition": "gnosticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: these queries never feed the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "asked to say what his teacher is like, Thomas confesses he cannot, is drawn apart and given three secret sayings, then warns that repeating even one would make his companions stone him and fire come from the stones",
+      "provenanceChunkIds": ["gnosticism.gospel-of-thomas.013"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Logion 13; 'righteous angel', 'wise philosopher', 'intoxicated from the bubbling spring' paraphrased away; 'Thomas' kept — the gospel bears his name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "in the closing saying of Thomas's gospel, Simon Peter demands that Mary be sent away since women do not merit life, and Jesus answers he will guide her to become male so she too can enter the kingdom of heaven",
+      "provenanceChunkIds": ["gnosticism.gospel-of-thomas.114"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Logion 114; 'make herself male', 'living spirit resembling you males', 'not worthy of life' paraphrased; Peter, Mary, and the gospel's closing-saying position kept as reader-honest anchors. First draft without the work-name anchor missed top-15."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the kingdom likened to a woman walking home unaware that her cracked jar has been spilling its flour along the road, so she arrives to find it empty",
+      "provenanceChunkIds": ["gnosticism.gospel-of-thomas.097"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Logion 97, the parable unique to this gospel; 'jar full of meal', 'the handle of the jar broke', 'noticed no accident' paraphrased into cracked jar / spilled flour."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the saying in the Gospel of Thomas that all things came out of the teacher and stretch back to him, so that he can be met inside a piece of cut wood or under a lifted stone",
+      "provenanceChunkIds": ["gnosticism.gospel-of-thomas.077"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "note": "Logion 77; 'I am the light which is above them all', 'split a piece of wood, and I am there', 'lift up the stone, and you will find me there' paraphrased. Work-level recall gap: three honest rewrites (work-name anchor, light-above-all lead, 'logion 77' section-title anchor) never brought the work itself into top-15 — the one-line chunk loses to pan-traditional light/wood/stone mysticism (Boehme, Rumi, Agrippa); gnosticism survives via gospel-of-philip's parallel, so the probe is kept tradition-anchored without mustIncludeWork."
+    },
+    {
+      "kind": "relevance",
+      "query": "is the kingdom of heaven a future event, a faraway place, or a present reality that people fail to recognize",
+      "provenanceChunkIds": ["gnosticism.gospel-of-thomas.003", "gnosticism.gospel-of-thomas.113"],
+      "note": "Logia 3 and 113 answer this, but so do many traditions' teachings on the immanent divine realm. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why must a person seek the living truth while still alive rather than waiting until after death",
+      "provenanceChunkIds": ["gnosticism.gospel-of-thomas.059"],
+      "note": "Logion 59's 'take heed of the living one while you are alive'; the die-before-you-die theme is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "work": "iamblichus-on-the-mysteries",
+  "tradition": "neoplatonism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: queries never feed the fine-tune distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why Iamblichus says the existence of the gods needs no demonstration, since an inborn awareness of them belongs to the soul's very nature, before any reasoning or decision",
+      "provenanceChunkIds": ["neoplatonism.iamblichus-on-the-mysteries.003"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "'Innate knowledge coexistent with our very essence', 'superior to all judgment and deliberate choice' paraphrased; Iamblichus kept as the author's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the answer that divine anger is not some inveterate rage but our own turning away from the gods' beneficent care, so rites of appeasement really turn us back toward it",
+      "provenanceChunkIds": ["neoplatonism.iamblichus-on-the-mysteries.019"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "The pacifications-of-anger chapter; 'abandonment of the beneficent care' kept only as sense, wording reworked."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Iamblichus on telling theurgic epiphanies apart — how the manifestations of gods, archangels, and daemons differ, the gods' light being too fine for bodily eyes, its beholders like creatures of the deep raised into thin air",
+      "provenanceChunkIds": ["neoplatonism.iamblichus-on-the-mysteries.033", "neoplatonism.iamblichus-on-the-mysteries.040"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "'Fishes drawn upward from turbid and thick water into attenuated and diaphanous air' recast as creatures of the deep; 'tenuity and subtilty' dropped. First draft without the Iamblichus/epiphany-ladder anchors missed top-15 (mystical-light chunks from sufi, christian, hermetic works came back instead)."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Iamblichus tells Porphyry that our personal daemon cannot be identified from the birth chart's ruling star, being allotted from the whole cosmos and governing every part of us at once",
+      "provenanceChunkIds": ["neoplatonism.iamblichus-on-the-mysteries.146", "neoplatonism.iamblichus-on-the-mysteries.148", "neoplatonism.iamblichus-on-the-mysteries.150"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "The peculiar-daemon chapters; 'lord of the geniture', 'nativity' paraphrased to birth chart's ruling star; Iamblichus, Porphyry, and 'daemon' kept as reader-honest anchors. First draft with 'guardian spirit' and no author name missed top-15 (Levi's ritual and hermetica came back instead)."
+    },
+    {
+      "kind": "relevance",
+      "query": "what makes ritual sacrifice genuinely effective rather than an empty gesture",
+      "provenanceChunkIds": ["neoplatonism.iamblichus-on-the-mysteries.101", "neoplatonism.iamblichus-on-the-mysteries.104"],
+      "note": "The efficacy-of-sacrifice chapters; why offerings work is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "can a person be freed from the compulsion of fate written into the stars",
+      "provenanceChunkIds": ["neoplatonism.iamblichus-on-the-mysteries.142", "neoplatonism.iamblichus-on-the-mysteries.143"],
+      "note": "The two-souls and liberation-from-fate chapters; escaping astral necessity is answered by hermetic, gnostic, and other traditions. No target — graded post-hoc."
+    }
+  ]
+}

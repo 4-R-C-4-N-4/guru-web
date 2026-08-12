@@ -1,0 +1,44 @@
+{
+  "work": "gilgamesh",
+  "tradition": "mesopotamian",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "how the wild man Enkidu, who lived and drank among the beasts, was drawn into the human world by a woman and forgot the place of his birth",
+      "provenanceChunkIds": ["mesopotamian.gilgamesh-tablet-01.004", "mesopotamian.gilgamesh-tablet-02.001"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "Enkidu's taming at the water-hole; 'courtesan-girl', 'hetaera', 'ravish the soul of him', 'six days, seven nights' paraphrased away; 'Enkidu' kept as a name any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why the death of his friend fills Gilgamesh with terror of dying and sends him across the desert and the waters of death to find the one man who escaped mortality",
+      "provenanceChunkIds": ["mesopotamian.gilgamesh-tablet-09.001", "mesopotamian.gilgamesh-tablet-10.003"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "Tablets IX-X, the quest after Enkidu's death; 'Uta-Napishtim the Distant', 'Ubara-Tutu', 'Ur-Shanabi the boatman' paraphrased away; 'Gilgamesh' kept — the epic bears his name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Uta-Napishtim's account of building the great vessel, sealing its hull with pitch, and riding out the storm the gods sent to drown mankind",
+      "provenanceChunkIds": ["mesopotamian.gilgamesh-tablet-11.002", "mesopotamian.gilgamesh-tablet-11.003"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "The flood narrative of Tablet XI; 'shar of bitumen', 'six days, a se'nnight', 'fish-spawn', 'quant-pole' paraphrased away; 'Uta-Napishtim' kept as the flood hero's name."
+    },
+    {
+      "kind": "relevance",
+      "query": "what do the dead experience in the world below",
+      "provenanceChunkIds": ["mesopotamian.gilgamesh-tablet-07.002"],
+      "note": "Enkidu's vision of the house of dust; the fate of the dead is answered by nearly every tradition. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "is there any way for a human being to escape death and live forever",
+      "provenanceChunkIds": ["mesopotamian.gilgamesh-tablet-11.001"],
+      "note": "Gilgamesh's question to the flood survivor; the immortality quest is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

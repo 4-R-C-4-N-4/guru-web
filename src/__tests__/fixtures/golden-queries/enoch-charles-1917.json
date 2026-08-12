@@ -1,0 +1,53 @@
+{
+  "work": "enoch-charles-1917",
+  "tradition": "jewish_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Drafted from chunks (todo/a8559033). Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the rebel angels who bound themselves by oath to take wives among mortal women, whose leader feared bearing the sin alone, and the forbidden crafts of weapon-forging and sorcery that Azazel and his fellows taught mankind",
+      "provenanceChunkIds": ["jewish_mysticism.enoch-charles-1917.022", "jewish_mysticism.enoch-charles-1917.023", "jewish_mysticism.enoch-charles-1917.024"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The fall of the Watchers (ch. VI-VIII); 'children of the heaven', 'charms and enchantments', 'cutting of roots', 'swords and knives and shields and breastplates', 'antimony' paraphrased away; 'Azazel' kept as a name any reader of Enoch knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "who is the figure with a human face who stands beside the white-haired Ancient One in Enoch's parables, named before the sun and stars existed, who will cast down kings from their thrones",
+      "provenanceChunkIds": ["jewish_mysticism.enoch-charles-1917.065", "jewish_mysticism.enoch-charles-1917.067"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The Son of Man and Head of Days (ch. XLVI, XLVIII); 'Head of Days', 'white like wool', 'Lord of Spirits', 'Elect One' paraphrased away; 'Enoch' kept as the work's own name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the dream in which all of Israel's history unfolds as a herd: patriarchs as white bulls, the nation as a flock of sheep menaced by beasts of prey, and negligent shepherds who let far more be devoured than was decreed",
+      "provenanceChunkIds": ["jewish_mysticism.enoch-charles-1917.108", "jewish_mysticism.enoch-charles-1917.113", "jewish_mysticism.enoch-charles-1917.116"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The second Dream-Vision / animal apocalypse (ch. LXXXV-XC); 'Lord of the sheep', 'wild asses', 'it was written by the other in a book' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the angel Uriel's revelation of the laws of the sun and moon, entering and leaving heaven through numbered gates through the year so that the reckoning of days is never wrong",
+      "provenanceChunkIds": ["jewish_mysticism.enoch-charles-1917.093", "jewish_mysticism.enoch-charles-1917.094", "jewish_mysticism.enoch-charles-1917.095"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The Book of the Courses of the Heavenly Luminaries (ch. LXXII-LXXIII); 'portals' paraphrased to 'gates', 'her chariot in which she rides is driven by the wind' and the day/night 'parts' arithmetic paraphrased away; 'Uriel' kept as a name any reader knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "what happens to the souls of the dead while they wait for the final judgment",
+      "provenanceChunkIds": ["jewish_mysticism.enoch-charles-1917.040", "jewish_mysticism.enoch-charles-1917.041"],
+      "note": "The hollow places of Sheol (ch. XXII) answer this, but so do many traditions in the corpus. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why do the rich and powerful face reversal and punishment when divine judgment comes",
+      "provenanceChunkIds": ["jewish_mysticism.enoch-charles-1917.082", "jewish_mysticism.enoch-charles-1917.083"],
+      "note": "The judgment of the kings and the mighty (ch. LXII-LXIII); reversal-of-fortune eschatology is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

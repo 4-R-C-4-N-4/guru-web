@@ -1,0 +1,53 @@
+{
+  "work": "life-and-doctrines-boehme",
+  "tradition": "christian_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Hartmann's compilation — Boehme quotations interleaved with theosophical commentary; probes drafted from the quoted Boehme material.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Boehme's teaching that divine wisdom cannot be pulled down by wanting it, any more than we can drag sunlight to us — we can only step out of the shadow and ascend past where the clouds end",
+      "provenanceChunkIds": ["christian_mysticism.life-and-doctrines-boehme.007"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The sunlight simile for receiving wisdom; 'neither can we attract the sunlight', 'climb to the top of the mountain which rises above the clouds' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Boehme on the seven qualities of eternal nature, each eternally generating the others, appearing in the power of the Word like seven burning lights",
+      "provenanceChunkIds": ["christian_mysticism.life-and-doctrines-boehme.021", "christian_mysticism.life-and-doctrines-boehme.022", "christian_mysticism.life-and-doctrines-boehme.023"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The seven properties/spirits chapter; 'seven luminous torches', 'crystalline ocean', 'the last generates the first' paraphrased away; 'seven qualities of eternal nature' kept — the doctrine's own name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Boehme's account of his breakthrough: his sorrowing spirit rose up as if in a tempest and would not stop wrestling with God's love and mercy until the blessing came and the light broke through",
+      "provenanceChunkIds": ["christian_mysticism.life-and-doctrines-boehme.008", "christian_mysticism.life-and-doctrines-boehme.009"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The autobiographical illumination passage; 'as if moving in a great storm, arose in God', 'carrying with it my whole heart and mind' paraphrased into indirect speech."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Lucifer fell according to Boehme: God's light did not push him out — his own imagination drew him into the fiery wrath he had kindled within himself, and he stayed in the qualities of that fire",
+      "provenanceChunkIds": ["christian_mysticism.life-and-doctrines-boehme.043", "christian_mysticism.life-and-doctrines-boehme.045"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The Lucifer chapters; 'the wrath of nature' drawing him, 'imagine (project his consciousness) into the fire', 'remained in the qualities of the central fire which he had awakened' paraphrased away; 'Lucifer' kept as a name any reader knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "what happens to the soul after it separates from the body at death",
+      "provenanceChunkIds": ["christian_mysticism.life-and-doctrines-boehme.148", "christian_mysticism.life-and-doctrines-boehme.151"],
+      "note": "Boehme's death-and-eternal-life chapter answers this, but so does half the corpus. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "must a seeker abandon home, family, and possessions, or only the will that clings to them",
+      "provenanceChunkIds": ["christian_mysticism.life-and-doctrines-boehme.005"],
+      "note": "Renunciation as inner surrender rather than outward flight; answered by hindu, buddhist, stoic material too. No target — graded post-hoc."
+    }
+  ]
+}

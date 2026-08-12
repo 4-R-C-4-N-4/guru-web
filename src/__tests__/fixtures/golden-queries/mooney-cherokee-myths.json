@@ -1,0 +1,53 @@
+{
+  "work": "mooney-cherokee-myths",
+  "tradition": "native_american",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the Cherokee picture of the world as a body of land afloat on the ocean, hung from the stone sky by ropes at its four corners, doomed to go under when they wear out",
+      "provenanceChunkIds": ["native_american.mooney-cherokee-myths.001"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "'Great island floating in a sea of water', 'suspended at each of the four cardinal points by a cord', 'sky vault' paraphrased into ropes, corners, stone sky."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the sons of Kana'ti trail their father into the mountains and find where he keeps all the deer shut away under a great stone",
+      "provenanceChunkIds": ["native_american.mooney-cherokee-myths.005", "native_american.mooney-cherokee-myths.006", "native_american.mooney-cherokee-myths.011"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "Origin of game; 'turn over a large stone that appeared to be carelessly leaned against another', 'lets one out and kills it' paraphrased; 'Kana'ti' kept as the hunter's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "seven men carry a box to the ghost country in the west to bring back the spirit of the Sun's daughter, warned never to lift the lid before reaching home",
+      "provenanceChunkIds": ["native_american.mooney-cherokee-myths.015", "native_american.mooney-cherokee-myths.016"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "The Daughter of the Sun; 'Tsusgina'i', 'the Darkening land', 'strike her with the rods' paraphrased; the Sun's daughter kept as the tale's title figure."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the captured Shawano wizard buys his life by killing the great horned serpent Uktena, striking its one vulnerable spot and carrying off the blazing crystal from its head",
+      "provenanceChunkIds": ["native_american.mooney-cherokee-myths.077", "native_american.mooney-cherokee-myths.078"],
+      "mustIncludeTraditions": ["native_american"],
+      "mustIncludeWork": true,
+      "note": "Agan-unitsi's search; 'arrow through its heart, which was under the seventh spot', 'blazing star set in the forehead', 'Ulunsuti' paraphrased; 'Uktena' kept."
+    },
+    {
+      "kind": "relevance",
+      "query": "why do stories tell of people rising into the sky to become a cluster of stars",
+      "provenanceChunkIds": ["native_american.mooney-cherokee-myths.022"],
+      "note": "The seven boys who danced up into the sky as the Pleiades; star-cluster origin tales are pan-traditional. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can a river be revered as a living being that speaks to and purifies people",
+      "provenanceChunkIds": ["native_american.mooney-cherokee-myths.220"],
+      "note": "The Long Man river god whose voice is the cataract; sacred rivers are answered by many traditions. No target — graded post-hoc."
+    }
+  ]
+}

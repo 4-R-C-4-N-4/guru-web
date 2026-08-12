@@ -1,0 +1,23 @@
+{
+  "work": "heart-sutra-smaller",
+  "tradition": "buddhism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable. Single-chunk work (Müller's smaller Prajnaparamita-hridaya) — this chunk is the work's whole presence in the corpus, so both queries share one provenance id.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the short sutra where Avalokiteshvara teaches Shariputra that material shape is no different from the void, and that in the void none of the senses or the four truths remain",
+      "provenanceChunkIds": ["buddhism.heart-sutra-smaller.001"],
+      "mustIncludeTraditions": ["buddhism"],
+      "mustIncludeWork": true,
+      "note": "'Form here is emptiness, and emptiness indeed is form' paraphrased to material shape / the void; the no-eye-no-ear list compressed to 'none of the senses'; Avalokiteshvara and Shariputra kept as reader-honest anchors."
+    },
+    {
+      "kind": "relevance",
+      "query": "is the world our senses show us ultimately real or empty",
+      "provenanceChunkIds": ["buddhism.heart-sutra-smaller.001"],
+      "note": "The sutra's core claim, but Hindu maya, the upanishads, and taoist teaching on appearances all answer it. No target — graded post-hoc."
+    }
+  ]
+}

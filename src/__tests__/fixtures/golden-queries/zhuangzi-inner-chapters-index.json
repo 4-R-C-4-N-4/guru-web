@@ -1,0 +1,45 @@
+{
+  "work": "zhuangzi-inner-chapters-index",
+  "tradition": "taoism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset. Legge translation with heavy footnote apparatus — many chunks are pure editorial notes (e.g. 007, 017-019, 031-032, 049-052, 057); probes drawn from narrative chunks only. Anchored in specific parables to stay clear of the existing 'the tao and the way of wu wei' golden.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Zhuangzi opens with a colossal fish of the northern deep that transforms into a bird vast enough to darken the sky as it sets off for the south",
+      "provenanceChunkIds": ["taoism.zhuangzi-inner-chapters-index.001"],
+      "mustIncludeTraditions": ["taoism"],
+      "mustIncludeWork": true,
+      "note": "Book I; 'wings are like clouds all round the sky' paraphrased to darkening the sky; Legge's romanizations Khwän/Phing avoided entirely, Zhuangzi kept as reader-honest title anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the gnarled tree in Zhuangzi that no carpenter will cut because its timber is worthless, and so lives out its natural span unharmed",
+      "provenanceChunkIds": ["taoism.zhuangzi-inner-chapters-index.005", "taoism.zhuangzi-inner-chapters-index.031"],
+      "mustIncludeTraditions": ["taoism"],
+      "mustIncludeWork": true,
+      "note": "Books I and IV; 'neither bill nor axe would shorten its existence' and 'the advantage of being useless' paraphrased to worthless timber / natural span unharmed."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the parable where the rulers of the northern and southern seas repay the kindness of Chaos, ruler of the center, by drilling one opening in him each day until on the seventh he dies",
+      "provenanceChunkIds": ["taoism.zhuangzi-inner-chapters-index.056"],
+      "mustIncludeTraditions": ["taoism"],
+      "mustIncludeWork": true,
+      "note": "Book VII close; 'seven orifices' paraphrased to one opening a day for seven days; Chaos kept as the character's reader-honest name (Legge's Shû and Hû avoided)."
+    },
+    {
+      "kind": "relevance",
+      "query": "should death be mourned, or accepted as one more natural transformation",
+      "provenanceChunkIds": ["taoism.zhuangzi-inner-chapters-index.044", "taoism.zhuangzi-inner-chapters-index.045"],
+      "note": "The four friends and the great founder casting metal — but every tradition in the corpus has an answer to grief at death. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can anyone be sure that waking life is not itself a dream",
+      "provenanceChunkIds": ["taoism.zhuangzi-inner-chapters-index.047"],
+      "note": "Book VI's dreaming-of-birds-and-fish passage; Hindu maya and Buddhist illusion teachings answer the same question. No target — graded post-hoc."
+    }
+  ]
+}

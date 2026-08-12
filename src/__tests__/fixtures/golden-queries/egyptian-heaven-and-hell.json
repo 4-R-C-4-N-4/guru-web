@@ -1,0 +1,45 @@
+{
+  "work": "egyptian-heaven-and-hell",
+  "tradition": "egyptian",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: this work's queries never feed the fine-tune distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why even Ra could not cross the Tuat by his own strength, but needed the hidden names and spells that stripped every dweller of the night realm of resistance, sailing on in the Boat of Millions of Years",
+      "provenanceChunkIds": ["egyptian.egyptian-heaven-and-hell.038", "egyptian.egyptian-heaven-and-hell.039"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "'Knowledge of the proper words of power, and of magical names and formulae' paraphrased into 'hidden names and spells'; 'Boat of Millions of Years' kept — the vessel's own famous name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the promise that the dead would find their father and mother, their children and friends again in Sekhet-hetep, and know them there as they had on earth",
+      "provenanceChunkIds": ["egyptian.egyptian-heaven-and-hell.029", "egyptian.egyptian-heaven-and-hell.030"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "The reunion-and-recognition chapter; the chunk's long kin list ('foster-parents', 'concubines', 'those who have worked for him') paraphrased down to parents, children, friends; 'Sekhet-hetep' kept as the region's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "how the Book Am-Tuat was composed by the priesthood of Amen to make their god master of the world of the dead, while the Book of Gates defended the ancient claim of Osiris to rule there forever",
+      "provenanceChunkIds": ["egyptian.egyptian-heaven-and-hell.035"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "'Asserting the absolute supremacy', 'over-lord of the Underworld', 'kingdom was everlasting' paraphrased; the two book titles kept — they are what the work is about."
+    },
+    {
+      "kind": "relevance",
+      "query": "is there a hell of fire where the wicked are finally destroyed",
+      "provenanceChunkIds": ["egyptian.egyptian-heaven-and-hell.036", "egyptian.egyptian-heaven-and-hell.084"],
+      "note": "The pits of fire consuming the enemies of Osiris and Ra; fiery punishment of the wicked is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what does it mean for the faithful to feed on the body of their god",
+      "provenanceChunkIds": ["egyptian.egyptian-heaven-and-hell.004"],
+      "note": "The beatified living daily on the wheat that springs from the body of Osiris; eating the god's body resonates far beyond Egypt. No target — graded post-hoc."
+    }
+  ]
+}
