@@ -1,0 +1,20 @@
+{
+  "id": "df76ff48",
+  "type": "chore",
+  "state": "done",
+  "summary": "Aggregate per-work query files into the golden retrieval test: assert recall probes like the existing 14, export relevance queries as a grading manifest (no assertion)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T13:49:01.380Z",
+  "updated_at": "2026-08-12T14:18:31.851Z",
+  "relationships": {
+    "parent": "a8559033"
+  },
+  "resolution": {
+    "commit": "f9755c04f27225974219375b9c4aa39d01a8e519",
+    "resolved_at": "2026-08-12T14:18:31.851Z",
+    "resolved_by": "unknown",
+    "note": "golden-queries.test.ts (INTEGRATION_TEST-gated): loads all fixtures/golden-queries/<work>.json via the schema loader; recall probes asserted like the existing 14 (tradition survival + optional mustIncludeWork via works.member_text_ids); relevance queries run unasserted and export src/__tests__/output/relevance-manifest.json (gitignored) for post-hoc (query,chunk) grading. corpus_version drift warns, never fails. Verified: 18/18 against live corpus v50."
+  }
+}
