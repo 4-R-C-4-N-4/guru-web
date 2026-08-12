@@ -1,0 +1,22 @@
+{
+  "id": "f8610bc9",
+  "type": "chore",
+  "state": "done",
+  "summary": "Define fixtures/golden-queries/<work>.json schema: recall-probe and relevance kinds, provenance chunk ids, frozen-eval flag; example file + schema validation test",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T13:48:50.562Z",
+  "updated_at": "2026-08-12T14:09:38.826Z",
+  "relationships": {
+    "parent": "a8559033"
+  },
+  "resolution": {
+    "commit": "60871d1a68f0116aa0f48ae9c949757de4c4d5b0",
+    "resolved_at": "2026-08-12T14:09:38.826Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/golden-queries-schema.test.ts",
+    "test_function": "validateGoldenQueriesFile",
+    "note": "Schema: recall-probe/relevance kinds, required provenanceChunkIds, required frozenEval work-partition flag, strict unknown-key rejection. Loader skips _-prefixed docs files."
+  }
+}
