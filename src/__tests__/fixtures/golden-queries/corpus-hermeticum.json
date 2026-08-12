@@ -1,0 +1,51 @@
+{
+  "work": "corpus-hermeticum",
+  "tradition": "hermeticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Pilot file (todo:3b2b548d). Frozen: this work anchors the work-disjoint eval subset — its queries never feed the fine-tune distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why did the first heavenly man descend toward nature after seeing his own likeness mirrored below",
+      "provenanceChunkIds": ["hermeticism.corpus-hermeticum-01.003"],
+      "mustIncludeTraditions": ["hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The fall of Primal Man in the vision of creation; 'Form of beauty', 'shadow on her Earth', the seven 'Rulers' all paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the soul rising after death gives back a different passion at each planetary sphere it passes",
+      "provenanceChunkIds": ["hermeticism.corpus-hermeticum-01.005"],
+      "mustIncludeTraditions": ["hermeticism"],
+      "note": "The ascent through the zones; 'zone', 'de-energized', and the vice catalogue wording paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the vessel of mind sent down from god so that souls who plunge into it gain true knowledge",
+      "provenanceChunkIds": ["hermeticism.corpus-hermeticum-04.001", "hermeticism.corpus-hermeticum-04.002"],
+      "mustIncludeTraditions": ["hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The Cup/Monad tractate; 'Cup', 'baptized', 'Gnosis of the Mind' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "to comprehend god you must order your soul to travel anywhere in an instant, needing no wings",
+      "provenanceChunkIds": ["hermeticism.corpus-hermeticum-11.005"],
+      "mustIncludeTraditions": ["hermeticism"],
+      "note": "Mind unto Hermes: 'bid thy soul go unto any land'; kept the wingless-flight image, dropped the imperative phrasing and 'bid'."
+    },
+    {
+      "kind": "relevance",
+      "query": "can a human being come to know god directly in this life",
+      "provenanceChunkIds": ["hermeticism.corpus-hermeticum-10.002"],
+      "note": "The Key answers this; so do half the corpus traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what happens to the soul in the moments after the body dies",
+      "provenanceChunkIds": ["hermeticism.corpus-hermeticum-10.004"],
+      "note": "The Key's spirit-withdraws-into-soul account; every eschatology in the corpus competes here."
+    }
+  ]
+}
