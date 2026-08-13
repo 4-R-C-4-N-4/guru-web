@@ -1,0 +1,23 @@
+{
+  "work": "bundahishn",
+  "tradition": "zoroastrianism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "CORPUS ODDITY: both chunks are West's general 'Introduction to Pahlavi Texts' (SBE front matter), not the Bundahishn creation account itself — no Ohrmazd/Ahriman cosmogony content exists under this work id. Probe targets what is actually there.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why the later Pahlavi writings, though less authoritative than the Avesta, are indispensable for the details of Parsi tradition, ceremony, and custom",
+      "provenanceChunkIds": ["zoroastrianism.bundahishn.001", "zoroastrianism.bundahishn.002"],
+      "mustIncludeTraditions": ["zoroastrianism"],
+      "mustIncludeWork": true,
+      "note": "West's introduction on the two classes of Parsi sacred writings; 'good religion of the Mazdayasnians', 'bahdinan', the Cyrus/Isaiah passage, 'Zand' paraphrased away; Pahlavi, Avesta, Parsi kept as proper nouns any reader knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "how does a religious community decide which of its writings carry binding authority",
+      "provenanceChunkIds": ["zoroastrianism.bundahishn.002"],
+      "note": "The intro's discussion of disputed Pahlavi authority; canon and authority questions recur across traditions. No target — graded post-hoc."
+    }
+  ]
+}

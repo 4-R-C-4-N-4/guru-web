@@ -1,0 +1,53 @@
+{
+  "work": "julian-revelations",
+  "tradition": "christian_mysticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Julian of Norwich sees all of creation as a small round thing no bigger than a hazelnut resting in her hand, and learns it endures only because God made it, loves it, and keeps it",
+      "provenanceChunkIds": ["christian_mysticism.julian-revelations.007"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The hazelnut shewing; 'the quantity of an hazel-nut in the palm of my hand', 'it is all that is made', 'fallen to naught for littleness' paraphrased away; 'hazelnut' kept — the image any reader of Julian knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Julian wonders why God did not prevent sin at the beginning, and is comforted that sin plays a necessary part yet every kind of thing will be made well in the end",
+      "provenanceChunkIds": ["christian_mysticism.julian-revelations.036", "christian_mysticism.julian-revelations.040"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The 'sin is behovable but all shall be well' shewing; 'behovable', 'the beginning of sin was not hindered' and the fourfold 'I may/can/will/shall make all thing well' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the vision-parable shown to Julian of a lord with a single servant who rushes off eagerly on his errand, falls and lies hurt, and receives from his master not blame but a greater reward",
+      "provenanceChunkIds": ["christian_mysticism.julian-revelations.069", "christian_mysticism.julian-revelations.070", "christian_mysticism.julian-revelations.073"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The example of the Lord and the Servant; 'shewed full mistily a wonderful example', 'his affright and his dread, his hurt and his maim' paraphrased away; 'lord' and 'servant' kept as the names by which readers know the parable."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "where Julian describes Jesus as our true Mother, feeding and rearing souls with the tenderness of a wise mother who knows her child's need",
+      "provenanceChunkIds": ["christian_mysticism.julian-revelations.091", "christian_mysticism.julian-revelations.092", "christian_mysticism.julian-revelations.093"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The Motherhood-of-Christ chapters; 'Kind Mother, Gracious Mother', 'forthspreading', 'witteth and knoweth the need of her child' paraphrased away; 'Mother' itself kept — it is the doctrine's name."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can a good and almighty God permit the great harm that evil does to his creatures",
+      "provenanceChunkIds": ["christian_mysticism.julian-revelations.038"],
+      "note": "Julian's anguished 'how might all be well?'; theodicy is answered by nearly every tradition in the corpus. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why pray at all if God has already ordained everything that will happen",
+      "provenanceChunkIds": ["christian_mysticism.julian-revelations.054", "christian_mysticism.julian-revelations.057"],
+      "note": "'I am the Ground of thy beseeching' — prayer under providence; a question many traditions answer. No target — graded post-hoc."
+    }
+  ]
+}

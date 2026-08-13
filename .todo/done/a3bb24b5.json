@@ -1,0 +1,21 @@
+{
+  "id": "a3bb24b5",
+  "type": "chore",
+  "state": "done",
+  "summary": "Backfill golden-queries files for all remaining works (55 of 58): same shape as the tradition-scoped goldens, drafted from chunks, verified against live retrieval; ritual covers new works going forward",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-12T14:49:10.468Z",
+  "updated_at": "2026-08-12T17:38:06.859Z",
+  "tags": [
+    "retrieval",
+    "golden-set"
+  ],
+  "resolution": {
+    "commit": "a8fdd366ec923f6a3b19b5c11e2febbe6c8f082d",
+    "resolved_at": "2026-08-12T17:38:06.859Z",
+    "resolved_by": "unknown",
+    "note": "All 58 works now carry golden-queries files (20 frozen ≈ 1/3, tradition-spread). 258/258 integration assertions pass on corpus v50; ~90% of probes carry mustIncludeWork. Honest iterations and burned probes recorded in file notes. Corpus findings captured as 49309aa1 (Hesiod contamination), baecc6e7 (bundahishn misattribution), b749d1cb (split Siphra Dtzenioutha), 6e0c2a63 (apparatus contamination), 418a98c9 (recall gaps). scripts/verify-golden-queries.ts added for the authoring loop, docs updated."
+  }
+}

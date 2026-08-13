@@ -1,0 +1,31 @@
+{
+  "work": "sefer-yetzirah",
+  "tradition": "jewish_mysticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Drafted from chunks (todo/a8559033). Frozen: part of the frozen eval subset; queries must never feed training.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the doctrine of the three mother letters Aleph, Mem, and Shin, each ruling one of air, water, and fire, and stamped alike on the world, the seasons of the year, and the parts of the human body",
+      "provenanceChunkIds": ["jewish_mysticism.sefer-yetzirah.002", "jewish_mysticism.sefer-yetzirah.003"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The three mothers (ch. II-III); 'mute as Water, hissing as Fire', 'the tongue of a balance', 'crowned and combined', head/belly/chest assignments paraphrased away; the letter names kept spelled out rather than the chunk's 'A, M, SH'."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "how the Creator sealed height, depth, and the four quarters of space, each with a different permutation of a three-lettered divine name",
+      "provenanceChunkIds": ["jewish_mysticism.sefer-yetzirah.002"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The sealing of the six directions (ch. I); the specific letter orders I H V / I V H / H I V etc. and 'He looked above... He looked below' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "what role do letters and sounds play in the creation of the world",
+      "provenanceChunkIds": ["jewish_mysticism.sefer-yetzirah.002"],
+      "note": "Creation through the twenty-two letters; creative speech and sacred sound are answered by several traditions in the corpus. No target — graded post-hoc."
+    }
+  ]
+}

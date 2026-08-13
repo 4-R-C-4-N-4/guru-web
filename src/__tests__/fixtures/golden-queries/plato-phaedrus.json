@@ -1,0 +1,45 @@
+{
+  "work": "plato-phaedrus",
+  "tradition": "platonism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Probes anchored in the Phaedrus' own myths (the chariot, the invention of letters, the regrowth of wings) to separate it from the other four Platonic dialogues.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the soul pictured as a charioteer driving a pair of winged horses, one noble and responsive, the other unruly and dragging the team down toward earth",
+      "provenanceChunkIds": ["platonism.plato-phaedrus.015", "platonism.plato-phaedrus.016", "platonism.plato-phaedrus.020"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The chariot image; the bad horse's description ('crooked lumbering animal', 'short thick neck', 'shag-eared and deaf, hardly yielding to whip and spur') paraphrased away; 'charioteer' kept — the image is known by that name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Socrates, retelling an old Egyptian story about the inventor of letters, says that writing weakens memory and gives readers only an appearance of knowing without real understanding",
+      "provenanceChunkIds": ["platonism.plato-phaedrus.035", "platonism.plato-phaedrus.036"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The critique of writing; 'aid not to memory, but to reminiscence', 'semblance of truth', 'show of wisdom without the reality', 'garden of letters' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why the lover trembles with reverence at the sight of a beautiful face: earthly beauty stirs the memory of what his soul once beheld beyond the heavens, and the soul's wings begin to sprout again",
+      "provenanceChunkIds": ["platonism.plato-phaedrus.017", "platonism.plato-phaedrus.018"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "Recollection of true beauty and the regrowth of wings; 'a shudder runs through him', 'the old awe steals over him', 'transported with the recollection', 'bird fluttering and looking upward' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "can madness be a gift from the gods — prophetic inspiration that comes only when someone is out of their ordinary mind",
+      "provenanceChunkIds": ["platonism.plato-phaedrus.013", "platonism.plato-phaedrus.028"],
+      "note": "Divine madness and the Delphic prophetess; ecstatic inspiration as sacred rather than sick is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "should the deepest teachings be written down, or passed on living from teacher to student",
+      "provenanceChunkIds": ["platonism.plato-phaedrus.036", "platonism.plato-phaedrus.037"],
+      "note": "Writing as recreation versus the living word planted in a soul; oral transmission of doctrine is a pan-traditional concern. No target — graded post-hoc."
+    }
+  ]
+}

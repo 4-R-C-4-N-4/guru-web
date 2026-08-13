@@ -1,0 +1,45 @@
+{
+  "work": "eckhart-sermons-field",
+  "tradition": "christian_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Small work (23 chunks, seven sermons in Field's translation).",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Eckhart's sermon on sanctification: the heart must stand empty of every creature and image, like a writing surface that must be blank before anything new can be set down on it",
+      "provenanceChunkIds": ["christian_mysticism.eckhart-sermons-field.016", "christian_mysticism.eckhart-sermons-field.019"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The white-tablet analogy in the sermon on sanctification; 'wipe the tablet clean', 'vacant of all other things' paraphrased away; 'Eckhart' and the sermon topic kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Eckhart preaching that God bears his Son in the soul whether a person is willing or not, asleep or awake, just as the ground cannot escape the sky pouring down on it",
+      "provenanceChunkIds": ["christian_mysticism.eckhart-sermons-field.010"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The birth of the Son in the soul from the sermon on the angel's greeting; 'the earth cannot flee from heaven', 'rains its influence', 'stamps its impress' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Eckhart preaching on 'the kingdom of God is near': the kingdom lies within us, and God waits inside, prepared and friendly, while we linger outside, estranged and unprepared",
+      "provenanceChunkIds": ["christian_mysticism.eckhart-sermons-field.006", "christian_mysticism.eckhart-sermons-field.008"],
+      "mustIncludeTraditions": ["christian_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The 'God is ready, we are unready' antitheses closing the sermon on the nearness of the kingdom, paraphrased into indirect statement; the sermon's scripture text kept as a reader-honest anchor. First nameless draft ('God stands prepared and close at hand while people remain distant') missed top-15 entirely — no christian_mysticism at all."
+    },
+    {
+      "kind": "relevance",
+      "query": "if God is unchanging and already knows everything, what is the point of asking him for things in prayer",
+      "provenanceChunkIds": ["christian_mysticism.eckhart-sermons-field.018"],
+      "note": "Eckhart's answer that God foresaw all prayers from eternity; petitionary prayer under divine immutability is answered across traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why is suffering held to be the fastest road to spiritual perfection",
+      "provenanceChunkIds": ["christian_mysticism.eckhart-sermons-field.020"],
+      "note": "'Nothing is sharper than suffering, nothing is sweeter than to have suffered'; redemptive suffering is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

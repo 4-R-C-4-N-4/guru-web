@@ -1,0 +1,45 @@
+{
+  "work": "plato-phaedo",
+  "tradition": "platonism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen: part of the eval subset, never fed to training. Probes anchored in the Phaedo's own scene and arguments (the prison death-day, the cyclical argument, the attunement objection) to separate it from the other four Platonic dialogues.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Socrates' final request in the prison, after the poison began to work, that Crito repay a debt of a rooster owed to Asclepius",
+      "provenanceChunkIds": ["platonism.plato-phaedo.044"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The death scene's last words; 'cock', 'he was beginning to grow cold about the groin', 'his eyes were set' paraphrased away; 'Crito' and 'Asclepius' kept as names any reader of the scene knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Socrates arguing on his last day that since opposites arise from opposites, the living must come back from the dead, so souls exist in the underworld awaiting return to birth",
+      "provenanceChunkIds": ["platonism.plato-phaedo.010", "platonism.plato-phaedo.011"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The cyclical argument; 'go from this into the other world, and return hither', 'the complement of nature', 'revival' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Simmias' worry that the soul might be like the attunement of a stringed instrument, gone when the frame breaks, and Socrates' reply that the soul rules and opposes the body as no attunement could",
+      "provenanceChunkIds": ["platonism.plato-phaedo.021", "platonism.plato-phaedo.027"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The harmony-and-lyre objection and its refutation; 'harmony', 'lyre', 'tensions and relaxations and vibrations of the strings' paraphrased away ('attunement of a stringed instrument' instead); 'Simmias' kept as a speaker's name."
+    },
+    {
+      "kind": "relevance",
+      "query": "how are souls judged for their deeds after death, and can punishment cleanse them",
+      "provenanceChunkIds": ["platonism.plato-phaedo.037", "platonism.plato-phaedo.041"],
+      "note": "The closing myth's sorting of souls and the year in Tartarus for pardonable crimes; post-mortem judgment and purgation are pan-traditional. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why must someone seeking truth withdraw from the senses and from bodily pleasures",
+      "provenanceChunkIds": ["platonism.plato-phaedo.007", "platonism.plato-phaedo.008"],
+      "note": "Purification as the soul gathering herself apart from the body; ascetic detachment as a condition of insight is answered by many traditions. No target — graded post-hoc."
+    }
+  ]
+}

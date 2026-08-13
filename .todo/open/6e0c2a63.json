@@ -1,0 +1,15 @@
+{
+  "id": "6e0c2a63",
+  "type": "debt",
+  "state": "open",
+  "summary": "Translator/editor apparatus contaminating chunk bodies across many works (golden-queries backfill findings, 2026-08-12): iamblichus .162-.180 are Taylor endnotes mislabeled as Chapter VIII continuations; ~25/66 mandaean gnostic-john-baptizer chunks are Mead footnotes (cross-tradition edge-noise risk); Rolt commentary inside both Dionysius works (incl. OCR 'Wheat is the Divine Gloom' in mystical-theology.001); Budge bibliographic-footnote and museum-catalog chunks in egyptian works; Legge/Mueller footnote chunks in zhuangzi + diamond-sutra (OCR-splintered diacritics defeat lexical matching); gospel-of-philip.001 is a site header; descent-of-inanna.001 opens with navigation cruft; masnavi .014 mostly footnotes; heroic-enthusiasts pt1.001-013 translator biography; orphic-hymns .001-.034 Taylor preface; kalevala .273 name glossary. Candidates for quality-filter DROP/STRIP rules or corpus-side re-chunk.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-12T17:37:48.477Z",
+  "updated_at": "2026-08-12T17:37:48.477Z",
+  "tags": [
+    "corpus",
+    "quality-filter"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "work": "paracelsus-treasure-of-treasures",
+  "tradition": "renaissance_hermeticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the raw matter for the alchemists' work, a mineral bred underground in two varieties found across Europe, the finer of which is stamped with the outward shape of the greater world",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-treasure-of-treasures.001"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The opening on nature begetting the mineral; 'bowels of the earth', 'eastern part of the sphere of the Sun', 'Southern Star', 'first efflorescence' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the accelerated great work: not nine months but forty days are enough to fix the substance, carry it through putrefaction and fermentation into a stone, and hatch the alchemical phoenix",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-treasure-of-treasures.004"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The Spagyric shortcut; 'Sulphur of Cinnabar', 'Flying Eagle whose wings fly away without wind' paraphrased away; forty days and the phoenix kept as reader-honest anchors of the passage."
+    },
+    {
+      "kind": "relevance",
+      "query": "why do so many people seek the great secret and so few ever find it",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-treasure-of-treasures.002"
+      ],
+      "note": "'What many seek after and few find'; the rarity of true attainment is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

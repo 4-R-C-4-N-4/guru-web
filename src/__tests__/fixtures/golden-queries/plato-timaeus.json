@@ -1,0 +1,45 @@
+{
+  "work": "plato-timaeus",
+  "tradition": "platonism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Probes anchored in the Timaeus' own material (demiurge, Atlantis, receptacle) to separate it from the other four Platonic dialogues.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why does Timaeus say the divine craftsman, being free of envy, took the visible universe in its chaotic swirling state and shaped it into an ordered whole so that everything would be as good as possible",
+      "provenanceChunkIds": ["platonism.plato-timaeus.008", "platonism.plato-timaeus.009"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The demiurge's motive for creation; 'free from jealousy', 'moving in an irregular and disorderly fashion', 'out of disorder he brought order' paraphrased away; 'Timaeus' kept as the dialogue's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the tale an Egyptian priest of Sais told Solon about ancient Athens repelling a great island empire from beyond the straits before it sank beneath the waves",
+      "provenanceChunkIds": ["platonism.plato-timaeus.004", "platonism.plato-timaeus.006"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "Critias' Atlantis prologue; 'district of Sais' phrasing and the priest's speech paraphrased away; 'Solon' and 'Sais' kept as proper nouns any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the third kind in Timaeus' account, neither the eternal pattern nor its changing copy, but a formless invisible medium underlying all becoming, taking every impression while having no shape of its own",
+      "provenanceChunkIds": ["platonism.plato-timaeus.022", "platonism.plato-timaeus.023"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The receptacle passage; 'mother and receptacle', 'nurse', 'devoid of any particular form' paraphrased away; 'Timaeus' kept as the dialogue's name."
+    },
+    {
+      "kind": "relevance",
+      "query": "how does time relate to eternity, and can what always is be said to have a past or a future",
+      "provenanceChunkIds": ["platonism.plato-timaeus.013"],
+      "note": "Time as a created likeness of the eternal; the time/eternity relation is answered across many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why are souls placed into bodies, and how does the way a life is lived shape what a soul becomes next",
+      "provenanceChunkIds": ["platonism.plato-timaeus.016", "platonism.plato-timaeus.050"],
+      "note": "Embodiment by necessity and the transmigration of careless souls into animals; rebirth-by-conduct is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

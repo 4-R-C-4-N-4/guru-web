@@ -1,0 +1,23 @@
+{
+  "work": "gathas-introduction",
+  "tradition": "zoroastrianism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Two chunks only, both translator's apparatus (the SBE introduction to the Gathas), so the probe targets the apparatus itself; chunk 002 is a single sentence about imitated rhythm.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "an introduction explaining that the oldest Zoroastrian hymns show Zarathustra as a struggling human prophet rather than a demi-god, with the old Aryan gods almost entirely absent",
+      "provenanceChunkIds": ["zoroastrianism.gathas-introduction.001"],
+      "mustIncludeTraditions": ["zoroastrianism"],
+      "mustIncludeWork": true,
+      "note": "The introduction's claims about antiquity and tone; 'productions of a small group of influential men', 'Yasna, Vendidad, Yasts', 'anthology' paraphrased away; Zarathustra kept as a name."
+    },
+    {
+      "kind": "relevance",
+      "query": "how do the earliest layers of a scripture differ in spirit from its later elaborations",
+      "provenanceChunkIds": ["zoroastrianism.gathas-introduction.001"],
+      "note": "The intro's contrast of the Gathas with later Yasna material; scriptural stratification is a question across traditions. No target — graded post-hoc."
+    }
+  ]
+}

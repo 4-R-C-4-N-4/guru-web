@@ -1,0 +1,51 @@
+{
+  "work": "dhammapada",
+  "tradition": "buddhism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Pilot file (todo:3b2b548d). Trainable: eligible for the fine-tune query distribution. Müller translation with dense philological commentary — a deliberate commentary-heavy pilot (cf. todo:31a7fe76).",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the opening verses teaching that pain and happiness trail our thinking the way a cart trails the animal that draws it",
+      "provenanceChunkIds": ["buddhism.dhammapada-chapter-01.001"],
+      "mustIncludeTraditions": ["buddhism"],
+      "mustIncludeWork": true,
+      "note": "The twin verses; 'wheel follows the foot of the ox' paraphrased to cart/animal."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Buddha's teaching that the heedful never die while the heedless are already dead",
+      "provenanceChunkIds": ["buddhism.dhammapada-chapter-02.001"],
+      "mustIncludeTraditions": ["buddhism"],
+      "note": "On earnestness; 'earnestness is the path of immortality' inverted into a reader's summary. First draft without the 'Buddha' anchor missed top-15 — a fully anonymized paraphrase loses the tradition entirely (recorded per the ritual's iterate-honestly rule)."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "a craftsman straightening a shaft as the image for steadying the restless, trembling mind",
+      "provenanceChunkIds": ["buddhism.dhammapada-chapter-03.001"],
+      "mustIncludeTraditions": ["buddhism"],
+      "mustIncludeWork": true,
+      "note": "'As a fletcher makes straight his arrow' — fletcher/arrow paraphrased to craftsman/shaft."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Buddhist verses on thirst: craving grows like a wild vine and flings a person from birth to birth",
+      "provenanceChunkIds": ["buddhism.dhammapada-chapter-24.001"],
+      "mustIncludeTraditions": ["buddhism"],
+      "note": "The chapter on thirst; 'creeper' and 'monkey seeking fruit in the forest' paraphrased; 'thirst' kept as the chapter's own title a reader would cite. Fully anonymized draft missed top-15."
+    },
+    {
+      "kind": "relevance",
+      "query": "how should a person answer hatred and injury from others",
+      "provenanceChunkIds": ["buddhism.dhammapada-chapter-15.001"],
+      "note": "'Let us live free from hatred among those who hate' — but every ethics in the corpus answers this. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what is the path that leads out of suffering",
+      "provenanceChunkIds": ["buddhism.dhammapada-chapter-20.001"],
+      "note": "The eightfold way chapter; soteriology is the corpus's most contested ground. No target — graded post-hoc."
+    }
+  ]
+}

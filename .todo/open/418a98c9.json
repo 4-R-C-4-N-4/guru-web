@@ -1,0 +1,15 @@
+{
+  "id": "418a98c9",
+  "type": "debt",
+  "state": "open",
+  "summary": "Recall gaps recorded during golden-queries backfill (probes honestly burned, wording in file notes): tao-te-ching ch76 supple-alive/stiff-dead (3 wordings, lands in dhammapada+funerary texts) and ch42 cosmogony (drowns in hermetic/kabbalist emanation, zero taoism in top-15); gospel-of-thomas logion 77 never surfaces the work itself (kept tradition-anchored only); kojiki single chunk only surfaces with the work's name in the query. Related: todo:31a7fe76.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-12T17:37:48.521Z",
+  "updated_at": "2026-08-12T17:37:48.521Z",
+  "tags": [
+    "retrieval",
+    "golden-set"
+  ]
+}

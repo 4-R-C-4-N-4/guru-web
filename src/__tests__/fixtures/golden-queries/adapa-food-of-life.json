@@ -1,0 +1,22 @@
+{
+  "work": "adapa-food-of-life",
+  "tradition": "mesopotamian",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why the sage Adapa, summoned before Anu for breaking the wing of the south wind, refused on Ea's advice the food and drink that would have made him immortal",
+      "provenanceChunkIds": ["mesopotamian.adapa-food-of-life.001", "mesopotamian.adapa-food-of-life.002"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "The refusal scene; 'mourning garment', 'Tammuz and Gishzida', 'wise man of Eridu' paraphrased away; 'breaking the wing of the south wind' kept as the tale's emblematic episode (reader-honest, like a chapter title), Adapa/Anu/Ea kept as names."
+    },
+    {
+      "kind": "relevance",
+      "query": "why was mankind denied the gift of immortality",
+      "provenanceChunkIds": ["mesopotamian.adapa-food-of-life.002"],
+      "note": "Adapa's lost chance stands for humanity's; the lost-immortality question is answered across traditions. No target — graded post-hoc."
+    }
+  ]
+}

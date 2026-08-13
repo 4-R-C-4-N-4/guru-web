@@ -1,0 +1,15 @@
+{
+  "id": "49309aa1",
+  "type": "bug",
+  "state": "open",
+  "summary": "pythagorean-golden-verses is ~75% untranslated Hesiod Theogony: chunks .034-.122 ('Section 13') are polytonic-Greek Theogony text, not Pythagorean material — source-file concatenation error at ingest. Found 2026-08-12 during golden-queries backfill (todo:a3bb24b5). Work is currently frozenEval:true in the golden set; re-chunk before the frozen subset hardens (corpus-side fix in guru repo; remember clean_bodies after re-chunk).",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-12T17:37:48.351Z",
+  "updated_at": "2026-08-12T17:37:48.351Z",
+  "tags": [
+    "corpus",
+    "ingest"
+  ]
+}

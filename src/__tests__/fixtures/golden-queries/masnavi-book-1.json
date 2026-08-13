@@ -1,0 +1,45 @@
+{
+  "work": "masnavi-book-1",
+  "tradition": "sufism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Probes deliberately anchor in passages other than the reed-flute prologue, which the frozen golden gate already covers.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Rumi's tale of the painting contest where one side covers their wall in elaborate colors and the other only polishes theirs until it mirrors every image",
+      "provenanceChunkIds": ["sufism.masnavi-book-1.032"],
+      "mustIncludeTraditions": ["sufism"],
+      "mustIncludeWork": true,
+      "note": "The Chinese and Greek artists; 'Chinese', 'Greeks', 'Sultan', 'cleansing the walls' paraphrased away; Rumi kept as the author's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why 'Ali dropped his sword in the middle of combat after his enemy spat in his face, refusing to strike out of personal anger",
+      "provenanceChunkIds": ["sufism.masnavi-book-1.035"],
+      "mustIncludeTraditions": ["sufism"],
+      "mustIncludeWork": true,
+      "note": "'Ali's forbearance; 'Magian chief', 'Lion of God', 'satisfaction of his own vengeance' paraphrased away; 'Ali kept as a name any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the merchant's caged parrot that learned from its kin in India to feign death and so won its freedom",
+      "provenanceChunkIds": ["sufism.masnavi-book-1.017"],
+      "mustIncludeTraditions": ["sufism"],
+      "mustIncludeWork": true,
+      "note": "The merchant and his clever parrot; 'Hindustan' rendered as India, 'message to his kinsmen', 'flock of parrots' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "should a person rely on their own striving or surrender in trust to God",
+      "provenanceChunkIds": ["sufism.masnavi-book-1.011"],
+      "note": "The lion and the beasts debate on exertion versus trust; effort versus providence is answered across traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "can the divine be known when it has no opposite to set it off",
+      "provenanceChunkIds": ["sufism.masnavi-book-1.013", "sufism.masnavi-book-1.014"],
+      "note": "Light known by darkness, the Infinite with nothing to contrast it; apophatic knowledge is a cross-tradition question. No target — graded post-hoc."
+    }
+  ]
+}

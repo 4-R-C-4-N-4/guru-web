@@ -1,0 +1,52 @@
+{
+  "work": "mabinogion",
+  "tradition": "celtic",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Pilot file (todo:3b2b548d). Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the adventure of Owain: water thrown on a stone beside a spring calls down a storm and a dark champion to fight",
+      "provenanceChunkIds": ["celtic.mabinogion.009"],
+      "mustIncludeTraditions": ["celtic"],
+      "mustIncludeWork": true,
+      "note": "The fountain ritual in the Lady of the Fountain; 'silver bowl', 'marble slab', 'peal of thunder' paraphrased away; 'Owain' kept as a name any reader of the tale knows. Nameless draft missed top-15."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the giant king whose severed head stayed uncorrupted, keeping his companions company through years of feasting before its burial as a ward for the island",
+      "provenanceChunkIds": ["celtic.mabinogion.145", "celtic.mabinogion.146"],
+      "mustIncludeTraditions": ["celtic"],
+      "mustIncludeWork": true,
+      "note": "The head of Bendigeid Vran; 'White Mount', 'birds of Rhiannon', 'Harlech', 'Gwales' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "how the bard Taliesin came to be: a boy tastes the brew of inspiration, flees through many animal shapes, is swallowed as a grain, and is reborn from the sea",
+      "provenanceChunkIds": ["celtic.mabinogion.179", "celtic.mabinogion.180", "celtic.mabinogion.186"],
+      "mustIncludeTraditions": ["celtic"],
+      "mustIncludeWork": true,
+      "note": "Gwion Bach and Caridwen's chase; 'cauldron', 'winnowed wheat', 'black hen', 'leathern bag' paraphrased away; 'Taliesin' kept — the tale bears his name. Nameless draft missed top-15."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the hero who can only be slain while standing with one foot on a beast's back and the other on the rim of a tub, betrayed by the wife who coaxed the secret from him",
+      "provenanceChunkIds": ["celtic.mabinogion.166"],
+      "mustIncludeTraditions": ["celtic"],
+      "note": "Blodeuwedd drawing Llew's conditional death; 'buck', 'cauldron', 'Gronw' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "what does it mean to journey into the otherworld and come back changed",
+      "provenanceChunkIds": ["celtic.mabinogion.157"],
+      "note": "Annwvyn's gifts crossing into this world; otherworld descent is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how do insults to a guest's honor bind rulers to reparation or war",
+      "provenanceChunkIds": ["celtic.mabinogion.139"],
+      "note": "Matholwch's insult and Bran's reparations; honor-debt is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

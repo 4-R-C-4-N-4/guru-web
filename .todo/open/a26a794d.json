@@ -1,0 +1,16 @@
+{
+  "id": "a26a794d",
+  "type": "chore",
+  "state": "open",
+  "summary": "Extend docs/golden-queries.md corpus-update hook: the full post-update chain — golden queries -> re-distill thin scorer -> re-derive parallels, with owner gates marked",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-13T13:26:25.934Z",
+  "updated_at": "2026-08-13T13:26:25.972Z",
+  "tags": [
+    "golden-set",
+    "ritual"
+  ],
+  "description": "Relocated from guru todo:2decb432 (parent c3f479ff, the Pass C retirement) — the ritual doc belongs here because docs/golden-queries.md owns the corpus-update hook it extends.\n\nDocument the chain a corpus update triggers, with gates: (1) per-work golden query files ship in the same PR (already documented — this ticket extends, not rewrites); (2) thin-scorer re-distill via the rellm scorer pipeline (~1 GPU-hour scripted; gates: teacher Pearson >= 0.85, gold-eval AUC, ship-gate protocol — rellm docs/edges/thin-scorer-spec.md); (3) guru re-derives parallels (scripts/derive_parallels.py once ported — guru todo:5620391a) and the owner spot-checks panels before their corpus push. Mark plainly which steps are owner-gated (query ratification, re-distill go/no-go, panel ratification, prod push)."
+}

@@ -1,0 +1,23 @@
+{
+  "work": "lesser-holy-assembly",
+  "tradition": "jewish_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Drafted from chunks (todo/a8559033). Trainable: eligible for the fine-tune query distribution. Only a fragment of the Idra Zuta (ch. VIII, on the forehead) is in corpus (2 chunks).",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "at what hour of the week is the forehead of Macroprosopus laid bare, quieting wrath so that prayer can rise and be received on high",
+      "provenanceChunkIds": ["jewish_mysticism.lesser-holy-assembly.001"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The unveiling at the Sabbath evening prayer (Idra Zuta ch. VIII); 'acceptation of acceptations', 'Ratzon, Will-power', 'four hundred and twenty worlds', 'the prayers of the Israelites ascend' paraphrased away; corpus-native 'Macroprosopus' kept as the translation's own term."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can divine anger be soothed so that prayers are accepted",
+      "provenanceChunkIds": ["jewish_mysticism.lesser-holy-assembly.001"],
+      "note": "Wrath assuaged at the hour of acceptance; the appeasement of divine anger through timely prayer is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

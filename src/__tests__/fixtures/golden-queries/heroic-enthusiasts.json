@@ -1,0 +1,70 @@
+{
+  "work": "heroic-enthusiasts",
+  "tradition": "renaissance_hermeticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: never feeds the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Bruno's distinction between two sorts of frenzy: a blind bestial madness, and a divinely inspired rapture that lifts a person above ordinary humanity",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.heroic-enthusiasts-pt1.026",
+        "renaissance_hermeticism.heroic-enthusiasts-pt1.027"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The two kinds of enthusiasts opening the Third Dialogue; 'stupidity and irrational impetuosity', 'divine abstraction', 'black bile' paraphrased away; 'Bruno' kept as the author any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the heroic lover's soul torn by simultaneous opposites, frozen expectation and blazing longing at once, silent yet filling the air with cries",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.heroic-enthusiasts-pt1.021",
+        "renaissance_hermeticism.heroic-enthusiasts-pt1.023"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The standard-bearer sonnet and its gloss in the Second Dialogue; 'my hopes are ice and my desires glowing', 'tremble, sparkle, freeze, and burn' paraphrased into different words."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the paradox of the chase after divine truth in which the pursuer is captured and turned into the very quarry he was hunting",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.heroic-enthusiasts-pt2.027"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The hunter-becomes-the-hunted passage (the Actaeon theme) in Part 2; 'the thief becomes the thing stolen', 'fugitive and wild body', 'mouth of his own intelligence' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the tale of nine young men struck sightless by love, each giving a different cause for his blindness, who wander for years before reaching the nymphs of a British island",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.heroic-enthusiasts-pt2.036",
+        "renaissance_hermeticism.heroic-enthusiasts-pt2.045",
+        "renaissance_hermeticism.heroic-enthusiasts-pt2.046"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The nine blind men of the Fourth and Fifth Dialogues of Part 2; 'ploughed the seas', 'temperate sky of the British Isles', 'lovely graceful nymph' paraphrased; the nine blind men kept as the episode any reader of the work knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "is ecstatic love or divine madness a genuine path to knowledge of God",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.heroic-enthusiasts-pt1.026"
+      ],
+      "note": "The whole book answers this, but so do Sufi, bhakti, and Platonic traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can love of visible beauty become a ladder toward the divine",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.heroic-enthusiasts-pt2.004",
+        "renaissance_hermeticism.heroic-enthusiasts-pt2.019"
+      ],
+      "note": "Material beauty as a glittering ray of spiritual form; the eros-ascent is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

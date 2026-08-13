@@ -1,0 +1,53 @@
+{
+  "work": "tertium-organum",
+  "tradition": "western_esoteric",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: queries never feed the fine-tune distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Ouspensky's argument that a flat creature confined to a plane would experience our third dimension as time, treating everything off its plane as past or future rather than as elsewhere",
+      "provenanceChunkIds": ["western_esoteric.tertium-organum.046", "western_esoteric.tertium-organum.047", "western_esoteric.tertium-organum.050"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The plane-being analogy chapters; 'section', 'angle', 'third perpendicular', 'spiral and film' paraphrased away; Ouspensky kept as the author's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the claim that a horse or cat perceives no depth at all, reading solids as shifting flat appearances, so an animal's world has one dimension fewer than a man's",
+      "provenanceChunkIds": ["western_esoteric.tertium-organum.066", "western_esoteric.tertium-organum.068", "western_esoteric.tertium-organum.070"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The animal-perception chapter; 'series of complicated moving surfaces', 'angles and curves as motion' paraphrased into shifting flat appearances."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the analysis of the present moment as nothing but a boundary where what has not yet arrived crosses into what no longer exists, hinting that time is really an unperceived dimension of space",
+      "provenanceChunkIds": ["western_esoteric.tertium-organum.029", "western_esoteric.tertium-organum.030"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "'The moment of transition of a phenomenon from one non-existence into another non-existence' recast; 'motion in space and motion in time' dropped."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Ouspensky calls love a cosmic force in which individual human beings are mere incidents, its enormous surplus beyond what reproduction needs destined for another kind of creation",
+      "provenanceChunkIds": ["western_esoteric.tertium-organum.108", "western_esoteric.tertium-organum.109", "western_esoteric.tertium-organum.110"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "The occultism-and-love chapter; 'cosmic phenomenon in which men, humanity, are merely accidents', 'creation of the future by begetting' paraphrased."
+    },
+    {
+      "kind": "relevance",
+      "query": "is the universe one eternal being rather than an endless becoming",
+      "provenanceChunkIds": ["western_esoteric.tertium-organum.122"],
+      "note": "Language pictures a dual, becoming universe that is really one and being; the eternal-now question is answered across traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "do stones, trees, and mountains possess souls or an inner life of their own",
+      "provenanceChunkIds": ["western_esoteric.tertium-organum.105", "western_esoteric.tertium-organum.129"],
+      "note": "The animated-nature chapter and the voices of stones; panpsychism is answered by many traditions. No target — graded post-hoc."
+    }
+  ]
+}

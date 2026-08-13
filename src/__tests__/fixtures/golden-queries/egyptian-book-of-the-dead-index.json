@@ -1,0 +1,53 @@
+{
+  "work": "egyptian-book-of-the-dead-index",
+  "tradition": "egyptian",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "in the hall of judgment the dead man greets each of the assessor gods by name and denies a different sin to each one — cheating the scales, holding back temple offerings, taking food from a child",
+      "provenanceChunkIds": ["egyptian.egyptian-book-of-the-dead-index.218", "egyptian.egyptian-book-of-the-dead-index.222"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "The negative confession; 'made light the weight in the scales', 'snatched the milk from the mouth of the babe', the gods' epithets and towns all paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the scribe Ani's spell to keep his own heart from being carried off from him in the world below, pictured with the heart set on a stand before the seated gods",
+      "provenanceChunkIds": ["egyptian.egyptian-book-of-the-dead-index.185"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "Chapter XXVII and its vignette; 'not letting the heart of a man be taken away' reworded, 'pedestal in the form of Maat' paraphrased; 'Ani' kept — the papyrus bears his name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "while searching for her husband's coffin, Isis serves as nurse to the king's son at Byblos, feeding him strangely and laying him in the flames each night to burn away what was mortal",
+      "provenanceChunkIds": ["egyptian.egyptian-book-of-the-dead-index.039"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "The Osiris legend as told in the introduction; 'gave him her finger to suck' paraphrased to 'feeding him strangely'; 'Isis' and 'Byblos' kept as names every reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the teaching that each person has a ka, a double that dwells in the tomb and must be kept alive with offerings of food, or failing those with images of meals to feed upon",
+      "provenanceChunkIds": ["egyptian.egyptian-book-of-the-dead-index.047", "egyptian.egyptian-book-of-the-dead-index.051"],
+      "mustIncludeTraditions": ["egyptian"],
+      "mustIncludeWork": true,
+      "note": "The khat/ka doctrine; 'painted similitudes' paraphrased to 'images of meals'; 'ka' kept — the doctrine's own name."
+    },
+    {
+      "kind": "relevance",
+      "query": "how are a person's deeds weighed and judged after death",
+      "provenanceChunkIds": ["egyptian.egyptian-book-of-the-dead-index.148", "egyptian.egyptian-book-of-the-dead-index.218"],
+      "note": "The weighing of words before Thoth and the confession; post-mortem judgment is answered across the corpus. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how did the creator bring forth the first gods out of his own body before heaven and earth existed",
+      "provenanceChunkIds": ["egyptian.egyptian-book-of-the-dead-index.314"],
+      "note": "Tmu begetting Shu and Tefnut before creation; self-generated creation is a pan-traditional question. No target — graded post-hoc."
+    }
+  ]
+}

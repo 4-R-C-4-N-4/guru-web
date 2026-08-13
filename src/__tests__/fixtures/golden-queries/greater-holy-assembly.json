@@ -1,0 +1,23 @@
+{
+  "work": "greater-holy-assembly",
+  "tradition": "jewish_mysticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Drafted from chunks (todo/a8559033). Frozen: part of the frozen eval subset; queries must never feed training. Only ch. I of the Idra Rabba is in corpus (3 chunks).",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "why does Rabbi Schimeon weep before disclosing hidden doctrine to the companions gathered around him in the field, caught between the duty to reveal and the danger of revealing",
+      "provenanceChunkIds": ["jewish_mysticism.greater-holy-assembly.001"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The ingress of the Idra Rabba; 'Woe! if I shall reveal it! Woe! if I shall not reveal it!', 'the reapers of the land are few', the vineyard image and the armour-and-spears summons paraphrased away; corpus-native 'Rabbi Schimeon' spelling kept."
+    },
+    {
+      "kind": "relevance",
+      "query": "why must esoteric teaching be concealed from those unfit to receive it",
+      "provenanceChunkIds": ["jewish_mysticism.greater-holy-assembly.002"],
+      "note": "'The faithful in spirit concealeth the word' — the ethics of secrecy is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

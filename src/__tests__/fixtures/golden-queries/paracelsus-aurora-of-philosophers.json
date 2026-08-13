@@ -1,0 +1,58 @@
+{
+  "work": "paracelsus-aurora-of-philosophers",
+  "tradition": "renaissance_hermeticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the claim that Adam already possessed every art, and that this knowledge, carved in stone against the coming flood, descended through the Chaldeans and Egyptians to Hermes Trismegistus",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.001",
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.002"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "Ch. I-II on the origin of the philosophers' stone; 'first inventor of arts', 'hieroglyphical characters', 'king, priest, prophet, magician, sophist' paraphrased away; Adam and Hermes Trismegistus kept as reader-honest names."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "a catalogue of failed seekers of the stone: those who hunted it in plant juices, those who tried animal matter and blood, and the frauds whose counterfeit metal ruined goldsmiths and coiners",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.005",
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.006",
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.009"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The chapters against sophists seeking the stone in vegetables and animals; 'Lac Virginis', 'fixatory waters', 'mint-masters', and the named targets (Geber, Rupescissa) paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why the stone requires a marriage of Sol and Luna, husband and wife who cannot generate anything without a third animated seed from them both",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.015"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The two matters of the Stone; 'proper marriage, both natural and artificial', 'seed and sperm of both' paraphrased; Sol and Luna kept as the alchemical names every reader of the literature knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "where did the most ancient wisdom come from and how was it handed down",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.002"
+      ],
+      "note": "The Chaldean-Egyptian-Greek transmission chain; primordial-wisdom lineages are claimed by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what is man made of, and what makes him a small mirror of the whole creation",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-aurora-of-philosophers.021"
+      ],
+      "note": "Man as quintessence extracted from elements and stars; microcosm doctrine is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

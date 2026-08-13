@@ -1,0 +1,45 @@
+{
+  "work": "bhagavad-gita",
+  "tradition": "hinduism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable. Telang translation.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the Bhagavad Gita's counsel from Krishna to the grieving Arjuna before battle that the soul cannot be slain and only trades old bodies for new, the way a man changes out of worn garments",
+      "provenanceChunkIds": ["hinduism.bhagavad-gita-chapter-02.002"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Chapter II; 'casting off old clothes, puts on others and new ones' paraphrased to worn garments; Krishna/Arjuna are reader-honest (Telang's chunk says 'the Deity'). First draft without the title or battlefield context pulled generic soul-immortality texts (Phaedo, Julian, gnosticism) and missed hinduism entirely."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Arjuna begging to see the god's universal form and being overwhelmed by a body containing all the worlds, with countless faces, arms, and terrible jaws",
+      "provenanceChunkIds": ["hinduism.bhagavad-gita-chapter-11.001", "hinduism.bhagavad-gita-chapter-11.002"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Chapter XI theophany; 'many mouths and eyes, with many arms, thighs, and feet' paraphrased to countless faces and arms; 'divine form' rendered as universal form from reader knowledge."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Gita's downward chain where brooding on pleasures breeds clinging, clinging turns to craving, craving flares into anger, and anger wrecks memory and judgment until the person is destroyed",
+      "provenanceChunkIds": ["hinduism.bhagavad-gita-chapter-02.004"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Chapter II; 'ponders over objects of sense forms an attachment... from attachment desire... from desire anger... confusion of the memory... loss of reason... utterly ruined' paraphrased to brooding/clinging/craving/wrecked judgment."
+    },
+    {
+      "kind": "relevance",
+      "query": "can taking part in a war ever be a duty rather than a sin",
+      "provenanceChunkIds": ["hinduism.bhagavad-gita-chapter-01.003", "hinduism.bhagavad-gita-chapter-02.001"],
+      "note": "Arjuna's crisis on the battlefield — but just-war and nonviolence questions run through several traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "is a life of contemplation superior to a life of action",
+      "provenanceChunkIds": ["hinduism.bhagavad-gita-chapter-05.001"],
+      "note": "Chapter V's renunciation-versus-pursuit question; monastic and taoist teachings weigh the same choice. No target — graded post-hoc."
+    }
+  ]
+}

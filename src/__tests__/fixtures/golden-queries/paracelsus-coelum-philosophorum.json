@@ -1,0 +1,38 @@
+{
+  "work": "paracelsus-coelum-philosophorum",
+  "tradition": "renaissance_hermeticism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen eval subset: never feeds the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Saturn speaking in his own voice, complaining that his six brothers cast him out to be their examiner and clothed him in a perishable body, though gold and silver come out purified from his water",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-coelum-philosophorum.004"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "Saturn's speech in the canons; 'thrust me forth from a spiritual place', 'penetrate my body and perish in the fire' paraphrased; Saturn and the six brothers kept as the conceit any reader of the canons knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the seven rules of alchemy teaching how the six lesser metals are ripened by degrees, passing from one death to a higher one, until they become silver and at last royal gold",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-coelum-philosophorum.001",
+        "renaissance_hermeticism.paracelsus-coelum-philosophorum.005"
+      ],
+      "mustIncludeTraditions": ["renaissance_hermeticism"],
+      "mustIncludeWork": true,
+      "note": "The Seven Canons and the transposition of metals; 'Sol and Luna', 'brilliant and altogether royal metal', 'clear in its esse' paraphrased into silver/gold; the seven rules kept as the book's own announced frame."
+    },
+    {
+      "kind": "relevance",
+      "query": "why is fire the great tester that separates the pure from the impure",
+      "provenanceChunkIds": [
+        "renaissance_hermeticism.paracelsus-coelum-philosophorum.012"
+      ],
+      "note": "Fire as the proving ordeal of substances; refining-fire imagery is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

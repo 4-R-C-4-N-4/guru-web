@@ -1,0 +1,53 @@
+{
+  "work": "plotinus-select-works-index",
+  "tradition": "neoplatonism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Plotinus on turning the gaze inward and laboring at one's own soul the way a craftsman perfects a figure, removing what is superfluous until the inner splendor shows",
+      "provenanceChunkIds": ["neoplatonism.plotinus-select-works-index.063", "neoplatonism.plotinus-select-works-index.064"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "The self-sculpting passage of the treatise on Beauty; 'withdraw into yourself', 'statue', 'sculptor', 'chisel' paraphrased into craftsman imagery; 'Plotinus' kept as the author's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the philosopher's account of repeatedly awakening out of his body into himself, identified with the divine order, and then puzzling over how the soul ever comes down again",
+      "provenanceChunkIds": ["neoplatonism.plotinus-select-works-index.424"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "The famous opening of the treatise on the soul's descent; 'lifted out of the body', 'self-encentered', 'marvellous beauty' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why Plotinus calls every virtue a purification, comparing the embodied soul to a precious metal dulled by clinging earth that regains its beauty only when refined back to itself alone",
+      "provenanceChunkIds": ["neoplatonism.plotinus-select-works-index.060", "neoplatonism.plotinus-select-works-index.061"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "'Gold degraded when mixed with earthy particles', 'gold with gold alone', 'moral-discipline' paraphrased into refining imagery; Plotinus kept."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the defense of consecrated images and holy places: the wise of old prepared receptacles tuned to the soul of the All so that a divine presence would settle in them",
+      "provenanceChunkIds": ["neoplatonism.plotinus-select-works-index.312"],
+      "mustIncludeTraditions": ["neoplatonism"],
+      "mustIncludeWork": true,
+      "note": "The shrines-and-statues passage; 'erection of shrines and statues', 'tractable', 'mirror' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can love of beautiful things become a ladder toward the divine",
+      "provenanceChunkIds": ["neoplatonism.plotinus-select-works-index.058", "neoplatonism.plotinus-select-works-index.062"],
+      "note": "The ascent from sensible to intelligible beauty; eros as a path upward is answered across many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "why does a good and provident source produce a world that contains inferior and ugly things",
+      "provenanceChunkIds": ["neoplatonism.plotinus-select-works-index.163", "neoplatonism.plotinus-select-works-index.212"],
+      "note": "Against the censurers of the Kosmos: gradation of primals to ultimates; theodicy is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "work": "book-of-concealed-mystery",
+  "tradition": "jewish_mysticism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Drafted from chunks (todo/a8559033). Trainable: eligible for the fine-tune query distribution. NB: this work holds only Siphra Dtzenioutha ch. V; ch. I-IV sit under kabbalah-unveiled-intro.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the concealed mystery's exposition of the giants of Genesis: men of renown from eternity who worked wonders through the Tetragrammaton's name yet without holiness, and the divine spirit that will not abide in flesh forever",
+      "provenanceChunkIds": ["jewish_mysticism.book-of-concealed-mystery.003", "jewish_mysticism.book-of-concealed-mystery.004", "jewish_mysticism.book-of-concealed-mystery.005"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "'There were giants in the earth' and the men of the name (ch. V on Gen. vi); 'men of the name', 'exercised themselves in the name', 'and not the holy inferiors' paraphrased away; the Gen. vi frame, work title, and corpus-native 'Tetragrammaton' kept as reader-honest anchors. First draft without title/Tetragrammaton anchors kept the tradition but missed the work in top-15."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "why the serpent that came from Moses' staff is called a shell of middle nature between the holy and the profane, springing over the hills in hundreds of leaps and gripping its own tail in its teeth",
+      "provenanceChunkIds": ["jewish_mysticism.book-of-concealed-mystery.007"],
+      "mustIncludeTraditions": ["jewish_mysticism"],
+      "mustIncludeWork": true,
+      "note": "The serpent of Nogah (ch. V); 'rod of Moses' rephrased to 'staff', 'Nogah, or splendour', 'three hundred and seventy leaps', 'he leapeth upon the mountains, and rusheth swiftly over the hills' paraphrased away or approximated; 'Moses' kept as a name any reader knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "how is strict judgment tempered by mercy in the divine ordering of the world",
+      "provenanceChunkIds": ["jewish_mysticism.book-of-concealed-mystery.008"],
+      "note": "The four kinds of judgment (rigorous, gentle, by balance, and neither); judgment-tempered-by-mercy is answered across many traditions. No target — graded post-hoc."
+    }
+  ]
+}

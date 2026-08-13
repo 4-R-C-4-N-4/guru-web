@@ -1,0 +1,31 @@
+{
+  "work": "enuma-elish",
+  "tradition": "mesopotamian",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Known-gap caution: 'Tiamat and the Babylonian creation' missed top-15 at corpus v27 in the frozen golden gate. Probes here anchor hard on Marduk/Tiamat; failures reported honestly.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "how Marduk snared Tiamat in his net and loosed the raging winds into her open mouth to end her life",
+      "provenanceChunkIds": ["mesopotamian.enuma-elish.008"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "The combat scene; 'evil wind', 'her belly', 'shut her lips' paraphrased away; 'net' kept as the episode's emblem any reader knows; Marduk and Tiamat kept as names."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the brood of serpents, monstrous warriors, and tempests Tiamat raised for war against the younger gods, with Kingu exalted at their head",
+      "provenanceChunkIds": ["mesopotamian.enuma-elish.002", "mesopotamian.enuma-elish.003", "mesopotamian.enuma-elish.005"],
+      "mustIncludeTraditions": ["mesopotamian"],
+      "mustIncludeWork": true,
+      "note": "The eleven monsters and Kingu's investiture; 'poison instead of blood', 'scorpion-men', 'fish-men and rams', 'Tablets of Destiny' paraphrased away; Tiamat and Kingu kept as names."
+    },
+    {
+      "kind": "relevance",
+      "query": "how did an ordered world first arise out of watery chaos",
+      "provenanceChunkIds": ["mesopotamian.enuma-elish.001"],
+      "note": "The opening before heaven and earth were named; creation from primordial waters is answered across traditions. No target — graded post-hoc."
+    }
+  ]
+}

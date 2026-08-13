@@ -1,0 +1,45 @@
+{
+  "work": "plato-republic",
+  "tradition": "platonism",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution. Corpus holds Books VI-VII only (text_ids plato-republic-6-*/7-*); probes anchored in that stretch's own figures (the cave, the ship, the sun) to separate it from the other four Platonic dialogues.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the allegory of people bound underground since childhood, mistaking shadows thrown on a wall for the whole of reality, until one is freed and climbs up into the sunlight",
+      "provenanceChunkIds": ["platonism.plato-republic-7-0.001", "platonism.plato-republic-7-0.002"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The cave; 'underground den', 'legs and necks chained', 'a fire is blazing at a distance' paraphrased away; shadows-for-reality kept — the allegory is unrecognizable without it and any reader knows it."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the parable of a ship whose sailors fight to seize the helm through flattery and force while dismissing as a useless stargazer the one man who reads the heavens and the weather — an image of how the city treats the true philosopher",
+      "provenanceChunkIds": ["platonism.plato-republic-6-1.002"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The ship of state; 'the year and seasons and sky and stars and winds', 'able seaman', 'good-for-nothing' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Socrates comparing the highest form, the good, to the sun: as the sun gives the eye its power of sight and things their growth, the good gives what is known its truth and very being",
+      "provenanceChunkIds": ["platonism.plato-republic-6-2.001", "platonism.plato-republic-6-2.002"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The sun analogy for the good; 'author of sight', 'a sort of effluence which is dispensed from the sun' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "why is someone who has glimpsed a higher reality reluctant to come back down to ordinary affairs, and should they be made to return",
+      "provenanceChunkIds": ["platonism.plato-republic-7-0.003", "platonism.plato-republic-7-0.005"],
+      "note": "The freed prisoner's reluctant descent and the compulsion of the best to govern; the contemplative's return is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "is awakening a matter of pouring knowledge into a person, or of turning a capacity for vision they already possess toward the light",
+      "provenanceChunkIds": ["platonism.plato-republic-7-0.004"],
+      "note": "Education as turning the soul's existing eye rather than filling it; instruction-versus-awakening is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

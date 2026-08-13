@@ -1,0 +1,45 @@
+{
+  "work": "plato-symposium",
+  "tradition": "platonism",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen: part of the eval subset, never fed to training. Probes anchored in the Symposium's own speeches (Diotima's ladder, Aristophanes' halves, Love as intermediate spirit) to separate it from the other four Platonic dialogues.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Diotima's greater mysteries of love: the lover climbs step by step from devotion to one beautiful body, through beautiful souls and pursuits, to the vision of beauty itself, everlasting and unmixed",
+      "provenanceChunkIds": ["platonism.plato-symposium.027", "platonism.plato-symposium.028"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The ladder of love; 'begin in youth to visit beautiful forms', 'contemplation of beauty absolute', 'the measure of gold and garments' paraphrased away; 'Diotima' kept as a name any reader of the dialogue knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Aristophanes' myth at the banquet that humans were once round double creatures split in two by the gods, so that love is each half's longing to be rejoined with its lost counterpart",
+      "provenanceChunkIds": ["platonism.plato-symposium.014", "platonism.plato-symposium.015"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "The split-humans myth; the surgical details ('pulled the skin', 'purses which draw in', 'navel', Hephaestus' offer to weld the pair) paraphrased away; 'Aristophanes' kept as the speaker's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Diotima teaching Socrates that Love is not a god at all but a great spirit standing between the divine and the mortal, and that those who pursue wisdom stand between wisdom and ignorance",
+      "provenanceChunkIds": ["platonism.plato-symposium.022", "platonism.plato-symposium.023"],
+      "mustIncludeTraditions": ["platonism"],
+      "mustIncludeWork": true,
+      "note": "Love as intermediate daimon; 'neither mortal nor immortal', 'no god is a philosopher or seeker after wisdom, for he is wise already' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "how do mortal beings reach toward immortality through offspring, fame, and the works they leave behind",
+      "provenanceChunkIds": ["platonism.plato-symposium.025", "platonism.plato-symposium.026"],
+      "note": "Generation as the mortal's share of eternity; procreative and creative immortality is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what distinguishes love directed at a person's character and soul from desire for their body alone",
+      "provenanceChunkIds": ["platonism.plato-symposium.009"],
+      "note": "Pausanias' vulgar versus noble lover; soul-love versus body-desire is a pan-traditional distinction. No target — graded post-hoc."
+    }
+  ]
+}

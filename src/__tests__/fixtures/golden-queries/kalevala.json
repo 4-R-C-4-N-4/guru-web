@@ -1,0 +1,53 @@
+{
+  "work": "kalevala",
+  "tradition": "finnic",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Louhi's bargain: her daughter in marriage to whoever can forge her the Sampo with its many-colored cover out of a feather, a barley grain, and a wisp of wool",
+      "provenanceChunkIds": ["finnic.kalevala.034"],
+      "mustIncludeTraditions": ["finnic"],
+      "mustIncludeWork": true,
+      "note": "'Tips of white-swan feathers', 'milk of greatest virtue', 'finest wool of lambkins', 'hammer me the lid in colors' compressed and paraphrased; 'Louhi' and 'Sampo' kept as names every reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Lemminkainen's mother rakes the river of Tuoni for the scattered pieces of her son and joins them back into a living man",
+      "provenanceChunkIds": ["finnic.kalevala.077", "finnic.kalevala.078"],
+      "mustIncludeTraditions": ["finnic"],
+      "mustIncludeWork": true,
+      "note": "The restoration in Rune XV; 'half the head, a fore-arm', 'flesh to flesh with skill she places' paraphrased; the raven's advice to leave him as a sea-beast dropped."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "swallowed whole by the sleeping giant Wipunen, Wainamoinen torments him from inside his body until the ancient words of origin are given up",
+      "provenanceChunkIds": ["finnic.kalevala.089", "finnic.kalevala.090"],
+      "mustIncludeTraditions": ["finnic"],
+      "mustIncludeWork": true,
+      "note": "The lost-words episode; the boat built from a knife handle and the rowing 'through every gland and vessel' paraphrased to torment from inside; both names kept."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the herd-boy Kullervo avenges the hostess's malice by singing wolves and bears into the shape of cattle and driving them home to the smith's wife at milking time",
+      "provenanceChunkIds": ["finnic.kalevala.195", "finnic.kalevala.196", "finnic.kalevala.197"],
+      "mustIncludeTraditions": ["finnic"],
+      "mustIncludeWork": true,
+      "note": "The raven's counsel and the death of Ilmarinen's wife; 'drive them home like spotted cattle', 'sing the forest wolves together' paraphrased; 'Kullervo' kept — the cycle bears his name."
+    },
+    {
+      "kind": "relevance",
+      "query": "why does knowing the origin of a thing give power to heal or control it",
+      "provenanceChunkIds": ["finnic.kalevala.040", "finnic.kalevala.043"],
+      "note": "The origin of iron recited to close Wainamoinen's wound, the balsam tested on broken stone; word-power over origins is answered by many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what happens to the world when the sun and moon are stolen away and hidden",
+      "provenanceChunkIds": ["finnic.kalevala.252", "finnic.kalevala.261"],
+      "note": "Louhi hides sun and moon in the stone mountain; the hidden-luminaries motif recurs across traditions. No target — graded post-hoc."
+    }
+  ]
+}

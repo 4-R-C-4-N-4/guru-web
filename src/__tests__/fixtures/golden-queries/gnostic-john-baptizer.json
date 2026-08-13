@@ -1,0 +1,45 @@
+{
+  "work": "gnostic-john-baptizer",
+  "tradition": "mandaean",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the tale of Miryai, raised by the priests to serve in the Jerusalem temple, who forsook Jewry for her lord and was later found by the Euphrates seated in state, reading from a sacred book to wake sleeping souls",
+      "provenanceChunkIds": ["mandaean.gnostic-john-baptizer-2.001", "mandaean.gnostic-john-baptizer-2.005"],
+      "mustIncludeTraditions": ["mandaean"],
+      "mustIncludeWork": true,
+      "note": "Miryai's expulsion and enthronement; 'white standard unfurled', 'Books of Truth', 'rouses all worlds from their sleep', 'staff of Life's water' paraphrased; 'Miryai' kept — the heroine's name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the speaker who insists he is no catcher of fish but a fisher of souls, calling the faithful to gather to him and overpowering the wicked fishers who prey on them",
+      "provenanceChunkIds": ["mandaean.gnostic-john-baptizer-3.004", "mandaean.gnostic-john-baptizer-3.008"],
+      "mustIncludeTraditions": ["mandaean"],
+      "mustIncludeWork": true,
+      "note": "'Fisher of Souls' tractate; 'eater of filth', 'stamped on the bows of the ship', 'the Seven are vanquished' paraphrased away; 'fisher of souls' kept — the tractate's own title."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the Messiah, son of Miryam, comes down to the bank of the Jordan and asks Yahya to baptize him with his baptism and pronounce his name over him",
+      "provenanceChunkIds": ["mandaean.gnostic-john-baptizer-1.009"],
+      "mustIncludeTraditions": ["mandaean"],
+      "mustIncludeWork": true,
+      "note": "John and the baptism of Jesus; 'Who told Yeshu', 'proclaims in the nights', 'glory rises over the worlds' paraphrased away; 'Yahya' kept — the Mandaean name of the Baptizer that names the book."
+    },
+    {
+      "kind": "relevance",
+      "query": "what becomes of the soul once it separates from the body at death",
+      "provenanceChunkIds": ["mandaean.gnostic-john-baptizer-1.016", "mandaean.gnostic-john-baptizer-1.017"],
+      "note": "Yahya's discourse on the soul at death and the funeral scene; the soul's departure is answered by nearly every tradition. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what existed before the heavens and the earth took form, and where was the soul then",
+      "provenanceChunkIds": ["mandaean.gnostic-john-baptizer-3.015"],
+      "note": "The pre-creation soul 'in the Bowl'; before-creation cosmogony is pan-traditional. 'Outspread'/'condensed' phrasing paraphrased. No target — graded post-hoc."
+    }
+  ]
+}

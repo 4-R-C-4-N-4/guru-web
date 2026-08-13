@@ -1,0 +1,52 @@
+{
+  "work": "orphic-hymns",
+  "tradition": "greek_mystery",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Orpheus instructing his pupil Musaeus which divinities to summon when beginning the sacred rites of initiation",
+      "provenanceChunkIds": ["greek_mystery.orphic-hymns.032"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "mustIncludeWork": true,
+      "note": "Opening address to Musaeus; 'attend to my sacred song', 'what rites to sacrifice belong' and the pantheon roll-call paraphrased away; Orpheus and Musaeus kept as names any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the hymn to Protogonus, the two-natured winged first-born hatched at the world's beginning, ancestor of every god and mortal",
+      "provenanceChunkIds": ["greek_mystery.orphic-hymns.039"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "mustIncludeWork": true,
+      "note": "'Egg-born', 'bull-roarer', 'golden wings', 'Ericapaeus' and 'from whom the race of Gods and mortals springs' paraphrased away; Protogonus kept — the hymn bears his name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the goddess Prothyraea whose special care is women crying out in the pains of childbirth",
+      "provenanceChunkIds": ["greek_mystery.orphic-hymns.035"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "mustIncludeWork": true,
+      "note": "'Labour pains are thy peculiar care', 'great Nature's key' and the storax fumigation paraphrased away; Prothyraea kept as the hymn's title name."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Melinoe, the underworld goddess with limbs half dark and half bright, conceived when Jove took Pluto's shape to deceive Proserpine",
+      "provenanceChunkIds": ["greek_mystery.orphic-hymns.115"],
+      "mustIncludeTraditions": ["greek_mystery"],
+      "note": "'Saffron-veil'd', 'Cocytus' and 'partly black thy limbs and partly white' paraphrased away; Melinoe and Proserpine kept as names."
+    },
+    {
+      "kind": "relevance",
+      "query": "should the gods be honored with animal sacrifice or with purer offerings of fruits and thought",
+      "provenanceChunkIds": ["greek_mystery.orphic-hymns.016", "greek_mystery.orphic-hymns.017"],
+      "note": "Theophrastus on bloodless offerings in the dissertation; sacrifice ethics is pan-traditional. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what does prayer accomplish in uniting the soul with beings higher than itself",
+      "provenanceChunkIds": ["greek_mystery.orphic-hymns.020"],
+      "note": "The dissertation's defense of prayer; every tradition in the corpus answers this. No target — graded post-hoc."
+    }
+  ]
+}

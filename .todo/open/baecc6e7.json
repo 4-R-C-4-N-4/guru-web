@@ -1,0 +1,15 @@
+{
+  "id": "baecc6e7",
+  "type": "chore",
+  "state": "open",
+  "summary": "bundahishn work id contains no Bundahishn: both chunks are E.W. West's SBE 'Introduction to Pahlavi Texts' front matter; the actual Ohrmazd/Ahriman cosmogony is absent. Golden-queries file targets what is actually there. Corpus-side: ingest the real text or relabel the work.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-12T17:37:48.393Z",
+  "updated_at": "2026-08-12T17:37:48.393Z",
+  "tags": [
+    "corpus",
+    "ingest"
+  ]
+}

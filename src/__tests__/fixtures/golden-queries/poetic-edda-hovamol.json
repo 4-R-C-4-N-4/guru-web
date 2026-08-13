@@ -1,0 +1,31 @@
+{
+  "work": "poetic-edda-hovamol",
+  "tradition": "norse",
+  "corpus_version": "50",
+  "frozenEval": false,
+  "note": "Trainable: eligible for the fine-tune query distribution.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Othin's own account of hanging nine nights on the wind-swept tree, pierced by a spear and sacrificed to himself, to win the runes",
+      "provenanceChunkIds": ["norse.poetic-edda-hovamol.013"],
+      "mustIncludeTraditions": ["norse"],
+      "mustIncludeWork": true,
+      "note": "'I ween that I hung', 'offered I was to Othin, myself to myself', 'what root beneath it runs' paraphrased; Othin and the runes kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "how the High One beguiled the giant Suttung's daughter Gunnloth to steal the precious mead of poetry, then left her betrayed and grieving",
+      "provenanceChunkIds": ["norse.poetic-edda-hovamol.009", "norse.poetic-edda-hovamol.010"],
+      "mustIncludeTraditions": ["norse"],
+      "mustIncludeWork": true,
+      "note": "'Full many a word, my will to get, I spoke in Suttung's hall', 'Gunnloth to grief he left', the ring-oath paraphrased; Suttung and Gunnloth kept as names."
+    },
+    {
+      "kind": "relevance",
+      "query": "how are friendships kept alive, and why do false friendships burn hot then cool",
+      "provenanceChunkIds": ["norse.poetic-edda-hovamol.005", "norse.poetic-edda-hovamol.011"],
+      "note": "The half-loaf friend and the untrodden road to a friend's house; counsel on friendship is pan-traditional. No target — graded post-hoc."
+    }
+  ]
+}

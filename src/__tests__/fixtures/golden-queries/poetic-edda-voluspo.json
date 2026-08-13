@@ -1,0 +1,31 @@
+{
+  "work": "poetic-edda-voluspo",
+  "tradition": "norse",
+  "corpus_version": "50",
+  "frozenEval": true,
+  "note": "Frozen: part of the work-disjoint eval subset.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the seeress recalling the age of Ymir, before sand or sea or sky existed, when there was only a great emptiness and no green thing",
+      "provenanceChunkIds": ["norse.poetic-edda-voluspo.003"],
+      "mustIncludeTraditions": ["norse"],
+      "mustIncludeWork": true,
+      "note": "'Yawning gap', 'cool waves', 'earth had not been nor heaven above' paraphrased; Ymir kept as a name any reader knows."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the prophecy that the sun goes dark, the land sinks under the ocean and flame reaches heaven itself, before a green earth rises from the waves once more",
+      "provenanceChunkIds": ["norse.poetic-edda-voluspo.015"],
+      "mustIncludeTraditions": ["norse"],
+      "mustIncludeWork": true,
+      "note": "'Hot stars down from heaven are whirled', 'life-feeding flame', 'cataracts fall' paraphrased; the prophecy framing kept — the poem is the wise-woman's prophecy."
+    },
+    {
+      "kind": "relevance",
+      "query": "after the destruction of the world, does it return renewed",
+      "provenanceChunkIds": ["norse.poetic-edda-voluspo.015", "norse.poetic-edda-voluspo.016"],
+      "note": "World-renewal after cataclysm is answered across traditions. No target — graded post-hoc."
+    }
+  ]
+}
