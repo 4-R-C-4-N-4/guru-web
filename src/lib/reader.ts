@@ -334,10 +334,38 @@ export async function getChunkTags(chunkId: string): Promise<ChunkTag[]> {
   );
 }
 
+/** Hard ceiling on how many partners one chunk's panel loads (todo:bc084b37).
+ *  Derived PARALLELS are far denser than the Pass C edges this panel was built
+ *  for — p95 is 54 partners and the worst chunk has 344 — and the page renders
+ *  every returned row into the DOM (10 visible, the rest inside a <details>).
+ *  100 clears p95 comfortably, so ordinary panels are untouched and only the
+ *  handful of pathological chunks are capped. Those are also the panels where
+ *  the raw count is least meaningful — see the weight-asymmetry note below. */
+const RELATED_LIMIT = 100;
+
 /** Cross-tradition partners of a chunk. PARALLELS/CONTRASTS edges are stored
  *  one direction, so match both ends and join the partner endpoint (same
  *  idiom as graph.ts walkGraph). The stored annotation is the reviewed
- *  justification — rendered verbatim as the relationship explanation. */
+ *  justification — rendered verbatim as the relationship explanation.
+ *
+ *  Ordered by `weight` (todo:bc084b37). Before the Pass C retirement every
+ *  PARALLELS row shared one tier and carried no weight, so the tier term below
+ *  decided nothing and rows fell through to `p.id` — alphabetical. The page
+ *  shows only the first 10, so a reader saw the alphabetically-first partners
+ *  rather than the best-graded ones. Derived rows carry the scorer's grade in
+ *  `weight`, which is what makes a meaningful order possible at all.
+ *
+ *  Caveat worth knowing before trusting this order absolutely: `weight` is the
+ *  score of whichever endpoint was the *partner* when the generator picked the
+ *  pair, and the row does not record which endpoint that was (guru
+ *  derive_parallels.py build_edges normalises source/target alphabetically).
+ *  For a chunk that was itself picked as many anchors' partner, its rows carry
+ *  its own scores and tie heavily. That is rare — 6 chunks corpus-wide have
+ *  >=20 partners and <=2 distinct weights — and fixing it properly is a
+ *  generator-side data-model change, not a query change. The tier and p.id
+ *  terms remain as deterministic tiebreaks for exactly those ties, and for
+ *  CONTRASTS, which ship weightless from a frozen snapshot (hence NULLS LAST
+ *  rather than a bare DESC). */
 export async function getRelatedPassages(chunkId: string): Promise<RelatedPassage[]> {
   return query<RelatedPassage>(
     `SELECT e.edge_type, e.tier, e.annotation,
@@ -348,9 +376,11 @@ export async function getRelatedPassages(chunkId: string): Promise<RelatedPassag
       WHERE (e.source = $1 OR e.target = $1)
         AND e.edge_type = ANY(ARRAY['PARALLELS','CONTRASTS'])
       ORDER BY e.edge_type = 'CONTRASTS',
+               e.weight DESC NULLS LAST,
                CASE e.tier WHEN 'verified' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
-               p.id`,
-    [chunkId],
+               p.id
+      LIMIT $2`,
+    [chunkId, RELATED_LIMIT],
   );
 }
 

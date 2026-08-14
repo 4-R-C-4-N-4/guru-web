@@ -79,6 +79,28 @@ describe('getRelatedPassages', () => {
     expect(sql).toMatch(/CASE WHEN e\.source = \$1 THEN e\.target ELSE e\.source END/);
     expect(sql).toMatch(/'PARALLELS','CONTRASTS'/);
   });
+
+  it('ranks partners by weight before falling back to tier and id (todo:bc084b37)', async () => {
+    mQuery.mockResolvedValue([]);
+    await getRelatedPassages('trad.text-a.001');
+    const sql = mQuery.mock.calls[0][0] as string;
+    // NULLS LAST matters: frozen CONTRASTS carry no weight, and a bare DESC
+    // would sort those nulls first in Postgres.
+    expect(sql).toMatch(/ORDER BY[\s\S]*e\.weight DESC NULLS LAST/);
+    // Weight must outrank the tier bucket — every derived PARALLELS row shares
+    // tier='inferred', so tier-first collapses the order back to alphabetical.
+    const order = sql.slice(sql.indexOf('ORDER BY'));
+    expect(order.indexOf('e.weight')).toBeLessThan(order.indexOf('CASE e.tier'));
+    expect(order.indexOf('CASE e.tier')).toBeLessThan(order.indexOf('p.id'));
+  });
+
+  it('caps how many partners one panel loads (todo:bc084b37)', async () => {
+    mQuery.mockResolvedValue([]);
+    await getRelatedPassages('trad.text-a.001');
+    const [sql, params] = mQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toMatch(/LIMIT \$2/);
+    expect(params[1]).toBe(100);
+  });
 });
 
 describe('getTextToc', () => {
