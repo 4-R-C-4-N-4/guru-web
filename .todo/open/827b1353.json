@@ -1,0 +1,35 @@
+{
+  "id": "827b1353",
+  "type": "bug",
+  "state": "open",
+  "summary": "Atlas reports zero cross-tradition parallels: all four PARALLELS queries filter tier='verified' but every derived edge is tier='inferred'",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-15T17:53:35.096Z",
+  "updated_at": "2026-08-15T17:54:01.865Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts",
+      "lines": [
+        170,
+        334
+      ]
+    }
+  ],
+  "tags": [
+    "atlas",
+    "edges",
+    "cutover",
+    "corpus"
+  ],
+  "analysis": [
+    {
+      "timestamp": "2026-08-15T17:54:01.865Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "Found 2026-08-15 sweeping guru-web for consumers affected by the Pass C cutover. Measured against corpus v55 loaded in local docker postgres, not inferred.\n\nTHE BREAK. src/lib/atlas.ts filters `e.tier='verified'` at every site that touches PARALLELS:\n\n  line 170  headline count  parallels_verified\n  line 171  headline count  parallels_proposed\n  line 212  tradition-pair co-occurrence matrix\n  line 231  per-tradition centrality (degree, partner count, per-100 normalisation)\n  line 334  exemplar passage pairs the essay cites\n\nEvery derived PARALLELS row carries tier='inferred'. Measured on the loaded corpus: 0 of 50,148 PARALLELS rows are 'verified', and 0 are 'proposed' either — so line 171 does not rescue line 170. The Atlas does not degrade gracefully; it reports that the corpus contains no cross-tradition parallels at all, across every surface it computes.\n\nTHE FILE'S OWN STATED INVARIANT IS NOW FALSE. atlas.ts's header documents two invariants that make the analysis \"trustworthy\". The first reads: \"The quality signal is `tier`, never `weight` — every edge ships weight=NULL (verified across all 33,260 edges). Headline claims are tier-gated to 'verified'.\" Both halves have inverted. Every derived row now carries a real weight (range -8.46 .. 2.70), and none carries a verified tier. The design chose tier over weight precisely BECAUSE weight was always NULL; that reasoning no longer holds.\n\nInvariant 2 (\"centrality is reported BOTH raw and normalized, so the essay can separate genuine bridging from corpus over-sampling\") is silently voided as a consequence — the centrality query returns nothing, so both figures are absent rather than one being misleading.\n\nWHY THIS IS WORSE THAN AN EMPTY PAGE. The header also instructs: \"Everything here is facts from the DB — the LLM composition layer may weave these numbers but must never invent or alter one.\" The composition layer is therefore contractually obliged to compose an essay against zeros, and forbidden from noticing they are wrong. An analysis essay asserting the corpus has no cross-tradition parallels is a worse artifact than a page that fails to render.\n\nSCOPE. /atlas is a public top-level route (src/app/atlas/page.tsx), not admin-gated.\n\nFIX OPTIONS, cheapest first.\n(a) Drop the tier predicate from all five sites. One-line each; restores every surface immediately. Correct if tier is provenance rather than confidence.\n(b) Resolve guru todo:dd034dc4 (is tier a confidence signal or a provenance timestamp?) and re-tier the corpus accordingly, then leave atlas.ts alone. Principled but blocks on a decision that has been open since 2026-08-09.\n(c) Re-gate on something that still discriminates. Note there is no longer an obvious candidate: the derived table is uniform in tier by construction, so any quality gate would have to key on `weight` — which is exactly the signal invariant 1 rejected, and which measures the PARTNER's fit to the shared concept rather than the pair's (see guru todo:7427712c and the weight-asymmetry note on todo:bc084b37).\n\nWORTH DOING AT THE SAME TIME. Line 334 orders exemplar pairs by ABS(token_count - TARGET_CHUNK_TOKENS) summed across both sides — i.e. it picks citable passages by how close they are to a target length, with no reference to how strong the parallel is. That made sense when every edge was weightless. Whoever removes the tier filter should consider ordering by weight instead, or at least breaking length ties with it.\n\nBLOCKING. This should be settled before the owner's next corpus push: shipping v55 to production lights up the reader panels and simultaneously blanks the Atlas.",
+      "confidence": "high"
+    }
+  ]
+}
