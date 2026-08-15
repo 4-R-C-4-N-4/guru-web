@@ -3,7 +3,8 @@
  *
  * Server-side reads for the public source-material reader (/read): traditions
  * → texts → chunk pages, plus per-chunk tags (EXPRESSES edges), related
- * passages (PARALLELS/CONTRASTS edges) and study summaries (summary_nodes).
+ * passages (PARALLELS edges only — CONTRASTS belong to the Atlas, see
+ * getRelatedPassages) and study summaries (summary_nodes).
  *
  * Same conventions as src/lib/corpus.ts: raw parameterized SQL through
  * src/lib/db.ts (search_path resolves bare corpus table names), typed rows,
