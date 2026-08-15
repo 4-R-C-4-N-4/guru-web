@@ -85,14 +85,15 @@ export interface AtlasSnapshot {
     // todo:827b1353). A single total plus the live weight distribution lets
     // the essay speak to strength, not only volume.
     parallelsTotal: number;
-    parallelsMedianWeight: number;
-    parallelsP90Weight: number;
+    /** null on a weightless corpus (pre-cutover PARALLELS). */
+    parallelsMedianWeight: number | null;
+    parallelsP90Weight: number | null;
     contrasts: number;
   };
   // Top cross-tradition pairs, ranked by median parallel weight (not raw
   // count — count tracks tag density/encyclopedic breadth more than genuine
   // affinity; see traditionMatrix()'s comment). Count is still reported.
-  traditionMatrix: Array<{ a: string; b: string; parallels: number; medianWeight: number }>;
+  traditionMatrix: Array<{ a: string; b: string; parallels: number; medianWeight: number | null }>;
   // The live min_n floor traditionMatrix applied (75th percentile of pair
   // sizes) — a pair below this never appears above, however strong its
   // median. Surfaced so the essay can state the cutoff instead of leaving an
@@ -245,8 +246,11 @@ async function headline(): Promise<AtlasSnapshot['headline']> {
     concepts: Number(row?.concepts ?? 0),
     families: Number(row?.families ?? 0),
     parallelsTotal: Number(row?.parallels_total ?? 0),
-    parallelsMedianWeight: Number(row?.parallels_median_weight ?? 0),
-    parallelsP90Weight: Number(row?.parallels_p90_weight ?? 0),
+    // A weightless corpus (pre-cutover PARALLELS carry weight=NULL) must read
+    // as "no figure", never as 0 — 0 is a plausible-looking weight and the
+    // composition layer is told never to invent one.
+    parallelsMedianWeight: row?.parallels_median_weight ?? null,
+    parallelsP90Weight: row?.parallels_p90_weight ?? null,
     contrasts: Number(row?.contrasts ?? 0),
   };
 }
@@ -311,13 +315,13 @@ async function traditionMatrix(
     pairAgg(`SELECT a, b, n AS parallels, median_weight
              FROM pair_agg
              WHERE n >= $2
-             ORDER BY median_weight DESC, a, b LIMIT $1`),
+             ORDER BY median_weight DESC NULLS LAST, n DESC, a, b LIMIT $1`),
     [limit, minN],
   );
   return {
     minN,
     rows: rows.map(r => ({
-      a: r.a, b: r.b, parallels: Number(r.parallels), medianWeight: Number(r.median_weight),
+      a: r.a, b: r.b, parallels: Number(r.parallels), medianWeight: r.median_weight ?? null,
     })),
   };
 }

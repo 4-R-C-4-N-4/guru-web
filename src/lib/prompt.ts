@@ -483,7 +483,7 @@ export function getAtlasSystemPrompt(): string {
 function formatFacts(s: AtlasSnapshot): string {
   const h = s.headline;
   const matrix = s.traditionMatrix
-    .map(m => `  ${m.a} ↔ ${m.b}: ${m.parallels} parallels, median weight ${m.medianWeight}`)
+    .map(m => `  ${m.a} ↔ ${m.b}: ${m.parallels} parallels, median weight ${m.medianWeight ?? 'n/a (weightless corpus)'}`)
     .join("\n");
   const central = s.centrality
     .map(
@@ -519,7 +519,7 @@ function formatFacts(s: AtlasSnapshot): string {
     `FACTS (corpus snapshot as of ${s.generatedAt}, schema v${s.schemaVersion}):`,
     ``,
     `Scale: ${h.traditions} traditions, ${h.concepts} concepts in ${h.families} families, ` +
-      `${h.parallelsTotal} cross-tradition parallels (median weight ${h.parallelsMedianWeight}, p90 ${h.parallelsP90Weight} — ` +
+      `${h.parallelsTotal} cross-tradition parallels (median weight ${h.parallelsMedianWeight ?? 'n/a'}, p90 ${h.parallelsP90Weight ?? 'n/a'} — ` +
       `higher is a stronger parallel; weight is not a per-pair strength score, only trust it in aggregate — see below), ` +
       `${h.contrasts} explicit contrasts. All parallels are cross-tradition by construction.`,
     // Guard: snapshots stored by pre-v4 editions lack the document layer.

@@ -201,3 +201,28 @@ describe('computeAtlasSnapshot', () => {
     expect(contrastSql).not.toMatch(/ABS\(\(cs\.token_count \+ ct\.token_count\)/);
   });
 });
+
+describe('weightless corpus (pre-cutover PARALLELS carry weight=NULL)', () => {
+  it('reports missing weight as null, never coerced to 0', async () => {
+    // 0 is a plausible-looking weight (real medians sit near -1.5), and the
+    // composition layer is instructed never to invent a number.
+    mQuery.mockResolvedValue([]);
+    mOne.mockResolvedValue({
+      traditions: 1, concepts: 1, families: 1, parallels_total: 10,
+      parallels_median_weight: null, parallels_p90_weight: null, contrasts: 0,
+    } as never);
+    const s = await computeAtlasSnapshot('2026-08-15T00:00:00Z');
+    expect(s.headline.parallelsMedianWeight).toBeNull();
+    expect(s.headline.parallelsP90Weight).toBeNull();
+  });
+
+  it('sorts null medians last so they cannot outrank real pairs', async () => {
+    // Postgres puts NULLs FIRST under plain DESC; without NULLS LAST a
+    // weightless corpus ranks the matrix alphabetically via the a,b tiebreak.
+    mQuery.mockResolvedValue([]);
+    mOne.mockResolvedValue({} as never);
+    await computeAtlasSnapshot('2026-08-15T00:00:00Z');
+    const sql = mQuery.mock.calls.map(c => c[0] as string).find(s => /median_weight DESC/.test(s));
+    expect(sql).toMatch(/ORDER BY median_weight DESC NULLS LAST/);
+  });
+});
