@@ -72,7 +72,7 @@ function humanizeTradition(slug: string): string {
 export function chunkMetaDescription(
   chunk: Pick<ChunkPage, 'section' | 'pos' | 'text_label' | 'tradition_label' | 'tradition'>,
   tags: Pick<ChunkTag, 'label'>[],
-  related: Pick<RelatedPassage, 'edge_type' | 'tradition'>[],
+  related: Pick<RelatedPassage, 'tradition'>[],
 ): string {
   const section = chunk.section ?? `Passage ${chunk.pos}`;
   const base = `${section} of ${chunk.text_label} (${chunk.tradition_label})`;
@@ -96,8 +96,8 @@ export function chunkMetaDescription(
     // The count branch fires only when every partner shares the chunk's own
     // tradition (that is the only way partnerTraditions ends up empty here),
     // so it must not claim "cross-tradition" — unreachable today (the
-    // pipeline stages PARALLELS/CONTRASTS across traditions only), but the
-    // SQL doesn't enforce that and this copy shouldn't lie if it ever fires.
+    // pipeline stages PARALLELS across traditions only), but the SQL doesn't
+    // enforce that and this copy shouldn't lie if it ever fires.
     parts.push(shown.length > 0
       ? `parallels in ${partnerTraditions.length > shown.length ? `${shown.join(', ')}, and beyond` : shown.join(' and ')}`
       : `${related.length} linked ${related.length === 1 ? 'parallel' : 'parallels'}`);

@@ -1,0 +1,61 @@
+{
+  "id": "827b1353",
+  "type": "bug",
+  "state": "done",
+  "summary": "Atlas reports zero cross-tradition parallels: all four PARALLELS queries filter tier='verified' but every derived edge is tier='inferred'",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-15T17:53:35.096Z",
+  "updated_at": "2026-08-15T18:10:37.531Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts",
+      "lines": [
+        170,
+        334
+      ]
+    }
+  ],
+  "tags": [
+    "atlas",
+    "edges",
+    "cutover",
+    "corpus"
+  ],
+  "analysis": [
+    {
+      "timestamp": "2026-08-15T17:54:01.865Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "Found 2026-08-15 sweeping guru-web for consumers affected by the Pass C cutover. Measured against corpus v55 loaded in local docker postgres, not inferred.\n\nTHE BREAK. src/lib/atlas.ts filters `e.tier='verified'` at every site that touches PARALLELS:\n\n  line 170  headline count  parallels_verified\n  line 171  headline count  parallels_proposed\n  line 212  tradition-pair co-occurrence matrix\n  line 231  per-tradition centrality (degree, partner count, per-100 normalisation)\n  line 334  exemplar passage pairs the essay cites\n\nEvery derived PARALLELS row carries tier='inferred'. Measured on the loaded corpus: 0 of 50,148 PARALLELS rows are 'verified', and 0 are 'proposed' either — so line 171 does not rescue line 170. The Atlas does not degrade gracefully; it reports that the corpus contains no cross-tradition parallels at all, across every surface it computes.\n\nTHE FILE'S OWN STATED INVARIANT IS NOW FALSE. atlas.ts's header documents two invariants that make the analysis \"trustworthy\". The first reads: \"The quality signal is `tier`, never `weight` — every edge ships weight=NULL (verified across all 33,260 edges). Headline claims are tier-gated to 'verified'.\" Both halves have inverted. Every derived row now carries a real weight (range -8.46 .. 2.70), and none carries a verified tier. The design chose tier over weight precisely BECAUSE weight was always NULL; that reasoning no longer holds.\n\nInvariant 2 (\"centrality is reported BOTH raw and normalized, so the essay can separate genuine bridging from corpus over-sampling\") is silently voided as a consequence — the centrality query returns nothing, so both figures are absent rather than one being misleading.\n\nWHY THIS IS WORSE THAN AN EMPTY PAGE. The header also instructs: \"Everything here is facts from the DB — the LLM composition layer may weave these numbers but must never invent or alter one.\" The composition layer is therefore contractually obliged to compose an essay against zeros, and forbidden from noticing they are wrong. An analysis essay asserting the corpus has no cross-tradition parallels is a worse artifact than a page that fails to render.\n\nSCOPE. /atlas is a public top-level route (src/app/atlas/page.tsx), not admin-gated.\n\nFIX OPTIONS, cheapest first.\n(a) Drop the tier predicate from all five sites. One-line each; restores every surface immediately. Correct if tier is provenance rather than confidence.\n(b) Resolve guru todo:dd034dc4 (is tier a confidence signal or a provenance timestamp?) and re-tier the corpus accordingly, then leave atlas.ts alone. Principled but blocks on a decision that has been open since 2026-08-09.\n(c) Re-gate on something that still discriminates. Note there is no longer an obvious candidate: the derived table is uniform in tier by construction, so any quality gate would have to key on `weight` — which is exactly the signal invariant 1 rejected, and which measures the PARTNER's fit to the shared concept rather than the pair's (see guru todo:7427712c and the weight-asymmetry note on todo:bc084b37).\n\nWORTH DOING AT THE SAME TIME. Line 334 orders exemplar pairs by ABS(token_count - TARGET_CHUNK_TOKENS) summed across both sides — i.e. it picks citable passages by how close they are to a target length, with no reference to how strong the parallel is. That made sense when every edge was weightless. Whoever removes the tier filter should consider ordering by weight instead, or at least breaking length ties with it.\n\nBLOCKING. This should be settled before the owner's next corpus push: shipping v55 to production lights up the reader panels and simultaneously blanks the Atlas.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-08-15T18:00:55.603Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "WEIGHT IS A USABLE SIGNAL FOR THE ATLAS. Measured on corpus v55 in local docker postgres, 50,148 PARALLELS rows.\n\nDistribution: min -8.46, p25 -2.36, median -1.48, p90 0.52, max 2.70. Continuous and well spread — unlike tier, which is now a constant ('inferred' on every row).\n\nIt discriminates between tradition pairs, and the ordering is historically defensible rather than arbitrary. Pairs with n>=200, ranked by median weight:\n\n  strongest\n    christian_mysticism / neoplatonism   n=5366  median -0.24  best 2.61\n    gnosticism / neoplatonism            n=1004  median -0.82  best 1.73\n    neoplatonism / taoism                n= 265  median -0.87  best 1.73\n    christian_mysticism / hermeticism    n= 349  median -0.99  best 2.61\n    christian_mysticism / gnosticism     n=1165  median -0.99  best 2.61\n\n  weakest\n    celtic / western_esoteric            n= 491  median -3.01\n    native_american / western_esoteric   n= 769  median -3.01\n    finnic / western_esoteric            n=1063  median -2.60\n    egyptian / platonism                 n= 359  median -2.29\n    buddhism / hinduism                  n= 209  median -2.29\n\nThe top of that list is the actual intellectual lineage of the corpus — Christian mysticism reading through Neoplatonism (Dionysius, Eckhart), Gnosticism sharing the late-antique Neoplatonic milieu. That is the finding an Atlas essay exists to surface, and weight ranks it first unprompted.\n\nTHE COROLLARY THAT MATTERS FOR THE FIX: raw edge COUNT is now actively misleading as a measure of affinity. finnic / western_esoteric carries 1,063 edges at median -2.60, while neoplatonism / taoism carries 265 at -0.87. Count tracks tag density and encyclopedic breadth — secret-teachings-of-all-ages touches every tradition — where weight separates genuine affinity from incidental co-tagging. Every Atlas surface that currently ranks or reports by COUNT(*) inherits that distortion, and did so before this cutover too; the weightless corpus simply gave it no alternative.\n\nOne caveat to carry into any use: weight is the score of whichever endpoint was the PARTNER when the generator picked the pair, not a symmetric measure of the pair (guru todo:7427712c, and the asymmetry note on todo:bc084b37). It is sound in aggregate — the medians above are over thousands of rows — but a single edge's weight should not be read as \"how good this parallel is\" in both directions.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-08-15T18:00:55.651Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "CONCLUSION — rebuild the Atlas on weight, and stop hardcoding corpus-derived constants. Owner direction 2026-08-15; supporting entries [0] (the break) and [1] (weight is usable).\n\nTWO RULES FOR THE FIX.\n\nRule 1 — no hardcoded corpus figures in comments or code. The header's \"verified across all 33,260 edges\" is the immediate offender: it was true when written, is false now (50,148 PARALLELS alone), and nothing would ever have failed to flag it. Any count, threshold or distribution figure baked into this file goes stale silently the next time the corpus moves, which is every corpus version. State invariants structurally (\"weight is populated for PARALLELS and NULL for CONTRASTS\") rather than numerically, and let anything quantitative come from the query.\n\nRule 2 — the quality signal is `weight`, and `tier` is not a signal at all. Drop `e.tier='verified'` from all five sites. Tier is uniform by construction on the derived table, so it discriminates nothing; keeping it as a predicate is what blanked the page. Where a quality distinction is genuinely wanted, take it from weight — and take it RELATIVELY (a percentile of the current distribution) rather than as an absolute cut, so it cannot go stale the way the hardcoded count did. An absolute weight floor would recreate exactly the failure just removed upstream in guru todo:ac63de1a.\n\nPER SITE.\n\n  line 170/171 — headline counts, currently split parallels_verified / parallels_proposed.\n    Both return 0. The verified/proposed split no longer carries meaning; replace with a single\n    PARALLELS total plus distribution figures computed in-query (median and p90 weight), so the\n    essay can say how strong the corpus's parallels are rather than only how many exist.\n\n  line 212 — tradition-pair co-occurrence matrix, currently ORDER BY COUNT(*) DESC.\n    This is the surface most distorted by counting. Report count AND median weight per pair, and\n    rank by weight. Per entry [1] this promotes christian_mysticism/neoplatonism (the real lineage)\n    and demotes finnic/western_esoteric (encyclopedic breadth). Keeping a count-ranked view as a\n    secondary column is fine and honest; leading with it is not.\n\n  line 231 — per-tradition centrality (degree, partner count, per-100 normalisation).\n    Add a weighted degree (sum or mean of incident weights) beside raw degree. Invariant 2 of the\n    header — report raw AND normalised so over-sampling is visible — was the right instinct and\n    should now extend to weight: a tradition can have high degree through one encyclopedic work.\n\n  line 334 — exemplar pairs the essay cites, currently ORDER BY ABS(token_count - TARGET) summed\n    across both sides, i.e. chosen by length convenience with no reference to parallel strength.\n    Order by weight DESC and keep the length term only as a tiebreak, so the passages quoted in\n    the essay are the strongest instances rather than the most conveniently sized.\n\nWHAT NOT TO DO. Do not reintroduce a tier predicate under another name, and do not gate on an\nabsolute weight value. If the essay needs \"only strong parallels\", express that as a percentile of\nthe live distribution.\n\nRISK TO STATE PLAINLY IN THE FIX. Weight is the partner-side score, not a symmetric pair score\n(entry [1], final paragraph). Aggregate uses — medians over thousands of rows, per-pair rankings,\nweighted degree — are sound. A claim about one specific cited parallel's strength is not, and the\nessay layer should not be handed weight as though it were.\n\nSEQUENCING. This blocks the owner's next corpus push: shipping v55 lights up the reader panels and\nblanks the Atlas in the same deploy. It does not block guru #70 or #69.",
+      "confidence": "high",
+      "supporting_evidence": [
+        0,
+        1
+      ]
+    }
+  ],
+  "resolution": {
+    "commit": "4ea869cac57cbe0bf1e4b01491d2c81825d150b1",
+    "resolved_at": "2026-08-15T18:10:37.531Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas.test.ts",
+    "test_function": "ranks the tradition-pair matrix by median weight, not raw count",
+    "note": "Dropped tier='verified' from all 5 sites; headline/matrix/centrality now rank on weight (median/p90 for headline, per-pair median for the matrix with a live p75 sample-size floor, mean incident weight for centrality); exemplar picker orders by weight DESC with length as tiebreak; header rewritten to structural invariants with zero hardcoded corpus figures. Verified live: matrix top row christian_mysticism/neoplatonism n=5366 median -0.24, matches ticket expectation exactly."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "e7b40dd5",
+  "type": "chore",
+  "state": "done",
+  "summary": "Golden gate drift at corpus v50: 'gnosis and the demiurge and the archons' no longer recalls gnosticism in top-15 (fixture pinned v37; got neoplatonism/greek_mystery/western_esoteric/hermeticism/mandaean/christian_mysticism). Pre-existing on main, surfaced 2026-08-12 during todo:a8559033 verification. Re-baseline deliberately per the fixture's own note, or investigate if the corpus change was benign.",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-12T14:21:21.838Z",
+  "updated_at": "2026-08-15T17:41:23.771Z",
+  "files": [
+    {
+      "path": "src/__tests__/fixtures/golden-retrieval.json"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "golden-set"
+  ],
+  "resolution": {
+    "commit": "c2735c03549ab442e5ac383320477b055036565c",
+    "resolved_at": "2026-08-15T17:41:23.771Z",
+    "resolved_by": "unknown",
+    "note": "Resolved by corpus movement, verified 2026-08-15 at v55: 'gnosis and the demiurge and the archons' passes, legacy gate 14/14 (run: set -a; . ./.env; set +a; INTEGRATION_TEST=1 npx vitest run src/__tests__/golden-retrieval.test.ts --reporter=verbose). The drift was recorded at v50 against a v37-pinned fixture; the corpus has since moved through v51-v55 and gnosticism recall recovered on its own. No re-baseline needed — the fixture was never changed, so this closes as fixed-by-corpus rather than fixed-by-fixture."
+  }
+}

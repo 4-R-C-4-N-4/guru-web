@@ -1,0 +1,46 @@
+{
+  "id": "bc084b37",
+  "type": "bug",
+  "state": "done",
+  "summary": "getRelatedPassages has no LIMIT and cannot order by weight: post-cutover panels reach 344 partners rendered alphabetically, burying the best-graded parallels",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-14T20:51:30.876Z",
+  "updated_at": "2026-08-14T21:27:37.668Z",
+  "files": [
+    {
+      "path": "src/lib/reader.ts"
+    }
+  ],
+  "tags": [
+    "reader",
+    "panels",
+    "derived",
+    "cutover"
+  ],
+  "analysis": [
+    {
+      "timestamp": "2026-08-14T20:51:48.217Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Found by sanity-checking the first real derived artifact (guru PR #64, corpus_version 53) before the corpus push — not yet observed in a browser, but it follows directly from the SQL and the data.\n\nTHE QUERY (src/lib/reader.ts, getRelatedPassages): matches both ends (e.source = $1 OR e.target = $1), has NO LIMIT, and orders by:\n  e.edge_type = 'CONTRASTS', then CASE tier WHEN 'verified' 0 WHEN 'proposed' 1 ELSE 2, then p.id\n\nPost-cutover, EVERY derived PARALLELS row is tier='inferred'. So the tier term collapses to a constant and the effective ordering within PARALLELS is p.id — alphabetical by partner chunk id, i.e. buddhism.* first through zoroastrian.* last. The scorer grade that the whole derived-parallels design exists to produce is in the weight column and is never consulted.\n\nMEASURED panel-size shift (both directions counted, since the query matches both ends):\n  | | old Pass C | new derived |\n  | rows | 11,412 | 17,244 |\n  | chunks with a panel | 3,708 | 2,364 |\n  | median | 4 | 8 |\n  | p95 | 19 | 54 |\n  | max | 177 | 344 |\n\nCoverage concentrates onto fewer chunks while each panel roughly doubles; p95 nearly triples. Note the generator's top_k/per_work_cap bound only what a chunk selects AS AN ANCHOR (<= 2*top_k = 10). A chunk can additionally be CHOSEN as a partner by unboundedly many other anchors, and the both-ends match surfaces all of those — which is why 344 is possible even though no anchor picked 344 partners.\n\nCONCRETE FAILURE: a reader opening a popular chunk gets 344 related passages, unpaginated, alphabetical, with the strongest parallels scattered arbitrarily. The old max was 177 and the old tier term at least did something (the corpus had verified/proposed rows), so this is a real regression at cutover, not a pre-existing wart.\n\nFIX: ORDER BY weight DESC NULLS LAST (guru todo:6da4f965 already flagged this as a follow-up, but as optional polish — it is not) plus a LIMIT. Weight is populated for PARALLELS only; CONTRASTS ship weight NULL from the frozen snapshot, hence NULLS LAST rather than a bare DESC. Pick the LIMIT against the p95 of 54 rather than the max.\n\nSEQUENCING: this does not block merging guru PR #64 (nothing deploys on merge) but it should land BEFORE the owner's corpus push, since that push is what makes readers see it. Related: guru todo:dd034dc4 (tier semantics — same query's tier bucket) and guru todo:9097deed (the cutover panel-ratification gate, which is where this would otherwise have been caught by eye).",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-08-14T21:10:21.350Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "CORRECTION to entry [0], found against the real corpus (v54 loaded into local docker postgres). The no-LIMIT + collapsed-ordering diagnosis holds exactly. But the proposed fix (ORDER BY weight DESC) is necessary and NOT sufficient, because weight is asymmetric and the row does not record which endpoint it describes.\n\nGround truth, guru scripts/derive_parallels.py build_edges():\n\n    a, b = (ch, partner) if ch LT partner else (partner, ch)\n\nsource/target are ALPHABETICALLY NORMALIZED, not anchor/partner. weight = the PARTNER's score on the via concept (the anchor's own leg is deliberately unused -- min-leg clamping made panels monochrome in the prototype). So each row carries a score describing ONE endpoint, and which one is unrecoverable from the row.\n\nWhat that does to a panel: viewing chunk X, rows split into two kinds.\n  - X was the anchor: weight is the displayed partner's score. Ranking is meaningful.\n  - X was picked as someone else's partner: weight is X's OWN score on that via concept. Identical across every such row for a given concept, and says nothing about the partner being displayed.\n\nMeasured on the worst case, christian_mysticism.dionysius-divine-names-5.009 (344 partners): 343 rows have it as source and only 1 as target -- purely the alphabetical accident that christian_mysticism sorts before egyptian/greek, NOT a role signal. Across those 343 rows there are only 14 DISTINCT WEIGHTS: this chunk was selected as a partner by hundreds of anchors across ~14 via concepts, so the panel's weights are mostly its own scores. Its top 8 by weight are an 8-way tie at 1.517. ORDER BY weight DESC therefore degenerates back to an arbitrary tiebreak in exactly the case that motivated this ticket.\n\nCorpus-wide the pathology is rare: only 6 chunks have >=20 partners and <=2 distinct weights. Weight ordering is a real improvement for the overwhelming majority of panels and should still ship.\n\nSCOPE DECISION: implement here only what is unambiguously right and self-contained in guru-web -- a LIMIT (an unbounded 344-row panel is indefensible) and ORDER BY weight DESC NULLS LAST with a deterministic secondary key. Do NOT attempt to fix the asymmetry in this repo; it is a guru-side data-model question (options: emit one row per ordered (anchor, partner) pair so weight always describes the displayed partner, costing ~2x rows and the both-ends match; or add a column naming the endpoint the weight refers to). That belongs with the generator in guru and should be raised at the todo:9097deed panel-ratification gate.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "f1cee1ed50e53cbd1312800ab77a7369078cc0e3",
+    "resolved_at": "2026-08-14T21:27:37.668Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/reader.test.ts",
+    "test_function": "ranks partners by weight before falling back to tier and id (todo:bc084b37)",
+    "note": "ORDER BY weight DESC NULLS LAST ahead of the tier bucket, plus a 100-row cap. Verified on corpus v54 in local docker postgres: distinct traditions in the visible ten go 3.58 -> 3.98 across the 707 chunks with >=10 partners. Weight asymmetry documented at the call site and left to the generator side."
+  }
+}

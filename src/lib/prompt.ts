@@ -413,13 +413,18 @@ the FACTS summarize), and — when coverage allows — WORK DOSSIERS (curated
 capsules describing the works those passages come from).
 
 METHODOLOGY — OPEN WITH THIS, PLAINLY:
-  - The associations are proposed by a language model tagging primary sources,
-  then tier-rated; this essay rests on the 'verified' tier only.
+  - The associations are proposed by a language model that scores candidate
+  cross-tradition pairs; every parallel below carries that scorer's weight
+  (higher is stronger), not a human-verified label.
   - The corpus is curated and additive, not a complete census of any tradition.
-  - Edges carry no confidence weight — tier is the only quality signal.
+  - Weight is the quality signal, and it is trustworthy in aggregate — medians,
+  rankings across many pairs, weighted centrality — but a single passage pair
+  should never be described as strong or weak on its own; only speak to
+  strength where the FACTS give you an aggregate figure to point to.
   - Coverage is uneven: some traditions are far more represented than others, so
   raw centrality partly reflects sampling. Where the FACTS give a normalized
-  figure (per-100-chunks), reason from it, and say why.
+  figure (per-100-chunks) or a weighted figure (mean incident weight), reason
+  from those, and say why.
   Tell the reader what the instrument is before you tell them what it sees. Do
   not bury this as a footnote — it is the essay's frame.
 
@@ -478,12 +483,12 @@ export function getAtlasSystemPrompt(): string {
 function formatFacts(s: AtlasSnapshot): string {
   const h = s.headline;
   const matrix = s.traditionMatrix
-    .map(m => `  ${m.a} ↔ ${m.b}: ${m.parallels}`)
+    .map(m => `  ${m.a} ↔ ${m.b}: ${m.parallels} parallels, median weight ${m.medianWeight ?? 'n/a (weightless corpus)'}`)
     .join("\n");
   const central = s.centrality
     .map(
       c =>
-        `  ${c.tradition}: degree ${c.parallelDegree}, ${c.partnerTraditions} partner traditions, ${c.chunks} chunks, ${c.parallelsPer100Chunks} parallels/100 chunks`,
+        `  ${c.tradition}: degree ${c.parallelDegree}, ${c.partnerTraditions} partner traditions, ${c.chunks} chunks, ${c.parallelsPer100Chunks} parallels/100 chunks, mean weight ${c.meanParallelWeight ?? "n/a"}`,
     )
     .join("\n");
   const bridges = s.bridgeConcepts
@@ -504,7 +509,7 @@ function formatFacts(s: AtlasSnapshot): string {
     })
     .join("\n");
   const longRange = s.longRangeCases
-    .map(l => `  ${l.a} ↔ ${l.b}: ${l.parallels} verified parallels`)
+    .map(l => `  ${l.a} ↔ ${l.b}: ${l.parallels} parallels`)
     .join("\n");
   const contrastList = s.contrasts
     .map(c => `  ${c.a.tradition} (${c.a.text_name}) ⟷ ${c.b.tradition} (${c.b.text_name}): ${c.annotation ?? "(no annotation)"}`)
@@ -514,7 +519,8 @@ function formatFacts(s: AtlasSnapshot): string {
     `FACTS (corpus snapshot as of ${s.generatedAt}, schema v${s.schemaVersion}):`,
     ``,
     `Scale: ${h.traditions} traditions, ${h.concepts} concepts in ${h.families} families, ` +
-      `${h.parallelsVerified} verified cross-tradition parallels (+${h.parallelsProposed} proposed, not used here), ` +
+      `${h.parallelsTotal} cross-tradition parallels (median weight ${h.parallelsMedianWeight ?? 'n/a'}, p90 ${h.parallelsP90Weight ?? 'n/a'} — ` +
+      `higher is a stronger parallel; weight is not a per-pair strength score, only trust it in aggregate — see below), ` +
       `${h.contrasts} explicit contrasts. All parallels are cross-tradition by construction.`,
     // Guard: snapshots stored by pre-v4 editions lack the document layer.
     ...(s.documentLayer
@@ -528,9 +534,9 @@ function formatFacts(s: AtlasSnapshot): string {
         ]
       : []),
     ``,
-    `Top cross-tradition pairs (verified parallels):\n${matrix}`,
+    `Top cross-tradition pairs, ranked by median parallel weight (not by count — count tracks tag density/encyclopedic breadth more than genuine affinity). Pairs with fewer than ${s.traditionMatrixMinN} parallels are excluded from this ranking (a live floor, not a fixed one) — absence from this list means a pair didn't clear that sample-size threshold, not that it has zero parallels:\n${matrix}`,
     ``,
-    `Tradition centrality (raw degree AND normalized per-100-chunks — use the normalized figure to separate genuine reach from over-sampling):\n${central}`,
+    `Tradition centrality (raw degree, normalized per-100-chunks, AND mean incident parallel weight — use the normalized figure to separate genuine reach from over-sampling, and mean weight to separate strong bridging from merely frequent bridging):\n${central}`,
     ``,
     `Concept families by tradition-spread (the hierarchy's load-bearing clusters — several near-universal concepts are really facets of one family; read at this level before treating concepts as independent coincidences):\n${famBridges}`,
     ``,

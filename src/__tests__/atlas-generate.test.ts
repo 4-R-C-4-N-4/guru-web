@@ -2,24 +2,25 @@
  * src/__tests__/atlas-generate.test.ts
  *
  * generateAtlasEdition writes a draft atlas edition from the deterministic
- * snapshot + a model completion. Contract: it tier-guards on a non-empty corpus,
- * numbers editions, refuses to stack drafts, and stores the snapshot + cited
- * chunks on a seed_kind='atlas' row.
+ * snapshot + a model completion. Contract: it refuses to run against a corpus
+ * with zero parallels, numbers editions, refuses to stack drafts, and stores
+ * the snapshot + cited chunks on a seed_kind='atlas' row.
  */
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 
 vi.mock('@/lib/db', () => ({ one: vi.fn(), query: vi.fn(), exec: vi.fn() }));
-vi.mock('@/lib/atlas', () => ({ computeAtlasSnapshot: vi.fn() }));
+vi.mock('@/lib/atlas', () => ({ computeAtlasSnapshot: vi.fn(), hasAnyParallels: vi.fn() }));
 vi.mock('@/lib/model', () => ({ completeStream: vi.fn() }));
 vi.mock('@/lib/cost', () => ({ computeCost: vi.fn() }));
 
 import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
-import { computeAtlasSnapshot } from '@/lib/atlas';
+import { computeAtlasSnapshot, hasAnyParallels } from '@/lib/atlas';
 import { one } from '@/lib/db';
 import { completeStream } from '@/lib/model';
 import { computeCost } from '@/lib/cost';
 
 const mSnap = computeAtlasSnapshot as MockedFunction<typeof computeAtlasSnapshot>;
+const mHasParallels = hasAnyParallels as MockedFunction<typeof hasAnyParallels>;
 const mOne = one as MockedFunction<typeof one>;
 const mStream = completeStream as MockedFunction<typeof completeStream>;
 const mCost = computeCost as MockedFunction<typeof computeCost>;
@@ -28,13 +29,13 @@ const ch = (id: string, tradition: string) => ({
   id, text_id: `${id}-text`, tradition, text_name: 'T', section: 'I.1', translator: null, tier: 'verified', body: 'passage', token_count: 4,
 });
 
-function snapshot(parallelsVerified = 4252) {
+function snapshot(parallelsTotal = 50148) {
   return {
     generatedAt: '2026-06-06T00:00:00Z', schemaVersion: '3',
-    headline: { traditions: 16, concepts: 95, families: 28, parallelsVerified, parallelsProposed: 382, contrasts: 8 },
+    headline: { traditions: 16, concepts: 95, families: 28, parallelsTotal, parallelsMedianWeight: -1.48, parallelsP90Weight: 0.52, contrasts: 8 },
     documentLayer: { works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 },
-    traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322 }],
-    centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9 }],
+    traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, medianWeight: -0.87 }],
+    centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9, meanParallelWeight: -0.9 }],
     bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],
     familyBridges: [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }],
     hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology'] }] }],
@@ -53,6 +54,7 @@ const GOOD = `TITLE: The Shape of the Whole\nDEK: What the aggregate shows.\n\n$
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mHasParallels.mockResolvedValue(true);
   mSnap.mockResolvedValue(snapshot());
   mCost.mockResolvedValue({ cost_usd: 0.05 } as never);
   mStream.mockReturnValue(streamOf(GOOD) as never);
@@ -90,8 +92,16 @@ describe('generateAtlasEdition', () => {
     await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(/already in flight/);
   });
 
-  it('refuses (AtlasRefusal) when the corpus has no verified parallels', async () => {
-    mSnap.mockResolvedValue(snapshot(0));
+  it('refuses (AtlasRefusal) when the corpus has no parallels', async () => {
+    mHasParallels.mockResolvedValue(false);
     await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(AtlasRefusal);
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(/no parallels in the corpus/);
+  });
+
+  it('checks for parallels before computing the snapshot or checking for an in-flight draft', async () => {
+    mHasParallels.mockResolvedValue(false);
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(AtlasRefusal);
+    expect(mSnap).not.toHaveBeenCalled();
+    expect(mOne).not.toHaveBeenCalled();
   });
 });

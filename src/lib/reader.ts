@@ -3,7 +3,8 @@
  *
  * Server-side reads for the public source-material reader (/read): traditions
  * → texts → chunk pages, plus per-chunk tags (EXPRESSES edges), related
- * passages (PARALLELS/CONTRASTS edges) and study summaries (summary_nodes).
+ * passages (PARALLELS edges only — CONTRASTS belong to the Atlas, see
+ * getRelatedPassages) and study summaries (summary_nodes).
  *
  * Same conventions as src/lib/corpus.ts: raw parameterized SQL through
  * src/lib/db.ts (search_path resolves bare corpus table names), typed rows,
@@ -111,7 +112,6 @@ export interface ChunkTag {
 }
 
 export interface RelatedPassage {
-  edge_type: 'PARALLELS' | 'CONTRASTS';
   tier: string;
   annotation: string | null;
   partner_id: string;
@@ -334,23 +334,66 @@ export async function getChunkTags(chunkId: string): Promise<ChunkTag[]> {
   );
 }
 
-/** Cross-tradition partners of a chunk. PARALLELS/CONTRASTS edges are stored
- *  one direction, so match both ends and join the partner endpoint (same
- *  idiom as graph.ts walkGraph). The stored annotation is the reviewed
- *  justification — rendered verbatim as the relationship explanation. */
+/** Hard ceiling on how many partners one chunk's panel loads (todo:bc084b37).
+ *  This is a reader-facing editorial limit, not a derived bound: the page shows
+ *  10 and hides the remainder behind a <details> toggle, so 15 leaves a short
+ *  tail to expand into rather than a long one nobody reads. Every returned row
+ *  is rendered into the DOM whether or not it is visible.
+ *
+ *  Deliberately NOT sized off the corpus distribution. An earlier value of 100
+ *  was derived from a p95 of 54, which stopped meaning anything once the score
+ *  floor came off in guru todo:ac63de1a — PARALLELS went 17,244 -> 50,148 and
+ *  the largest panel reached 1,178 partners. Chasing that distribution just
+ *  makes the cap track whatever the generator happens to emit; a reader's
+ *  appetite for related passages does not change when the pipeline does.
+ *
+ *  Consequence to know: the section header counts what was loaded, so a panel
+ *  with more than 15 partners reports 15. Ordering is by weight (below), so the
+ *  15 shown are the best-graded ones rather than an arbitrary slice.
+ *
+ *  Exported so every consumer (the reader page, generateMetadata) shares one
+ *  number instead of each declaring its own — a page-local RELATED_VISIBLE
+ *  used to diverge from this and desync the "N more" toggle from what the
+ *  query actually returned. */
+export const RELATED_LIMIT = 15;
+
+/** Cross-tradition parallels of a chunk. CONTRASTS edges are excluded —
+ *  divergence annotations belong to the Atlas, not a passage's related-reading
+ *  panel. PARALLELS edges are stored one direction, so match both ends and
+ *  join the partner endpoint (same idiom as graph.ts walkGraph). The stored
+ *  annotation is the reviewed justification — rendered verbatim as the
+ *  relationship explanation.
+ *
+ *  Ordered by `weight` (todo:bc084b37). Before the Pass C retirement every
+ *  PARALLELS row shared one tier and carried no weight, so the tier term below
+ *  decided nothing and rows fell through to `p.id` — alphabetical. The page
+ *  shows only the first 10, so a reader saw the alphabetically-first partners
+ *  rather than the best-graded ones. Derived rows carry the scorer's grade in
+ *  `weight`, which is what makes a meaningful order possible at all.
+ *
+ *  Caveat worth knowing before trusting this order absolutely: `weight` is the
+ *  score of whichever endpoint was the *partner* when the generator picked the
+ *  pair, and the row does not record which endpoint that was (guru
+ *  derive_parallels.py build_edges normalises source/target alphabetically).
+ *  For a chunk that was itself picked as many anchors' partner, its rows carry
+ *  its own scores and tie heavily. That is rare — 6 chunks corpus-wide have
+ *  >=20 partners and <=2 distinct weights — and fixing it properly is a
+ *  generator-side data-model change, not a query change. The tier and p.id
+ *  terms remain as deterministic tiebreaks for exactly those ties. */
 export async function getRelatedPassages(chunkId: string): Promise<RelatedPassage[]> {
   return query<RelatedPassage>(
-    `SELECT e.edge_type, e.tier, e.annotation,
+    `SELECT e.tier, e.annotation,
             p.id AS partner_id, p.tradition, p.text_name, p.section,
             LEFT(p.body, 240) AS preview
        FROM edges e
        JOIN chunks p ON p.id = CASE WHEN e.source = $1 THEN e.target ELSE e.source END
       WHERE (e.source = $1 OR e.target = $1)
-        AND e.edge_type = ANY(ARRAY['PARALLELS','CONTRASTS'])
-      ORDER BY e.edge_type = 'CONTRASTS',
+        AND e.edge_type = 'PARALLELS'
+      ORDER BY e.weight DESC NULLS LAST,
                CASE e.tier WHEN 'verified' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
-               p.id`,
-    [chunkId],
+               p.id
+      LIMIT $2`,
+    [chunkId, RELATED_LIMIT],
   );
 }
 

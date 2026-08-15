@@ -77,7 +77,38 @@ describe('getRelatedPassages', () => {
     const sql = mQuery.mock.calls[0][0] as string;
     expect(sql).toMatch(/e\.source = \$1 OR e\.target = \$1/);
     expect(sql).toMatch(/CASE WHEN e\.source = \$1 THEN e\.target ELSE e\.source END/);
-    expect(sql).toMatch(/'PARALLELS','CONTRASTS'/);
+    expect(sql).toMatch(/e\.edge_type = 'PARALLELS'/);
+  });
+
+  it('excludes CONTRASTS edges — those belong to the Atlas, not this panel', async () => {
+    mQuery.mockResolvedValue([]);
+    await getRelatedPassages('trad.text-a.001');
+    const sql = mQuery.mock.calls[0][0] as string;
+    expect(sql).not.toMatch(/CONTRASTS/);
+  });
+
+  it('ranks partners by weight before falling back to tier and id (todo:bc084b37)', async () => {
+    mQuery.mockResolvedValue([]);
+    await getRelatedPassages('trad.text-a.001');
+    const sql = mQuery.mock.calls[0][0] as string;
+    expect(sql).toMatch(/ORDER BY[\s\S]*e\.weight DESC NULLS LAST/);
+    // Weight must outrank the tier bucket — every derived PARALLELS row shares
+    // tier='inferred', so tier-first collapses the order back to alphabetical.
+    const order = sql.slice(sql.indexOf('ORDER BY'));
+    expect(order.indexOf('e.weight')).toBeLessThan(order.indexOf('CASE e.tier'));
+    expect(order.indexOf('CASE e.tier')).toBeLessThan(order.indexOf('p.id'));
+  });
+
+  it('caps how many partners one panel loads (todo:bc084b37)', async () => {
+    mQuery.mockResolvedValue([]);
+    await getRelatedPassages('trad.text-a.001');
+    const [sql, params] = mQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toMatch(/LIMIT \$2/);
+    // Editorial cap, not a corpus-derived one, and the only cap now — the page
+    // renders every row this query returns, no separate client-side slice.
+    // Kept small on purpose — an earlier 100 tracked a p95 that the generator
+    // has since invalidated.
+    expect(params[1]).toBe(15);
   });
 });
 
