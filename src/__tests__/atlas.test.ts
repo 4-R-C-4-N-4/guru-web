@@ -2,9 +2,15 @@
  * src/__tests__/atlas.test.ts
  *
  * computeAtlasSnapshot is the deterministic spine of the State of the Atlas
- * essay. Two invariants must hold or the essay's credibility collapses:
- *   - every headline/parallel query is tier-gated to 'verified'
- *   - NO query reads `weight` (it ships null on 100% of edges)
+ * essay. Post Pass-C-retirement (todo:827b1353), the invariants that must
+ * hold or the essay's credibility collapses are:
+ *   - no query filters or ranks on tier='verified' — tier is uniform on the
+ *     derived PARALLELS table and discriminates nothing (that's what blanked
+ *     the Atlas)
+ *   - the tradition-pair matrix ranks by weight, not raw COUNT(*) — count
+ *     tracks tag density/encyclopedic breadth, not genuine affinity
+ *   - the exemplar-pair picker orders by weight first, chunk-length only as
+ *     a tiebreak
  * Plus: the snapshot maps the rows into the documented shape.
  */
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
@@ -21,7 +27,7 @@ const EXEMPLAR_ROW = {
   id: 'a1', text_id: 'enneads', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1',
   translator: null, body: 'The One overflows.', token_count: 5,
   b_id: 'b1', b_text_id: 'chuang-tzu', b_tradition: 'taoism', b_text_name: 'Chuang Tzu', b_section: 'Bk 1',
-  b_translator: null, b_body: 'The uncarved block.', b_token_count: 5, edge_tier: 'verified',
+  b_translator: null, b_body: 'The uncarved block.', b_token_count: 5, edge_tier: 'inferred',
   annotation: 'A asserts emanation; B asserts the uncarved simple — they diverge on structure.',
 };
 
@@ -38,8 +44,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   mOne.mockImplementation(async (sql: string) => {
     if (sql.includes('corpus_metadata')) return { value: '3' } as never;
-    if (sql.includes('parallels_verified')) {
-      return { traditions: 16, concepts: 95, families: 28, parallels_verified: 4252, parallels_proposed: 382, contrasts: 8 } as never;
+    if (sql.includes('parallels_total')) {
+      return {
+        traditions: 16, concepts: 95, families: 28,
+        parallels_total: 50148, parallels_median_weight: -1.48, parallels_p90_weight: 0.52,
+        contrasts: 8,
+      } as never;
     }
     if (sql.includes('summary_nodes')) {
       return { works: 52, dossiers: 52, summaries_l1: 214, summaries_l2: 52 } as never;
@@ -47,8 +57,8 @@ beforeEach(() => {
     return null as never;
   });
   mQuery.mockImplementation(async (sql: string) => {
-    if (sql.includes('GROUP BY a, b')) return [{ a: 'christian_mysticism', b: 'neoplatonism', parallels: 1073 }] as never;
-    if (sql.includes('partner_traditions')) return [{ tradition: 'neoplatonism', chunks: 828, parallel_degree: 2500, partner_traditions: 13, per100: 301.9 }] as never;
+    if (sql.includes('GROUP BY a, b')) return [{ a: 'christian_mysticism', b: 'neoplatonism', parallels: 5366, median_weight: -0.24 }] as never;
+    if (sql.includes('partner_traditions')) return [{ tradition: 'neoplatonism', chunks: 828, parallel_degree: 2500, partner_traditions: 13, per100: 301.9, mean_weight: -0.85 }] as never;
     if (sql.includes('split_part(cf.id')) return [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }] as never; // familyBridges
     if (sql.includes('concept_label')) return [{ domain: 'theology', family_id: 'theology.divine_nature', family_label: 'Divine Nature', concept_label: 'Apophatic Theology' }] as never; // hierarchy
     if (sql.includes('co.label')) return [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }] as never;
@@ -61,27 +71,52 @@ beforeEach(() => {
 });
 
 describe('computeAtlasSnapshot', () => {
-  it('tier-gates every parallel/headline query to verified and never reads weight', async () => {
+  it('never filters or ranks on tier (tier is uniform on the derived table and discriminates nothing)', async () => {
     await computeAtlasSnapshot('2026-06-06T00:00:00Z');
     const allSql = [...mQuery.mock.calls, ...mOne.mock.calls].map(c => c[0] as string);
 
-    // No query may reference the (always-null) weight column.
-    for (const sql of allSql) expect(sql).not.toMatch(/\bweight\b/);
+    // The bug this ticket fixes: a WHERE/AND predicate gating on tier='verified'.
+    // (e.tier still appears as a SELECT'd/displayed column elsewhere — that's fine.)
+    for (const sql of allSql) expect(sql).not.toMatch(/tier\s*=\s*'verified'/);
+    for (const sql of allSql) expect(sql).not.toMatch(/CASE\s+e\.tier/);
+  });
 
-    // Parallel-counting queries are tier-gated.
+  it('reads weight for every PARALLELS-touching query (the quality signal post-cutover)', async () => {
+    await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    const allSql = [...mQuery.mock.calls, ...mOne.mock.calls].map(c => c[0] as string);
     const parallelSql = allSql.filter(s => /edge_type='PARALLELS'/.test(s));
     expect(parallelSql.length).toBeGreaterThan(0);
-    for (const sql of parallelSql) expect(sql).toMatch(/tier\s*=\s*'verified'/);
+    for (const sql of parallelSql) expect(sql).toMatch(/\bweight\b/);
+  });
+
+  it('ranks the tradition-pair matrix by median weight, not raw count', async () => {
+    await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    const matrixSql = mQuery.mock.calls.map(c => c[0] as string).find(s => s.includes('GROUP BY a, b'));
+    expect(matrixSql).toBeDefined();
+    expect(matrixSql).toMatch(/ORDER BY median_weight DESC/);
+    expect(matrixSql).not.toMatch(/ORDER BY (n|parallels|COUNT\(\*\)) DESC/);
+    // Count is still selected (an honest secondary column), just not the rank key.
+    expect(matrixSql).toMatch(/COUNT\(\*\)::int AS n/);
+  });
+
+  it('orders exemplar pairs by weight, falling back to length only as a tiebreak', async () => {
+    await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    const exemplarSql = mQuery.mock.calls.map(c => c[0] as string).find(s => s.includes('cs.tradition=$1'));
+    expect(exemplarSql).toBeDefined();
+    expect(exemplarSql).toMatch(/ORDER BY e\.weight DESC/);
+    const order = exemplarSql!.slice(exemplarSql!.indexOf('ORDER BY'));
+    expect(order.indexOf('e.weight')).toBeLessThan(order.indexOf('ABS(cs.token_count'));
   });
 
   it('maps rows into the documented snapshot shape', async () => {
     const snap = await computeAtlasSnapshot('2026-06-06T00:00:00Z');
     expect(snap.generatedAt).toBe('2026-06-06T00:00:00Z');
     expect(snap.schemaVersion).toBe('3');
-    expect(snap.headline.parallelsVerified).toBe(4252);
-    expect(snap.headline.parallelsProposed).toBe(382);
-    expect(snap.traditionMatrix[0]).toMatchObject({ a: 'christian_mysticism', b: 'neoplatonism', parallels: 1073 });
-    expect(snap.centrality[0]).toMatchObject({ tradition: 'neoplatonism', parallelsPer100Chunks: 301.9 });
+    expect(snap.headline.parallelsTotal).toBe(50148);
+    expect(snap.headline.parallelsMedianWeight).toBe(-1.48);
+    expect(snap.headline.parallelsP90Weight).toBe(0.52);
+    expect(snap.traditionMatrix[0]).toMatchObject({ a: 'christian_mysticism', b: 'neoplatonism', parallels: 5366, medianWeight: -0.24 });
+    expect(snap.centrality[0]).toMatchObject({ tradition: 'neoplatonism', parallelsPer100Chunks: 301.9, meanParallelWeight: -0.85 });
     expect(snap.bridgeConcepts[0]).toMatchObject({ label: 'Apophatic Theology', family: 'Divine Nature', traditions: 15 });
     expect(snap.familyBridges[0]).toMatchObject({ label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5 });
     expect(snap.hierarchy[0]).toMatchObject({ domain: 'theology' });
@@ -134,17 +169,13 @@ describe('computeAtlasSnapshot', () => {
     expect(bridgeSql).toMatch(/edge_type='EXPRESSES'/);
   });
 
-  it('targets each exemplar/contrast side to a length (not the pair sum, not shortest)', async () => {
+  it('targets each contrast side to a length (not the pair sum, not shortest) — contrasts carry no weight to rank by', async () => {
     await computeAtlasSnapshot('2026-06-06T00:00:00Z');
-    const passageSql = mQuery.mock.calls
-      .map(c => c[0] as string)
-      .filter(s => s.includes('cs.tradition=$1') || s.includes("edge_type='CONTRASTS'"));
-    expect(passageSql.length).toBeGreaterThan(0);
-    for (const sql of passageSql) {
-      // Per-side: penalize each chunk's distance from the target so a thin
-      // heading stub can't ride along with a long passage.
-      expect(sql).toMatch(/ORDER BY ABS\(cs\.token_count - \d+\) \+ ABS\(ct\.token_count - \d+\) ASC/);
-      expect(sql).not.toMatch(/ABS\(\(cs\.token_count \+ ct\.token_count\)/);
-    }
+    const contrastSql = mQuery.mock.calls.map(c => c[0] as string).find(s => s.includes("edge_type='CONTRASTS'"));
+    expect(contrastSql).toBeDefined();
+    // Per-side: penalize each chunk's distance from the target so a thin
+    // heading stub can't ride along with a long passage.
+    expect(contrastSql).toMatch(/ORDER BY ABS\(cs\.token_count - \d+\) \+ ABS\(ct\.token_count - \d+\) ASC/);
+    expect(contrastSql).not.toMatch(/ABS\(\(cs\.token_count \+ ct\.token_count\)/);
   });
 });

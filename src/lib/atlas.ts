@@ -7,12 +7,38 @@
  * rankings, and exemplar cited passages the essay is composed against.
  *
  * Two invariants make this trustworthy:
- *   1. The quality signal is `tier`, never `weight` — every edge ships
- *      weight=NULL (verified across all 33,260 edges). Headline claims are
- *      tier-gated to 'verified'.
+ *   1. The quality signal is `weight`, not `tier`. On this (post Pass-C-
+ *      retirement, todo:827b1353) table, tier is provenance, not confidence:
+ *      structurally, weight is populated for every PARALLELS row (the
+ *      generator's scorer logit) and NULL for every CONTRASTS row (a frozen,
+ *      human-curated snapshot). Tier is therefore uniform within PARALLELS and
+ *      discriminates nothing — no query below filters or ranks on it. Where a
+ *      surface wants "strong parallels only", it takes a percentile of the
+ *      live weight (or weight-per-pair) distribution, computed in-query —
+ *      never an absolute floor (that recreates the failure removed upstream
+ *      in guru todo:ac63de1a).
  *   2. Centrality is reported BOTH raw and normalized (parallels ÷ chunk count),
- *      so the essay can separate genuine bridging from corpus over-sampling
- *      (Neoplatonism has the most chunks AND the most parallels).
+ *      AND both unweighted (degree) and weight-aware (mean incident weight),
+ *      so the essay can separate genuine bridging from corpus over-sampling —
+ *      a tradition can rack up degree through one encyclopedic, indiscriminately
+ *      cross-tagged work.
+ *
+ * `weight` caveat that applies everywhere it is read below: it is the score of
+ * whichever endpoint was the PARTNER when the generator picked the pair — the
+ * row does not record which endpoint that was (guru derive_parallels.py
+ * build_edges normalises source/target alphabetically; see guru todo:7427712c
+ * and the fuller note on todo:bc084b37). Aggregating it — medians over many
+ * rows, per-pair rankings, weighted degree — is sound; reading one row's
+ * weight as "how strong is this specific cited parallel" is not, and the
+ * exemplar/contrast passages returned below deliberately do not carry weight
+ * into the essay layer for that reason.
+ *
+ * House rule for anyone editing this file: no corpus count, threshold, or
+ * distribution figure belongs in a comment here. A number like "true as of
+ * today" goes stale the next time the corpus moves — which is every corpus
+ * version — and nothing will ever flag a stale comment. State invariants
+ * structurally instead (as above). Anything quantitative comes from a query
+ * at read time, not a constant baked into the file.
  *
  * Everything here is facts from the DB — the LLM composition layer may weave
  * these numbers but must never invent or alter one.
@@ -33,7 +59,9 @@ export interface AtlasChunk {
   token_count: number;
 }
 
-// One verified cross-tradition parallel, both passages it joins.
+// One cross-tradition parallel, both passages it joins. `weight` is
+// intentionally not carried onto this shape — see the file header caveat on
+// reading a single row's weight as a per-pair quality score.
 export interface AtlasParallel {
   a: AtlasChunk; // source-side passage
   b: AtlasChunk; // target-side passage
@@ -52,19 +80,28 @@ export interface AtlasSnapshot {
     traditions: number;
     concepts: number;
     families: number;
-    parallelsVerified: number;
-    parallelsProposed: number;
+    // The verified/proposed split retired with tier as a quality signal (both
+    // buckets returned zero once the corpus moved to a fully-derived table —
+    // todo:827b1353). A single total plus the live weight distribution lets
+    // the essay speak to strength, not only volume.
+    parallelsTotal: number;
+    parallelsMedianWeight: number;
+    parallelsP90Weight: number;
     contrasts: number;
   };
-  // Top cross-tradition pairs by verified-parallel count.
-  traditionMatrix: Array<{ a: string; b: string; parallels: number }>;
-  // Per-tradition reach: raw degree + normalized (per 100 chunks).
+  // Top cross-tradition pairs, ranked by median parallel weight (not raw
+  // count — count tracks tag density/encyclopedic breadth more than genuine
+  // affinity; see traditionMatrix()'s comment). Count is still reported.
+  traditionMatrix: Array<{ a: string; b: string; parallels: number; medianWeight: number }>;
+  // Per-tradition reach: raw degree + normalized (per 100 chunks) + mean
+  // incident weight (see centrality()'s comment for why mean, not sum).
   centrality: Array<{
     tradition: string;
     chunks: number;
     parallelDegree: number;
     partnerTraditions: number;
     parallelsPer100Chunks: number;
+    meanParallelWeight: number | null; // null only when a tradition has zero PARALLELS edges
   }>;
   // Concepts that recur across the most traditions (the candidate "universals"),
   // each situated in its domain → family.
@@ -109,8 +146,8 @@ export interface AtlasSnapshot {
     parallels: number;
     exemplars: AtlasParallel[];
   }>;
-  // The explicit divergences (rare — 8 in the current corpus), each with its
-  // curated annotation describing how the two passages diverge.
+  // The explicit divergences — curated and comparatively few by design, each
+  // with its curated annotation describing how the two passages diverge.
   contrasts: AtlasContrast[];
   // One capsule per work behind the cited exemplar/contrast passages (deduped):
   // the curated dossier's framing of what each work IS. Apparatus for the
@@ -157,26 +194,36 @@ const CHUNK_COLS = (alias: string) =>
   `${alias}.id, ${alias}.text_id, ${alias}.tradition, ${alias}.text_name, ${alias}.section,
    ${alias}.translator, ${alias}.body, ${alias}.token_count`;
 
-/** Headline counts — the corpus at a glance. */
+/**
+ * Headline counts — the corpus at a glance. PARALLELS is reported as a single
+ * total (the verified/proposed split is meaningless on a uniformly-tiered
+ * table) plus median/p90 weight, computed live, so the essay can speak to how
+ * strong the corpus's parallels are, not only how many exist.
+ */
 async function headline(): Promise<AtlasSnapshot['headline']> {
   const row = await one<{
     traditions: number; concepts: number; families: number;
-    parallels_verified: number; parallels_proposed: number; contrasts: number;
+    parallels_total: number; parallels_median_weight: number | null;
+    parallels_p90_weight: number | null; contrasts: number;
   }>(
     `SELECT
-       (SELECT COUNT(*) FROM corpus.traditions)                                       AS traditions,
-       (SELECT COUNT(*) FROM corpus.concepts)                                         AS concepts,
-       (SELECT COUNT(*) FROM corpus.concept_families)                                 AS families,
-       (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='PARALLELS' AND tier='verified') AS parallels_verified,
-       (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='PARALLELS' AND tier='proposed') AS parallels_proposed,
-       (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='CONTRASTS')                AS contrasts`,
+       (SELECT COUNT(*) FROM corpus.traditions)                       AS traditions,
+       (SELECT COUNT(*) FROM corpus.concepts)                         AS concepts,
+       (SELECT COUNT(*) FROM corpus.concept_families)                 AS families,
+       (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='PARALLELS') AS parallels_total,
+       (SELECT ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY weight)::numeric, 2)
+          FROM corpus.edges WHERE edge_type='PARALLELS')              AS parallels_median_weight,
+       (SELECT ROUND(percentile_cont(0.9) WITHIN GROUP (ORDER BY weight)::numeric, 2)
+          FROM corpus.edges WHERE edge_type='PARALLELS')              AS parallels_p90_weight,
+       (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='CONTRASTS') AS contrasts`,
   );
   return {
     traditions: Number(row?.traditions ?? 0),
     concepts: Number(row?.concepts ?? 0),
     families: Number(row?.families ?? 0),
-    parallelsVerified: Number(row?.parallels_verified ?? 0),
-    parallelsProposed: Number(row?.parallels_proposed ?? 0),
+    parallelsTotal: Number(row?.parallels_total ?? 0),
+    parallelsMedianWeight: Number(row?.parallels_median_weight ?? 0),
+    parallelsP90Weight: Number(row?.parallels_p90_weight ?? 0),
     contrasts: Number(row?.contrasts ?? 0),
   };
 }
@@ -200,45 +247,84 @@ async function documentLayer(): Promise<AtlasSnapshot['documentLayer']> {
   };
 }
 
-/** Top cross-tradition pairs by verified-parallel count. */
+/**
+ * Top cross-tradition pairs, ranked by median parallel weight rather than raw
+ * count. Count alone is actively misleading here: it tracks tag density and
+ * encyclopedic breadth (a work like secret-teachings-of-all-ages touches
+ * every tradition) rather than genuine affinity, and pre-dates this ranking
+ * change too — the pre-cutover verified corpus simply had no alternative to
+ * count. Count is still returned as an honest secondary column.
+ *
+ * `min_n` guards the ranking itself: a pair's median is only as trustworthy
+ * as its sample size, and a handful of edges touching a barely-represented
+ * tradition can tie on a single (partner-side) weight and coincidentally
+ * outrank a pair with thousands of edges. Per the file header, this floor is
+ * relative (the live 75th percentile of pair sizes), never a fixed constant —
+ * it adapts as the corpus grows instead of going stale.
+ */
 async function traditionMatrix(limit = 15): Promise<AtlasSnapshot['traditionMatrix']> {
-  const rows = await query<{ a: string; b: string; parallels: number }>(
+  const rows = await query<{ a: string; b: string; parallels: number; median_weight: number }>(
     `WITH p AS (
        SELECT LEAST(cs.tradition, ct.tradition) AS a,
-              GREATEST(cs.tradition, ct.tradition) AS b
+              GREATEST(cs.tradition, ct.tradition) AS b,
+              e.weight AS weight
        FROM corpus.edges e
        JOIN corpus.chunks cs ON cs.id = e.source
        JOIN corpus.chunks ct ON ct.id = e.target
-       WHERE e.edge_type='PARALLELS' AND e.tier='verified' AND cs.tradition <> ct.tradition)
-     SELECT a, b, COUNT(*)::int AS parallels
-     FROM p GROUP BY a, b ORDER BY parallels DESC, a, b LIMIT $1`,
+       WHERE e.edge_type='PARALLELS' AND cs.tradition <> ct.tradition),
+     pair_agg AS (
+       SELECT a, b, COUNT(*)::int AS n,
+              percentile_cont(0.5) WITHIN GROUP (ORDER BY weight) AS median_weight
+       FROM p GROUP BY a, b),
+     thresh AS (SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY n) AS min_n FROM pair_agg)
+     SELECT a, b, n AS parallels, ROUND(median_weight::numeric, 2) AS median_weight
+     FROM pair_agg, thresh
+     WHERE n >= thresh.min_n
+     ORDER BY median_weight DESC, a, b LIMIT $1`,
     [limit],
   );
-  return rows.map(r => ({ a: r.a, b: r.b, parallels: Number(r.parallels) }));
+  return rows.map(r => ({
+    a: r.a, b: r.b, parallels: Number(r.parallels), medianWeight: Number(r.median_weight),
+  }));
 }
 
-/** Per-tradition centrality: raw degree, partner count, and per-100-chunk normalization. */
+/**
+ * Per-tradition centrality: raw degree, partner count, per-100-chunk
+ * normalization, and mean incident parallel weight.
+ *
+ * meanParallelWeight is the MEAN (not sum) of the weight on every edge
+ * touching the tradition. Sum would just re-derive parallelDegree scaled by a
+ * roughly-constant factor — no new information. Mean answers a different
+ * question: are this tradition's parallels typically strong or typically
+ * weak, independent of how many it has — the weighted analogue of degree the
+ * way parallelsPer100Chunks is the sampling-normalized analogue of degree.
+ * Read it alongside chunk count for the same reason as invariant 2 in the
+ * file header: a tradition with very few chunks can post an extreme mean off
+ * a handful of edges.
+ */
 async function centrality(): Promise<AtlasSnapshot['centrality']> {
   const rows = await query<{
     tradition: string; chunks: number; parallel_degree: number;
-    partner_traditions: number; per100: number;
+    partner_traditions: number; per100: number; mean_weight: number | null;
   }>(
     `WITH p AS (
-       SELECT cs.tradition AS a, ct.tradition AS b
+       SELECT cs.tradition AS a, ct.tradition AS b, e.weight AS weight
        FROM corpus.edges e
        JOIN corpus.chunks cs ON cs.id = e.source
        JOIN corpus.chunks ct ON ct.id = e.target
-       WHERE e.edge_type='PARALLELS' AND e.tier='verified'),
-     u AS (SELECT a AS t, b AS o FROM p UNION ALL SELECT b, a FROM p),
+       WHERE e.edge_type='PARALLELS'),
+     u AS (SELECT a AS t, b AS o, weight FROM p UNION ALL SELECT b, a, weight FROM p),
      deg AS (
-       SELECT t, COUNT(*)::int AS parallel_degree, COUNT(DISTINCT o)::int AS partner_traditions
+       SELECT t, COUNT(*)::int AS parallel_degree, COUNT(DISTINCT o)::int AS partner_traditions,
+              ROUND(AVG(weight)::numeric, 2) AS mean_weight
        FROM u GROUP BY t),
      ch AS (SELECT tradition, COUNT(*)::int AS chunks FROM corpus.chunks GROUP BY tradition)
      SELECT ch.tradition,
             ch.chunks,
             COALESCE(deg.parallel_degree, 0)    AS parallel_degree,
             COALESCE(deg.partner_traditions, 0) AS partner_traditions,
-            ROUND(100.0 * COALESCE(deg.parallel_degree,0) / NULLIF(ch.chunks,0), 1) AS per100
+            ROUND(100.0 * COALESCE(deg.parallel_degree,0) / NULLIF(ch.chunks,0), 1) AS per100,
+            deg.mean_weight
      FROM ch LEFT JOIN deg ON deg.t = ch.tradition
      ORDER BY parallel_degree DESC`,
   );
@@ -248,6 +334,7 @@ async function centrality(): Promise<AtlasSnapshot['centrality']> {
     parallelDegree: Number(r.parallel_degree),
     partnerTraditions: Number(r.partner_traditions),
     parallelsPer100Chunks: Number(r.per100 ?? 0),
+    meanParallelWeight: r.mean_weight === null || r.mean_weight === undefined ? null : Number(r.mean_weight),
   }));
 }
 
@@ -321,7 +408,14 @@ async function hierarchy(): Promise<AtlasSnapshot['hierarchy']> {
   }));
 }
 
-/** K exemplar verified parallels for a specific ordered tradition pair. */
+/**
+ * K exemplar parallels for a specific ordered tradition pair — the passages
+ * the essay actually quotes. Ordered by weight DESC first (the strongest
+ * instances of the parallel, not just any instance), length-fit only as a
+ * tiebreak so a thin heading stub can't win purely by being conveniently
+ * sized (see TARGET_CHUNK_TOKENS' comment for that failure mode). weight
+ * itself is never returned on the chunk shape — see the file header caveat.
+ */
 async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasParallel[]> {
   const rows = await query<Record<string, unknown>>(
     `SELECT ${CHUNK_COLS('cs')},
@@ -331,9 +425,10 @@ async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasP
      FROM corpus.edges e
      JOIN corpus.chunks cs ON cs.id = e.source
      JOIN corpus.chunks ct ON ct.id = e.target
-     WHERE e.edge_type='PARALLELS' AND e.tier='verified'
+     WHERE e.edge_type='PARALLELS'
        AND ((cs.tradition=$1 AND ct.tradition=$2) OR (cs.tradition=$2 AND ct.tradition=$1))
-     ORDER BY ABS(cs.token_count - ${TARGET_CHUNK_TOKENS}) + ABS(ct.token_count - ${TARGET_CHUNK_TOKENS}) ASC
+     ORDER BY e.weight DESC,
+              ABS(cs.token_count - ${TARGET_CHUNK_TOKENS}) + ABS(ct.token_count - ${TARGET_CHUNK_TOKENS}) ASC
      LIMIT $3`,
     [a, b, k],
   );
@@ -358,7 +453,12 @@ function chunkFrom(r: Record<string, unknown>, prefix: string, tier: string): At
   };
 }
 
-/** The 8 explicit CONTRASTS with their passages and curated annotations. */
+/**
+ * The explicit CONTRASTS with their passages and curated annotations. Ordered
+ * by length-fit only, never weight — CONTRASTS ship from a frozen, curated
+ * snapshot with weight NULL on every row by construction (file header
+ * invariant 1), so there is nothing to rank by here.
+ */
 async function contrasts(limit = 8): Promise<AtlasContrast[]> {
   const rows = await query<Record<string, unknown>>(
     `SELECT ${CHUNK_COLS('cs')},
@@ -442,7 +542,7 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     contrasts(),
   ]);
 
-  // Long-range hard cases: only pairs that actually have verified parallels.
+  // Long-range hard cases: only pairs that actually have parallels.
   const longRangeCases: AtlasSnapshot['longRangeCases'] = [];
   for (const [a, b] of LONG_RANGE_PAIRS) {
     const exemplars = await exemplarsForPair(a, b, EXEMPLARS_PER_CASE);

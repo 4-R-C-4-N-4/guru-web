@@ -37,7 +37,7 @@ const IN_FLIGHT = ['queued', 'generating', 'draft', 'needs_attention'];
 
 /**
  * A refusal the operator can act on (an edition already in flight, a corpus with
- * no verified evidence) — distinct from an unexpected/transient failure (LLM
+ * no evidence at all) — distinct from an unexpected/transient failure (LLM
  * error, empty completion). Callers map this to 409 and everything else to 500.
  */
 export class AtlasRefusal extends Error {
@@ -104,10 +104,10 @@ export async function generateAtlasEdition(opts: {
   );
   const editionNo = Number(maxRow?.next ?? 1);
 
-  // Deterministic analysis. Grounding guard: refuse an essay with no verified evidence.
+  // Deterministic analysis. Grounding guard: refuse an essay with no evidence at all.
   const snapshot = await computeAtlasSnapshot(generatedAt);
-  if (snapshot.headline.parallelsVerified === 0) {
-    throw new AtlasRefusal('atlas: no verified parallels in the corpus — refusing to generate.');
+  if (snapshot.headline.parallelsTotal === 0) {
+    throw new AtlasRefusal('atlas: no parallels in the corpus — refusing to generate.');
   }
 
   const slugStr = isCuratedSlug(opts.model ?? '') ? (opts.model as CuratedSlug) : DEFAULT_CURATED_SLUG;

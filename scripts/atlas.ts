@@ -30,9 +30,9 @@ function printSnapshotSummary(s: Awaited<ReturnType<typeof computeAtlasSnapshot>
   const h = s.headline;
   console.log(`\n  Corpus (schema v${s.schemaVersion}, as of ${s.generatedAt}):`);
   console.log(`    ${h.traditions} traditions · ${h.concepts} concepts / ${h.families} families`);
-  console.log(`    ${h.parallelsVerified} verified parallels (+${h.parallelsProposed} proposed) · ${h.contrasts} contrasts`);
-  console.log(`  Top pairs:`);
-  for (const m of s.traditionMatrix.slice(0, 5)) console.log(`    ${m.a} ↔ ${m.b}: ${m.parallels}`);
+  console.log(`    ${h.parallelsTotal} parallels (median weight ${h.parallelsMedianWeight}, p90 ${h.parallelsP90Weight}) · ${h.contrasts} contrasts`);
+  console.log(`  Top pairs (by median weight):`);
+  for (const m of s.traditionMatrix.slice(0, 5)) console.log(`    ${m.a} ↔ ${m.b}: ${m.parallels} parallels, median weight ${m.medianWeight}`);
   console.log(`  Bridge families:`);
   for (const f of s.familyBridges.slice(0, 5)) console.log(`    ${f.label} (${f.domain}): ${f.traditions} traditions, ${f.concepts} concepts`);
   console.log(`  Bridge concepts:`);

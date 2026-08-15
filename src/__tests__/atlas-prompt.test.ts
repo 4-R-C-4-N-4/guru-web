@@ -17,10 +17,10 @@ const chunk = (id: string, tradition: string, text: string, body: string): Atlas
 const SNAP: AtlasSnapshot = {
   generatedAt: '2026-06-06T00:00:00Z',
   schemaVersion: '3',
-  headline: { traditions: 16, concepts: 95, families: 28, parallelsVerified: 4252, parallelsProposed: 382, contrasts: 8 },
+  headline: { traditions: 16, concepts: 95, families: 28, parallelsTotal: 50148, parallelsMedianWeight: -1.48, parallelsP90Weight: 0.52, contrasts: 8 },
   documentLayer: { works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 },
-  traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322 }],
-  centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9 }],
+  traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, medianWeight: -0.87 }],
+  centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9, meanParallelWeight: -0.9 }],
   bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],
   familyBridges: [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }],
   hierarchy: [{ domain: 'theology', families: [{ id: 'theology.divine_nature', label: 'Divine Nature', concepts: ['Apophatic Theology', 'Divine Hiddenness'] }] }],
@@ -70,9 +70,12 @@ describe('buildAtlasPrompt', () => {
   const prompt = buildAtlasPrompt(SNAP);
   it('emits a FACTS block with the snapshot numbers verbatim', () => {
     expect(prompt).toMatch(/FACTS/);
-    expect(prompt).toContain('4252 verified');
-    expect(prompt).toContain('neoplatonism ↔ taoism: 322');
+    expect(prompt).toContain('50148 cross-tradition parallels');
+    expect(prompt).toContain('median weight -1.48');
+    expect(prompt).toContain('p90 0.52');
+    expect(prompt).toContain('neoplatonism ↔ taoism: 322 parallels, median weight -0.87');
     expect(prompt).toContain('301.9 parallels/100 chunks'); // the normalized figure
+    expect(prompt).toContain('mean weight -0.9'); // the weighted centrality figure
     expect(prompt).toContain('Apophatic Theology');
     // The hierarchy is expressed: family-level bridges, concept shown in its
     // family, and the full domain → family → concept map.
