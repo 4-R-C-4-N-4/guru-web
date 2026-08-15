@@ -93,6 +93,11 @@ export interface AtlasSnapshot {
   // count — count tracks tag density/encyclopedic breadth more than genuine
   // affinity; see traditionMatrix()'s comment). Count is still reported.
   traditionMatrix: Array<{ a: string; b: string; parallels: number; medianWeight: number }>;
+  // The live min_n floor traditionMatrix applied (75th percentile of pair
+  // sizes) — a pair below this never appears above, however strong its
+  // median. Surfaced so the essay can state the cutoff instead of leaving an
+  // absence unexplained.
+  traditionMatrixMinN: number;
   // Per-tradition reach: raw degree + normalized (per 100 chunks) + mean
   // incident weight (see centrality()'s comment for why mean, not sum).
   centrality: Array<{
@@ -194,6 +199,24 @@ const CHUNK_COLS = (alias: string) =>
   `${alias}.id, ${alias}.text_id, ${alias}.tradition, ${alias}.text_name, ${alias}.section,
    ${alias}.translator, ${alias}.body, ${alias}.token_count`;
 
+// Every PARALLELS edge joined to both endpoints' traditions — the shared base
+// of traditionMatrix()'s and centrality()'s `p` CTEs. They diverge only in
+// whether a/b get LEAST/GREATEST-normalized (traditionMatrix, which rolls a
+// pair up regardless of edge direction) or kept raw (centrality, which unions
+// both directions itself).
+const PARALLELS_BY_TRADITION = (aExpr: string, bExpr: string) =>
+  `SELECT ${aExpr} AS a, ${bExpr} AS b, e.weight AS weight
+     FROM corpus.edges e
+     JOIN corpus.chunks cs ON cs.id = e.source
+     JOIN corpus.chunks ct ON ct.id = e.target
+    WHERE e.edge_type='PARALLELS'`;
+
+// The percentile_cont + round idiom repeated across headline() and
+// traditionMatrix(). `col` is a bare column/expression, not a param — callers
+// only ever pass a fixed identifier, never user input.
+const pctSql = (p: number, col: string) =>
+  `ROUND(percentile_cont(${p}) WITHIN GROUP (ORDER BY ${col})::numeric, 2)`;
+
 /**
  * Headline counts — the corpus at a glance. PARALLELS is reported as a single
  * total (the verified/proposed split is meaningless on a uniformly-tiered
@@ -211,9 +234,9 @@ async function headline(): Promise<AtlasSnapshot['headline']> {
        (SELECT COUNT(*) FROM corpus.concepts)                         AS concepts,
        (SELECT COUNT(*) FROM corpus.concept_families)                 AS families,
        (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='PARALLELS') AS parallels_total,
-       (SELECT ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY weight)::numeric, 2)
+       (SELECT ${pctSql(0.5, 'weight')}
           FROM corpus.edges WHERE edge_type='PARALLELS')              AS parallels_median_weight,
-       (SELECT ROUND(percentile_cont(0.9) WITHIN GROUP (ORDER BY weight)::numeric, 2)
+       (SELECT ${pctSql(0.9, 'weight')}
           FROM corpus.edges WHERE edge_type='PARALLELS')              AS parallels_p90_weight,
        (SELECT COUNT(*) FROM corpus.edges WHERE edge_type='CONTRASTS') AS contrasts`,
   );
@@ -260,32 +283,43 @@ async function documentLayer(): Promise<AtlasSnapshot['documentLayer']> {
  * tradition can tie on a single (partner-side) weight and coincidentally
  * outrank a pair with thousands of edges. Per the file header, this floor is
  * relative (the live 75th percentile of pair sizes), never a fixed constant —
- * it adapts as the corpus grows instead of going stale.
+ * it adapts as the corpus grows instead of going stale. Returned alongside
+ * the rows (not just applied silently) so a pair's absence from the ranking
+ * is auditable — see the FACTS block in prompt.ts, which states it in the
+ * essay's own grounding data rather than leaving a reader to re-derive the
+ * percentile by hand. Computed as its own query so it's available even when
+ * `limit` or the floor itself leaves `rows` empty.
  */
-async function traditionMatrix(limit = 15): Promise<AtlasSnapshot['traditionMatrix']> {
-  const rows = await query<{ a: string; b: string; parallels: number; median_weight: number }>(
-    `WITH p AS (
-       SELECT LEAST(cs.tradition, ct.tradition) AS a,
-              GREATEST(cs.tradition, ct.tradition) AS b,
-              e.weight AS weight
-       FROM corpus.edges e
-       JOIN corpus.chunks cs ON cs.id = e.source
-       JOIN corpus.chunks ct ON ct.id = e.target
-       WHERE e.edge_type='PARALLELS' AND cs.tradition <> ct.tradition),
-     pair_agg AS (
-       SELECT a, b, COUNT(*)::int AS n,
-              percentile_cont(0.5) WITHIN GROUP (ORDER BY weight) AS median_weight
-       FROM p GROUP BY a, b),
-     thresh AS (SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY n) AS min_n FROM pair_agg)
-     SELECT a, b, n AS parallels, ROUND(median_weight::numeric, 2) AS median_weight
-     FROM pair_agg, thresh
-     WHERE n >= thresh.min_n
-     ORDER BY median_weight DESC, a, b LIMIT $1`,
-    [limit],
+async function traditionMatrix(
+  limit = 15,
+): Promise<{ rows: AtlasSnapshot['traditionMatrix']; minN: number }> {
+  const pairAgg = (extra: string) => `
+    WITH p AS (
+      ${PARALLELS_BY_TRADITION('LEAST(cs.tradition, ct.tradition)', 'GREATEST(cs.tradition, ct.tradition)')}
+        AND cs.tradition <> ct.tradition),
+    pair_agg AS (
+      SELECT a, b, COUNT(*)::int AS n, ${pctSql(0.5, 'weight')} AS median_weight
+      FROM p GROUP BY a, b)
+    ${extra}`;
+
+  const threshRow = await one<{ min_n: number | null }>(
+    pairAgg(`SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY n) AS min_n FROM pair_agg`),
   );
-  return rows.map(r => ({
-    a: r.a, b: r.b, parallels: Number(r.parallels), medianWeight: Number(r.median_weight),
-  }));
+  const minN = Number(threshRow?.min_n ?? 0);
+
+  const rows = await query<{ a: string; b: string; parallels: number; median_weight: number }>(
+    pairAgg(`SELECT a, b, n AS parallels, median_weight
+             FROM pair_agg
+             WHERE n >= $2
+             ORDER BY median_weight DESC, a, b LIMIT $1`),
+    [limit, minN],
+  );
+  return {
+    minN,
+    rows: rows.map(r => ({
+      a: r.a, b: r.b, parallels: Number(r.parallels), medianWeight: Number(r.median_weight),
+    })),
+  };
 }
 
 /**
@@ -301,6 +335,18 @@ async function traditionMatrix(limit = 15): Promise<AtlasSnapshot['traditionMatr
  * Read it alongside chunk count for the same reason as invariant 2 in the
  * file header: a tradition with very few chunks can post an extreme mean off
  * a handful of edges.
+ *
+ * Caveat beyond that one, specific to meanParallelWeight: per the file header,
+ * `weight` is the score of whichever endpoint was the generator's *partner* —
+ * the edge doesn't record which side that was. The `u` CTE below necessarily
+ * duplicates each edge's weight onto BOTH endpoint traditions (there is no way
+ * to route it to only the correct one), so a tradition's mean partly averages
+ * in scores that structurally belonged to its partners, not itself. Unlike the
+ * rare per-chunk ties this causes in reader.ts (todo:bc084b37) — a handful of
+ * chunks corpus-wide — this smears every row, not an edge case. It is sound as
+ * a rough "typically strong vs. typically weak" signal, not as a precise one.
+ * Fixing it requires the generator to record anchor/partner role per edge; no
+ * query-level fix exists against the current schema.
  */
 async function centrality(): Promise<AtlasSnapshot['centrality']> {
   const rows = await query<{
@@ -308,11 +354,7 @@ async function centrality(): Promise<AtlasSnapshot['centrality']> {
     partner_traditions: number; per100: number; mean_weight: number | null;
   }>(
     `WITH p AS (
-       SELECT cs.tradition AS a, ct.tradition AS b, e.weight AS weight
-       FROM corpus.edges e
-       JOIN corpus.chunks cs ON cs.id = e.source
-       JOIN corpus.chunks ct ON ct.id = e.target
-       WHERE e.edge_type='PARALLELS'),
+       ${PARALLELS_BY_TRADITION('cs.tradition', 'ct.tradition')}),
      u AS (SELECT a AS t, b AS o, weight FROM p UNION ALL SELECT b, a, weight FROM p),
      deg AS (
        SELECT t, COUNT(*)::int AS parallel_degree, COUNT(DISTINCT o)::int AS partner_traditions,
@@ -522,6 +564,37 @@ async function dossierCapsules(textIds: string[]): Promise<AtlasDossierCapsule[]
   return capsules;
 }
 
+/** Cheap existence check for the generation refusal guard (atlas-generate.ts)
+ *  — an indexed EXISTS/LIMIT 1, not the full snapshot's COUNT(*) + two
+ *  percentile_cont scans. Called before computeAtlasSnapshot() so an empty or
+ *  freshly-deployed corpus refuses without paying for the rest of the
+ *  snapshot (8 parallel queries + the long-range-case loop) first. */
+export async function hasAnyParallels(): Promise<boolean> {
+  const row = await one<{ exists: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM corpus.edges WHERE edge_type='PARALLELS' LIMIT 1) AS exists`,
+  );
+  return row?.exists ?? false;
+}
+
+/** True PARALLELS count between two traditions, either order — independent of
+ *  traditionMatrix()'s min_n ranking floor, which guards the Top Pairs list,
+ *  not existence. LONG_RANGE_PAIRS are rare/low-contact by definition, which
+ *  is exactly the profile likely to fail that floor; looking their count up
+ *  in the (filtered, limit-15) matrix instead of here previously understated
+ *  it, sometimes down to the exemplar cap. */
+async function pairParallelCount(a: string, b: string): Promise<number> {
+  const row = await one<{ n: number }>(
+    `SELECT COUNT(*)::int AS n
+       FROM corpus.edges e
+       JOIN corpus.chunks cs ON cs.id = e.source
+       JOIN corpus.chunks ct ON ct.id = e.target
+      WHERE e.edge_type='PARALLELS'
+        AND ((cs.tradition=$1 AND ct.tradition=$2) OR (cs.tradition=$2 AND ct.tradition=$1))`,
+    [a, b],
+  );
+  return Number(row?.n ?? 0);
+}
+
 /**
  * Compute the full atlas snapshot. `generatedAt` is injected by the caller (pass
  * new Date().toISOString()) so the snapshot is deterministic under test.
@@ -542,15 +615,16 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     contrasts(),
   ]);
 
-  // Long-range hard cases: only pairs that actually have parallels.
+  // Long-range hard cases: only pairs that actually have parallels. Counted
+  // directly (pairParallelCount), not looked up in `matrix.rows` — that list
+  // is filtered by min_n and limited to 15, and these pairs are rare by
+  // definition, exactly the profile likely to be missing from it.
   const longRangeCases: AtlasSnapshot['longRangeCases'] = [];
   for (const [a, b] of LONG_RANGE_PAIRS) {
     const exemplars = await exemplarsForPair(a, b, EXEMPLARS_PER_CASE);
     if (exemplars.length === 0) continue;
-    const cell = matrix.find(
-      m => (m.a === a && m.b === b) || (m.a === b && m.b === a),
-    );
-    longRangeCases.push({ a, b, parallels: cell?.parallels ?? exemplars.length, exemplars });
+    const parallels = await pairParallelCount(a, b);
+    longRangeCases.push({ a, b, parallels, exemplars });
   }
 
   // Capsules for every work behind a cited passage (exemplars + contrasts).
@@ -570,7 +644,8 @@ export async function computeAtlasSnapshot(generatedAt: string): Promise<AtlasSn
     schemaVersion: meta?.value ?? 'unknown',
     headline: head,
     documentLayer: docLayer,
-    traditionMatrix: matrix,
+    traditionMatrix: matrix.rows,
+    traditionMatrixMinN: matrix.minN,
     centrality: central,
     bridgeConcepts: bridges,
     familyBridges: families,

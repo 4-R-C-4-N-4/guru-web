@@ -13,7 +13,7 @@
  */
 
 import { one } from './db';
-import { computeAtlasSnapshot, type AtlasSnapshot, type AtlasChunk } from './atlas';
+import { computeAtlasSnapshot, hasAnyParallels, type AtlasSnapshot, type AtlasChunk } from './atlas';
 import { getAtlasSystemPrompt, buildAtlasPrompt } from './prompt';
 import { completeStream } from './model';
 import { parseGenerated } from './blog-generate';
@@ -83,6 +83,14 @@ export async function generateAtlasEdition(opts: {
 }): Promise<AtlasEditionResult> {
   const { generatedAt, force = false } = opts;
 
+  // Grounding guard: refuse an essay with no evidence at all. Checked first,
+  // cheaply, before the dup-guard and the full snapshot computation — an
+  // empty or freshly-deployed corpus shouldn't pay for 8 parallel queries
+  // plus the long-range-case loop just to be told there was nothing to say.
+  if (!(await hasAnyParallels())) {
+    throw new AtlasRefusal('atlas: no parallels in the corpus — refusing to generate.');
+  }
+
   // Dup-guard: don't stack drafts.
   if (!force) {
     const inFlight = await one<{ id: string; edition_no: number | null }>(
@@ -104,11 +112,8 @@ export async function generateAtlasEdition(opts: {
   );
   const editionNo = Number(maxRow?.next ?? 1);
 
-  // Deterministic analysis. Grounding guard: refuse an essay with no evidence at all.
+  // Deterministic analysis. Grounding guard already ran above (hasAnyParallels).
   const snapshot = await computeAtlasSnapshot(generatedAt);
-  if (snapshot.headline.parallelsTotal === 0) {
-    throw new AtlasRefusal('atlas: no parallels in the corpus — refusing to generate.');
-  }
 
   const slugStr = isCuratedSlug(opts.model ?? '') ? (opts.model as CuratedSlug) : DEFAULT_CURATED_SLUG;
   const modelId = resolveCuratedModel(slugStr);

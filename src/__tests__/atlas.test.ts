@@ -54,6 +54,8 @@ beforeEach(() => {
     if (sql.includes('summary_nodes')) {
       return { works: 52, dossiers: 52, summaries_l1: 214, summaries_l2: 52 } as never;
     }
+    if (sql.includes('min_n')) return { min_n: 500 } as never; // traditionMatrix's threshold query
+    if (sql.includes('COUNT(*)::int AS n')) return { n: 47 } as never; // pairParallelCount
     return null as never;
   });
   mQuery.mockImplementation(async (sql: string) => {
@@ -81,12 +83,18 @@ describe('computeAtlasSnapshot', () => {
     for (const sql of allSql) expect(sql).not.toMatch(/CASE\s+e\.tier/);
   });
 
-  it('reads weight for every PARALLELS-touching query (the quality signal post-cutover)', async () => {
+  it('reads weight for every PARALLELS-touching query that ranks or selects rows', async () => {
     await computeAtlasSnapshot('2026-06-06T00:00:00Z');
     const allSql = [...mQuery.mock.calls, ...mOne.mock.calls].map(c => c[0] as string);
     const parallelSql = allSql.filter(s => /edge_type='PARALLELS'/.test(s));
     expect(parallelSql.length).toBeGreaterThan(0);
-    for (const sql of parallelSql) expect(sql).toMatch(/\bweight\b/);
+    for (const sql of parallelSql) {
+      // pairParallelCount is a pure COUNT(*) existence guard for long-range
+      // cases — it doesn't rank or select rows, so there's nothing for the
+      // tier-vs-weight bug this test guards against to manifest in.
+      if (/^\s*SELECT COUNT\(\*\)::int AS n\b/.test(sql)) continue;
+      expect(sql).toMatch(/\bweight\b/);
+    }
   });
 
   it('ranks the tradition-pair matrix by median weight, not raw count', async () => {
@@ -116,6 +124,7 @@ describe('computeAtlasSnapshot', () => {
     expect(snap.headline.parallelsMedianWeight).toBe(-1.48);
     expect(snap.headline.parallelsP90Weight).toBe(0.52);
     expect(snap.traditionMatrix[0]).toMatchObject({ a: 'christian_mysticism', b: 'neoplatonism', parallels: 5366, medianWeight: -0.24 });
+    expect(snap.traditionMatrixMinN).toBe(500);
     expect(snap.centrality[0]).toMatchObject({ tradition: 'neoplatonism', parallelsPer100Chunks: 301.9, meanParallelWeight: -0.85 });
     expect(snap.bridgeConcepts[0]).toMatchObject({ label: 'Apophatic Theology', family: 'Divine Nature', traditions: 15 });
     expect(snap.familyBridges[0]).toMatchObject({ label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5 });
@@ -167,6 +176,19 @@ describe('computeAtlasSnapshot', () => {
     await computeAtlasSnapshot('2026-06-06T00:00:00Z');
     const bridgeSql = mQuery.mock.calls.map(c => c[0] as string).find(s => s.includes('co.label'));
     expect(bridgeSql).toMatch(/edge_type='EXPRESSES'/);
+  });
+
+  it('counts long-range case parallels directly, not from the ranked/limited matrix (todo:827b1353 follow-up)', async () => {
+    // The mocked matrix only has a christian_mysticism/neoplatonism row — none
+    // of LONG_RANGE_PAIRS matches it, so a matrix.find() lookup would always
+    // miss and fall back to exemplars.length (1, from the mocked exemplar
+    // row) — exactly the bug this regression test catches.
+    const snap = await computeAtlasSnapshot('2026-06-06T00:00:00Z');
+    expect(snap.longRangeCases[0].parallels).toBe(47);
+    const countSql = mOne.mock.calls.map(c => c[0] as string)
+      .find(s => /^\s*SELECT COUNT\(\*\)::int AS n\b/.test(s));
+    expect(countSql).toBeDefined();
+    expect(countSql).toMatch(/\(cs\.tradition=\$1 AND ct\.tradition=\$2\) OR \(cs\.tradition=\$2 AND ct\.tradition=\$1\)/);
   });
 
   it('targets each contrast side to a length (not the pair sum, not shortest) — contrasts carry no weight to rank by', async () => {

@@ -20,6 +20,7 @@ const SNAP: AtlasSnapshot = {
   headline: { traditions: 16, concepts: 95, families: 28, parallelsTotal: 50148, parallelsMedianWeight: -1.48, parallelsP90Weight: 0.52, contrasts: 8 },
   documentLayer: { works: 52, dossiers: 52, summaryNodesL1: 214, summaryNodesL2: 52 },
   traditionMatrix: [{ a: 'neoplatonism', b: 'taoism', parallels: 322, medianWeight: -0.87 }],
+  traditionMatrixMinN: 75,
   centrality: [{ tradition: 'neoplatonism', chunks: 828, parallelDegree: 2500, partnerTraditions: 13, parallelsPer100Chunks: 301.9, meanParallelWeight: -0.9 }],
   bridgeConcepts: [{ label: 'Apophatic Theology', domain: 'theology', family: 'Divine Nature', traditions: 15, mentions: 646 }],
   familyBridges: [{ id: 'theology.divine_nature', label: 'Divine Nature', domain: 'theology', traditions: 15, concepts: 5, mentions: 2510 }],
@@ -74,6 +75,9 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toContain('median weight -1.48');
     expect(prompt).toContain('p90 0.52');
     expect(prompt).toContain('neoplatonism ↔ taoism: 322 parallels, median weight -0.87');
+    // The min_n floor is stated, not silent — a reader can tell a thin pair's
+    // absence from "Top pairs" is the sample-size cutoff, not zero parallels.
+    expect(prompt).toContain('Pairs with fewer than 75 parallels are excluded from this ranking');
     expect(prompt).toContain('301.9 parallels/100 chunks'); // the normalized figure
     expect(prompt).toContain('mean weight -0.9'); // the weighted centrality figure
     expect(prompt).toContain('Apophatic Theology');

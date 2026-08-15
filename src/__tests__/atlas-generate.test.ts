@@ -9,17 +9,18 @@
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 
 vi.mock('@/lib/db', () => ({ one: vi.fn(), query: vi.fn(), exec: vi.fn() }));
-vi.mock('@/lib/atlas', () => ({ computeAtlasSnapshot: vi.fn() }));
+vi.mock('@/lib/atlas', () => ({ computeAtlasSnapshot: vi.fn(), hasAnyParallels: vi.fn() }));
 vi.mock('@/lib/model', () => ({ completeStream: vi.fn() }));
 vi.mock('@/lib/cost', () => ({ computeCost: vi.fn() }));
 
 import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
-import { computeAtlasSnapshot } from '@/lib/atlas';
+import { computeAtlasSnapshot, hasAnyParallels } from '@/lib/atlas';
 import { one } from '@/lib/db';
 import { completeStream } from '@/lib/model';
 import { computeCost } from '@/lib/cost';
 
 const mSnap = computeAtlasSnapshot as MockedFunction<typeof computeAtlasSnapshot>;
+const mHasParallels = hasAnyParallels as MockedFunction<typeof hasAnyParallels>;
 const mOne = one as MockedFunction<typeof one>;
 const mStream = completeStream as MockedFunction<typeof completeStream>;
 const mCost = computeCost as MockedFunction<typeof computeCost>;
@@ -53,6 +54,7 @@ const GOOD = `TITLE: The Shape of the Whole\nDEK: What the aggregate shows.\n\n$
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mHasParallels.mockResolvedValue(true);
   mSnap.mockResolvedValue(snapshot());
   mCost.mockResolvedValue({ cost_usd: 0.05 } as never);
   mStream.mockReturnValue(streamOf(GOOD) as never);
@@ -91,7 +93,15 @@ describe('generateAtlasEdition', () => {
   });
 
   it('refuses (AtlasRefusal) when the corpus has no parallels', async () => {
-    mSnap.mockResolvedValue(snapshot(0));
+    mHasParallels.mockResolvedValue(false);
     await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(AtlasRefusal);
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(/no parallels in the corpus/);
+  });
+
+  it('checks for parallels before computing the snapshot or checking for an in-flight draft', async () => {
+    mHasParallels.mockResolvedValue(false);
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(AtlasRefusal);
+    expect(mSnap).not.toHaveBeenCalled();
+    expect(mOne).not.toHaveBeenCalled();
   });
 });

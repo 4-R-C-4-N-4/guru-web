@@ -1,0 +1,22 @@
+{
+  "id": "557c8a93",
+  "type": "chore",
+  "state": "open",
+  "summary": "PARALLELS edges don't record anchor/partner role, so weight can't be attributed to the correct endpoint",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-15T19:34:17.505Z",
+  "updated_at": "2026-08-15T19:34:17.505Z",
+  "files": [
+    {
+      "path": "src/lib/atlas.ts"
+    }
+  ],
+  "tags": [
+    "atlas",
+    "reader",
+    "data-model",
+    "weight"
+  ]
+}

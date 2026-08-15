@@ -534,7 +534,7 @@ function formatFacts(s: AtlasSnapshot): string {
         ]
       : []),
     ``,
-    `Top cross-tradition pairs, ranked by median parallel weight (not by count — count tracks tag density/encyclopedic breadth more than genuine affinity):\n${matrix}`,
+    `Top cross-tradition pairs, ranked by median parallel weight (not by count — count tracks tag density/encyclopedic breadth more than genuine affinity). Pairs with fewer than ${s.traditionMatrixMinN} parallels are excluded from this ranking (a live floor, not a fixed one) — absence from this list means a pair didn't clear that sample-size threshold, not that it has zero parallels:\n${matrix}`,
     ``,
     `Tradition centrality (raw degree, normalized per-100-chunks, AND mean incident parallel weight — use the normalized figure to separate genuine reach from over-sampling, and mean weight to separate strong bridging from merely frequent bridging):\n${central}`,
     ``,
