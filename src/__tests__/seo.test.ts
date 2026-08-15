@@ -21,8 +21,7 @@ const CHUNK = {
 };
 
 const tag = (label: string) => ({ label });
-const rel = (tradition: string, edge_type: 'PARALLELS' | 'CONTRASTS' = 'PARALLELS') =>
-  ({ edge_type, tradition });
+const rel = (tradition: string) => ({ tradition });
 
 describe('chunkMetaDescription (todo:17621cef)', () => {
   it('leads with section, text and tradition, then concepts and partner traditions', () => {

@@ -4,7 +4,7 @@
  * The chunk viewer — one passage per page, the reader's primary unit.
  * Shows the passage body with its section heading, position in the text,
  * concept tags (live EXPRESSES edges) and cross-tradition related passages
- * (PARALLELS/CONTRASTS edges with their stored justifications). Prev/next
+ * (PARALLELS edges with their stored justifications). Prev/next
  * walk the text in reading order and continue across member texts of a
  * grouped work. Every hop is a plain link, so the browser back button
  * retraces the exploration chain — the breadcrumb answers "where am I",
@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  getChunkPage, getChunkTags, getRelatedPassages,
+  getChunkPage, getChunkTags, getRelatedPassages, RELATED_LIMIT,
   type ChunkNav, type RelatedPassage,
 } from '@/lib/reader';
 import { pathToChunkId, chunkIdToPath, askAboutHref } from '@/lib/read-path';
@@ -33,7 +33,6 @@ const getRelatedPassagesCached = cache(getRelatedPassages);
 export const dynamic = 'force-dynamic';
 
 const TIER_SYMBOL: Record<string, string> = { verified: '◆', proposed: '◇', inferred: '○', summary: '§' };
-const RELATED_VISIBLE = 10;
 
 type Params = Promise<{ tradition: string; textId: string; n: string }>;
 
@@ -97,11 +96,6 @@ function RelatedCard({ r }: { r: RelatedPassage }) {
         <span>{r.text_name}</span>
         <span style={{ opacity: 0.4 }}>|</span>
         <span>{r.section}</span>
-        {r.edge_type === 'CONTRASTS' && (
-          <span style={{ color: tokens.text.error, letterSpacing: 1, border: `1px solid ${tokens.text.error}`, padding: '0 5px', borderRadius: 2 }}>
-            CONTRASTS
-          </span>
-        )}
       </div>
       <div style={{ fontFamily: tokens.font.display, fontSize: 14, color: tokens.text.primary, fontStyle: 'italic', lineHeight: 1.6 }}>
         &ldquo;{r.preview.trimEnd()}…&rdquo;
@@ -132,9 +126,6 @@ export default async function ChunkPage({ params }: { params: Params }) {
     fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.link,
     letterSpacing: 1, textDecoration: 'none', textTransform: 'uppercase',
   } as const;
-  const parallels = related.filter(r => r.edge_type === 'PARALLELS');
-  const contrasts = related.filter(r => r.edge_type === 'CONTRASTS');
-
   return (
     <main style={{ minHeight: '100vh', background: tokens.bg.deep, padding: '48px 24px 64px' }}>
       <article style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -233,18 +224,9 @@ export default async function ChunkPage({ params }: { params: Params }) {
         {related.length > 0 && (
           <section style={{ marginTop: 36 }}>
             <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-              Related passages · {parallels.length} parallel{parallels.length === 1 ? '' : 's'}
-              {contrasts.length > 0 && <> · {contrasts.length} contrast{contrasts.length === 1 ? '' : 's'}</>}
+              Related passages · {related.length} parallel{related.length === 1 ? '' : 's'}
             </div>
-            {related.slice(0, RELATED_VISIBLE).map(r => <RelatedCard key={`${r.edge_type}:${r.partner_id}`} r={r} />)}
-            {related.length > RELATED_VISIBLE && (
-              <details>
-                <summary style={{ cursor: 'pointer', fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.link, letterSpacing: 1, textTransform: 'uppercase', padding: '6px 0' }}>
-                  {related.length - RELATED_VISIBLE} more
-                </summary>
-                {related.slice(RELATED_VISIBLE).map(r => <RelatedCard key={`${r.edge_type}:${r.partner_id}`} r={r} />)}
-              </details>
-            )}
+            {related.slice(0, RELATED_LIMIT).map(r => <RelatedCard key={r.partner_id} r={r} />)}
           </section>
         )}
 

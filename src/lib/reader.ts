@@ -111,7 +111,6 @@ export interface ChunkTag {
 }
 
 export interface RelatedPassage {
-  edge_type: 'PARALLELS' | 'CONTRASTS';
   tier: string;
   annotation: string | null;
   partner_id: string;
@@ -349,13 +348,20 @@ export async function getChunkTags(chunkId: string): Promise<ChunkTag[]> {
  *
  *  Consequence to know: the section header counts what was loaded, so a panel
  *  with more than 15 partners reports 15. Ordering is by weight (below), so the
- *  15 shown are the best-graded ones rather than an arbitrary slice. */
-const RELATED_LIMIT = 15;
+ *  15 shown are the best-graded ones rather than an arbitrary slice.
+ *
+ *  Exported so every consumer (the reader page, generateMetadata) shares one
+ *  number instead of each declaring its own — a page-local RELATED_VISIBLE
+ *  used to diverge from this and desync the "N more" toggle from what the
+ *  query actually returned. */
+export const RELATED_LIMIT = 15;
 
-/** Cross-tradition partners of a chunk. PARALLELS/CONTRASTS edges are stored
- *  one direction, so match both ends and join the partner endpoint (same
- *  idiom as graph.ts walkGraph). The stored annotation is the reviewed
- *  justification — rendered verbatim as the relationship explanation.
+/** Cross-tradition parallels of a chunk. CONTRASTS edges are excluded —
+ *  divergence annotations belong to the Atlas, not a passage's related-reading
+ *  panel. PARALLELS edges are stored one direction, so match both ends and
+ *  join the partner endpoint (same idiom as graph.ts walkGraph). The stored
+ *  annotation is the reviewed justification — rendered verbatim as the
+ *  relationship explanation.
  *
  *  Ordered by `weight` (todo:bc084b37). Before the Pass C retirement every
  *  PARALLELS row shared one tier and carried no weight, so the tier term below
@@ -372,20 +378,17 @@ const RELATED_LIMIT = 15;
  *  its own scores and tie heavily. That is rare — 6 chunks corpus-wide have
  *  >=20 partners and <=2 distinct weights — and fixing it properly is a
  *  generator-side data-model change, not a query change. The tier and p.id
- *  terms remain as deterministic tiebreaks for exactly those ties, and for
- *  CONTRASTS, which ship weightless from a frozen snapshot (hence NULLS LAST
- *  rather than a bare DESC). */
+ *  terms remain as deterministic tiebreaks for exactly those ties. */
 export async function getRelatedPassages(chunkId: string): Promise<RelatedPassage[]> {
   return query<RelatedPassage>(
-    `SELECT e.edge_type, e.tier, e.annotation,
+    `SELECT e.tier, e.annotation,
             p.id AS partner_id, p.tradition, p.text_name, p.section,
             LEFT(p.body, 240) AS preview
        FROM edges e
        JOIN chunks p ON p.id = CASE WHEN e.source = $1 THEN e.target ELSE e.source END
       WHERE (e.source = $1 OR e.target = $1)
-        AND e.edge_type = ANY(ARRAY['PARALLELS','CONTRASTS'])
-      ORDER BY e.edge_type = 'CONTRASTS',
-               e.weight DESC NULLS LAST,
+        AND e.edge_type = 'PARALLELS'
+      ORDER BY e.weight DESC NULLS LAST,
                CASE e.tier WHEN 'verified' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
                p.id
       LIMIT $2`,
