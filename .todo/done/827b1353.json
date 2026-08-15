@@ -1,13 +1,13 @@
 {
   "id": "827b1353",
   "type": "bug",
-  "state": "active",
+  "state": "done",
   "summary": "Atlas reports zero cross-tradition parallels: all four PARALLELS queries filter tier='verified' but every derived edge is tier='inferred'",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-08-15T17:53:35.096Z",
-  "updated_at": "2026-08-15T18:00:55.651Z",
+  "updated_at": "2026-08-15T18:10:37.531Z",
   "files": [
     {
       "path": "src/lib/atlas.ts",
@@ -49,5 +49,13 @@
         1
       ]
     }
-  ]
+  ],
+  "resolution": {
+    "commit": "4ea869cac57cbe0bf1e4b01491d2c81825d150b1",
+    "resolved_at": "2026-08-15T18:10:37.531Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas.test.ts",
+    "test_function": "ranks the tradition-pair matrix by median weight, not raw count",
+    "note": "Dropped tier='verified' from all 5 sites; headline/matrix/centrality now rank on weight (median/p90 for headline, per-pair median for the matrix with a live p75 sample-size floor, mean incident weight for centrality); exemplar picker orders by weight DESC with length as tiebreak; header rewritten to structural invariants with zero hardcoded corpus figures. Verified live: matrix top row christian_mysticism/neoplatonism n=5366 median -0.24, matches ticket expectation exactly."
+  }
 }
