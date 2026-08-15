@@ -99,7 +99,10 @@ describe('getRelatedPassages', () => {
     await getRelatedPassages('trad.text-a.001');
     const [sql, params] = mQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toMatch(/LIMIT \$2/);
-    expect(params[1]).toBe(100);
+    // Editorial cap, not a corpus-derived one: the page shows 10 and hides the
+    // rest behind a toggle, so this leaves a short tail. Kept small on purpose
+    // — an earlier 100 tracked a p95 that the generator has since invalidated.
+    expect(params[1]).toBe(15);
   });
 });
 

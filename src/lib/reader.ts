@@ -335,13 +335,22 @@ export async function getChunkTags(chunkId: string): Promise<ChunkTag[]> {
 }
 
 /** Hard ceiling on how many partners one chunk's panel loads (todo:bc084b37).
- *  Derived PARALLELS are far denser than the Pass C edges this panel was built
- *  for — p95 is 54 partners and the worst chunk has 344 — and the page renders
- *  every returned row into the DOM (10 visible, the rest inside a <details>).
- *  100 clears p95 comfortably, so ordinary panels are untouched and only the
- *  handful of pathological chunks are capped. Those are also the panels where
- *  the raw count is least meaningful — see the weight-asymmetry note below. */
-const RELATED_LIMIT = 100;
+ *  This is a reader-facing editorial limit, not a derived bound: the page shows
+ *  10 and hides the remainder behind a <details> toggle, so 15 leaves a short
+ *  tail to expand into rather than a long one nobody reads. Every returned row
+ *  is rendered into the DOM whether or not it is visible.
+ *
+ *  Deliberately NOT sized off the corpus distribution. An earlier value of 100
+ *  was derived from a p95 of 54, which stopped meaning anything once the score
+ *  floor came off in guru todo:ac63de1a — PARALLELS went 17,244 -> 50,148 and
+ *  the largest panel reached 1,178 partners. Chasing that distribution just
+ *  makes the cap track whatever the generator happens to emit; a reader's
+ *  appetite for related passages does not change when the pipeline does.
+ *
+ *  Consequence to know: the section header counts what was loaded, so a panel
+ *  with more than 15 partners reports 15. Ordering is by weight (below), so the
+ *  15 shown are the best-graded ones rather than an arbitrary slice. */
+const RELATED_LIMIT = 15;
 
 /** Cross-tradition partners of a chunk. PARALLELS/CONTRASTS edges are stored
  *  one direction, so match both ends and join the partner endpoint (same
