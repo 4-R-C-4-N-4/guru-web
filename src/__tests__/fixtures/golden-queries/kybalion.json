@@ -1,0 +1,52 @@
+{
+  "work": "kybalion",
+  "tradition": "western_esoteric",
+  "corpus_version": "58",
+  "frozenEval": true,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Is there a classic Hermetic illustration where a spinning wheel or top, sped up further and further, passes through a rising musical note, then heat, then each color of the rainbow in order, then invisible rays, and finally dissolves into pure vibration once its speed outruns what the senses can register?",
+      "provenanceChunkIds": ["western_esoteric.kybalion.040"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Chunk 040's illustration uses 'the object', 'Ethereal Substance', 'X Rays' as its own vocabulary; paraphrased as a generic rising-vibration description (musical note, rainbow order, invisible rays, dissolution) so the probe doesn't just echo the chunk's own terms."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "How does this teaching explain the sense of having two parts within one's own mind — an active, willing 'I' and a more passive, generative 'Me' that receives and gives birth to mental creations — as an expression of a doctrine of Mental Gender?",
+      "provenanceChunkIds": ["western_esoteric.kybalion.058"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases chunk 058's 'mental womb' / 'I' and 'Me' language into a plain description of the same inner split, keeping 'Mental Gender' since that's the doctrine's own name, not lifted phrasing."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Is there a story about Hermes Trismegistus being asked directly by his most advanced students why the ultimate reality creates or manifests a universe at all, and answering only by pressing his lips shut and staying silent — implying there is no answer to give?",
+      "provenanceChunkIds": ["western_esoteric.kybalion.031"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Chunk 031's own phrase is 'pressing his lips tightly together'; kept the gesture (hard to paraphrase away without losing the anchor) but reframed the question and dropped the chunk's specific 'Aspect of BEING/BECOMING' vocabulary."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does this teaching invoke Dickens's humble Mr. Micawber, who says his Creator's spirit lives within him without claiming to BE that Creator, as the right contrast to those who flatly announce 'I am God' — while still insisting THE ALL is genuinely present in even the lowliest creature, down to an earthworm?",
+      "provenanceChunkIds": ["western_esoteric.kybalion.027", "western_esoteric.kybalion.028"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "First draft was too diffuse ('a fictional character') and missed top-15 on work survival. Strengthened by naming Micawber directly (a reader's own general knowledge of Dickens, not lifted chunk phrasing) and adding the earthworm anchor, which is the chunk's other distinctive image."
+    },
+    {
+      "kind": "relevance",
+      "query": "What philosophical or mystical traditions teach that the highest or ultimate reality is fundamentally unknowable to the finite mind — beyond any name, image, or human concept, rather than a describable being with humanlike qualities?",
+      "provenanceChunkIds": ["western_esoteric.kybalion.014", "western_esoteric.kybalion.015"],
+      "note": "Apophatic / negative-theology theme (THE ALL as UNKNOWABLE, rejecting anthropomorphic attributes) that other traditions' own ineffability doctrines should also surface for."
+    },
+    {
+      "kind": "relevance",
+      "query": "How do different spiritual or philosophical systems explain that suffering and joy, or loss and gain, come in a compensating balance — so that a swing toward one extreme guarantees an eventual swing back toward the other?",
+      "provenanceChunkIds": ["western_esoteric.kybalion.047"],
+      "note": "Rhythm/Compensation ('the measure of the swing to the right is the measure of the swing to the left') as a cosmic-balance theme other traditions' karma, cosmic-justice, or fortune doctrines should also answer."
+    }
+  ]
+}

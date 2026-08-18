@@ -1,0 +1,22 @@
+{
+  "id": "8bc7698b",
+  "type": "bug",
+  "state": "open",
+  "summary": "Golden-query recall regressed for 5 unrelated works after ~35% one-shot corpus growth (west-eso addition, v50→v58)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-18T17:53:23.867Z",
+  "updated_at": "2026-08-18T17:53:23.922Z",
+  "files": [
+    {
+      "path": "src/__tests__/golden-queries.test.ts"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "golden-queries",
+    "reranker"
+  ],
+  "description": "After guru corpus_version 50 -> 58 (four new western_esoteric texts —\nkybalion, book-of-ceremonial-magic, tarot-of-the-bohemians,\npsychic-self-defence — ~1,600 new chunks, roughly +35% corpus size in one\nPR), 5 pre-existing golden-query recall probes on unrelated works started\nfailing the mustIncludeTraditions assertion in the integration gate\n(src/__tests__/golden-queries.test.ts):\n\n  - corpus-hermeticum: \"why did the first heavenly man descend...\" -> misses hermeticism\n  - dhammapada: \"a craftsman straightening a shaft...\" -> misses buddhism\n  - enoch-charles-1917: \"who is the figure with a human face...\" -> misses jewish_mysticism\n  - pythagorean-golden-verses: \"the Pythagorean rule of reviewing...\" -> misses greek_mystery\n  - tao-te-ching-legge: \"the Tao Te Ching's advice to deal with...\" -> misses taoism\n\nRoot-caused, ruled one hypothesis OUT:\n\n1. RULED OUT: a new concept (\"group_mind\", added this same corpus update)\n   whose auto-derived label \"Group Mind\" whole-word-matched the common word\n   \"mind\" in extractConcepts() (src/lib/graph.ts), spuriously firing the\n   graph leg into western_esoteric on unrelated queries. This was real and\n   has been fixed (concept renamed to collective_psychic_field in guru's\n   concepts/taxonomy.toml, todo captured in that repo) -- but re-running the\n   full integration gate after the fix reproduced all 5 failures identically.\n   The renamed concept's graph-leg contribution (1 chunk) never survived\n   into the final top-15 in either run, confirming it was not the driver\n   for these 5.\n\n2. CONFIRMED DRIVER: plain vector-rank dilution. Checked directly for the\n   dhammapada probe: its target chunk (buddhism.dhammapada-chapter-03.001)\n   ranks only 102nd of 6,068 chunks by raw cosine distance for that query --\n   it was always a marginal semantic match riding on favorable multi-leg\n   merge/rerank behavior, not strong vector similarity. All 5 failing probes\n   share this profile (none anchor strongly on vector distance alone).\n   Adding ~1,600 dense new chunks in one shot was enough to tip several such\n   marginal probes below the top-15 threshold after retrieve()'s\n   merge-and-rerank step, even though vectorSearch's own candidate pool\n   (topK * poolMult = 150) is wide enough to still include rank ~102.\n\nThis is retrieval-tuning territory (src/lib/retriever.ts's mergeAndRerank /\ndiversity logic, or the poolMult/lexical-leg balance), not a content or\ntaxonomy bug, and not something guru's own workbook fix (the concept\nrename) could touch. docs/golden-queries.md's assumption that \"unrelated\nworks... stale corpus_version only warns, never fails\" appears to hold for\nsmall incremental corpus growth but breaks down for a large one-shot\naddition like this one.\n\nNext steps for whoever picks this up: (a) decide whether these 5 probes'\nwording should be re-audited/strengthened now that the corpus is larger\n(the golden-queries.md draft-iterate path), or (b) investigate whether\nmergeAndRerank's diversity logic should weight vector-rank more heavily\nrelative to lexical/graph legs as corpus size grows. Not blocking the PR\nthat surfaced it -- captured for separate follow-up."
+}

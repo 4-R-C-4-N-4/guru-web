@@ -1,0 +1,52 @@
+{
+  "work": "tarot-of-the-bohemians",
+  "tradition": "western_esoteric",
+  "corpus_version": "58",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Is there a tarot card showing a crowned conqueror riding a cube-shaped chariot under a star-covered canopy on four pillars, holding a sceptre topped by a globe, square, and triangle, drawn by one white and one black sphinx yoked together?",
+      "provenanceChunkIds": ["western_esoteric.tarot-of-the-bohemians.048"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the Chariot card's own description (coronet, cuirass, Urim/Thummim crescents, winged globe, lingam) into a simpler visual summary, keeping only unavoidable card-specific nouns."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does one tarot card depict a young man suspended upside-down by one foot from a gallows resting on two pruned trees, his hands bound behind him, arms folded into a downward-pointing triangle beneath his head, legs crossed to form a cross?",
+      "provenanceChunkIds": ["western_esoteric.tarot-of-the-bohemians.053"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the Hanged Man's own description; kept the gallows/inverted-hanging image since it's the card's defining visual and hard to describe otherwise, but dropped the Hebrew-letter and zodiac-sign apparatus around it."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "In this book's reading of the tarot's Devil card, is a serpent biting its own tail explained as the classic image for an inescapable, circling fate that bounds how freely a person's will can act within a fixed span of time?",
+      "provenanceChunkIds": ["western_esoteric.tarot-of-the-bohemians.058"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "First draft ('does this book explain...') was too diffuse and missed top-15 on work survival. Strengthened by naming the Devil card directly (the card's own title, not lifted body phrasing) while still paraphrasing the ouroboros/Fatality passage itself."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does this book argue that the tarot is really the lost Egyptian Book of Thoth, preserved by gypsy fortune-tellers as a deck of playing cards, where each of the 22 major cards is tied to one of the twenty-two Hebrew letters as well as to a number and a symbol?",
+      "provenanceChunkIds": ["western_esoteric.tarot-of-the-bohemians.027"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "First draft avoided the title 'Book of Thoth' entirely and missed top-15 on work survival. Strengthened by naming it directly (the book's own central thesis and title, not lifted body phrasing) and adding the gypsy-transmission detail as a second anchor."
+    },
+    {
+      "kind": "relevance",
+      "query": "How do different esoteric systems argue that numbers themselves carry fixed cosmic or moral meaning, independent of what shape or object they're attached to, so that the number of a thing reveals a deeper structural truth about it?",
+      "provenanceChunkIds": ["western_esoteric.tarot-of-the-bohemians.034"],
+      "note": "The book's Wronski-derived claim that the numerical order of the cards is the 'most settled element' giving 'unvarying results' — a numerology theme other traditions' own number-mysticism should also surface for."
+    },
+    {
+      "kind": "relevance",
+      "query": "How do various traditions map a set of higher symbolic or divine figures onto the planets, and a set of lesser figures onto the zodiac signs and their subdivisions, so that the whole heavens become a key to reading fate or meaning below?",
+      "provenanceChunkIds": ["western_esoteric.tarot-of-the-bohemians.084"],
+      "note": "The major-arcana-as-planets / minor-arcana-as-zodiac-signs-and-decans correspondence scheme as an instance of astrological-correspondence thinking other traditions' own astrology should also answer."
+    }
+  ]
+}

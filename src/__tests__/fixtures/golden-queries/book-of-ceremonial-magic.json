@@ -1,0 +1,52 @@
+{
+  "work": "book-of-ceremonial-magic",
+  "tradition": "western_esoteric",
+  "corpus_version": "58",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Is there a grimoire recipe for a candle made from the dried, greased hand of a hanged criminal, cured with salt and preservatives over about two weeks, which — once lit — paralyzes anyone who sees it so a burglar can work undisturbed, along with a rival version and an ointment said to neutralize its effect on a doorway?",
+      "provenanceChunkIds": ["western_esoteric.book-of-ceremonial-magic.160"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Chunk 160's own heading names it the Hand of Glory; kept that as a fair proper-noun anchor but paraphrased the preparation steps (herbs, drying method, counter-unguent ingredients) rather than quoting them."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does one grimoire's pact-making procedure call for cutting a rod from a wild, never-fruited hazel tree at the exact moment of sunrise the night before, then using a named stone alongside two blessed candles to trace a triangle at an isolated or ruined site for the ritual?",
+      "provenanceChunkIds": ["western_esoteric.book-of-ceremonial-magic.134"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the Grand Grimoire's hazel-rod/sunrise/triangle procedure; dropped the stone's specific name from the query itself to test whether the description alone still anchors retrieval to this chunk."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does the author state that his real purpose in compiling this survey of magical ritual is to demonstrate how useless Ceremonial Magic actually is when practiced from books, and to show that the traditional split between 'White' and 'Black' Magic doesn't hold up under scrutiny?",
+      "provenanceChunkIds": ["western_esoteric.book-of-ceremonial-magic.006"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the editorial 'futility of Ceremonial Magic' / rejection of the White-Black distinction that chunk 006 states as the book's own purpose, avoiding the chunk's exact wording."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Is there a divination method where an operator prepares a cleansed room with a water-filled glass vessel and wax candles, then has a young, well-behaved boy gaze into the water while a conjuration is spoken near his ear, with the child expected to describe what appears and the spirit asked to answer aloud or write its reply?",
+      "provenanceChunkIds": ["western_esoteric.book-of-ceremonial-magic.163", "western_esoteric.book-of-ceremonial-magic.164"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the Invocation of Uriel's hydromancy setup (phial of water, child scryer, whispered conjuration) without naming Uriel, to test recall on procedure alone rather than the named spirit."
+    },
+    {
+      "kind": "relevance",
+      "query": "In magical or religious ritual, why must certain tools or writing materials be prepared under strict purity conditions from scratch — an untouched animal slain and skinned by the practitioner's own hand, for instance — rather than simply obtained ready-made from an outside craftsman?",
+      "provenanceChunkIds": ["western_esoteric.book-of-ceremonial-magic.097"],
+      "note": "The 'virgin parchment' requirement (self-slaughtered, never-bred animal, self-prepared skin) as an instance of a broader ritual-purity-of-materials theme other traditions' own consecration or sacrifice doctrines should also surface for."
+    },
+    {
+      "kind": "relevance",
+      "query": "How do different mystical traditions describe reaching union with the divine by moving past discursive thought altogether, grounding that union in the claim that one's own deepest being was never actually separate from God's?",
+      "provenanceChunkIds": ["western_esoteric.book-of-ceremonial-magic.009"],
+      "note": "The Introduction's reading of the Cloud of Unknowing (identity of 'our essential nature with the Divine Nature') as a unitive-mysticism theme other traditions' own contemplative doctrines should also answer."
+    }
+  ]
+}
