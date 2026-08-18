@@ -113,12 +113,18 @@ export async function retrieve(
   // reaches — but at the default 0.3 those chunks lose top-K slots to vector
   // hubs. Swept without a redeploy; default is GRAPH_WEIGHT until measured.
   const graphWeight = Number(process.env.RETRIEVAL_GRAPH_WEIGHT) || GRAPH_WEIGHT;
+  // Lexical gate-cap (todo:8bc7698b): default on at LEX_GATE_CAP. Kill-switch
+  // RETRIEVAL_LEX_GATE_CAP=off disables the gate; a number retunes it without a
+  // redeploy. (Number('off') is NaN → falls back, so 'off' is handled first.)
+  const gateCapEnv = process.env.RETRIEVAL_LEX_GATE_CAP;
+  const lexGateCap = gateCapEnv === 'off' ? null : (Number(gateCapEnv) || LEX_GATE_CAP);
 
   return mergeAndRerank([...vectorResults, ...summaryResults], graphResults, topK, {
     traditionRarity,
     lexicalResults,
     lexicalWeight,
     graphWeight,
+    lexGateCap,
     // A pinned study work is single-tradition: the cap would truncate results
     // to MAX_PER_TRADITION regardless of topK.
     perTraditionCap: studyWorkId ? 0 : undefined,
@@ -365,6 +371,20 @@ const GRAPH_WEIGHT = 0.3;
 const LEXICAL_WEIGHT = 1.0; // tuned default (todo:3fc23534): swept 0→2.5, peak mean p@10 0.36 at 1.0 (baseline 0.21); env-overridable
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
+// Lexical gate-cap (todo:8bc7698b). The normalised lexical term is capped at
+// this value ONLY for a chunk with no vector support (similarity 0). A lexical
+// hit that the vector leg never corroborated therefore cannot outscore a
+// genuine vector answer. This fixes the corpus-growth flooding regression:
+// long natural-language paraphrase queries make the OR-semantics FTS leg match
+// many wordy off-target chunks (all sim=0), whose normalised lexical term (up
+// to LEXICAL_WEIGHT×1.0) otherwise buried the correct vector answer — every
+// chunk in the 5 regressed golden top-15s had sim=0. Vector-corroborated
+// lexical hits are never capped, and genuine entity-query rescues (also sim=0
+// but at strong lexical rank, e.g. isa-upanishad) still clear the cap. Swept
+// over the full golden set: 0.49 is the peak that restores all 5 regressed
+// probes (higher re-floods, lower drops marginal rescues). Default on;
+// RETRIEVAL_LEX_GATE_CAP=off disables, a number retunes without a redeploy.
+const LEX_GATE_CAP = 0.49;
 // 'summary' starts at inferred's weight deliberately (unswept — generated
 // apparatus competes on similarity, not tier); retune independently of
 // 'inferred' when the study-mode sweep lands.
@@ -405,12 +425,21 @@ export function mergeAndRerank(
     graphWeight?: number;
     /** Override MAX_PER_TRADITION (0 disables the cap — study mode). */
     perTraditionCap?: number;
+    /**
+     * Cap on the normalised lexical term for vector-unsupported (sim 0) hits
+     * (todo:8bc7698b). Defaults to LEX_GATE_CAP; pass null to disable the gate
+     * (RETRIEVAL_LEX_GATE_CAP=off from retrieve()). Positive vector similarity
+     * is never capped.
+     */
+    lexGateCap?: number | null;
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
   const lexicalResults = opts.lexicalResults ?? [];
   const lexicalWeight = opts.lexicalWeight ?? LEXICAL_WEIGHT;
   const graphWeight = opts.graphWeight ?? GRAPH_WEIGHT;
+  // Default on: only an explicit `null` (env kill-switch) disables the gate.
+  const lexGateCap = opts.lexGateCap === undefined ? LEX_GATE_CAP : opts.lexGateCap;
 
   // Vector leg. Vector search has no tier signal, so each hit is tagged
   // 'inferred' explicitly (not left undefined and silently floored). Its
@@ -510,7 +539,11 @@ export function mergeAndRerank(
       : DIVERSITY_BOOST / (traditionCounts.get(entry.chunk.tradition) ?? 1);
     // Normalised lexical term — 0 when there are no lexical hits (leg off), so
     // the score reduces exactly to the vector+graph+diversity sum.
-    const lexTerm = maxLex > 0 ? lexicalWeight * (entry.lexScore / maxLex) : 0;
+    let lexTerm = maxLex > 0 ? lexicalWeight * (entry.lexScore / maxLex) : 0;
+    // Gate-cap (todo:8bc7698b): a lexical-only hit (no vector support) can't
+    // outscore a genuine vector answer — kills long-paraphrase FTS flooding
+    // while leaving vector-corroborated hits and strong entity rescues intact.
+    if (lexGateCap != null && entry.similarity <= 0) lexTerm = Math.min(lexTerm, lexGateCap);
     const score = VECTOR_WEIGHT * entry.similarity + graphWeight * graphTerm + lexTerm + diversity;
     return { entry, score, tierW, diversity, lexTerm };
   });
@@ -520,7 +553,7 @@ export function mergeAndRerank(
   // Opt-in score trace (set RETRIEVAL_TRACE=1). Off by default — no prod cost.
   if (process.env.RETRIEVAL_TRACE) {
     console.log(
-      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${graphWeight} lex_w=${lexicalWeight} cap=${MAX_PER_TRADITION}):`,
+      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${graphWeight} lex_w=${lexicalWeight} lex_gate_cap=${lexGateCap ?? 'off'} cap=${MAX_PER_TRADITION}):`,
     );
     for (const s of scored.slice(0, topK)) {
       console.log(
