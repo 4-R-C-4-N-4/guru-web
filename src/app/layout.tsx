@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { clerkAppearance } from '@/styles/clerk-appearance';
 import { tokensToCssVars } from '@/styles/tokens';
 import { TAILNET_HOST } from '@/lib/host';
-import { SITE_URL } from '@/lib/site';
+import { SITE_URL, SOCIAL_METADATA } from '@/lib/site';
 import './globals.css';
 
 const display = Cormorant_Garamond({
@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   title: 'Guru — Cross-Tradition Esoteric Research',
   description:
     'Discover the hidden threads between Gnostic aeons, Kabbalistic sefirot, Neoplatonic emanations, and Vedantic consciousness — traced to their sources, every claim cited.',
+  // Social cards (todo:7cf30162) — see SOCIAL_METADATA in @/lib/site. Before
+  // this, no page emitted og:image or a twitter card, so shared links rendered
+  // a blank placeholder.
+  ...SOCIAL_METADATA,
 };
 
 export default async function RootLayout({
