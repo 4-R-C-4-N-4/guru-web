@@ -38,7 +38,7 @@ export default function GlobalError({
           padding: '2rem',
         }}
       >
-        <p style={{ color: tokens.text.error }}>
+        <p role="alert" style={{ color: tokens.text.error }}>
           Something went wrong loading this page.
         </p>
         {error.digest && (

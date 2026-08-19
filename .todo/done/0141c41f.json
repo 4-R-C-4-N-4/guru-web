@@ -27,7 +27,7 @@
     "resolved_by": "unknown",
     "test_file": "src/__tests__/global-error.test.tsx",
     "test_function": "renders a visible fallback with a retry action instead of a blank page",
-    "note": "Added src/app/global-error.tsx as the App Router's outermost error boundary — an uncaught client-side exception now shows a visible fallback + retry instead of unmounting to a blank page. Does NOT fix the underlying trigger (Clerk Turnstile captcha_oauth_bypass excluding oauth_google) — that requires a Clerk dashboard change, out of scope for a code PR. Filed as a follow-up."
+    "note": "Added src/app/global-error.tsx as the App Router's outermost error boundary — defense-in-depth so an uncaught client-side RENDER exception shows a visible fallback + retry instead of unmounting to a blank page. Note this is a React error boundary: it only catches errors thrown during render, so it is NOT guaranteed to catch the original Turnstile failure mode (async cross-origin pageerror + 401 fetch + Clerk's own SignUp DOM wipe). Does NOT fix the underlying trigger — the actual fix was disabling Clerk Bot sign-up protection in the dashboard (verified live: captcha_enabled=false). Boundary remains a general safety net regardless."
   },
   "analysis": [
     {
