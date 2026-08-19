@@ -21,6 +21,7 @@ import {
 } from '@/lib/reader';
 import { pathToChunkId, chunkIdToPath, askAboutHref } from '@/lib/read-path';
 import { chunkMetaDescription } from '@/lib/seo';
+import { OG_IMAGE } from '@/lib/site';
 import { tokens, type Tier } from '@/styles/tokens';
 
 // generateMetadata and the page body both need chunk + tags + related (the
@@ -52,7 +53,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label} — Guru`,
     description: chunkMetaDescription(chunk, tags, related),
-    openGraph: { type: 'article', title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label}` },
+    // images re-attached explicitly: a page-level openGraph shallow-REPLACES
+    // the root's (todo:7cf30162), so without this the card image is dropped.
+    openGraph: {
+      type: 'article',
+      title: `${chunk.section ?? `Passage ${chunk.pos}`} — ${chunk.text_label}`,
+      images: [OG_IMAGE],
+    },
     // Rebuilt from the chunk's own id (not the request params) — the page
     // 404s on any tradition/text mismatch, so this is the one true URL.
     alternates: { canonical: chunkIdToPath(chunk.id) ?? undefined },
