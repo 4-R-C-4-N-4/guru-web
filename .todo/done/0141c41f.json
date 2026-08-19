@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-08-19T12:27:45.070Z",
-  "updated_at": "2026-08-19T12:54:40.947Z",
+  "updated_at": "2026-08-19T12:56:28.324Z",
   "files": [
     {
       "path": "src/app/sign-up/[[...sign-up]]/page.tsx"
@@ -35,6 +35,13 @@
       "author": "Backend Engineer",
       "type": "conclusion",
       "content": "User disabled Bot sign-up protection entirely in the Clerk dashboard (broader than the suggested oauth_google-only bypass). Verified live: clerk.guru-ai.org/v1/environment now shows captcha_enabled=false, captcha_provider=null. Re-ran the WebKit repro against prod — clicking 'Continue with Google' on /sign-up now navigates straight to accounts.google.com's real sign-in screen with no Turnstile iframe, no cross-origin pageerror, and no form wipe. Root cause confirmed resolved end-to-end. global-error.tsx boundary from this PR remains as defense-in-depth regardless.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-08-19T12:56:28.323Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Correction to prior analysis entry: the 'CAPTCHA OAuth bypass' dashboard control I described does not exist. Clerk's dashboard only exposes a single global Bot sign-up protection toggle (confirmed via Clerk's own docs) -- the captcha_oauth_bypass field seen in the live API response is real but not dashboard-configurable. User disabled protection globally to unblock the Safari bug, and is not thrilled about the broader-than-needed scope. Left open as owner's call: re-enable globally, build a custom sign-up flow for granular control, or ask Clerk support about captcha_oauth_bypass. PR body corrected to match.",
       "confidence": "high"
     }
   ]
