@@ -1,0 +1,48 @@
+{
+  "id": "0141c41f",
+  "type": "bug",
+  "state": "done",
+  "summary": "Sign-up form goes blank on Safari/Mac after clicking Continue with Google — Clerk Turnstile bot-check throws and wipes form",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-19T12:27:45.070Z",
+  "updated_at": "2026-08-19T12:56:28.324Z",
+  "files": [
+    {
+      "path": "src/app/sign-up/[[...sign-up]]/page.tsx"
+    }
+  ],
+  "tags": [
+    "clerk",
+    "safari",
+    "turnstile",
+    "sign-up",
+    "auth"
+  ],
+  "description": "Reported by a Mac Safari user: clicking Begin -> /sign-up appears blank.\n\nROOT CAUSE (confirmed live against prod, guru-ai.org, via a real WebKit repro):\nClerk Bot Protection is enabled on this instance (clerk.guru-ai.org/v1/environment: captcha_enabled=true, captcha_provider=turnstile, captcha_widget_type=smart, captcha_oauth_bypass=[] i.e. OAuth is NOT exempt). Clicking 'Continue with Google' on /sign-up triggers an embedded Cloudflare Turnstile challenge that:\n  1. opens an iframe to challenges.cloudflare.com\n  2. throws a same-origin JS error ('...challenges.cloudflare.com from accessing a frame with origin https://guru-ai.org. Protocols, domains, and ports must match.')\n  3. the challenge-verification request 401s\n  4. the SignUp form's DOM content (email field, password field, Google button) disappears afterward, leaving only the card header -- this is what reads as 'blank page'\n\nNo src/app/error.tsx or global-error.tsx exists anywhere in the tree, so nothing catches this and shows a retry state.\n\nTurnstile's smart/managed mode is known to have elevated failure rates specifically under Safari privacy features (ITP, iCloud Private Relay) vs Chrome -- explains why this is Safari-specific in the field even though it also reproduces on generic WebKit.\n\nSECONDARY, independent issue also found live: accounts.guru-ai.org (Clerk's Account Portal) currently returns HTTP 403 from Cloudflare with cf-mitigated: challenge on every request -- unrelated to the above but a real broken piece of the auth infra.\n\nSUGGESTED FIX: in Clerk dashboard, add oauth_google to the CAPTCHA OAuth bypass list (Google's own OAuth already does bot verification, so gating it behind Turnstile too is redundant and is what's failing). Also add src/app/global-error.tsx as a general safety net regardless of root cause.",
+  "resolution": {
+    "commit": "400cbb1b420425bee9fe60b294865e7aa336dab4",
+    "resolved_at": "2026-08-19T12:30:50.558Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/global-error.test.tsx",
+    "test_function": "renders a visible fallback with a retry action instead of a blank page",
+    "note": "Added src/app/global-error.tsx as the App Router's outermost error boundary — defense-in-depth so an uncaught client-side RENDER exception shows a visible fallback + retry instead of unmounting to a blank page. Note this is a React error boundary: it only catches errors thrown during render, so it is NOT guaranteed to catch the original Turnstile failure mode (async cross-origin pageerror + 401 fetch + Clerk's own SignUp DOM wipe). Does NOT fix the underlying trigger — the actual fix was disabling Clerk Bot sign-up protection in the dashboard (verified live: captcha_enabled=false). Boundary remains a general safety net regardless."
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-08-19T12:54:40.947Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "User disabled Bot sign-up protection entirely in the Clerk dashboard (broader than the suggested oauth_google-only bypass). Verified live: clerk.guru-ai.org/v1/environment now shows captcha_enabled=false, captcha_provider=null. Re-ran the WebKit repro against prod — clicking 'Continue with Google' on /sign-up now navigates straight to accounts.google.com's real sign-in screen with no Turnstile iframe, no cross-origin pageerror, and no form wipe. Root cause confirmed resolved end-to-end. global-error.tsx boundary from this PR remains as defense-in-depth regardless.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-08-19T12:56:28.323Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Correction to prior analysis entry: the 'CAPTCHA OAuth bypass' dashboard control I described does not exist. Clerk's dashboard only exposes a single global Bot sign-up protection toggle (confirmed via Clerk's own docs) -- the captcha_oauth_bypass field seen in the live API response is real but not dashboard-configurable. User disabled protection globally to unblock the Safari bug, and is not thrilled about the broader-than-needed scope. Left open as owner's call: re-enable globally, build a custom sign-up flow for granular control, or ask Clerk support about captcha_oauth_bypass. PR body corrected to match.",
+      "confidence": "high"
+    }
+  ]
+}
