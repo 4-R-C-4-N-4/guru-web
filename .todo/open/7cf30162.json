@@ -1,0 +1,24 @@
+{
+  "id": "7cf30162",
+  "type": "bug",
+  "state": "open",
+  "summary": "Social preview image (og:image) blank on X/socials — no og:image or twitter:card tags on any guru-ai.org page",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-19T13:17:36.617Z",
+  "updated_at": "2026-08-19T13:17:50.587Z",
+  "files": [
+    {
+      "path": "src/app/layout.tsx"
+    }
+  ],
+  "tags": [
+    "seo",
+    "opengraph",
+    "social",
+    "metadata",
+    "twitter-card"
+  ],
+  "description": "Reported by owner: sharing a guru-ai.org chapter link on X shows a card with the\ncorrect title + description but a BLANK placeholder image (generic card icon).\nSee the Kybalion Ch IX share on @lookslikeprimes, 2026-08-19.\n\nROOT CAUSE (confirmed live against prod as Twitterbot):\nNo page on the site emits an og:image, and there is no twitter:card tag anywhere.\n- `curl -A Twitterbot https://guru-ai.org` returns ONLY <meta name=\"description\"> —\n  zero og:* and zero twitter:* tags.\n- Chapter route src/app/read/[tradition]/[textId]/[n]/page.tsx sets\n  openGraph:{ type, title } with NO `images` field. That is why X still renders\n  title/description but leaves the image slot blank.\n- No `openGraph.images` anywhere in src/app; no `twitter` block anywhere.\n- No public/ directory exists (no static asset to point at); no dynamic\n  opengraph-image.tsx / next/og route either.\n\nTwo separate deficiencies, both needed for a good card:\n1. Missing og:image  -> blank image slot (the reported symptom).\n2. Missing twitter:card=summary_large_image -> even once an image exists, X uses\n   the small square \"summary\" layout instead of the large banner card.\n\nPROPOSED FIX (compose A now, layer B later):\nA. Quick / global floor (~15 min): add a static public/og.png (1200x630) plus a\n   default openGraph.images + twitter { card:'summary_large_image', ... } block to\n   the root metadata in src/app/layout.tsx. Every page inherits it, turning every\n   shared link from blank-placeholder into a real card.\nB. On-brand / per-page (dynamic): add opengraph-image.tsx on the read routes using\n   next/og ImageResponse to render chapter title + tradition + a procedural motif\n   per URL. Stronger for a research site where each shared link is a different\n   passage. More work; do after A.\n\nVERIFY: re-fetch as Twitterbot and confirm og:image + twitter:card present; run the\nURL through X's Card Validator / a real share once deployed. metadataBase is already\nset in root layout so image URLs resolve absolute — good."
+}
