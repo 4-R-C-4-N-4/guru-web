@@ -1,0 +1,52 @@
+{
+  "work": "psychic-self-defence",
+  "tradition": "western_esoteric",
+  "corpus_version": "58",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Does the author advise checking a suspected victim's neck, forearms, ear-lobes, toes, and (for a woman) breasts with a magnifying glass for tiny, easily-missed puncture marks as a way to diagnose vampiric attack, and note that a person with vampire tendencies may develop unusually long, needle-sharp canine teeth?",
+      "provenanceChunkIds": ["western_esoteric.psychic-self-defence.036"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the diagnostic checklist and canine-teeth detail from chunk 036 without quoting its wording directly."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does this book warn that hair-combings, nail-clippings, and worn clothing hold a person's personal magnetism and should be promptly burned or, for garments, left exposed to sun and open air on bare ground for several days before disposal, to keep that magnetism from being misused against them?",
+      "provenanceChunkIds": ["western_esoteric.psychic-self-defence.109"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases chunk 109's disposal precautions (combings, nail-parings, cast-off clothing) into a plain summary rather than quoting the specific burn/sun-exposure instructions verbatim."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does this book compare the way an object can hold onto subtle psychic impressions to how a knife retains the smell of onions and taints whatever it later cuts, and warn that this is also why outdoor shoes shouldn't rest on a table or outdoor coats on a bed?",
+      "provenanceChunkIds": ["western_esoteric.psychic-self-defence.105"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Chunk 105's own analogy (knife retaining onion smell) is distinctive enough that paraphrasing it further would lose the anchor entirely, so it's kept close to the original image; the surrounding ritual-bath framing is dropped."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Does this book give a three-way diagnostic rule for ghostly disturbances — that a form both seen and heard means a genuine haunting with some real substance to it, seen-but-not-heard may just be a sensitive person picking up an image with no entity actually present, and heard-but-not-seen may be leftover astral disturbance from a past ritual rather than any presence at all?",
+      "provenanceChunkIds": ["western_esoteric.psychic-self-defence.040"],
+      "mustIncludeTraditions": ["western_esoteric"],
+      "mustIncludeWork": true,
+      "note": "Paraphrases the seen/heard diagnostic framework from chunk 040 (ectoplasm, 'reflecting ether', leftover astral forces) without borrowing its specific vocabulary."
+    },
+    {
+      "kind": "relevance",
+      "query": "How do different traditions use consecrated salt and water, blessed in the name of the divine, as a ritual weapon to banish evil influence or hostile spiritual forces from a place?",
+      "provenanceChunkIds": ["western_esoteric.psychic-self-defence.107", "western_esoteric.psychic-self-defence.108"],
+      "note": "The book's Catholic-derived salt-and-water consecration prayer as an instance of a broader purification/exorcism-by-blessed-substance theme other traditions' own rites should also surface for."
+    },
+    {
+      "kind": "relevance",
+      "query": "How do different traditions treat sustained fear and sleeplessness itself, rather than any physical harm, as the actual mechanism by which a spiritual or occult attack can break a victim down?",
+      "provenanceChunkIds": ["western_esoteric.psychic-self-defence.012"],
+      "note": "The book's account of nervous exhaustion and mental breakdown as the real damage of an astral attack among Europeans (rather than physical death) as an instance of fear-as-the-actual-weapon, a theme other traditions' own accounts of curses, possession, or hexing should also surface for."
+    }
+  ]
+}

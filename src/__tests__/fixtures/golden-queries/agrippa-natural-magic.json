@@ -7,14 +7,14 @@
   "queries": [
     {
       "kind": "recall-probe",
-      "query": "Agrippa's opening claim that reality is layered into three realms of matter, heavens, and pure mind, and that the magician draws power down from each level into the one beneath",
+      "query": "the doctrine that opens Agrippa's book: a universe ranked in three worlds — earthly, heavenly, and angelic — where each lower world is ruled by the one above and takes its power from it, so the magician climbs through them to gather hidden powers from the source",
       "provenanceChunkIds": [
         "renaissance_hermeticism.agrippa-natural-magic-ch-01.001",
         "renaissance_hermeticism.agrippa-natural-magic-ch-02.001"
       ],
       "mustIncludeTraditions": ["renaissance_hermeticism"],
       "mustIncludeWork": true,
-      "note": "The three-fold world of Book I ch. 1-2; 'Elementary, Celestial and Intellectual' and 'collect virtues' paraphrased into plainer words; 'Agrippa' kept as the author any reader knows."
+      "note": "The three-fold world of Book I ch. 1-2; 'Elementary, Celestial and Intellectual' and 'collect virtues' paraphrased into plainer words; 'Agrippa' kept as the author any reader knows. Reworded (todo:8bc7698b, iterate-honestly rule): the first draft ('reality is layered into three realms of matter, heavens, and pure mind... the magician draws power down from each level into the one beneath') inverted the text's actual direction — the passage has 'every inferior is governed by its superior, and receiveth the influence' and man ascending to draw virtues from above, not power pushed downward — and over-abstracted the cosmology into generic metaphysics, so its embedding drifted off the passage. After corpus v58 it missed top-15. Reworded without lifting the passage's own diction (its 'governed by / ascend / Wise men' become 'ruled by / climbs / magician', 'receiveth the influence' becomes 'takes its power'); the shared frame is only the paraphrased three-worlds nouns. Surfaces ch-01.001 at rank 5 on vector alone — not a lexical rescue the gate would cap."
     },
     {
       "kind": "recall-probe",

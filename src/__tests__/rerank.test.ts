@@ -196,3 +196,61 @@ describe('mergeAndRerank — lexical leg (todo:0c38a006)', () => {
     expect(out.find(c => c.id === 'both')!.source).toBe('vector'); // overlap keeps original leg/source
   });
 });
+
+// Lexical gate-cap (todo:8bc7698b). A lexical-only hit (no vector support,
+// similarity 0) has its normalised lexical term capped so it can't leapfrog a
+// genuine vector answer — the fix for corpus-growth FTS flooding. On by default;
+// vector-corroborated hits and the opts.lexGateCap=null kill-switch are exempt.
+describe('mergeAndRerank — lexical gate-cap (todo:8bc7698b)', () => {
+  it('caps a strong lexical-only hit so it cannot bury a strong vector answer (default on)', () => {
+    // Strong vector answer: distance 0.15 → similarity 0.85. Score ≈ 0.7×0.85 +
+    // 0.12 floor + 0.1 div = 0.815. A sim=0 lexical-only hit at full normLex
+    // would score LEXICAL_WEIGHT(2.0) + 0.12 + 0.1 = 2.22 and win (the bug);
+    // gated at 0.49 it scores 0.49 + 0.12 + 0.1 = 0.71 and loses.
+    const out = mergeAndRerank(
+      [chunk('vec', 'x', { source: 'vector', distance: 0.15 })],
+      [],
+      5,
+      { lexicalResults: [lex('flood', 'y', 0.2)], lexicalWeight: 2.0 },
+    );
+    expect(out[0].id).toBe('vec'); // vector answer survives the flood
+  });
+
+  it('does NOT cap a lexical hit that also has vector support', () => {
+    // 'both' has vector similarity (distance 0.5 → 0.5) AND a lexical hit; the
+    // gate only applies to sim=0 hits, so its full lexical term still counts and
+    // it beats an equal-similarity vector-only peer.
+    const out = mergeAndRerank(
+      [
+        chunk('both', 'x', { source: 'vector', distance: 0.5 }),
+        chunk('vonly', 'y', { source: 'vector', distance: 0.5 }),
+      ],
+      [],
+      5,
+      { lexicalResults: [lex('both', 'x', 0.2)], lexicalWeight: 2.0 },
+    );
+    expect(out[0].id).toBe('both');
+  });
+
+  it('a weak lexical-only rescue below the cap is unaffected (cap is a ceiling, not a floor)', () => {
+    // normLex 0.25 × weight 1.0 = 0.25 < 0.49 cap → passes through unchanged, so
+    // the entity-query rescue the lexical leg exists for still surfaces.
+    const out = mergeAndRerank([], [], 5, {
+      lexicalResults: [lex('hi', 'x', 0.20), lex('lo', 'y', 0.05)],
+      lexicalWeight: 1.0,
+    });
+    expect(out.map(c => c.id)).toEqual(['hi', 'lo']); // relative order preserved
+  });
+
+  it('opts.lexGateCap=null disables the gate (env kill-switch parity)', () => {
+    // With the gate off, the uncapped lexical flood wins again — proves the
+    // kill-switch restores exact prior behaviour.
+    const out = mergeAndRerank(
+      [chunk('vec', 'x', { source: 'vector', distance: 0.15 })],
+      [],
+      5,
+      { lexicalResults: [lex('flood', 'y', 0.2)], lexicalWeight: 2.0, lexGateCap: null },
+    );
+    expect(out[0].id).toBe('flood');
+  });
+});
