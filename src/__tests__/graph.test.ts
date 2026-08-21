@@ -175,17 +175,15 @@ describe('walkGraph — chunks-query param alignment', () => {
   beforeEach(() => vi.clearAllMocks());
 
   function mockUpToChunksQuery() {
-    // 1st call: 1-hop neighbour edges — return empty
-    mockQuery.mockResolvedValueOnce([]);
-    // 2nd call: EXPRESSES edges — one chunk expressing the seed concept
+    // 1st call: EXPRESSES edges — one chunk expressing the seed concept
     mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', target: 'concept-a', tier: 'verified' }]);
-    // 3rd call: chunks fetch — returned shape doesn't matter for slot assertions
+    // 2nd call: chunks fetch — returned shape doesn't matter for slot assertions
     mockQuery.mockResolvedValueOnce([]);
   }
 
   function chunksCall() {
-    // The chunks SELECT is the 3rd query call walkGraph makes.
-    return mockQuery.mock.calls[2];
+    // The chunks SELECT is the 2nd query call walkGraph makes.
+    return mockQuery.mock.calls[1];
   }
 
   it('with empty scope prefs, LIMIT binds to $2 and params are [chunkIds, limit]', async () => {
@@ -300,7 +298,7 @@ describe('walkGraph — chunks-query param alignment', () => {
   });
 });
 
-describe('walkGraph — reachability expansion (todo:d0b40ad4)', () => {
+describe('walkGraph — no reachability expansion (todo:23298aa9)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   const prefs: UserPreferences = {
@@ -313,35 +311,21 @@ describe('walkGraph — reachability expansion (todo:d0b40ad4)', () => {
     preferredVoice: 'scholar',
   };
 
-  it('reachability query uses concept→concept edge types only — EXPRESSES excluded', async () => {
-    mockQuery.mockResolvedValueOnce([{ source: 'concept-a', target: 'concept-b' }]); // hop 1
-    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);       // EXPRESSES
-    mockQuery.mockResolvedValueOnce([]);                                              // chunks
+  it('issues no concept→concept hop — the first query is the EXPRESSES lookup', async () => {
+    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', target: 'concept-a', tier: 'verified' }]); // EXPRESSES
+    mockQuery.mockResolvedValueOnce([]);                                                             // chunks
 
     await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
-    // First query is the reachability hop. It must not pull EXPRESSES
-    // (chunk→concept) edges into concept-graph traversal — that polluted
-    // `reachable` with chunk IDs that never match the EXPRESSES lookup.
+    // The old PARALLELS/DERIVES_FROM reachability hop could never match on
+    // this corpus (PARALLELS endpoints are chunk ids; DERIVES_FROM has zero
+    // rows) and was removed. walkGraph goes straight to the EXPRESSES lookup
+    // over the seed concepts, and makes exactly two queries in total.
     const [sql, params] = mockQuery.mock.calls[0];
-    expect(sql).not.toMatch(/EXPRESSES/);
-    expect(params).toEqual([['concept-a'], ['PARALLELS', 'DERIVES_FROM']]);
-  });
-
-  it('walks exactly one concept hop (HOP_DEPTH=1) before the EXPRESSES lookup', async () => {
-    mockQuery.mockResolvedValueOnce([{ source: 'concept-a', target: 'concept-b' }]); // hop 1 finds new neighbour
-    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', tier: 'verified' }]);       // EXPRESSES
-    mockQuery.mockResolvedValueOnce([]);                                              // chunks
-
-    await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
-
-    // Even though hop 1 discovered a brand-new neighbour (concept-b), the
-    // query that immediately follows is the EXPRESSES lookup — proving no
-    // second reachability hop ran. Bumping HOP_DEPTH must break this.
-    const secondSql = mockQuery.mock.calls[1][0];
-    expect(secondSql).toMatch(/edge_type = 'EXPRESSES'/);
-    // The 1-hop neighbour is included in the EXPRESSES lookup's reachable set.
-    expect(mockQuery.mock.calls[1][1]).toEqual([['concept-a', 'concept-b']]);
+    expect(sql).toMatch(/edge_type = 'EXPRESSES'/);
+    expect(sql).not.toMatch(/PARALLELS|DERIVES_FROM/);
+    expect(params).toEqual([['concept-a']]);
+    expect(mockQuery.mock.calls).toHaveLength(2);
   });
 });
 
@@ -359,7 +343,6 @@ describe('walkGraph — match-tier weight propagation (todo:522f389a)', () => {
   };
 
   it('stamps conceptMatchWeight = max match weight over the concepts a chunk expresses', async () => {
-    mockQuery.mockResolvedValueOnce([]); // hop: no neighbours
     // chunk-1 expresses concept-a (domain → 0.25) and concept-b (concept → 1.0).
     mockQuery.mockResolvedValueOnce([
       { source: 'chunk-1', target: 'concept-a', tier: 'inferred' },
@@ -377,18 +360,6 @@ describe('walkGraph — match-tier weight propagation (todo:522f389a)', () => {
     );
 
     expect(result[0].conceptMatchWeight).toBe(1.0); // max(0.25, 1.0)
-  });
-
-  it('hop-discovered concepts inherit the reaching seed match weight', async () => {
-    // seed concept-a matched at family tier (0.5); hop discovers concept-b.
-    mockQuery.mockResolvedValueOnce([{ source: 'concept-a', target: 'concept-b' }]);
-    // a chunk expresses only the hop-discovered concept-b → inherits 0.5.
-    mockQuery.mockResolvedValueOnce([{ source: 'chunk-1', target: 'concept-b', tier: 'proposed' }]);
-    mockQuery.mockResolvedValueOnce([{ id: 'chunk-1', tradition: 'vedanta' }]);
-
-    const result = await walkGraph([{ conceptId: 'concept-a', matchTier: 'family' }], prefs, 25);
-
-    expect(result[0].conceptMatchWeight).toBe(0.5);
   });
 });
 
