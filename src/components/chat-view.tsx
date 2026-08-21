@@ -39,7 +39,6 @@ interface CitationData {
   text: string;
   section: string;
   quote?: string;
-  tier: 'verified' | 'proposed' | 'inferred' | 'summary';
 }
 
 export interface Message {
@@ -761,8 +760,6 @@ export default function ChatView({ initialSessionId, initialMessages, initialMod
  *
  * Citations come pre-joined from the API (todo:89af833a) — /api/sessions/[id]
  * does a single batched lookup against corpus.chunks for the whole session.
- * Tier defaults to 'verified' on the API side because chunks_used persists
- * chunk IDs only, not the tier the chunk had at retrieval time.
  */
 export function recordsToMessages(records: ReadonlyArray<{
   query_text: string;

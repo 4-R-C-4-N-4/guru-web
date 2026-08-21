@@ -65,9 +65,8 @@ describe('buildStudyPrompt', () => {
     expect(p.indexOf('WORK DOSSIER')).toBeGreaterThanOrEqual(0);
     expect(p.indexOf('WORK DOSSIER')).toBeLessThan(p.indexOf('SOURCE PASSAGES'));
     expect(p).toMatch(/QUERY: who slays Tiamat$/);
-    // summary passages carry their tier symbol + label
-    expect(p).toContain('§');
-    expect(p).toContain('TIER: summary');
+    // summary passages are marked as generated apparatus, never as source text
+    expect(p).toContain('GENERATED SUMMARY');
   });
 
   it('missing dossier → no block, no placeholder (W0 finding 4)', () => {
@@ -91,12 +90,12 @@ describe('buildStudyPrompt', () => {
   });
 });
 
-describe('citations tier vocabulary (review finding)', () => {
-  it('parseCitationsBlock preserves TIER: summary instead of downgrading to inferred', async () => {
+describe('citations legacy tier segment (todo:0f48f68a)', () => {
+  it('parseCitationsBlock drops a stored TIER: summary segment without losing the entry', async () => {
     const { parseCitationsBlock } = await import('@/lib/citations');
     const raw = 'Answer body.\n\nCITATIONS:\n[mandaean | John-Book | Whole work | TIER: summary]';
     const { citations } = parseCitationsBlock(raw);
     expect(citations).toHaveLength(1);
-    expect(citations[0].tier).toBe('summary');
+    expect(citations[0]).toEqual({ tradition: 'mandaean', text: 'John-Book', section: 'Whole work' });
   });
 });

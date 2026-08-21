@@ -21,7 +21,7 @@ describe('chat-view CITATIONS handling', () => {
     const msg: Message = {
       role: 'assistant',
       text: RAW,
-      citations: [{ tradition: 'neoplatonism', text: 'Enneads', section: 'V.1', tier: 'verified' }],
+      citations: [{ tradition: 'neoplatonism', text: 'Enneads', section: 'V.1' }],
     };
     const html = renderToStaticMarkup(<ChatView initialMessages={[msg]} />);
 

@@ -6,9 +6,14 @@
  * essayist prompt):
  *
  *   CITATIONS:
- *   [TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred]
+ *   [TRADITION | TEXT | SECTION]
  *   "optional short quote"
  *   [ ...more entries... ]
+ *
+ * Entries may carry a legacy fourth `| TIER: …` segment (stored posts and
+ * shares emitted before todo:0f48f68a) — it is parsed past and dropped: the
+ * tier column recorded which tool wrote an edge, not confidence, so it is no
+ * longer surfaced anywhere.
  *
  * Three surfaces need to render that block as styled <Citation> cards rather
  * than raw markdown text:
@@ -23,13 +28,10 @@
  * so entries can be spread straight into <Citation {...c} />.
  */
 
-export type CitationTier = 'verified' | 'proposed' | 'inferred' | 'summary';
-
 export interface ParsedCitation {
   tradition: string;
   text: string;
   section: string;
-  tier: CitationTier;
   quote?: string;
 }
 
@@ -40,11 +42,6 @@ export interface ParsedCitation {
 // lowercase "citations:" line would let ordinary hand-authored prose
 // truncate the body.
 const MARKER_RE = /^[^\S\n]*CITATIONS:[^\n]*$/m;
-
-function normalizeTier(raw: string | undefined): CitationTier {
-  const v = (raw ?? '').replace(/^TIER:\s*/i, '').trim().toLowerCase();
-  return v === 'verified' || v === 'proposed' || v === 'inferred' || v === 'summary' ? v : 'inferred';
-}
 
 // A line whose first non-space char is a quote glyph is treated as the quote
 // for the preceding entry. Strip the surrounding straight/curly quotes.
@@ -101,7 +98,7 @@ export function parseCitationsBlock(raw: string): { body: string; citations: Par
     const m = matches[i];
     const parts = m[1].split('|').map(s => s.trim());
     if (parts.length < 3) continue; // need at least tradition, text, section
-    const [tradition, textName, section, tierRaw] = parts;
+    const [tradition, textName, section] = parts; // 4th (legacy TIER) segment dropped
     if (!tradition || !textName) continue;
 
     // Optional quote: a quote line in the gap before the next entry (or EOF).
@@ -114,7 +111,6 @@ export function parseCitationsBlock(raw: string): { body: string; citations: Par
       tradition,
       text: textName,
       section: section ?? '',
-      tier: normalizeTier(tierRaw),
       ...(quote ? { quote } : {}),
     });
   }

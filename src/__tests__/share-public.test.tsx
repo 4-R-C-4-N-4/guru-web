@@ -102,7 +102,7 @@ describe('share page', () => {
         query_text: 'What is the demiurge?',
         response_text: 'The craftsman of the cosmos.\n\nCITATIONS:\n[gnosticism | Apocryphon of John | II.5 | TIER: verified]',
         created_at: 't1',
-        citations: [{ id: 'c1', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' }],
+        citations: [{ id: 'c1', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78' }],
       }],
     });
     expect(html).toContain('On the Demiurge');          // heading from snapshot title

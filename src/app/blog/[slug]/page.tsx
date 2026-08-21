@@ -53,8 +53,8 @@ export default async function BlogPostPage(
   const parsed = post.chunks_used.length > 0 ? null : parseCitationsBlock(post.content);
   const bodyContent = parsed ? parsed.body : post.content;
   const sources = post.chunks_used.length > 0
-    ? post.chunks_used.map(s => ({ key: s.id, id: s.id as string | undefined, tradition: s.tradition, text: s.text_name, section: s.section, tier: s.tier, quote: undefined as string | undefined }))
-    : (parsed?.citations ?? []).map((c, i) => ({ key: `c${i}`, id: undefined as string | undefined, tradition: c.tradition, text: c.text, section: c.section, tier: c.tier, quote: c.quote }));
+    ? post.chunks_used.map(s => ({ key: s.id, id: s.id as string | undefined, tradition: s.tradition, text: s.text_name, section: s.section, quote: undefined as string | undefined }))
+    : (parsed?.citations ?? []).map((c, i) => ({ key: `c${i}`, id: undefined as string | undefined, tradition: c.tradition, text: c.text, section: c.section, quote: c.quote }));
 
   return (
     <main
@@ -140,7 +140,6 @@ export default async function BlogPostPage(
                 tradition={src.tradition}
                 text={src.text}
                 section={src.section}
-                tier={src.tier}
                 quote={src.quote}
               />
             ))}

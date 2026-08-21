@@ -24,7 +24,7 @@ describe('parseCitationsBlock', () => {
     expect(body).toBe(PROSE);
     expect(body).not.toContain('CITATIONS:');
     expect(citations).toEqual([
-      { tradition: 'neoplatonism', text: 'Enneads', section: 'V.1', tier: 'verified' },
+      { tradition: 'neoplatonism', text: 'Enneads', section: 'V.1' },
     ]);
   });
 
@@ -32,7 +32,6 @@ describe('parseCitationsBlock', () => {
     const raw = `${PROSE}\n\nCITATIONS:\n[neoplatonism | Enneads | V.1 | TIER: verified]\n[buddhism | Visuddhimagga | IX | TIER: proposed]\n[taoism | Tao Te Ching | 1 | TIER: inferred]`;
     const { citations } = parseCitationsBlock(raw);
     expect(citations.map(c => c.tradition)).toEqual(['neoplatonism', 'buddhism', 'taoism']);
-    expect(citations.map(c => c.tier)).toEqual(['verified', 'proposed', 'inferred']);
   });
 
   it('attaches an optional quote line to the preceding entry', () => {
@@ -49,10 +48,17 @@ describe('parseCitationsBlock', () => {
     expect(citations[0].quote).toBe('The name that can be named is not the enduring name.');
   });
 
-  it('normalizes tier casing and an unknown/missing tier falls back to inferred', () => {
+  it('drops the legacy fourth TIER segment and parses tierless entries alike (todo:0f48f68a)', () => {
+    // Stored posts/shares emitted before the de-tier carry `| TIER: …`; the
+    // current contract has three segments. Both parse to the same shape, and
+    // no tier field survives on any entry.
     const raw = `${PROSE}\n\nCITATIONS:\n[a | T1 | S1 | TIER: VERIFIED]\n[b | T2 | S2 | TIER: nonsense]\n[c | T3 | S3]`;
     const { citations } = parseCitationsBlock(raw);
-    expect(citations.map(c => c.tier)).toEqual(['verified', 'inferred', 'inferred']);
+    expect(citations).toEqual([
+      { tradition: 'a', text: 'T1', section: 'S1' },
+      { tradition: 'b', text: 'T2', section: 'S2' },
+      { tradition: 'c', text: 'T3', section: 'S3' },
+    ]);
   });
 
   it('skips malformed entry lines (too few fields or empty tradition/text)', () => {
@@ -75,7 +81,6 @@ describe('parseCitationsBlock', () => {
       tradition: 'neoplatonism',
       text: 'Select Works of Plotinus',
       section: 'Section 275',
-      tier: 'verified',
       quote: 'In its character as Life … the Source of plurality.',
     });
     expect(citations[1].tradition).toBe('jewish_mysticism');
@@ -105,7 +110,6 @@ describe('parseCitationsBlock', () => {
     expect(body).toBe(PROSE);
     expect(body).not.toContain('CITATIONS:');
     expect(citations.map(c => c.tradition)).toEqual(['neoplatonism', 'taoism', 'buddhism']);
-    expect(citations.map(c => c.tier)).toEqual(['verified', 'verified', 'proposed']);
     expect(citations[0].text).toBe('Select Works of Plotinus (trans. Thomas Taylor)');
     expect(citations[0].section).toBe('Section 203 (part 2)');
   });

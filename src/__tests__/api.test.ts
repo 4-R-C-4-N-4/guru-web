@@ -315,7 +315,7 @@ describe('GET /api/sessions/[id]', () => {
 
     const res = await sessionGET(req('GET', '/api/sessions/s1'), { params: Promise.resolve({ id: 's1' }) });
     expect(res.status).toBe(200);
-    const body = await res.json() as { messages: Array<{ chunks_used: string[]; citations: Array<{ tradition: string; text: string; section: string; tier: string }> }> };
+    const body = await res.json() as { messages: Array<{ chunks_used: string[]; citations: Array<{ tradition: string; text: string; section: string }> }> };
 
     // Single batched JOIN — chunks lookup ran exactly once across both messages.
     expect(mockQuery).toHaveBeenCalledTimes(2);
@@ -330,11 +330,11 @@ describe('GET /api/sessions/[id]', () => {
     // since the rehydrator was shared with the share-snapshot path
     // (todo:131dbb82) — additive, clients that don't need it ignore it.
     expect(body.messages[0]!.citations).toEqual([
-      { id: 'c.a.001', tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78',  tier: 'verified' },
-      { id: 'c.b.005', tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1', tier: 'verified' },
+      { id: 'c.a.001', tradition: 'gnosticism',   text: 'Gospel of Philip', section: '78' },
+      { id: 'c.b.005', tradition: 'neoplatonism', text: 'Enneads',          section: 'V.1' },
     ]);
     expect(body.messages[1]!.citations).toEqual([
-      { id: 'c.a.001', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
+      { id: 'c.a.001', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78' },
     ]);
   });
 
@@ -1008,8 +1008,8 @@ describe('POST /api/query', () => {
     const header = res.headers.get('X-Citations');
     expect(header).toBeTruthy();
     expect(JSON.parse(decodeURIComponent(header!))).toEqual([
-      { id: 'c1', tradition: 'neoplatonism', text: 'Enneads', section: 'V.1', tier: 'verified' },
-      { id: 'c2', tradition: 'taoism', text: 'Tao Te Ching', section: '1', tier: 'proposed' },
+      { id: 'c1', tradition: 'neoplatonism', text: 'Enneads', section: 'V.1' },
+      { id: 'c2', tradition: 'taoism', text: 'Tao Te Ching', section: '1' },
     ]);
     await res.text();
   });

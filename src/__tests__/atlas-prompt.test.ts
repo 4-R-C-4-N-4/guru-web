@@ -11,7 +11,7 @@ import { getAtlasSystemPrompt, buildAtlasPrompt } from '@/lib/prompt';
 import type { AtlasSnapshot, AtlasChunk } from '@/lib/atlas';
 
 const chunk = (id: string, tradition: string, text: string, body: string): AtlasChunk => ({
-  id, text_id: `${id}-text`, tradition, text_name: text, section: 'I.1', translator: null, tier: 'verified', body, token_count: 6,
+  id, text_id: `${id}-text`, tradition, text_name: text, section: 'I.1', translator: null, body, token_count: 6,
 });
 
 const SNAP: AtlasSnapshot = {
@@ -96,8 +96,9 @@ describe('buildAtlasPrompt', () => {
     expect(prompt).toContain('The Tao that can be named.');
     expect(prompt).toContain('Two primal spirits.'); // a contrast passage
     expect(prompt).toMatch(/neoplatonism \| Enneads \| I\.1/);
-    // Tier is explicit (copyable into CITATIONS), not just a glyph.
-    expect(prompt).toMatch(/\| Enneads \| I\.1 \| TIER: verified/);
+    // No TIER stamp — the tier column is write-tool provenance, not
+    // confidence, and is no longer asserted anywhere (todo:0f48f68a).
+    expect(prompt).not.toContain('TIER:');
   });
   it('renders the document-knowledge layer line in FACTS', () => {
     expect(prompt).toMatch(/Document-knowledge layer: 52 works, 52 with curated dossiers, 214 section summaries \+ 52 whole-work summaries/);

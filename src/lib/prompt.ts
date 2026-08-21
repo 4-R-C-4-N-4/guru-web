@@ -75,7 +75,7 @@ Rules:
 
 Citation format (after your main response):
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
+[TRADITION | TEXT | SECTION]
 "optional short quote"`;
 
 export function getSystemPrompt(voice: VoiceSlug): string {
@@ -143,7 +143,7 @@ DEK: <one sentence that frames the parallel>
 <the essay, in markdown prose>
 
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
+[TRADITION | TEXT | SECTION]
 (one line per source passage you actually drew on)`;
 
 // getBlogSystemPrompt composes the blog overlay + blog rules. No voice
@@ -157,21 +157,6 @@ export function getBlogSystemPrompt(): string {
 // Chunk formatting
 // ---------------------------------------------------------------------------
 
-function tierSymbol(tier?: string): string {
-  switch (tier) {
-    case "verified":
-      return "◆";
-    case "proposed":
-      return "◇";
-    case "inferred":
-      return "○";
-    case "summary":
-      return "§"; // generated study apparatus, not a scraped source (W0 decision)
-    default:
-      return "○";
-  }
-}
-
 // Structural subset of the fields formatChunk reads — satisfied by both
 // RetrievedChunk (query/blog paths) and AtlasChunk (atlas path), so the exact
 // SOURCE PASSAGES formatting is shared by all three.
@@ -181,17 +166,18 @@ interface FormattableChunk {
   translator: string | null;
   section: string;
   body: string;
-  tier?: string;
+  source?: string;
   pinned?: boolean;
 }
 
 function formatChunk(chunk: FormattableChunk, index: number): string {
-  // Tier is stated explicitly (TIER: verified), not only as the ◆/◇/○ glyph:
-  // the glyph has no legend in the prompt, so a model emitting the CITATIONS
-  // block (whose format ends `| TIER: …`) would otherwise have to *infer* each
-  // passage's tier rather than copy it. The header now mirrors the citation
-  // format so the tier is read, not guessed.
-  const tier = chunk.tier ?? "inferred";
+  // The old `TIER: verified/proposed/…` stamp is gone (todo:0f48f68a): the
+  // tier column records which tool wrote an edge, not confidence, so echoing
+  // it into citations asserted a judgment nobody made. The one distinction
+  // that IS true and load-bearing survives on its own channel: summary-leg
+  // rows are generated study apparatus, not scraped source text, and are
+  // marked so the model never presents them as primary-text quotations.
+  const summaryMark = chunk.source === "summary" ? ` | GENERATED SUMMARY — apparatus, not a source text` : "";
   const translator = chunk.translator ? ` (trans. ${chunk.translator})` : "";
   // Pinned = the passage the user was reading when they clicked "Ask guru
   // about this passage" (todo:76219c57) — flag it so the model treats it as
@@ -200,7 +186,7 @@ function formatChunk(chunk: FormattableChunk, index: number): string {
     ? ` | THE PASSAGE THE USER IS READING — anchor your answer here`
     : "";
   return (
-    `[${index + 1}] ${tierSymbol(tier)} ${chunk.tradition} | ${chunk.text_name}${translator} | ${chunk.section} | TIER: ${tier}${pinnedMark}\n` +
+    `[${index + 1}] ${chunk.tradition} | ${chunk.text_name}${translator} | ${chunk.section}${summaryMark}${pinnedMark}\n` +
     `${chunk.body}`
   );
 }
@@ -472,7 +458,7 @@ DEK: <one sentence framing what this edition of the atlas shows>
 <the essay, in markdown prose>
 
 CITATIONS:
-[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]
+[TRADITION | TEXT | SECTION]
 (one line per SOURCE PASSAGE you actually drew on)`;
 
 export function getAtlasSystemPrompt(): string {

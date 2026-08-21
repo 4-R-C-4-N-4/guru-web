@@ -10,7 +10,7 @@
  * denormalized onto the session_shares row at share time —
  *
  *   - messages: ordered turns with citations rehydrated to rich objects
- *     ({id,tradition,text,section,tier}) NOW, while the chunk ids still
+ *     ({id,tradition,text,section}) NOW, while the chunk ids still
  *     resolve. queries.chunks_used holds bare ids that go stale when the
  *     corpus schema is dropped and re-imported; the blog (013) established
  *     this snapshot-rich-objects pattern.

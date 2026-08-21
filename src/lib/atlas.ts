@@ -54,7 +54,6 @@ export interface AtlasChunk {
   text_name: string;
   section: string;
   translator: string | null;
-  tier: string;
   body: string;
   token_count: number;
 }
@@ -467,7 +466,7 @@ async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasP
     `SELECT ${CHUNK_COLS('cs')},
             ct.id AS b_id, ct.text_id AS b_text_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
             ct.section AS b_section, ct.translator AS b_translator, ct.body AS b_body,
-            ct.token_count AS b_token_count, e.tier AS edge_tier
+            ct.token_count AS b_token_count
      FROM corpus.edges e
      JOIN corpus.chunks cs ON cs.id = e.source
      JOIN corpus.chunks ct ON ct.id = e.target
@@ -479,13 +478,13 @@ async function exemplarsForPair(a: string, b: string, k: number): Promise<AtlasP
     [a, b, k],
   );
   return rows.map(r => ({
-    a: chunkFrom(r, '', String(r.edge_tier)),
-    b: chunkFrom(r, 'b_', String(r.edge_tier)),
+    a: chunkFrom(r, ''),
+    b: chunkFrom(r, 'b_'),
   }));
 }
 
 /** Build an AtlasChunk from a prefixed result row. */
-function chunkFrom(r: Record<string, unknown>, prefix: string, tier: string): AtlasChunk {
+function chunkFrom(r: Record<string, unknown>, prefix: string): AtlasChunk {
   return {
     id: String(r[`${prefix}id`]),
     text_id: String(r[`${prefix}text_id`]),
@@ -493,7 +492,6 @@ function chunkFrom(r: Record<string, unknown>, prefix: string, tier: string): At
     text_name: String(r[`${prefix}text_name`]),
     section: String(r[`${prefix}section`]),
     translator: (r[`${prefix}translator`] as string | null) ?? null,
-    tier,
     body: String(r[`${prefix}body`]),
     token_count: Number(r[`${prefix}token_count`] ?? 0),
   };
@@ -510,7 +508,7 @@ async function contrasts(limit = 8): Promise<AtlasContrast[]> {
     `SELECT ${CHUNK_COLS('cs')},
             ct.id AS b_id, ct.text_id AS b_text_id, ct.tradition AS b_tradition, ct.text_name AS b_text_name,
             ct.section AS b_section, ct.translator AS b_translator, ct.body AS b_body,
-            ct.token_count AS b_token_count, e.tier AS edge_tier, e.annotation AS annotation
+            ct.token_count AS b_token_count, e.annotation AS annotation
      FROM corpus.edges e
      JOIN corpus.chunks cs ON cs.id = e.source
      JOIN corpus.chunks ct ON ct.id = e.target
@@ -520,8 +518,8 @@ async function contrasts(limit = 8): Promise<AtlasContrast[]> {
     [limit],
   );
   return rows.map(r => ({
-    a: chunkFrom(r, '', String(r.edge_tier)),
-    b: chunkFrom(r, 'b_', String(r.edge_tier)),
+    a: chunkFrom(r, ''),
+    b: chunkFrom(r, 'b_'),
     annotation: (r.annotation as string | null) ?? null,
   }));
 }

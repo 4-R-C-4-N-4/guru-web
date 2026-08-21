@@ -87,16 +87,16 @@ describe('getRelatedPassages', () => {
     expect(sql).not.toMatch(/CONTRASTS/);
   });
 
-  it('ranks partners by weight before falling back to tier and id (todo:bc084b37)', async () => {
+  it('ranks partners by weight, id as the only tiebreak (todo:bc084b37, todo:0f48f68a)', async () => {
     mQuery.mockResolvedValue([]);
     await getRelatedPassages('trad.text-a.001');
     const sql = mQuery.mock.calls[0][0] as string;
     expect(sql).toMatch(/ORDER BY[\s\S]*e\.weight DESC NULLS LAST/);
-    // Weight must outrank the tier bucket — every derived PARALLELS row shares
-    // tier='inferred', so tier-first collapses the order back to alphabetical.
+    // No tier term — the column is write-tool provenance, not confidence,
+    // and every derived PARALLELS row shares tier='inferred' anyway.
     const order = sql.slice(sql.indexOf('ORDER BY'));
-    expect(order.indexOf('e.weight')).toBeLessThan(order.indexOf('CASE e.tier'));
-    expect(order.indexOf('CASE e.tier')).toBeLessThan(order.indexOf('p.id'));
+    expect(order).not.toContain('e.tier');
+    expect(order.indexOf('e.weight')).toBeLessThan(order.indexOf('p.id'));
   });
 
   it('caps how many partners one panel loads (todo:bc084b37)', async () => {
