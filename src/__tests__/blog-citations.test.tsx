@@ -48,7 +48,7 @@ describe('blog post page — citations', () => {
     const html = await render({
       ...BASE,
       content: 'Generated prose with no citation tail.',
-      chunks_used: [{ id: 'ch1', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1', tier: 'proposed' }],
+      chunks_used: [{ id: 'ch1', tradition: 'neoplatonism', text_name: 'Enneads', section: 'V.1' }],
     });
     expect(html).toContain('Generated prose');
     expect(html).toContain('Sources');

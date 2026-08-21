@@ -12,13 +12,14 @@
 import { unstable_cache } from 'next/cache';
 import { one, query } from './db';
 
-/** A stored source entry on a published post (the chunks_used JSONB shape). */
+/** A stored source entry on a published post (the chunks_used JSONB shape).
+ *  Rows written before todo:0f48f68a also carry a `tier` field — ignored on
+ *  read and no longer part of the type. */
 export interface PublishedSource {
   id: string;
   tradition: string;
   text_name: string;
   section: string;
-  tier: 'verified' | 'proposed' | 'inferred';
 }
 
 /** A published post as the public pages read it. */
