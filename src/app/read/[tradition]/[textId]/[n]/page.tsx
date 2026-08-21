@@ -22,7 +22,7 @@ import {
 import { pathToChunkId, chunkIdToPath, askAboutHref } from '@/lib/read-path';
 import { chunkMetaDescription } from '@/lib/seo';
 import { OG_IMAGE } from '@/lib/site';
-import { tokens, type Tier } from '@/styles/tokens';
+import { tokens } from '@/styles/tokens';
 
 // generateMetadata and the page body both need chunk + tags + related (the
 // meta description is annotation-first, todo:17621cef); cache() dedupes the
@@ -32,8 +32,6 @@ const getChunkTagsCached = cache(getChunkTags);
 const getRelatedPassagesCached = cache(getRelatedPassages);
 
 export const dynamic = 'force-dynamic';
-
-const TIER_SYMBOL: Record<string, string> = { verified: '◆', proposed: '◇', inferred: '○', summary: '§' };
 
 type Params = Promise<{ tradition: string; textId: string; n: string }>;
 
@@ -66,10 +64,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-function tierColor(tier: string): string {
-  return tokens.tier[tier as Tier] ?? tokens.tier.inferred;
-}
-
 function NavLink({ nav, dir }: { nav: ChunkNav | null; dir: 'prev' | 'next' }) {
   if (!nav) return <span />;
   const href = chunkIdToPath(nav.id);
@@ -97,7 +91,6 @@ function RelatedCard({ r }: { r: RelatedPassage }) {
   const card = (
     <div style={{ borderLeft: `2px solid ${color}`, background: `${color}08`, padding: '10px 14px', margin: '8px 0' }}>
       <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-        <span style={{ color: tierColor(r.tier) }}>{TIER_SYMBOL[r.tier] ?? '○'}</span>
         <span style={{ color }}>{r.tradition}</span>
         <span style={{ opacity: 0.4 }}>|</span>
         <span>{r.text_name}</span>
@@ -200,7 +193,6 @@ export default async function ChunkPage({ params }: { params: Params }) {
               {tags.map(t => (
                 <details key={t.concept_id} style={{ border: `1px solid ${tokens.border.subtle}`, background: tokens.bg.surface, padding: '6px 12px' }}>
                   <summary style={{ cursor: 'pointer', fontFamily: tokens.font.mono, fontSize: 11, color: tokens.text.primary, letterSpacing: 0.5 }}>
-                    <span style={{ color: tierColor(t.tier), marginRight: 6 }}>{TIER_SYMBOL[t.tier] ?? '○'}</span>
                     {t.label}
                     {t.domain && <span style={{ color: tokens.text.muted, marginLeft: 8, fontSize: 10 }}>{t.domain}</span>}
                   </summary>

@@ -165,7 +165,7 @@ export async function generateAtlasEdition(opts: {
   }
 
   const used = citedChunks(snapshot).map(c => ({
-    id: c.id, tradition: c.tradition, text_name: c.text_name, section: c.section, tier: c.tier,
+    id: c.id, tradition: c.tradition, text_name: c.text_name, section: c.section,
   }));
 
   const row = await one<{ id: string }>(

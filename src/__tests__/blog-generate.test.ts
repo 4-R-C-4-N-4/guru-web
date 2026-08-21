@@ -70,7 +70,6 @@ const makeChunk = (id: string, tradition = 'neoplatonism') => ({
   body: 'The One overflows into being.',
   token_count: 8,
   source: 'vector' as const,
-  tier: 'verified' as const,
 });
 
 const makeStream = (chunks: unknown[]) => ({
@@ -161,7 +160,7 @@ describe('generateDraft — happy path', () => {
     expect(content).not.toContain('DEK:');        // head stripped
     const used = JSON.parse(chunksJson as string);
     expect(used).toHaveLength(4);
-    expect(used[0]).toEqual({ id: 'a', tradition: 'neoplatonism', text_name: 'neoplatonism Text', section: 'S1', tier: 'verified' });
+    expect(used[0]).toEqual({ id: 'a', tradition: 'neoplatonism', text_name: 'neoplatonism Text', section: 'S1' });
     expect(cost).toBe(0.0123);
   });
 

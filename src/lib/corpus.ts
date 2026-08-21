@@ -53,8 +53,8 @@ export const listTraditionsCached = unstable_cache(
  */
 export async function rehydrateCitations(
   chunkIds: string[],
-): Promise<Map<string, { id: string; tradition: string; text: string; section: string; tier: 'verified' | 'summary' }>> {
-  const map = new Map<string, { id: string; tradition: string; text: string; section: string; tier: 'verified' | 'summary' }>();
+): Promise<Map<string, { id: string; tradition: string; text: string; section: string }>> {
+  const map = new Map<string, { id: string; tradition: string; text: string; section: string }>();
   if (chunkIds.length === 0) return map;
 
   const rows = await query<{ id: string; tradition: string; text_name: string; section: string; src: string }>(
@@ -78,8 +78,7 @@ export async function rehydrateCitations(
       id: r.id,
       tradition: r.tradition,
       text: r.text_name,
-      section: r.section, // identical to the live X-Citations path; tier carries the summary signal
-      tier: r.src === 'summary' ? 'summary' : 'verified',
+      section: r.section, // identical to the live X-Citations path; the `sum:` id prefix carries the summary signal
     });
   }
   return map;

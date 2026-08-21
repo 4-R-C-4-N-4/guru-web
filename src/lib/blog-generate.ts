@@ -206,16 +206,16 @@ export async function generateDraft(seedId: string): Promise<void> {
 
     // 7. Store the RICHER chunks_used shape. queries.chunks_used stores bare
     //    IDs (api/query/route.ts); blog posts store {id, tradition, text_name,
-    //    section, tier} so the public Sources block and the draft grounding
+    //    section} so the public Sources block and the draft grounding
     //    review render without a corpus join and survive a corpus re-import.
-    //    We deliberately read only these five fields, so the wider hybrid
+    //    We deliberately read only these four fields, so the wider hybrid
     //    RetrievedChunk shape (source/lexRank/conceptMatchWeight) is ignored.
+    //    Older rows also carry a `tier` field — ignored on read (todo:0f48f68a).
     const used = chunks.map((c: RetrievedChunk) => ({
       id: c.id,
       tradition: c.tradition,
       text_name: c.text_name,
       section: c.section,
-      tier: c.tier ?? 'inferred',
     }));
 
     await exec(

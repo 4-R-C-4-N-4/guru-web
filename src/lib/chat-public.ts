@@ -10,7 +10,6 @@
 
 import { one } from './db';
 import type { RetrievalScope } from './types';
-import type { CitationTier } from './citations';
 
 /** A citation frozen into the snapshot at share time — rich display
  *  fields plus the source chunk id (what a fork writes back into
@@ -20,7 +19,6 @@ export interface SharedCitation {
   tradition: string;
   text: string;
   section: string;
-  tier: CitationTier;
 }
 
 export interface SharedMessage {

@@ -36,7 +36,6 @@ describe('getSystemPrompt', () => {
   it('contains key scholarly constraints', () => {
     expect(scholarPrompt).toContain('Guru');
     expect(scholarPrompt).toContain('CITATIONS');
-    expect(scholarPrompt).toContain('verified');
   });
 
   it('preserves the scholar identity opening', () => {
@@ -63,7 +62,7 @@ describe('getSystemPrompt', () => {
   });
 
   it('locks the citation format', () => {
-    expect(scholarPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\/summary\]\n"optional short quote"$/);
+    expect(scholarPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION\]\n"optional short quote"$/);
   });
 
   it('separates voice overlay from CORE_RULES with a blank line', () => {
@@ -133,12 +132,12 @@ describe('getSystemPrompt(woowoo)', () => {
     expect(woowooPrompt).toContain('Do not invent quotations');
     expect(woowooPrompt).toContain('Avoid false equivalences');
     expect(woowooPrompt).toContain('End each reply with a beat that opens the next turn');
-    expect(woowooPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\/summary\]\n"optional short quote"$/);
+    expect(woowooPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION\]\n"optional short quote"$/);
   });
 
   it('differs from scholar only in the overlay', () => {
     // Both should end with the same CITATIONS block (proves the shared CORE_RULES tail).
-    const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION | TIER: verified/proposed/inferred/summary]\n"optional short quote"';
+    const tail = 'Citation format (after your main response):\nCITATIONS:\n[TRADITION | TEXT | SECTION]\n"optional short quote"';
     expect(woowooPrompt.endsWith(tail)).toBe(true);
     expect(scholarPrompt.endsWith(tail)).toBe(true);
   });
@@ -173,17 +172,15 @@ describe('buildPrompt', () => {
     expect(result).toContain('What is divine spark?');
   });
 
-  it('includes chunk tradition and section headers', () => {
+  it('includes chunk tradition and section headers, without tier glyphs or stamps', () => {
     const chunks = [makeChunk('c1', 'gnosticism', 'verified')];
     const result = buildPrompt('divine spark', chunks, DEFAULT_PREFS, 'free');
     expect(result).toContain('gnosticism');
-    expect(result).toContain('◆'); // verified tier symbol
-  });
-
-  it('includes proposed tier symbol for proposed chunks', () => {
-    const chunks = [makeChunk('c1', 'hermeticism', 'proposed')];
-    const result = buildPrompt('nous', chunks, DEFAULT_PREFS, 'free');
-    expect(result).toContain('◇');
+    // No tier presentation anywhere (todo:0f48f68a) — the column is
+    // write-tool provenance, not confidence.
+    expect(result).not.toContain('TIER:');
+    expect(result).not.toContain('◆');
+    expect(result).not.toContain('◇');
   });
 
   it('falls back gracefully with no chunks', () => {
@@ -244,7 +241,7 @@ describe('getBlogSystemPrompt', () => {
   it('carries the parseable TITLE / DEK / CITATIONS contract', () => {
     expect(blogPrompt).toContain('TITLE:');
     expect(blogPrompt).toContain('DEK:');
-    expect(blogPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION \| TIER: verified\/proposed\/inferred\/summary\]/);
+    expect(blogPrompt).toMatch(/CITATIONS:\n\[TRADITION \| TEXT \| SECTION\]/);
   });
 
   it('uses essay shape, not the chat single-turn closer', () => {

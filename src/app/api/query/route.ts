@@ -419,7 +419,6 @@ export async function POST(req: Request) {
           tradition: c.tradition,
           text: c.text_name,
           section: c.section,
-          tier: c.tier ?? 'verified',
         })),
       ))
     : '';

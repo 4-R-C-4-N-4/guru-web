@@ -128,7 +128,6 @@ export default async function SharePage(
                       tradition={c.tradition}
                       text={c.text}
                       section={c.section}
-                      tier={c.tier}
                       quote={'quote' in c ? c.quote : undefined}
                     />
                   ))}

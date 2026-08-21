@@ -13,21 +13,23 @@ import Citation from '@/components/citation';
 describe('Citation reader links', () => {
   it('wraps the card in a link to the chunk page when id is a chunk id', () => {
     const html = renderToStaticMarkup(
-      <Citation id="gnosticism.gospel-of-thomas.002" tradition="gnosticism" text="Gospel of Thomas" section="Logion 2" tier="verified" />,
+      <Citation id="gnosticism.gospel-of-thomas.002" tradition="gnosticism" text="Gospel of Thomas" section="Logion 2" />,
     );
     expect(html).toContain('href="/read/gnosticism/gospel-of-thomas/002"');
   });
 
   it('links sum: ids to the summary page', () => {
     const html = renderToStaticMarkup(
-      <Citation id="sum:adapa-food-of-life" tradition="mesopotamian" text="Adapa" section="Whole work" tier="summary" />,
+      <Citation id="sum:adapa-food-of-life" tradition="mesopotamian" text="Adapa" section="Whole work" />,
     );
     expect(html).toContain(`href="/read/summary/${encodeURIComponent('sum:adapa-food-of-life')}"`);
+    // A sum: id renders the generated-apparatus marker (todo:0f48f68a).
+    expect(html).toContain('summary');
   });
 
   it('renders linkless without an id', () => {
     const html = renderToStaticMarkup(
-      <Citation tradition="taoism" text="Tao Te Ching" section="48" tier="verified" />,
+      <Citation tradition="taoism" text="Tao Te Ching" section="48" />,
     );
     expect(html).not.toContain('<a');
     expect(html).toContain('Tao Te Ching');

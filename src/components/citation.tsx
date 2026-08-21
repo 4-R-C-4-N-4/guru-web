@@ -14,16 +14,16 @@ interface CitationProps {
   text: string;
   section: string;
   quote?: string;
-  tier: 'verified' | 'proposed' | 'inferred' | 'summary';
 }
 
-const TIER_SYMBOL = { verified: '◆', proposed: '◇', inferred: '○', summary: '§' } as const;
-
-export default function Citation({ id, tradition, text, section, quote, tier }: CitationProps) {
+export default function Citation({ id, tradition, text, section, quote }: CitationProps) {
   const mobile = useIsMobile();
   const color  = tokens.tradition[tradition.toLowerCase() as keyof typeof tokens.tradition] ?? tokens.text.secondary;
-  const symbol = TIER_SYMBOL[tier] ?? '○';
-  const tierColor = tokens.tier[tier] ?? tokens.tier.inferred;
+  // The tier glyph (◆/◇/○) is gone (todo:0f48f68a) — the column recorded
+  // which tool wrote an edge, not confidence. What stays is the one true
+  // distinction: a `sum:` id is a generated summary node, not a passage of
+  // source text, and the card says so.
+  const isSummary = id?.startsWith('sum:') ?? false;
   const href = citationHref(id);
 
   const card = (
@@ -37,7 +37,7 @@ export default function Citation({ id, tradition, text, section, quote, tier }: 
         fontFamily: tokens.font.mono, fontSize: mobile ? 10 : 11, color: tokens.text.muted,
         marginBottom: 4, display: 'flex', alignItems: 'center', gap: mobile ? 4 : 6, flexWrap: 'wrap',
       }}>
-        <span style={{ color: tierColor }}>{symbol}</span>
+        {isSummary && <span style={{ opacity: 0.6, fontStyle: 'italic' }}>summary</span>}
         <span style={{ color }}>{tradition}</span>
         <span style={{ opacity: 0.4 }}>|</span>
         <span>{text}</span>

@@ -59,8 +59,8 @@ const SHARE: PublicShare = {
     {
       query_text: 'q1', response_text: 'r1', created_at: 't1',
       citations: [
-        { id: 'c1', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78', tier: 'verified' },
-        { id: 'c2', tradition: 'gnosticism', text: 'Gospel of Thomas', section: '22', tier: 'verified' },
+        { id: 'c1', tradition: 'gnosticism', text: 'Gospel of Philip', section: '78' },
+        { id: 'c2', tradition: 'gnosticism', text: 'Gospel of Thomas', section: '22' },
       ],
     },
     { query_text: 'q2', response_text: 'r2', created_at: 't2', citations: [] },

@@ -5,10 +5,6 @@
  * including citation data rehydrated from corpus.chunks for each
  * message's chunks_used array (todo:89af833a).
  *
- * Tier limitation: queries.chunks_used persists chunk IDs only — not
- * the tier the chunk had in the original retrieval. We default to
- * 'verified' for resumed citations. When the live /api/query path
- * starts persisting tier alongside chunk_id, this default goes away.
  */
 
 import { requireUser } from '@/lib/auth';

@@ -104,7 +104,6 @@ export interface ChunkPage {
 
 export interface ChunkTag {
   concept_id: string;
-  tier: string;
   annotation: string | null;
   label: string;
   domain: string | null;
@@ -112,7 +111,6 @@ export interface ChunkTag {
 }
 
 export interface RelatedPassage {
-  tier: string;
   annotation: string | null;
   partner_id: string;
   tradition: string;
@@ -134,7 +132,6 @@ export interface ExpressingChunk {
   text_name: string;
   section: string | null;
   preview: string;
-  tier: string;
 }
 
 export interface SummaryPage {
@@ -319,26 +316,24 @@ export async function getChunkPage(chunkId: string): Promise<ChunkPage | null> {
 }
 
 /** Live concept tags for a chunk — EXPRESSES edges joined to concepts,
- *  strongest tier first. (staged_tags never reach this DB; the export only
- *  carries promoted edges.) */
+ *  alphabetical by label. (Tier ordering is gone with the tier column's
+ *  demotion to write-tool provenance, todo:0f48f68a; staged_tags never reach
+ *  this DB — the export only carries promoted edges.) */
 export async function getChunkTags(chunkId: string): Promise<ChunkTag[]> {
   return query<ChunkTag>(
-    `SELECT e.target AS concept_id, e.tier, e.annotation,
+    `SELECT e.target AS concept_id, e.annotation,
             co.label, co.domain, co.definition
        FROM edges e
        JOIN concepts co ON co.id = e.target
       WHERE e.source = $1 AND e.edge_type = 'EXPRESSES'
-      ORDER BY CASE e.tier WHEN 'verified' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
-               co.label`,
+      ORDER BY co.label`,
     [chunkId],
   );
 }
 
 /** Hard ceiling on how many partners one chunk's panel loads (todo:bc084b37).
- *  This is a reader-facing editorial limit, not a derived bound: the page shows
- *  10 and hides the remainder behind a <details> toggle, so 15 leaves a short
- *  tail to expand into rather than a long one nobody reads. Every returned row
- *  is rendered into the DOM whether or not it is visible.
+ *  This is a reader-facing editorial limit, not a derived bound. The page
+ *  renders all 15 (the <details> fold was removed in 4c01eec).
  *
  *  Deliberately NOT sized off the corpus distribution. An earlier value of 100
  *  was derived from a p95 of 54, which stopped meaning anything once the score
@@ -378,11 +373,11 @@ export const RELATED_LIMIT = 15;
  *  For a chunk that was itself picked as many anchors' partner, its rows carry
  *  its own scores and tie heavily. That is rare — 6 chunks corpus-wide have
  *  >=20 partners and <=2 distinct weights — and fixing it properly is a
- *  generator-side data-model change, not a query change. The tier and p.id
- *  terms remain as deterministic tiebreaks for exactly those ties. */
+ *  generator-side data-model change, not a query change. The p.id term
+ *  remains as a deterministic tiebreak for exactly those ties. */
 export async function getRelatedPassages(chunkId: string): Promise<RelatedPassage[]> {
   return query<RelatedPassage>(
-    `SELECT e.tier, e.annotation,
+    `SELECT e.annotation,
             p.id AS partner_id, p.tradition, p.text_name, p.section,
             LEFT(p.body, 240) AS preview
        FROM edges e
@@ -390,7 +385,6 @@ export async function getRelatedPassages(chunkId: string): Promise<RelatedPassag
       WHERE (e.source = $1 OR e.target = $1)
         AND e.edge_type = 'PARALLELS'
       ORDER BY e.weight DESC NULLS LAST,
-               CASE e.tier WHEN 'verified' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
                p.id
       LIMIT $2`,
     [chunkId, RELATED_LIMIT],
@@ -451,12 +445,11 @@ export async function getConcept(conceptId: string): Promise<ConceptRow | null> 
 export async function listChunksExpressing(conceptId: string): Promise<ExpressingChunk[]> {
   return query<ExpressingChunk>(
     `SELECT c.id, c.tradition, c.text_name, c.section,
-            LEFT(c.body, 240) AS preview, e.tier
+            LEFT(c.body, 240) AS preview
        FROM edges e
        JOIN chunks c ON c.id = e.source
       WHERE e.target = $1 AND e.edge_type = 'EXPRESSES'
-      ORDER BY CASE e.tier WHEN 'verified' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
-               c.id`,
+      ORDER BY c.id`,
     [conceptId],
   );
 }

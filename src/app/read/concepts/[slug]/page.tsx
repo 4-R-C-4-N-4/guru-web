@@ -24,11 +24,10 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getConcept, listChunksExpressing, type ExpressingChunk } from '@/lib/reader';
 import { chunkIdToPath } from '@/lib/read-path';
-import { tokens, type Tier } from '@/styles/tokens';
+import { tokens } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
 
-const TIER_SYMBOL: Record<string, string> = { verified: '◆', proposed: '◇', inferred: '○' };
 const SECTION_CAP = 8;
 
 type Params = Promise<{ slug: string }>;
@@ -121,7 +120,7 @@ export default async function ConceptPage(
   ]);
   if (!concept) notFound();
 
-  // Group by tradition, largest first; tier-then-id order kept within each.
+  // Group by tradition, largest first; id order kept within each.
   const byTradition = new Map<string, ExpressingChunk[]>();
   for (const c of chunks) {
     const list = byTradition.get(c.tradition) ?? [];
@@ -188,7 +187,6 @@ export default async function ConceptPage(
                 return (
                   <Link key={c.id} href={href} style={{ display: 'block', textDecoration: 'none', padding: '8px 0', borderBottom: `1px solid ${tokens.bg.raised}` }}>
                     <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, marginBottom: 3 }}>
-                      <span style={{ color: tokens.tier[c.tier as Tier] ?? tokens.tier.inferred, marginRight: 6 }}>{TIER_SYMBOL[c.tier] ?? '○'}</span>
                       {c.text_name}{c.section ? ` | ${c.section}` : ''}
                     </div>
                     <div style={{ fontFamily: tokens.font.display, fontSize: 13, color: tokens.text.secondary, fontStyle: 'italic', lineHeight: 1.5 }}>
