@@ -388,7 +388,16 @@ const LEX_GATE_CAP = 0.49;
 // 'summary' starts at inferred's weight deliberately (unswept — generated
 // apparatus competes on similarity, not tier); retune independently of
 // 'inferred' when the study-mode sweep lands.
-const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 0.7, inferred: 0.4, summary: 0.4 };
+// 'proposed' is 1.0, not a hedge (todo:dd034dc4): the tier column never
+// encoded judgment — no reviewer could ever choose one (accept writes
+// 'verified' unconditionally), and 'proposed' only marks rows written by the
+// abandoned auto-promote tool in Apr–May 2026. Owner confirmed 2026-08-21
+// that no human has ever been in the review loop, so the old 0.7 was a
+// permanent penalty on 11,057 EXPRESSES rows for the tool that wrote them.
+// Measured before flattening: 1/29 golden+canonical queries changed (one
+// same-work chunk swap), 296/296 golden gate green — the graph term holds
+// ~1% of top-K slots, so tier weighting was nearly inert regardless.
+const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 1.0, inferred: 0.4, summary: 0.4 };
 
 type Tier = NonNullable<RetrievedChunk['tier']>;
 function tierWeight(tier: Tier): number {
