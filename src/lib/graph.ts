@@ -3,31 +3,18 @@
  *
  * Concept graph SQL queries.
  * - extractConcepts: keyword match against concept labels in DB
- * - walkGraph: traverse edges from matched concepts to fetch related chunks
+ * - walkGraph: fetch the chunks expressing the matched concepts
+ *
+ * There is no concept→concept reachability expansion (todo:23298aa9). The
+ * corpus has no concept↔concept edges to walk: PARALLELS endpoints are chunk
+ * ids and DERIVES_FROM has zero rows, so the hop this module used to run
+ * could never match — a trap independently confirmed three times (guru
+ * docs/edges/evaluation-tooling.md). Query-expansion breadth comes from the
+ * family/domain tiers in extractConcepts, not from edge traversal.
  */
 
 import { query } from './db';
 import type { ConceptMatch, MatchTier, QueryExpansion, RetrievedChunk, UserPreferences } from './types';
-
-/**
- * Number of concept→concept hops to expand out from the seed concepts
- * before collecting the chunks that express them. The single knob for
- * graph-walk breadth.
- *
- * Kept at 1 deliberately (todo:d0b40ad4): a single PARALLELS/DERIVES_FROM
- * hop already crosses traditions, and widening to 2 materially grows the
- * candidate set and latency. Bump this only alongside the retrieval eval
- * harness that can confirm the extra breadth improves quality rather than
- * adding noise — see docs/retriever-hitlist.md.
- */
-const HOP_DEPTH = 1;
-
-/**
- * Concept-graph edge types — concept↔concept only. EXPRESSES is a
- * chunk→concept edge and is intentionally excluded here; it is handled by
- * the expressing-chunk lookup in walkGraph, not by reachability expansion.
- */
-const CONCEPT_EDGE_TYPES = ['PARALLELS', 'DERIVES_FROM'];
 
 /**
  * Query-expansion match-tier weights (todo:522f389a §6). A concept matched
@@ -227,11 +214,9 @@ export async function summarizeExpansion(queryText: string): Promise<QueryExpans
 }
 
 /**
- * Walk the concept graph starting from the given concept matches.
- * Fetches chunks that EXPRESSES any concept reachable within HOP_DEPTH
- * concept→concept hops (currently 1), and stamps each chunk with the strongest
- * query-expansion match weight among the concepts it expresses
- * (`conceptMatchWeight`, consumed by the retriever's graph term).
+ * Fetch the chunks that EXPRESSES any of the matched concepts, stamping each
+ * chunk with the strongest query-expansion match weight among the concepts it
+ * expresses (`conceptMatchWeight`, consumed by the retriever's graph term).
  * Respects user tradition/text scope preferences.
  */
 export async function walkGraph(
@@ -241,49 +226,22 @@ export async function walkGraph(
 ): Promise<RetrievedChunk[]> {
   if (matches.length === 0) return [];
 
-  // Reachable concept → query-expansion match weight. Seeds carry the weight of
-  // the tier they were matched at; a concept discovered by a hop inherits the
-  // weight of the frontier concept that reached it (todo:522f389a §5.2).
-  const reachable = new Map<string, number>();
+  // Matched concept → query-expansion match weight, strongest tier winning
+  // when the same concept was matched at more than one tier (todo:522f389a).
+  const matchWeights = new Map<string, number>();
   for (const m of matches) {
     const w = MATCH_TIER_WEIGHTS[m.matchTier];
-    reachable.set(m.conceptId, Math.max(reachable.get(m.conceptId) ?? 0, w));
+    matchWeights.set(m.conceptId, Math.max(matchWeights.get(m.conceptId) ?? 0, w));
   }
 
-  // Expand the reachable concept set outward HOP_DEPTH concept→concept hops.
-  // Each hop only queries the newly-discovered frontier, so depth > 1 doesn't
-  // re-scan concepts already reached.
-  let frontier = matches.map(m => m.conceptId);
-  for (let hop = 0; hop < HOP_DEPTH; hop++) {
-    const neighbourRows = await query<{ source: string; target: string }>(
-      `SELECT source, target FROM edges
-       WHERE (source = ANY($1::text[]) OR target = ANY($1::text[]))
-         AND edge_type = ANY($2::text[])`,
-      [frontier, CONCEPT_EDGE_TYPES]
-    );
-
-    // Each edge touches the frontier on at least one endpoint (query filter), so
-    // exactly the *other* endpoint can be new — it inherits the reached node's
-    // weight. First reach wins if two parents discover the same node this hop.
-    const next: string[] = [];
-    for (const r of neighbourRows) {
-      const sw = reachable.get(r.source);
-      const tw = reachable.get(r.target);
-      if (sw === undefined && tw !== undefined) { reachable.set(r.source, tw); next.push(r.source); }
-      else if (tw === undefined && sw !== undefined) { reachable.set(r.target, sw); next.push(r.target); }
-    }
-    if (next.length === 0) break; // no new concepts — further hops are no-ops
-    frontier = next;
-  }
-
-  // Find chunks that EXPRESSES any reachable concept. Select the concept
+  // Find chunks that EXPRESSES any matched concept. Select the concept
   // (target) too, so each chunk can take the strongest match weight among the
-  // reachable concepts it expresses.
+  // matched concepts it expresses.
   const expressEdges = await query<{ source: string; target: string; tier: string }>(
     `SELECT source, target, tier FROM edges
      WHERE target = ANY($1::text[])
        AND edge_type = 'EXPRESSES'`,
-    [Array.from(reachable.keys())]
+    [Array.from(matchWeights.keys())]
   );
 
   if (expressEdges.length === 0) return [];
@@ -292,7 +250,7 @@ export async function walkGraph(
   const weightMap = new Map<string, number>();
   for (const e of expressEdges) {
     tierMap.set(e.source, e.tier); // EXPRESSES edge confidence tier (last-wins, unchanged)
-    const w = reachable.get(e.target) ?? 0;
+    const w = matchWeights.get(e.target) ?? 0;
     weightMap.set(e.source, Math.max(weightMap.get(e.source) ?? 0, w));
   }
 

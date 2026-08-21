@@ -155,15 +155,18 @@ const MEMBERSHIPS = [
   { concept_id: 'nous',         family_id: 'metaphysics.first_principles',  is_primary: true },
 ];
 
+// Mirrors the export contract (todo:23298aa9): PARALLELS are chunk↔chunk,
+// cross-tradition, always tier 'inferred', weight = a raw reranker logit
+// (negative values are normal), annotation naming the via concept. There are
+// no concept↔concept edges and no DERIVES_FROM rows in the real corpus —
+// fixtures that seeded them let a dead graph walk pass local testing.
 const EDGES = [
-  { source: 'divine-spark', target: 'gnosis',  edge_type: 'PARALLELS',    tier: 'verified', weight: 1.0 },
-  { source: 'divine-spark', target: 'atman',   edge_type: 'PARALLELS',    tier: 'proposed', weight: 0.8 },
-  { source: 'divine-spark', target: 'nous',    edge_type: 'PARALLELS',    tier: 'proposed', weight: 0.8 },
-  { source: 'gnosis',       target: 'atman',   edge_type: 'PARALLELS',    tier: 'inferred', weight: 0.5 },
-  { source: 'nous',         target: 'gnosis',  edge_type: 'DERIVES_FROM', tier: 'proposed', weight: 0.7 },
-  { source: 'gt-77',        target: 'divine-spark', edge_type: 'EXPRESSES', tier: 'verified', weight: 1.0 },
-  { source: 'ch-1-6',       target: 'divine-spark', edge_type: 'EXPRESSES', tier: 'proposed', weight: 0.8 },
-  { source: 'cu-6-8',       target: 'atman',         edge_type: 'EXPRESSES', tier: 'verified', weight: 1.0 },
+  { source: 'gt-77',  target: 'ch-1-9', edge_type: 'PARALLELS', tier: 'inferred', weight: 2.41,  annotation: 'Shared concept: Divine Spark — light within identified with the universal Light (derived)' },
+  { source: 'gt-3',   target: 'cu-6-8', edge_type: 'PARALLELS', tier: 'inferred', weight: 1.87,  annotation: 'Shared concept: Atman — the kingdom/self within (derived)' },
+  { source: 'ch-1-9', target: 'mu-1-2', edge_type: 'PARALLELS', tier: 'inferred', weight: -0.62, annotation: 'Shared concept: Divine Spark — inner divinity (derived)' },
+  { source: 'gt-77',  target: 'divine-spark', edge_type: 'EXPRESSES', tier: 'verified', weight: 1.0, annotation: null },
+  { source: 'ch-1-6', target: 'divine-spark', edge_type: 'EXPRESSES', tier: 'proposed', weight: 0.8, annotation: null },
+  { source: 'cu-6-8', target: 'atman',        edge_type: 'EXPRESSES', tier: 'verified', weight: 1.0, annotation: null },
 ];
 
 async function seed() {
@@ -232,8 +235,8 @@ async function seed() {
     console.log('Seeding edges…');
     for (const e of EDGES) {
       await client.query(
-        `INSERT INTO edges (source, target, edge_type, tier, weight) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
-        [e.source, e.target, e.edge_type, e.tier, e.weight]
+        `INSERT INTO edges (source, target, edge_type, tier, weight, annotation) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+        [e.source, e.target, e.edge_type, e.tier, e.weight, e.annotation ?? null]
       );
     }
 
