@@ -1,0 +1,39 @@
+{
+  "id": "23298aa9",
+  "type": "bug",
+  "state": "done",
+  "summary": "walkGraph concept-hop is dead code: PARALLELS endpoints are chunk ids, DERIVES_FROM has zero rows",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-21T15:37:31.385Z",
+  "updated_at": "2026-08-21T15:40:37.559Z",
+  "files": [
+    {
+      "path": "src/lib/graph.ts",
+      "lines": [
+        253,
+        277
+      ]
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "graph",
+    "dead-code"
+  ],
+  "work": {
+    "branch": "todo/23298aa9",
+    "base_branch": "main",
+    "started_at": "2026-08-21T15:37:52.706Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "034bed9b83853aff73baa0c909ed391d4e3abe23",
+    "resolved_at": "2026-08-21T15:40:37.559Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/graph.test.ts",
+    "test_function": "issues no concept→concept hop — the first query is the EXPRESSES lookup",
+    "note": "Removed HOP_DEPTH/CONCEPT_EDGE_TYPES and the reachability loop; walkGraph now goes straight to the EXPRESSES lookup over seed concepts (one fewer DB round-trip per query, no retrieval change — seeds were already in the lookup). Rewrote the tests that locked the dead edge-type list in; replaced seed-dev concept↔concept PARALLELS/DERIVES_FROM fixtures with production-shaped chunk↔chunk derived parallels."
+  }
+}
