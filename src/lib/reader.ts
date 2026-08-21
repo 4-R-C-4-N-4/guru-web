@@ -352,12 +352,12 @@ export async function getChunkTags(chunkId: string): Promise<ChunkTag[]> {
  *  query actually returned. */
 export const RELATED_LIMIT = 15;
 
-/** Cross-tradition parallels of a chunk. CONTRASTS edges are excluded —
- *  divergence annotations belong to the Atlas, not a passage's related-reading
- *  panel. PARALLELS edges are stored one direction, so match both ends and
- *  join the partner endpoint (same idiom as graph.ts walkGraph). The stored
- *  annotation is the reviewed justification — rendered verbatim as the
- *  relationship explanation.
+/** Cross-tradition parallels of a chunk. CONTRASTS edges are excluded here —
+ *  divergences render as their own section via getContrasts below, never mixed
+ *  into the parallels list. PARALLELS edges are stored one direction, so match
+ *  both ends and join the partner endpoint (same idiom as graph.ts walkGraph).
+ *  The stored annotation is the reviewed justification — rendered verbatim as
+ *  the relationship explanation.
  *
  *  Ordered by `weight` (todo:bc084b37). Before the Pass C retirement every
  *  PARALLELS row shared one tier and carried no weight, so the tier term below
@@ -388,6 +388,42 @@ export async function getRelatedPassages(chunkId: string): Promise<RelatedPassag
                p.id
       LIMIT $2`,
     [chunkId, RELATED_LIMIT],
+  );
+}
+
+/** True PARALLELS partner count for a chunk, so the panel header can say
+ *  "15 of N" instead of silently reporting the loaded count as the total —
+ *  post floor-removal the largest panel has over a thousand partners, and
+ *  "· 15 parallels" on such a chunk was simply false. One indexed COUNT;
+ *  runs alongside getRelatedPassages in the page's parallel batch. */
+export async function countParallels(chunkId: string): Promise<number> {
+  const row = await one<{ n: number }>(
+    `SELECT COUNT(*)::int AS n
+       FROM edges e
+      WHERE (e.source = $1 OR e.target = $1)
+        AND e.edge_type = 'PARALLELS'`,
+    [chunkId],
+  );
+  return row?.n ?? 0;
+}
+
+/** Curated divergences touching this chunk — CONTRASTS edges, the corpus's
+ *  112 frozen, human-annotated rows (guru config/frozen_contrasts.toml).
+ *  First reader surface for them (todo:4aa7785b); before this they reached
+ *  only the atlas LLM prompt. No weight ordering — CONTRASTS ship with
+ *  weight NULL by construction, so id order is the only honest one. Most
+ *  chunks have none; the page hides the section when empty. */
+export async function getContrasts(chunkId: string): Promise<RelatedPassage[]> {
+  return query<RelatedPassage>(
+    `SELECT e.annotation,
+            p.id AS partner_id, p.tradition, p.text_name, p.section,
+            LEFT(p.body, 240) AS preview
+       FROM edges e
+       JOIN chunks p ON p.id = CASE WHEN e.source = $1 THEN e.target ELSE e.source END
+      WHERE (e.source = $1 OR e.target = $1)
+        AND e.edge_type = 'CONTRASTS'
+      ORDER BY p.id`,
+    [chunkId],
   );
 }
 
