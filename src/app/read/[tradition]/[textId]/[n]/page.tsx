@@ -16,8 +16,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  getChunkPage, getChunkTags, getRelatedPassages, RELATED_LIMIT,
-  type ChunkNav, type RelatedPassage,
+  getChunkPage, getChunkTags, getRelatedPassages, countParallels, getContrasts,
+  RELATED_LIMIT, type ChunkNav, type RelatedPassage,
 } from '@/lib/reader';
 import { pathToChunkId, chunkIdToPath, askAboutHref } from '@/lib/read-path';
 import { chunkMetaDescription } from '@/lib/seo';
@@ -30,6 +30,8 @@ import { tokens } from '@/styles/tokens';
 const getChunkPageCached = cache(getChunkPage);
 const getChunkTagsCached = cache(getChunkTags);
 const getRelatedPassagesCached = cache(getRelatedPassages);
+const countParallelsCached = cache(countParallels);
+const getContrastsCached = cache(getContrasts);
 
 export const dynamic = 'force-dynamic';
 
@@ -113,10 +115,12 @@ function RelatedCard({ r }: { r: RelatedPassage }) {
 export default async function ChunkPage({ params }: { params: Params }) {
   const { tradition, textId, n } = await params;
   const chunkId = pathToChunkId(tradition, textId, n);
-  const [chunk, tags, related] = await Promise.all([
+  const [chunk, tags, related, parallelTotal, contrasts] = await Promise.all([
     getChunkPageCached(chunkId),
     getChunkTagsCached(chunkId),
     getRelatedPassagesCached(chunkId),
+    countParallelsCached(chunkId),
+    getContrastsCached(chunkId),
   ]);
   // The URL tradition/text must be the chunk's own (single canonical URL).
   if (!chunk || chunk.tradition !== tradition || chunk.text_id !== textId) notFound();
@@ -223,9 +227,22 @@ export default async function ChunkPage({ params }: { params: Params }) {
         {related.length > 0 && (
           <section style={{ marginTop: 36 }}>
             <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-              Related passages · {related.length} parallel{related.length === 1 ? '' : 's'}
+              {/* True total, not the loaded count — the largest panel has 1,000+
+                  partners and "· 15 parallels" on it was simply false. */}
+              Related passages · {parallelTotal > related.length
+                ? `${related.length} of ${parallelTotal} parallels`
+                : `${related.length} parallel${related.length === 1 ? '' : 's'}`}
             </div>
             {related.slice(0, RELATED_LIMIT).map(r => <RelatedCard key={r.partner_id} r={r} />)}
+          </section>
+        )}
+
+        {contrasts.length > 0 && (
+          <section style={{ marginTop: 36 }}>
+            <div style={{ fontFamily: tokens.font.mono, fontSize: 10, color: tokens.text.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+              Contrasts · where traditions diverge
+            </div>
+            {contrasts.map(r => <RelatedCard key={r.partner_id} r={r} />)}
           </section>
         )}
 
