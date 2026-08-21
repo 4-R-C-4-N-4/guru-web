@@ -1,0 +1,39 @@
+{
+  "id": "0f48f68a",
+  "type": "chore",
+  "state": "done",
+  "summary": "De-tier the presentation layer: TIER stamps in citations/prompts and reader glyphs present a meaningless column as confidence",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-21T16:52:49.067Z",
+  "updated_at": "2026-08-21T17:05:16.965Z",
+  "files": [
+    {
+      "path": "src/lib/prompt.ts",
+      "lines": [
+        78,
+        203
+      ]
+    }
+  ],
+  "tags": [
+    "tier",
+    "prompt",
+    "citations",
+    "reader",
+    "data-quality"
+  ],
+  "work": {
+    "branch": "todo/0f48f68a",
+    "base_branch": "main",
+    "started_at": "2026-08-21T16:58:36.548Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "9aab7b0ff1b4cc615c763c302cae439eb170eb41",
+    "resolved_at": "2026-08-21T17:05:16.965Z",
+    "resolved_by": "unknown",
+    "note": "Cut wholesale per owner decision: TIER stamps removed from all three citation contracts (chat/blog/atlas) and SOURCE PASSAGES headers; tier glyphs removed from Citation cards, reader themes/related panels, concepts page; tier dropped from citation payloads (X-Citations, sessions rehydration, share snapshots, blog chunks_used) and reader/atlas queries incl. tier-CASE orderings. Legacy stored content with '| TIER: x]' still parses — segment dropped on read. The one true distinction survives honestly: summary-leg chunks are marked GENERATED SUMMARY in prompts (from source, not tier) and Citation cards label sum: ids 'summary'. 763/763 unit tests green."
+  }
+}
