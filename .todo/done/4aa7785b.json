@@ -1,0 +1,35 @@
+{
+  "id": "4aa7785b",
+  "type": "feature",
+  "state": "done",
+  "summary": "Reader panel: header claims '15 parallels' for a 1,178-partner chunk (no true count), and the 112 curated CONTRASTS have zero reader surface",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-08-21T17:27:09.162Z",
+  "updated_at": "2026-08-21T17:28:53.060Z",
+  "files": [
+    {
+      "path": "src/app/read/[tradition]/[textId]/[n]/page.tsx"
+    }
+  ],
+  "tags": [
+    "reader",
+    "edges",
+    "contrasts"
+  ],
+  "work": {
+    "branch": "todo/4aa7785b",
+    "base_branch": "main",
+    "started_at": "2026-08-21T17:27:22.210Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "dc75742033cdd03a33f2c38bb300dc6dcf9482cd",
+    "resolved_at": "2026-08-21T17:28:53.060Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/reader.test.ts",
+    "test_function": "counts PARALLELS rows over both endpoints, no LIMIT (todo:4aa7785b)",
+    "note": "Header shows the true partner total ('15 of 207 parallels') via an indexed COUNT alongside the capped fetch; CONTRASTS get their first reader section (id-ordered — weight is NULL on them by construction), hidden when a chunk has none. Weight banding deliberately NOT added: raw scorer logits track passage length (floor-removal evidence), so rendering them as quality bands would repeat the tier mistake."
+  }
+}
