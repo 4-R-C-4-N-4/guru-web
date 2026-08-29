@@ -246,13 +246,15 @@ export async function walkGraph(
 
   if (expressEdges.length === 0) return [];
 
-  // Relevance ranking is OPT-IN (todo:697f9e58): RETRIEVAL_GRAPH_RANK=on. It
-  // ships OFF because the full frozen-golden sweep showed it only changes the
-  // head once graph weight is raised, and raising graph weight net-REGRESSES
-  // that set (6 -> 12/13 missing works) -- the real gaps are narrative-recall,
-  // a vector-side problem the graph leg can't reach. Default keeps the original
-  // behaviour byte-for-byte (LIMIT an unordered scan).
-  const rankOn = process.env.RETRIEVAL_GRAPH_RANK === 'on' || process.env.RETRIEVAL_GRAPH_RANK === '1';
+  // Relevance ranking is ON by default (todo:697f9e58); RETRIEVAL_GRAPH_RANK=off
+  // is a kill-switch. At the shipped graph weight it is a small net win on the
+  // frozen golden set (7 -> 6 missing works) AND removes the nondeterminism of
+  // the old unordered LIMIT (which returned an arbitrary DB-order sample). It is
+  // the GRAPH WEIGHT -- not this ordering -- that must stay at its default:
+  // raising graph weight to lean on the ranked leg net-regresses the frozen set
+  // (6 -> 12/13), because the remaining gaps are narrative-recall the graph leg
+  // can't reach. The off path below preserves the original unordered behaviour.
+  const rankOn = process.env.RETRIEVAL_GRAPH_RANK !== 'off';
 
   const tierMap = new Map<string, string>();
   const weightMap = new Map<string, number>();   // MAX match weight -> conceptMatchWeight (unchanged; scales the graph term downstream)
