@@ -2,9 +2,12 @@
 
 **What:** every work in the corpus gets a query file at
 `src/__tests__/fixtures/golden-queries/<work>.json` (`<work>` = a `corpus.works`
-id), drafted from the work's chunks and owner-ratified in PR review. The files
-grow the golden retrieval eval past the frozen 14-query
-`golden-retrieval.json` gate, which stays as-is, corpus-version-pinned.
+id), drafted from the work's chunks and owner-ratified in PR review. This
+per-work set is the **source of truth** for retrieval regression (todo:697f9e58).
+The older 14-query `golden-retrieval.json` gate is **deprecated** — frozen legacy
+at corpus v37, kept for reference but no longer extended and no longer the gate.
+New coverage goes here, one work at a time; the corpus-load-to-VPS gate runs
+this set.
 
 **Why by ritual:** queries that arrive with each corpus update cannot be
 cherry-picked toward any particular retrieval approach, and the set extends

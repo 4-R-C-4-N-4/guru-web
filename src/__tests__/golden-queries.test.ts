@@ -2,10 +2,11 @@
  * src/__tests__/golden-queries.test.ts
  *
  * Aggregation gate for the per-work golden query files (todo:df76ff48,
- * parent todo:a8559033). Companion to golden-retrieval.test.ts — that file's
- * corpus-v37-pinned fixture stays as-is; this one grows work by work as the
+ * parent todo:a8559033). This is the SOURCE OF TRUTH for retrieval regression
+ * (todo:697f9e58): one fixture per corpus.works id, grown work by work as the
  * corpus ritual ships fixtures/golden-queries/<work>.json files
- * (docs/golden-queries.md).
+ * (docs/golden-queries.md). The older golden-retrieval.test.ts is deprecated
+ * legacy — frozen at corpus v37, kept for reference, not extended.
  *
  * Two behaviours, matching the two query kinds:
  *   - recall probes are ASSERTED like the existing tradition-anchored

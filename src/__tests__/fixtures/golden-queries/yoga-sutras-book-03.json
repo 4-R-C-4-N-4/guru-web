@@ -1,0 +1,52 @@
+{
+  "work": "yoga-sutras-book-03",
+  "tradition": "hinduism",
+  "corpus_version": "63",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "In Patanjali's catalogue of the siddhis that samyama unlocks, which one lets a yogi take into his own body the sheer physical might of a great beast such as an elephant?",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-03.024"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 24, samyama on power/strength yielding the might of the elephant. Paraphrased 'power even such as that of the elephant may be gained' into 'physical might of a great beast'; samyama, siddhi, Patanjali kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Among the siddhis Patanjali sets out in the Vibhuti Pada, which power comes when a yogi turns samyama upon the stored subjective residues of his own mind, bringing those buried traces into direct view and so recovering the recollection of his former births?",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-03.018"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 18, samyama on the samskaras giving knowledge of previous births. Paraphrased 'when the mind-impressions become visible, there comes an understanding of previous births' into 'latent residues' and 'incarnations lived before this one'; rebirth/past-lives is the concept, not lifted phrasing."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "How, according to Patanjali, can a yogi vanish from an onlooker's sight and move about unseen, by directing samyama at the visible form of his own body and suspending its perceptibility?",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-03.021"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 21, the siddhi of invisibility from samyama on the body's form. Paraphrased 'arresting the body's perceptibility... the power to make the body invisible' into 'vanish from an onlooker's sight and move about unseen'; anchors samyama/Patanjali only."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Which siddhi arises when concentrated absorption is fixed on the energy centre at the hollow of the throat, so that the yogi is freed from the promptings of hunger and thirst?",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-03.030"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 30, samyama on the throat centre ending hunger and thirst. Paraphrased 'the centre of force in the well of the throat... the cessation of hunger and thirst' into 'energy centre at the hollow of the throat' and 'freed from the promptings of hunger and thirst'."
+    },
+    {
+      "kind": "relevance",
+      "query": "What is meant when concentration, sustained meditation, and complete absorption are fused into one continuous act of the mind trained on a single object, and what kind of knowing does that fusion open up?",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-03.004", "hinduism.yoga-sutras-book-03.005"],
+      "note": "Sutras 4-5, the definition of samyama as the union of dharana, dhyana and samadhi and the illumination it brings. Contemplative traditions broadly (Buddhist dhyana/jhana, Christian contemplation) also treat the ripening of concentration into absorption, so this asserts nothing about tradition or work."
+    },
+    {
+      "kind": "relevance",
+      "query": "Can deep meditative insight give a person genuine knowledge of past and future events, and how is that transcendence of ordinary time understood?",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-03.016", "hinduism.yoga-sutras-book-03.052"],
+      "note": "Sutras 16 and 52, knowledge of past and future through samyama and the wisdom born of discerning the divisions of time. Foreknowledge and timeless perception are claimed across many traditions, so no tradition/work assertion is made."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "work": "yoga-sutras-book-01",
+  "tradition": "hinduism",
+  "corpus_version": "63",
+  "frozenEval": true,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Patanjali's list of the inner obstacles that scatter the mind and keep a practitioner from reaching or holding deep absorption in samadhi — bodily illness, wavering uncertainty, sluggishness, heedlessness, and the failure to settle into a steady meditative state",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-01.030"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 30, the nine antaraya. 'sickness, inertia, doubt, lightmindedness, laziness, intemperance, false notions, inability to reach a stage of meditation, or to hold it when reached' paraphrased to illness/uncertainty/sluggishness/heedlessness; samadhi and Patanjali are reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Patanjali's yoga technique for making the mind serene and undisturbed enough for meditation by deliberately cultivating four attitudes toward others — gladness at the fortunate, tenderness toward the suffering, pleasure in the virtuous, and even-minded indifference toward the wicked",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-01.033"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 33, the four brahmaviharas (maitri, karuna, mudita, upeksha). 'sympathy with the happy, compassion for the sorrowful, delight in the holy, disregard of the unholy' paraphrased to gladness/tenderness/pleasure/indifference; 'gracious peace' rendered as serene mind; anchored to Patanjali/yoga/meditation because the bare four-fold compassion theme pulled dhammapada, sufi and christian-mysticism texts and missed hinduism."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the teaching that the sacred syllable OM is the very name of the Lord, and that repeating it silently while dwelling on its meaning turns consciousness inward and dissolves the obstacles on the path",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-01.027", "hinduism.yoga-sutras-book-01.028", "hinduism.yoga-sutras-book-01.029"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutras 27-29, Ishvara-pranidhana. 'His word is OM' / 'soundless repetition of OM and meditation thereon' / 'removal of barriers' paraphrased to name of the Lord / silent repetition / dissolves obstacles; OM and Lord (Ishvara) are reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the image of a mind grown so still that it turns transparent like a flawless jewel and takes on the colour of whatever it rests upon, whether that be the one who knows, the act of knowing, or the thing being known",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-01.041"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 41, the crystal simile of samapatti. 'like a pure crystal, takes the colour of what it rests on, whether that be the perceiver, perceiving, or the thing perceived' paraphrased to transparent jewel / the one who knows, the act of knowing, the thing known."
+    },
+    {
+      "kind": "relevance",
+      "query": "how can a restless, wandering mind be disciplined into steady stillness through sustained practice",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-01.002", "hinduism.yoga-sutras-book-01.032", "hinduism.yoga-sutras-book-01.035"],
+      "note": "Book I's central project of quieting the modifications of the mind through steady effort — but contemplative traditions broadly answer this. No asserted target; graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "what is the ultimate union in which the individual soul is joined to the divine and freed from separateness",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-01.001", "hinduism.yoga-sutras-book-01.051"],
+      "note": "The opening and closing framing of samadhi as union of soul with Oversoul — but mystical union is a shared question across traditions. No asserted target; graded post-hoc."
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "work": "yoga-sutras-book-04",
+  "tradition": "hinduism",
+  "corpus_version": "63",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Patanjali's account of the several ways extraordinary or supernormal abilities come to a person — some carried over and present from birth, some induced by herbs or potions, some awakened by reciting sacred formulas, some won through severe austerity, and the truest ones ripened in deep meditative absorption",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-04.001"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 1, the five origins of the siddhis (janma, oshadhi, mantra, tapas, samadhi). 'inborn, or gained by the use of drugs, or by incantations, or by fervour, or by Meditation' paraphrased to born-with / herbs or potions / reciting sacred formulas / severe austerity / meditative absorption; Patanjali is a reader-honest anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the argument that the mind cannot be the one that ultimately witnesses itself, because if a deeper mind observed the first, then a still deeper one would be needed to observe that, and so on forever, leaving an unresolvable tangle of overlapping recollections",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-04.021"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 21, the infinite-regress refutation that the mind is self-illuminating. 'if the Mind be thought of as seen by another more inward Mind, then there would be an endless series of perceiving Minds, and a confusion of memories' paraphrased to deeper mind observing / on forever / tangle of overlapping recollections."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the fourfold sorting of deeds: ordinary people's acts turn out light, or dark, or a blend of the two, and reap a matching reward or penalty, but the acts of one who has gone past all craving and set the heart wholly on the Eternal belong to a fourth kind that is neither — earning no bright pleasure and no dark suffering",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-04.007"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 7, the karma of the yogin is neither white nor black while others' is threefold (white / black / mixed). 'The works of followers after Union make neither for bright pleasure nor for dark pain; the works of others make for pleasure or pain, or a mingling of these' paraphrased to light/dark/blend and matching reward or penalty vs. a fourth kind that is neither."
+    },
+    {
+      "kind": "relevance",
+      "query": "what is the final liberation of the soul, in which awareness is set free from the workings of nature and comes to rest in its own pure being",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-04.032", "hinduism.yoga-sutras-book-04.034"],
+      "note": "The closing sutras on kaivalya — nature's gunas having served their purpose, pure Consciousness returns to its essential form — but final liberation and the soul's return to its source is a question many traditions answer. No asserted target; graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "is the division of time into past, present, and future ultimately real, or do what-has-been and what-is-to-come already exist together in an eternal now",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-04.012"],
+      "note": "Sutra 12's teaching that past and future coexist and differ only in phase — but the reality of time and the eternal present is a shared metaphysical question across traditions. No asserted target; graded post-hoc."
+    }
+  ]
+}
