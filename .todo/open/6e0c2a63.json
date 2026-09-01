@@ -7,9 +7,17 @@
     "type": "agent"
   },
   "created_at": "2026-08-12T17:37:48.477Z",
-  "updated_at": "2026-08-12T17:37:48.477Z",
+  "updated_at": "2026-09-01T14:04:54.203Z",
   "tags": [
     "corpus",
     "quality-filter"
+  ],
+  "relationships": {},
+  "files": [
+    {
+      "path": "docs/retrieval-golden-gap-investigation.md",
+      "commit": "459dd703adb99e253f808961afee914588fb7007",
+      "note": "full retrieval golden-gap investigation (todo:697f9e58)"
+    }
   ]
 }

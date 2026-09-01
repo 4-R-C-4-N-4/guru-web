@@ -119,15 +119,44 @@ export async function retrieve(
   const gateCapEnv = process.env.RETRIEVAL_LEX_GATE_CAP;
   const lexGateCap = gateCapEnv === 'off' ? null : (Number(gateCapEnv) || LEX_GATE_CAP);
 
+  // Cosine dup-collapse (todo:697f9e58, prototype). Opt-in: RETRIEVAL_DUP_COLLAPSE=on.
+  // Suppresses a candidate that restates a higher-ranked chunk already holding a
+  // slot. Same-text only unless RETRIEVAL_DUP_COLLAPSE_SCOPE=all. Embeddings are
+  // fetched here, gated, so the default path pays nothing.
+  const dupOn = process.env.RETRIEVAL_DUP_COLLAPSE === 'on' || process.env.RETRIEVAL_DUP_COLLAPSE === '1';
+  let dupCollapse: { threshold: number; sameTextOnly: boolean; embeddings: Map<string, number[]> } | undefined;
+  if (dupOn) {
+    const ids = new Set<string>();
+    for (const c of [...vectorResults, ...graphResults, ...lexicalResults]) ids.add(c.id);
+    dupCollapse = {
+      threshold: Number(process.env.RETRIEVAL_DUP_COLLAPSE_THRESHOLD) || DUP_COLLAPSE_THRESHOLD,
+      sameTextOnly: process.env.RETRIEVAL_DUP_COLLAPSE_SCOPE !== 'all',
+      embeddings: await fetchEmbeddings([...ids]),
+    };
+  }
+
+  // Per-work cap (todo:697f9e58). RETRIEVAL_MAX_PER_TEXT overrides MAX_PER_TEXT
+  // (a number retunes, 'off' disables). Disabled in study mode: the query is
+  // pinned to one work, whose own passages are exactly what the reader wants, so
+  // capping per text would starve the study answer. A narrow whitelist/blacklist
+  // that leaves too few works to fill topK under the cap is handled by the
+  // backfill in mergeAndRerank, not here.
+  const maxPerTextEnv = process.env.RETRIEVAL_MAX_PER_TEXT;
+  const perTextCap = studyWorkId
+    ? 0
+    : maxPerTextEnv === 'off' ? 0 : (Number(maxPerTextEnv) || MAX_PER_TEXT);
+
   return mergeAndRerank([...vectorResults, ...summaryResults], graphResults, topK, {
     traditionRarity,
     lexicalResults,
     lexicalWeight,
     graphWeight,
     lexGateCap,
+    dupCollapse,
     // A pinned study work is single-tradition: the cap would truncate results
     // to MAX_PER_TRADITION regardless of topK.
     perTraditionCap: studyWorkId ? 0 : undefined,
+    perTextCap,
   });
 }
 
@@ -294,6 +323,34 @@ export async function vectorSearch(
   return rows;
 }
 
+// Fetch raw chunk embeddings for a candidate id set, for the cosine dup-collapse
+// pass (todo:697f9e58). Gated in retrieve() — only called when the toggle is on,
+// so the default path never pays for it. pgvector's ::text form is a JSON array,
+// so it parses directly. Ids not in `chunks` (e.g. summary_nodes) are simply
+// absent from the map and treated as never-redundant by the collapse.
+async function fetchEmbeddings(ids: string[]): Promise<Map<string, number[]>> {
+  if (ids.length === 0) return new Map();
+  const rows = await query<{ id: string; embedding: string }>(
+    `SELECT id, embedding::text AS embedding FROM chunks WHERE id = ANY($1)`,
+    [ids],
+  );
+  const m = new Map<string, number[]>();
+  for (const r of rows) {
+    try { m.set(r.id, JSON.parse(r.embedding)); } catch { /* skip unparseable */ }
+  }
+  return m;
+}
+
+// Cosine similarity of two equal-length vectors (nomic embeddings aren't unit
+// -normalised, so divide by the norms). Small dim (768) over a handful of
+// top-K pairs — cheap enough to compute inline during emission.
+function cosine(a: number[], b: number[]): number {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom > 0 ? dot / denom : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Graph search
 // ---------------------------------------------------------------------------
@@ -371,6 +428,17 @@ const GRAPH_WEIGHT = 0.3;
 const LEXICAL_WEIGHT = 1.0; // tuned default (todo:3fc23534): swept 0→2.5, peak mean p@10 0.36 at 1.0 (baseline 0.21); env-overridable
 const DIVERSITY_BOOST = 0.1; // additive, applied to a tradition's first appearance
 const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncapped)
+// Per-work cap (todo:697f9e58). Bounds how many top-K slots any one TEXT can
+// take, so a single encyclopedic work (e.g. blavatsky-sd, measured holding 18-32
+// of the top scored slots on cross-tradition queries) can't crowd out primaries.
+// Distinct from MAX_PER_TRADITION: an omnibus that is nearly its whole tradition
+// slips under the tradition cap. 0 = uncapped; env override RETRIEVAL_MAX_PER_TEXT
+// (a number retunes, 'off' disables). Ships OFF by default (0) — the golden-set
+// measurement showed it recovers few probes and only at an aggressive value, so
+// enabling it is a deliberate, swept decision, not a silent default. It is
+// disabled in study mode (single pinned work) and BACKFILLED so a narrow
+// scope can never return fewer than topK results because of the cap.
+const MAX_PER_TEXT = 0;
 // Lexical gate-cap (todo:8bc7698b). The normalised lexical term is capped at
 // this value ONLY for a chunk with no vector support (similarity 0). A lexical
 // hit that the vector leg never corroborated therefore cannot outscore a
@@ -385,6 +453,12 @@ const MAX_PER_TRADITION = 3; // hard cap on top-K slots per tradition (0 = uncap
 // probes (higher re-floods, lower drops marginal rescues). Default on;
 // RETRIEVAL_LEX_GATE_CAP=off disables, a number retunes without a redeploy.
 const LEX_GATE_CAP = 0.49;
+// Cosine dup-collapse threshold (todo:697f9e58, prototype). A candidate whose
+// embedding is >= this cosine to a higher-ranked chunk already holding a slot
+// is suppressed. 0.80 is the starting point measured against the golden set's
+// same-text head triples (secret-teachings 0.82-0.85, blavatsky 0.77-0.79);
+// env-tunable via RETRIEVAL_DUP_COLLAPSE_THRESHOLD. Off unless RETRIEVAL_DUP_COLLAPSE=on.
+const DUP_COLLAPSE_THRESHOLD = 0.80;
 // 'summary' starts at inferred's weight deliberately (unswept — generated
 // apparatus competes on similarity, not tier); retune independently of
 // 'inferred' when the study-mode sweep lands.
@@ -434,6 +508,10 @@ export function mergeAndRerank(
     graphWeight?: number;
     /** Override MAX_PER_TRADITION (0 disables the cap — study mode). */
     perTraditionCap?: number;
+    /** Override MAX_PER_TEXT — max top-K slots one text may take (0 disables;
+     *  study mode passes 0). Starvation is backfilled, so this never shrinks the
+     *  result below topK. */
+    perTextCap?: number;
     /**
      * Cap on the normalised lexical term for vector-unsupported (sim 0) hits
      * (todo:8bc7698b). Defaults to LEX_GATE_CAP; pass null to disable the gate
@@ -441,6 +519,15 @@ export function mergeAndRerank(
      * is never capped.
      */
     lexGateCap?: number | null;
+    /**
+     * Cosine dup-collapse (todo:697f9e58, prototype). When set, a candidate
+     * whose embedding is >= threshold cosine to a higher-ranked chunk already
+     * emitted is suppressed, freeing its slot for distinct content. sameTextOnly
+     * restricts the comparison to chunks from the same text (default), so the
+     * pass never collapses two traditions that happen to be similar. Chunks with
+     * no embedding in the map are never suppressed.
+     */
+    dupCollapse?: { threshold: number; sameTextOnly: boolean; embeddings: Map<string, number[]> };
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
@@ -577,14 +664,69 @@ export function mergeAndRerank(
   // Emit top-K, capping how many slots any one tradition can take so a
   // single well-connected tradition can't flood the results.
   const tradCounts = new Map<string, number>();
+  const textCounts = new Map<string, number>();
   const out: RetrievedChunk[] = [];
+  const emitted = new Set<string>();
+  const tradCap = opts.perTraditionCap ?? MAX_PER_TRADITION;
+  const textCap = opts.perTextCap ?? MAX_PER_TEXT;
+  const dup = opts.dupCollapse;
+  let collapsed = 0;
+  let textCapSkips = 0;
   for (const { entry } of scored) {
     if (out.length >= topK) break;
     const trad = entry.chunk.tradition;
-    const cap = opts.perTraditionCap ?? MAX_PER_TRADITION;
-    if (cap > 0 && (tradCounts.get(trad) ?? 0) >= cap) continue;
+    const text = entry.chunk.text_id ?? '';
+    if (tradCap > 0 && (tradCounts.get(trad) ?? 0) >= tradCap) continue;
+    // Per-work cap (todo:697f9e58): bound slots per text so one omnibus can't
+    // flood the head. Backfilled below, so a narrow scope with few distinct
+    // works (whitelist/blacklist) is never starved under topK by this cap.
+    if (textCap > 0 && (textCounts.get(text) ?? 0) >= textCap) { textCapSkips++; continue; }
+    // Cosine dup-collapse: skip a chunk that restates one already emitted
+    // (todo:697f9e58). Only compares chunks that carry an embedding; sameTextOnly
+    // keeps it from collapsing distinct traditions that merely resemble each other.
+    if (dup) {
+      const emb = dup.embeddings.get(entry.chunk.id);
+      if (emb) {
+        let redundant = false;
+        for (const o of out) {
+          if (dup.sameTextOnly && o.text_id !== entry.chunk.text_id) continue;
+          const oemb = dup.embeddings.get(o.id);
+          if (oemb && cosine(emb, oemb) >= dup.threshold) { redundant = true; break; }
+        }
+        if (redundant) {
+          collapsed++;
+          if (process.env.RETRIEVAL_TRACE) {
+            console.log(`  [dup-collapse] skip ${entry.chunk.id} (>=${dup.threshold} cos to an emitted ${dup.sameTextOnly ? 'same-text ' : ''}chunk)`);
+          }
+          continue;
+        }
+      }
+    }
     out.push(entry.chunk);
+    emitted.add(entry.chunk.id);
     tradCounts.set(trad, (tradCounts.get(trad) ?? 0) + 1);
+    textCounts.set(text, (textCounts.get(text) ?? 0) + 1);
+  }
+  // Backfill (todo:697f9e58): if the per-work cap left us short of topK — a
+  // scope so narrow that textCap × availableWorks < topK — relax the per-work
+  // cap and fill the remaining slots from the highest-scored leftovers, so the
+  // cap never returns fewer results than the uncapped path would. Per-tradition
+  // cap is intentionally NOT relaxed here (its own study-mode override is 0).
+  if (textCap > 0 && out.length < topK && textCapSkips > 0) {
+    for (const { entry } of scored) {
+      if (out.length >= topK) break;
+      if (emitted.has(entry.chunk.id)) continue;
+      if (tradCap > 0 && (tradCounts.get(entry.chunk.tradition) ?? 0) >= tradCap) continue;
+      out.push(entry.chunk);
+      emitted.add(entry.chunk.id);
+      tradCounts.set(entry.chunk.tradition, (tradCounts.get(entry.chunk.tradition) ?? 0) + 1);
+    }
+    if (process.env.RETRIEVAL_TRACE) {
+      console.log(`  [per-work-cap] backfilled to ${out.length}/${topK} after ${textCapSkips} cap skip(s)`);
+    }
+  }
+  if (dup && process.env.RETRIEVAL_TRACE) {
+    console.log(`  [dup-collapse] ${collapsed} chunk(s) collapsed (threshold ${dup.threshold}, ${dup.sameTextOnly ? 'same-text' : 'cross-text'})`);
   }
   return out;
 }

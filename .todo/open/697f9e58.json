@@ -1,0 +1,42 @@
+{
+  "id": "697f9e58",
+  "type": "bug",
+  "state": "open",
+  "summary": "Retrieval: mega-text head crowding surfaced by golden set after blavatsky-sd load; golden-check harness was mis-calibrated (top-8 vs prod top-15)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-08-28T10:52:25.606Z",
+  "updated_at": "2026-09-01T14:04:54.455Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts",
+      "lines": [
+        373,
+        80
+      ]
+    },
+    {
+      "path": "docs/retrieval-golden-gap-investigation.md",
+      "commit": "459dd703adb99e253f808961afee914588fb7007",
+      "note": "full retrieval golden-gap investigation (todo:697f9e58)"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "ranking",
+    "golden-set"
+  ],
+  "description": "Golden set began failing after the blavatsky-sd (Secret Doctrine, 727 chunks) load. Investigation 2026-08-27/28 against docker postgres (6743 chunks, all embedded).\n\nTWO distinct causes:\n\nA) Mega-text head crowding (the real regression). MAX_PER_TRADITION=3 (retriever.ts:373) is per-TRADITION, not per-text. The 4 biggest omnibus works are each alone in their tradition — blavatsky-sd/theosophy (NEW), plotinus/neoplatonism, secret-teachings/western_esoteric, boehme/christian_mysticism — so each grabs its full 3 head slots. Measured: mega-texts take 7-8 of 15 head slots on failing queries; blavatsky-sd:3 appears in the head of EVERY failing query. Adding blavatsky added a 4th crowder to a 15-slot head, pushing small target texts past the cutoff. No per-TEXT cap exists.\n\nB) Vocabulary mismatch (latent, NOT caused by new text). Golden query uses a term absent from the specific public-domain translation: 'wu wei' -> Legge's 'non-action' (0 body hits in tao-te-ching-legge); 'Nous' -> Mead's 'Mind' (0 in corpus-hermeticum-01). Both legs blind. Would have failed before blavatsky.\n\nAlso found: intake pools scale with topK (retriever.ts:77-80, vector topK*poolMult, lexical/graph topK*2), so retrieve(q,8) != retrieve(q,15) truncated — same query returns different heads. golden-check.ts harness ran topK=8 while prod (api/query/route.ts:155) serves 15. FIXED harness default to 15 (golden-check.ts:36, uncommitted working-tree edit) — that recovered kybalion + book-of-dead (harness-only artifacts). Still-failing at K=15: sefer-yetzirah (crowding), corpus-hermeticum + tao-te-ching (vocab).\n\nCandidate directions (not yet decided): per-text cap MAX_PER_TEXT~2; floor intake pools independent of topK; concept_aliases for doctrinal synonyms (wu wei<->non-action, Nous<->Mind); fix/rebaseline the two vocab golden queries.",
+  "relationships": {
+    "linked_commits": [
+      "459dd70",
+      "f5cd354",
+      "54418ad"
+    ],
+    "related": [
+      "31a7fe76",
+      "418a98c9"
+    ]
+  }
+}

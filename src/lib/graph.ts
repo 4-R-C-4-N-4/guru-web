@@ -246,34 +246,74 @@ export async function walkGraph(
 
   if (expressEdges.length === 0) return [];
 
+  // Relevance ranking is ON by default (todo:697f9e58); RETRIEVAL_GRAPH_RANK=off
+  // is a kill-switch. At the shipped graph weight it is a small net win on the
+  // frozen golden set (7 -> 6 missing works) AND removes the nondeterminism of
+  // the old unordered LIMIT (which returned an arbitrary DB-order sample). It is
+  // the GRAPH WEIGHT -- not this ordering -- that must stay at its default:
+  // raising graph weight to lean on the ranked leg net-regresses the frozen set
+  // (6 -> 12/13), because the remaining gaps are narrative-recall the graph leg
+  // can't reach. The off path below preserves the original unordered behaviour.
+  const rankOn = process.env.RETRIEVAL_GRAPH_RANK !== 'off';
+
   const tierMap = new Map<string, string>();
-  const weightMap = new Map<string, number>();
+  const weightMap = new Map<string, number>();   // MAX match weight -> conceptMatchWeight (unchanged; scales the graph term downstream)
+  const relevance = new Map<string, number>();    // sum of match weight over the DISTINCT matched concepts a chunk expresses (rank mode only)
+  const seenPair = new Set<string>();             // (source,target) dedupe so a repeated edge can't double-count
   for (const e of expressEdges) {
     tierMap.set(e.source, e.tier); // EXPRESSES edge confidence tier (last-wins, unchanged)
     const w = matchWeights.get(e.target) ?? 0;
     weightMap.set(e.source, Math.max(weightMap.get(e.source) ?? 0, w));
+    if (rankOn) {
+      const pair = `${e.source} ${e.target}`;
+      if (!seenPair.has(pair)) {
+        seenPair.add(pair);
+        relevance.set(e.source, (relevance.get(e.source) ?? 0) + w);
+      }
+    }
   }
 
   const chunkIds = [...new Set(expressEdges.map(e => e.source))];
-
-  // $1 is taken by the chunkIds ANY clause below, so scope filter starts at $2.
-  const { where, params, paramIndex } = buildScopeFilter(prefs, 2);
-
-  const rows = await query<RetrievedChunk>(
-    `SELECT id, text_id, tradition, text_name, section, translator, body, token_count
-     FROM chunks
-     WHERE id = ANY($1::text[])
-       AND ${where}
-     LIMIT $${paramIndex}`,
-    [chunkIds, ...params, limit]
-  );
-
-  return rows.map(chunk => ({
+  const { where, params, paramIndex } = buildScopeFilter(prefs, 2); // $1 = the chunk-id ANY clause
+  const decorate = (chunk: RetrievedChunk) => ({
     ...chunk,
     source: 'graph' as const,
     tier: (tierMap.get(chunk.id) ?? 'inferred') as RetrievedChunk['tier'],
     conceptMatchWeight: weightMap.get(chunk.id) ?? 0,
-  }));
+  });
+
+  if (!rankOn) {
+    // Original path: LIMIT an unordered scan (arbitrary sample, DB order).
+    const rows = await query<RetrievedChunk>(
+      `SELECT id, text_id, tradition, text_name, section, translator, body, token_count
+       FROM chunks
+       WHERE id = ANY($1::text[])
+         AND ${where}
+       LIMIT $${paramIndex}`,
+      [chunkIds, ...params, limit]
+    );
+    return rows.map(decorate);
+  }
+
+  // Ranked path (RETRIEVAL_GRAPH_RANK=on): order co-expressors by relevance --
+  // sum of match weight over the distinct matched concepts a chunk expresses --
+  // BEFORE limiting, so a chunk covering more of the query's concepts ranks
+  // first, favouring the text a concept cluster is central to over an omnibus
+  // that mentions one in passing. Ties broken by chunk id for determinism (DB
+  // row order is not stable). Buffer the candidate set so the scope filter can
+  // drop rows without starving `limit`.
+  const cmp = (a: string, b: string) =>
+    (relevance.get(b) ?? 0) - (relevance.get(a) ?? 0) || (a < b ? -1 : a > b ? 1 : 0);
+  const candidateIds = chunkIds.sort(cmp).slice(0, Math.max(limit * 3, limit));
+  const rows = await query<RetrievedChunk>(
+    `SELECT id, text_id, tradition, text_name, section, translator, body, token_count
+     FROM chunks
+     WHERE id = ANY($1::text[])
+       AND ${where}`,
+    [candidateIds, ...params]
+  );
+  rows.sort((a, b) => cmp(a.id, b.id));
+  return rows.slice(0, limit).map(decorate);
 }
 
 /**

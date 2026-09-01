@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-08-13T13:26:25.934Z",
-  "updated_at": "2026-08-14T20:51:15.527Z",
+  "updated_at": "2026-09-01T14:04:54.244Z",
   "tags": [
     "golden-set",
     "ritual"
@@ -20,6 +20,14 @@
       "type": "evidence",
       "content": "Ground work is DONE upstream (guru PR #64, 23 commits, mergeable) — this ticket can now be written from measured fact instead of plan. Chain step 3 exists and has run for real.\n\nMEASURED, 2026-08-14 full-corpus run (guru scripts/derive_parallels.py, vendored ~/programs/guru/scorer-v1):\n- 38,452 (concept, chunk) pairs over 116 concepts, 614s scoring => budget ~10 min, NOT the ~6 min the old estimate assumed.\n- Output: 17,244 PARALLELS rows, 2,364 of 5,054 chunks got partners.\n- Exported clean at corpus_version 53: EXPRESSES 38,457 / BELONGS_TO 5,567 / PARALLELS 17,244 (derived, real weights) / CONTRASTS 112 (frozen snapshot).\n\nRITUAL DETAILS THE DOC MUST CARRY (each one cost time to discover):\n1. CPU-only, and not by preference — guru/rerank.py does NO device placement, so a CUDA pin is inert. Any 'GPU minutes' figure in older notes belongs to the rellm prototype, which had its own GPU path. Do not budget GPU time for step 3.\n2. Runtime is a guru-local venv (guru requirements-derive.txt, torch==2.13.0+cpu). Invoke as .venv/bin/python — a bare python3 dies minutes in, inside rerank._load(), after the DB and taxonomy have loaded. Do NOT reach into rellm's venv; rellm is a sandbox and guru must not depend on it.\n3. A partial (--limit-concepts) run left in the default data/derived_parallels/ silently becomes 'latest' and ships in place of the full run — export.py selects the latest COMPLETE run dir with no notion of coverage, and every freshness/non-empty guard passes. Partial runs must go to --out elsewhere.\n4. A warm score cache means a re-run never loads the model, so a successful re-run is NOT evidence the environment works. Verify with a direct scoring call instead.\n5. Export is never a dry run: next_corpus_version() commits before any bytes are written. Refused exports are free (all artifact guards run before the bump), successful ones burn a version.\n\nStep 2 (re-distill) was NOT exercised this round — the existing scorer-v1 checkpoint was reused, so its ~1 GPU-hour and its gates remain as-specified but unmeasured here.",
       "confidence": "high"
+    }
+  ],
+  "relationships": {},
+  "files": [
+    {
+      "path": "docs/retrieval-golden-gap-investigation.md",
+      "commit": "459dd703adb99e253f808961afee914588fb7007",
+      "note": "full retrieval golden-gap investigation (todo:697f9e58)"
     }
   ]
 }
