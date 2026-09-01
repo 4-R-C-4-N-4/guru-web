@@ -186,7 +186,12 @@ describe('walkGraph — chunks-query param alignment', () => {
     return mockQuery.mock.calls[1];
   }
 
-  it('with empty scope prefs, LIMIT binds to $2 and params are [chunkIds, limit]', async () => {
+  // Default path is relevance-ranked (todo:697f9e58): it fetches the ranked
+  // candidate set and slices to `limit` in JS, so the chunks SELECT carries NO
+  // SQL LIMIT and `params` is [candidateIds, ...scope] (no trailing limit). The
+  // scope-param-alignment invariant these tests guard ($1 = chunk ids, scope at
+  // $2..) is unchanged. The kill-switch off-path (LIMIT-bound) is covered last.
+  it('ranked (default): empty scope prefs — no SQL LIMIT, params are [chunkIds]', async () => {
     mockUpToChunksQuery();
 
     const prefs: UserPreferences = {
@@ -202,11 +207,11 @@ describe('walkGraph — chunks-query param alignment', () => {
     await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
 
     const [sql, params] = chunksCall();
-    expect(sql).toMatch(/LIMIT \$2\b/);
-    expect(params).toEqual([['chunk-1'], 25]);
+    expect(sql).not.toMatch(/LIMIT/);
+    expect(params).toEqual([['chunk-1']]);
   });
 
-  it('with blacklisted traditions, LIMIT binds to $3 and the text[] lands in $2', async () => {
+  it('ranked (default): blacklisted traditions — text[] binds $2, no LIMIT', async () => {
     mockUpToChunksQuery();
 
     const prefs: UserPreferences = {
@@ -223,11 +228,11 @@ describe('walkGraph — chunks-query param alignment', () => {
 
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/tradition <> ALL\(\$2::text\[\]\)/);
-    expect(sql).toMatch(/LIMIT \$3\b/);
-    expect(params).toEqual([['chunk-1'], ['gnosticism'], 25]);
+    expect(sql).not.toMatch(/LIMIT/);
+    expect(params).toEqual([['chunk-1'], ['gnosticism']]);
   });
 
-  it('with blacklisted TEXTS only, text_id filter lands in $2 and LIMIT in $3 (todo:2d0cbfab)', async () => {
+  it('ranked (default): blacklisted TEXTS only — text_id filter binds $2, no LIMIT (todo:2d0cbfab)', async () => {
     // The per-text scope path the settings checkboxes feed on every chat
     // query. Until 2026-07 no test passed a non-empty blockedTexts through
     // walkGraph — the predicate existed but a param-slot regression would
@@ -249,11 +254,11 @@ describe('walkGraph — chunks-query param alignment', () => {
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/text_id <> ALL\(\$2::text\[\]\)/);
     expect(sql).not.toMatch(/tradition <> ALL/);
-    expect(sql).toMatch(/LIMIT \$3\b/);
-    expect(params).toEqual([['chunk-1'], ['dhp.1', 'dhp.2'], 25]);
+    expect(sql).not.toMatch(/LIMIT/);
+    expect(params).toEqual([['chunk-1'], ['dhp.1', 'dhp.2']]);
   });
 
-  it('with blacklisted traditions AND texts, both predicates bind $2/$3 and LIMIT is $4', async () => {
+  it('ranked (default): blacklisted traditions AND texts — bind $2/$3, no LIMIT', async () => {
     mockUpToChunksQuery();
 
     const prefs: UserPreferences = {
@@ -271,11 +276,11 @@ describe('walkGraph — chunks-query param alignment', () => {
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/tradition <> ALL\(\$2::text\[\]\)/);
     expect(sql).toMatch(/text_id <> ALL\(\$3::text\[\]\)/);
-    expect(sql).toMatch(/LIMIT \$4\b/);
-    expect(params).toEqual([['chunk-1'], ['gnosticism'], ['kalevala'], 25]);
+    expect(sql).not.toMatch(/LIMIT/);
+    expect(params).toEqual([['chunk-1'], ['gnosticism'], ['kalevala']]);
   });
 
-  it('with whitelisted traditions + texts, scope params occupy $2..$3 and LIMIT is $4', async () => {
+  it('ranked (default): whitelisted traditions + texts — scope params occupy $2..$3, no LIMIT', async () => {
     mockUpToChunksQuery();
 
     const prefs: UserPreferences = {
@@ -293,8 +298,34 @@ describe('walkGraph — chunks-query param alignment', () => {
     const [sql, params] = chunksCall();
     expect(sql).toMatch(/tradition = ANY\(\$2::text\[\]\)/);
     expect(sql).toMatch(/text_id = ANY\(\$3::text\[\]\)/);
-    expect(sql).toMatch(/LIMIT \$4\b/);
-    expect(params).toEqual([['chunk-1'], ['neoplatonism'], ['enneads'], 25]);
+    expect(sql).not.toMatch(/LIMIT/);
+    expect(params).toEqual([['chunk-1'], ['neoplatonism'], ['enneads']]);
+  });
+
+  it('kill-switch RETRIEVAL_GRAPH_RANK=off restores the LIMIT-bound unordered fetch', async () => {
+    mockUpToChunksQuery();
+    const prev = process.env.RETRIEVAL_GRAPH_RANK;
+    process.env.RETRIEVAL_GRAPH_RANK = 'off';
+    try {
+      const prefs: UserPreferences = {
+        scopeMode: 'all',
+        blockedTraditions: [],
+        blockedTexts: [],
+        whitelistedTraditions: [],
+        whitelistedTexts: [],
+        preferredModel: null,
+        preferredVoice: 'scholar',
+      };
+
+      await walkGraph([{ conceptId: 'concept-a', matchTier: 'concept' }], prefs, 25);
+
+      const [sql, params] = chunksCall();
+      expect(sql).toMatch(/LIMIT \$2\b/);
+      expect(params).toEqual([['chunk-1'], 25]);
+    } finally {
+      if (prev === undefined) delete process.env.RETRIEVAL_GRAPH_RANK;
+      else process.env.RETRIEVAL_GRAPH_RANK = prev;
+    }
   });
 });
 
