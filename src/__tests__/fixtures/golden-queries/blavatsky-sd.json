@@ -1,0 +1,52 @@
+{
+  "work": "blavatsky-sd",
+  "tradition": "theosophy",
+  "corpus_version": "63",
+  "frozenEval": true,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "what is Fohat and how does it press cosmic mind into primordial matter, settling scattered atoms into solid worlds",
+      "provenanceChunkIds": ["theosophy.blavatsky-sd.050"],
+      "mustIncludeTraditions": ["theosophy"],
+      "mustIncludeWork": true,
+      "note": "Drafted from the Stanza III commentary; paraphrased away 'hardens the atoms', 'Cosmic Electricity', 'Web', and 'Svabhavat'. Kept the proper noun Fohat as a reader-honest anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the teaching that even a speck of mineral dust is itself alive, and that each successive Round of a manvantara brings one more of the elements into being",
+      "provenanceChunkIds": ["theosophy.blavatsky-sd.120"],
+      "mustIncludeTraditions": ["theosophy"],
+      "mustIncludeWork": true,
+      "note": "Drafted from the 'ALL IS LIFE' passage; paraphrased away 'fiery lives', 'Devourers', and the exact One-Life phrasing. Kept manvantara/Rounds as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "how the sequence of seven root-races and their vanished continents like Lemuria and Atlantis is read into the beast with seven heads in Revelation",
+      "provenanceChunkIds": ["theosophy.blavatsky-sd.700"],
+      "mustIncludeTraditions": ["theosophy"],
+      "mustIncludeWork": true,
+      "note": "Drafted from the Apocalyptic passage equating the seven heads with continents and races; paraphrased the biblical quotation. Kept 'seven root-races', Lemuria, Atlantis as anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "argument that towering prehistoric giants, not ordinary men, raised the huge megaliths of Stonehenge and Carnac, alongside old reports of oracle-giving stones",
+      "provenanceChunkIds": ["theosophy.blavatsky-sd.500"],
+      "mustIncludeTraditions": ["theosophy"],
+      "mustIncludeWork": true,
+      "note": "Drafted from the Cyclopean-ruins section; paraphrased away 'Cyclopean', 'betyles', 'ophites', and the animated-stone quotations. Kept Stonehenge, Carnac, giants as anchors."
+    },
+    {
+      "kind": "relevance",
+      "query": "why does evil have to exist at all, and can there be any good or growth in a world without it",
+      "provenanceChunkIds": ["theosophy.blavatsky-sd.200"],
+      "note": "The Secret Doctrine treats evil as a force essential to good, but the necessity-of-evil question is answered across many traditions in the corpus."
+    },
+    {
+      "kind": "relevance",
+      "query": "how a single point emerging within a circle can serve as the geometric root from which the whole ordered universe is generated",
+      "provenanceChunkIds": ["theosophy.blavatsky-sd.300"],
+      "note": "Drawn from the Pythagorean Monad / Mathematical-Point passage, but the point-and-circle image of cosmic origination recurs in Pythagorean, Kabbalistic, and Hermetic sources too."
+    }
+  ]
+}

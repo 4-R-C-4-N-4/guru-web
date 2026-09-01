@@ -1,6 +1,14 @@
 /**
  * src/__tests__/golden-retrieval.test.ts
  *
+ * DEPRECATED (todo:697f9e58) — superseded by the per-work golden set,
+ * `golden-queries.test.ts` (+ `fixtures/golden-queries/<work>.json`), which is
+ * now the SOURCE OF TRUTH for retrieval regression. This file is frozen legacy:
+ * a corpus-v37-pinned 14-query snapshot, kept for its historical
+ * tradition-anchored labels but no longer extended and no longer the gate. Do
+ * not add queries here; add a per-work fixture instead. It stays INTEGRATION_TEST
+ * -gated so it never runs in CI.
+ *
  * Golden retrieval regression gate (todo:b22586bc; design §9.3). The standing
  * safety net for big retrieval changes: a frozen, corpus-pinned set of
  * domain-knowledge expectations that must keep holding.

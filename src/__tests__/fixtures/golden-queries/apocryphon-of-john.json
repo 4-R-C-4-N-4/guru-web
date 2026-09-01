@@ -1,0 +1,44 @@
+{
+  "work": "apocryphon-of-john",
+  "tradition": "gnosticism",
+  "corpus_version": "63",
+  "frozenEval": true,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "the divine mother Sophia tries to produce something on her own without her male partner's consent, and what comes out is a misshapen, beast-faced being she is ashamed of and hides away; that creature grows into Yaldabaoth, the arrogant ruler who boasts that he is the only god there is",
+      "provenanceChunkIds": ["gnosticism.apocryphon-of-john.010"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Sophia's flawed offspring and the origin of the chief archon; 'lion-faced dragon', 'shining cloud', the exact boast 'I am God, and there is no god other than me', the alternate names Saklas and Samael all paraphrased away; 'Sophia' and 'Yaldabaoth' kept as reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the radiant Providence recounts going down three separate times into the darkness and the underworld-jail to reach the one imprisoned in a body, finally rousing him from his heavy sleep, telling him to remember his origin and follow his root, and sealing him so that death can no longer hold him",
+      "provenanceChunkIds": ["gnosticism.apocryphon-of-john.023"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "The threefold descent of Providence into Hades; 'five seals', 'remembrance of the Fullness', 'foundations of Chaos trembled', the exact call 'He who hears, let him rise up from the deep slumber' all paraphrased away; the triple-descent motif is the work's own distinctive scene."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the opening frame in which, after Jesus has departed, John goes up to the temple and a Pharisee mocks him, saying the Nazarene deceived his followers and turned them away from their ancestors' customs, so that John withdraws distressed into the wilderness wondering who his teacher's Father is and where the imperishable realm leads",
+      "provenanceChunkIds": ["gnosticism.apocryphon-of-john.001"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "The narrative frame that opens the revelation; the Pharisee's name Arimanios, 'sons of Zebedee', 'indestructible aeon', and the exact wording all paraphrased away; 'John' and 'the Nazarene' kept as anchors any reader knows."
+    },
+    {
+      "kind": "relevance",
+      "query": "what decides whether a person's soul is finally saved, and can a soul that fails in one lifetime be sent into another body to try again",
+      "provenanceChunkIds": ["gnosticism.apocryphon-of-john.020"],
+      "note": "The savior's answers on which souls attain the light and rebirth into a further body; salvation criteria and reincarnation are answered across many traditions. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how was the body of the first human assembled piece by piece by lower powers and then brought to life when a breath was blown into it",
+      "provenanceChunkIds": ["gnosticism.apocryphon-of-john.016"],
+      "note": "The molding of Adam's inert body and its animation by the in-blown spirit; the making and animating of the first human is a pan-traditional creation theme. No target — graded post-hoc."
+    }
+  ]
+}
