@@ -1,0 +1,38 @@
+{
+  "work": "gospel-of-judas",
+  "tradition": "gnosticism",
+  "corpus_version": "63",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "when Jesus challenges the disciples to stand before him, only Judas manages it, telling Jesus he recognizes that he came down from the deathless realm of Barbelo",
+      "provenanceChunkIds": ["gnosticism.gospel-of-judas.002"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Drafted from chunk 002; 'immortal realm of Barbelo', 'stand before him', 'not worthy to utter the name' paraphrased into deathless realm / manages it / recognizes. Judas and Barbelo kept as reader-honest proper nouns."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Jesus tells Judas he will be set apart as the thirteenth, denounced and hated by all the other generations, yet destined to hold authority over them",
+      "provenanceChunkIds": ["gnosticism.gospel-of-judas.005"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Drafted from chunk 005; 'thirteenth demon', 'cursed by the other generations and will rule over them', 'separated me from that generation' paraphrased into set apart / denounced / hold authority. Judas and 'thirteenth' kept as reader anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "at the close of the Gospel of Judas, Jesus says Judas will outdo every other follower by giving up the body that clothes him; Judas then looks up into the luminous cloud and enters it, and afterward accepts money and gives Jesus up to the authorities",
+      "provenanceChunkIds": ["gnosticism.gospel-of-judas.008"],
+      "mustIncludeTraditions": ["gnosticism"],
+      "mustIncludeWork": true,
+      "note": "Drafted from chunk 008; 'you'll do more than all of them', 'sacrifice the human who bears me', 'received some money and handed him over' paraphrased into outdo every follower / body that clothes him / accepts money. Judas, 'Gospel of Judas', and 'the luminous cloud' kept as reader-honest anchors. First draft without the work-name and luminous-cloud anchors missed top-15 (gnosticism survived via pistis-sophia / gnostic-john-baptizer, but the work did not)."
+    },
+    {
+      "kind": "relevance",
+      "query": "how did the visible cosmos and the lesser god who fashioned humankind first come into being",
+      "provenanceChunkIds": ["gnosticism.gospel-of-judas.006", "gnosticism.gospel-of-judas.007"],
+      "note": "Chunks 006-007 give the emanation of the invisible Spirit, the Self-Begotten, and the rebel craftsmen Nebro/Yaldabaoth and Saklas who mold Adam, but creation-of-the-world and the origin of the flawed creator are answered across many traditions. No asserted target — graded post-hoc."
+    }
+  ]
+}

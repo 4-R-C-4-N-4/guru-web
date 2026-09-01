@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vites
 
 vi.mock('@/lib/db', () => ({ query: vi.fn(), one: vi.fn(), exec: vi.fn() }));
 
-import { getChunkPage, getChunkTags, getRelatedPassages, getTextToc } from '@/lib/reader';
+import { getChunkPage, getChunkTags, getRelatedPassages, countParallels, getContrasts, getTextToc } from '@/lib/reader';
 import { query, one } from '@/lib/db';
 
 const mQuery = query as MockedFunction<typeof query>;
@@ -109,6 +109,34 @@ describe('getRelatedPassages', () => {
     // Kept small on purpose — an earlier 100 tracked a p95 that the generator
     // has since invalidated.
     expect(params[1]).toBe(15);
+  });
+});
+
+describe('countParallels', () => {
+  it('counts PARALLELS rows over both endpoints, no LIMIT (todo:4aa7785b)', async () => {
+    mOne.mockResolvedValue({ n: 209 } as never);
+    const n = await countParallels('trad.text-a.001');
+    expect(n).toBe(209);
+    const sql = mOne.mock.calls[0][0] as string;
+    expect(sql).toMatch(/COUNT\(\*\)/);
+    expect(sql).toMatch(/e\.source = \$1 OR e\.target = \$1/);
+    expect(sql).toMatch(/e\.edge_type = 'PARALLELS'/);
+    expect(sql).not.toMatch(/LIMIT/);
+  });
+});
+
+describe('getContrasts', () => {
+  it('selects CONTRASTS over both endpoints, id-ordered — no weight term (todo:4aa7785b)', async () => {
+    mQuery.mockResolvedValue([]);
+    await getContrasts('trad.text-a.001');
+    const sql = mQuery.mock.calls[0][0] as string;
+    expect(sql).toMatch(/e\.edge_type = 'CONTRASTS'/);
+    expect(sql).toMatch(/e\.source = \$1 OR e\.target = \$1/);
+    expect(sql).toMatch(/CASE WHEN e\.source = \$1 THEN e\.target ELSE e\.source END/);
+    // CONTRASTS ship with weight NULL by construction — ordering by it would
+    // be noise dressed as ranking. Plain id order.
+    expect(sql).not.toMatch(/weight/);
+    expect(sql).toMatch(/ORDER BY p\.id/);
   });
 });
 

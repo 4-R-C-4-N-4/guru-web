@@ -4,7 +4,7 @@
     "corpus_version": "37",
     "embedding_model": "ollama/nomic-embed-text",
     "captured_at": "2026-07-09",
-    "note": "Domain-knowledge regression labels pinned to this corpus snapshot (todo:b22586bc, design §9.3). Two assertion kinds, neither circular: (1) tradition-anchored queries use a distinctive term whose tradition a comparative-religion reader would assert regardless of the system — recall is 'did the expected tradition survive into top-K'; (2) hierarchy queries assert the query plane engages (minConcepts) + breadth (minTraditions). These are NOT chunk-level relevance judgments — those need human ratification (follow-up). Re-baseline deliberately when corpus_version changes; do not let it silently rot. Re-baselined 2026-07-09 at the v4 document-knowledge deploy (todo:8673c77e): all v27 labels re-verified against the V8-cleaned re-embedded corpus; 13/14 held unchanged."
+    "note": "DEPRECATED (todo:697f9e58) — superseded by the per-work golden set (golden-queries.test.ts). Frozen legacy, not re-baselined past v37. Domain-knowledge regression labels pinned to this corpus snapshot (todo:b22586bc, design §9.3). Two assertion kinds, neither circular: (1) tradition-anchored queries use a distinctive term whose tradition a comparative-religion reader would assert regardless of the system — recall is 'did the expected tradition survive into top-K'; (2) hierarchy queries assert the query plane engages (minConcepts) + breadth (minTraditions). These are NOT chunk-level relevance judgments — those need human ratification (follow-up). Re-baseline deliberately when corpus_version changes; do not let it silently rot. Re-baselined 2026-07-09 at the v4 document-knowledge deploy (todo:8673c77e): all v27 labels re-verified against the V8-cleaned re-embedded corpus; 13/14 held unchanged."
   },
   "topK": 15,
   "queries": [
@@ -22,13 +22,6 @@
       ],
       "minTraditions": 2,
       "note": "Corpus-native (Mathers) spelling. The modern 'sefirot' spelling misses top-15 despite a concept_aliases entry — graph-leg transliteration hits lose slots to vector hubs (GRAPH_WEIGHT tuning, see todo:31a7fe76). Domain-true either way; the gate pins the spelling the corpus can currently defend."
-    },
-    {
-      "query": "the One and emanation from the Nous",
-      "mustIncludeTraditions": [
-        "neoplatonism"
-      ],
-      "minTraditions": 3
     },
     {
       "query": "Poimandres the shepherd of men",
@@ -104,6 +97,11 @@
         "query": "Ahura Mazda and the Gathas",
         "expectedTradition": "zoroastrianism",
         "reason": "'ahura'/'mazda' appear 100+ times but the Gathas chunks are dense philological commentary that embeds poorly against a clean query"
+      },
+      {
+        "query": "the One and emanation from the Nous",
+        "expectedTradition": "neoplatonism",
+        "reason": "corpus drift v37->v63: the modern-synthesis omnibus texts (secret-teachings-of-all-ages, blavatsky-sd) that discuss 'the One'/'Nous' in clean modern prose out-rank Plotinus's archaic translation, and 'Nous' renders as 'Mind' in-text. Moved to knownGaps when this file was deprecated (todo:697f9e58); it fails identically with graph ranking on or off, so it is a pre-existing vector-side gap, not a ranking regression."
       }
     ]
   }

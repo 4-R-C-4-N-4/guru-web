@@ -1,0 +1,53 @@
+{
+  "work": "yoga-sutras-book-02",
+  "tradition": "hinduism",
+  "corpus_version": "63",
+  "frozenEval": false,
+  "note": "Book II (Sadhana Pada) of Patanjali's Yoga Sutras, Johnston translation with commentary. Probes target ashtanga / kleshas / yamas / niyamas, distinctive to book-02 among the four books.",
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "Patanjali's ashtanga scheme laying out the eight successive limbs of the yoga path that a practitioner must work through in strict order, starting with ethical restraints and moving up to deep absorption",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-02.029"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 29 enumerates the eight means as 'Commandments, Rules, right Poise, right Control of the life-force, Withdrawal, Attention, Meditation, Contemplation' — I paraphrased away that specific list and used the reader-honest anchors 'ashtanga' and 'eight limbs' plus the 'follow in order' framing."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the five kleshas or root afflictions Patanjali names as the sources of bondage — spiritual ignorance, ego-identification, craving, aversion, and the tenacious clinging to continued existence",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-02.003"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 3 renders the five as 'the darkness of unwisdom, self-assertion, lust, hate, attachment'. I used the standard klesha names (ignorance/ego/craving/aversion/clinging) instead of the chunk's idiosyncratic vocabulary; 'kleshas' and 'afflictions' are reader-honest anchors."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the yamas, Patanjali's five universal ethical restraints binding on everyone regardless of birth or circumstance — refraining from harm, deceit, taking what is not given, sexual excess, and grasping for possessions",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-02.030", "hinduism.yoga-sutras-book-02.031"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutra 30 lists 'non injury, truthfulness, abstaining from stealing, from impurity, from covetousness'; Sutra 31 stresses they hold across all races, places, times. I paraphrased the list into my own words and used 'yamas' as a reader-honest anchor."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "Patanjali's rule for asana, the bodily seat or posture used in yoga: the position taken for meditation should be stable and at ease, held steadily yet with no strain, so the finer life-currents can flow",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-02.046", "hinduism.yoga-sutras-book-02.047"],
+      "mustIncludeTraditions": ["hinduism"],
+      "mustIncludeWork": true,
+      "note": "Sutras 46-47 on 'right poise' (asana): 'Right poise must be firm and without strain... gained by steady and temperate effort.' Replaces an earlier ahimsa probe (Sutra 35) that could not surface book-02 honestly — its harmlessness content collided with cross-tradition nonviolence, and a siddhi framing pulled book-03. 'Asana' and 'posture' are reader-honest anchors; I reworded 'firm and without strain' rather than lifting it."
+    },
+    {
+      "kind": "relevance",
+      "query": "why is ordinary worldly life inherently unsatisfying, and can suffering be headed off before it even arises",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-02.015", "hinduism.yoga-sutras-book-02.016"],
+      "note": "Sutras 15-16 (all personal life is misery, waxing and waning; pain to be warded off before it comes). The diagnosis of dukkha and its pre-emption is shared with Buddhism and Stoic thought. No target — graded post-hoc."
+    },
+    {
+      "kind": "relevance",
+      "query": "how does a seeker learn to steadily tell apart what is eternal and real from what is fleeting and temporary",
+      "provenanceChunkIds": ["hinduism.yoga-sutras-book-02.026"],
+      "note": "Sutra 26 on unwavering discernment between the eternal and the temporal — the commentary itself ties it to Vedanta, Plato, and St. Paul, so the same question runs through several traditions. No target — graded post-hoc."
+    }
+  ]
+}
