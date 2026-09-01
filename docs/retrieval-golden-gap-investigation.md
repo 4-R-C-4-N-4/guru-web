@@ -1,0 +1,268 @@
+# Retrieval golden-gap investigation — `guru-web`
+
+**todo:697f9e58** · corpus v63 · written 2026-09-01
+
+The full record of the investigation that began when "the latest (biggest yet)
+text booped some texts out of successful retrieval in the golden query set,"
+from first exploration through the per-work-cap experiment. It is written so a
+future reader can see *what was tried, what the data actually said, and why the
+shipped defaults are what they are* — not just the conclusion.
+
+Files touched: `src/lib/retriever.ts`, `src/lib/graph.ts`,
+`src/__tests__/fixtures/golden-queries/*.json`,
+`src/__tests__/golden-retrieval.test.ts` (deprecated).
+
+---
+
+## 0. The trigger
+
+The newest, largest corpus load — **blavatsky-sd** (*The Secret Doctrine*, 727
+chunks, tradition `theosophy`) — coincided with primary texts dropping out of
+the golden query set. The initial ask was to look at the golden set's
+success/fail and find what could be done better.
+
+The corpus at the time: 6,743 chunks, all embedded (`nomic-embed-text`, 768d),
+loaded into the docker Postgres the app serves. blavatsky-sd present with all
+727 chunks.
+
+---
+
+## 1. Two golden sets, and a mis-calibrated canary
+
+There turned out to be **three** distinct artifacts, which had been conflated:
+
+| artifact | what it is | asserts |
+|---|---|---|
+| `scripts/golden-check.ts` | ad-hoc staging script (8 hand-picked probes: blavatsky + a few regressions) | expected text in **top-8** |
+| `src/__tests__/golden-retrieval.test.ts` | original frozen gate, 14 queries, pinned corpus v37 | tradition-anchored / hierarchy |
+| `src/__tests__/golden-queries.test.ts` | **per-work** set, one fixture per `corpus.works` id | tradition (+ optionally work) in **top-15** |
+
+The first finding was a **harness bug, not a retrieval bug**: `golden-check.ts`
+graded a **top-8** cut while production (`api/query/route.ts`) serves **top-15**
+(`retriever.ts` default `topK = 15`). Worse, the intake pools scale with `topK`
+(`vectorSearch(q, topK*10)`, graph/lexical `topK*2`), so `retrieve(q, 8)` and
+`retrieve(q, 15)` are *different computations* — not a prefix relationship. The
+canary was both stricter than prod and exposing pool-starvation.
+
+Aligning it to top-15 recovered 2 of the "failures" (kybalion, book-of-the-dead)
+as pure canary artifacts. **Lesson: steer by `golden-queries.test.ts`, not the
+staging script.** `golden-check.ts` is retained but should be treated as a smoke
+test, never a source of truth.
+
+---
+
+## 2. What was *already* failing vs. what blavatsky broke
+
+Chasing the `golden-check.ts` phrasing led down a wrong path (wu-wei / Nous /
+`corpus-hermeticum-01`) that turned out to be canary-specific, not real-gate
+failures. Correcting to the **frozen per-work set** reorganised the picture
+entirely:
+
+- **The per-work gate was healthy.** 180 recall-probes over 62 covered works:
+  **149 exact provenance-chunk hits (83%)**, 18 same-text-neighbour (10%) → 93%
+  land the right passage or its neighbour. Only **6 works** failed
+  `mustIncludeWork`.
+- **None of the "problem children" I first chased were real gate failures.**
+  sefer-yetzirah, tao-te-ching, corpus-hermeticum all *pass* the frozen set
+  cleanly — their apparent failures were `golden-check.ts` artifacts.
+- A tagging "gap" I asserted (`wu_wei` untagged) was a **query bug on my end**:
+  I filtered docker with `target='wu_wei'` when ids are prefixed `concept.wu_wei`.
+  wu_wei has 74 EXPRESSES edges on tao-te-ching. No tags were missing.
+
+So blavatsky did not "break" the corpus. The real failures were a small,
+pre-existing set of hard cases, and blavatsky's role was as a *crowder* (§5),
+not a corruptor.
+
+---
+
+## 3. Coverage completion (the 7 missing fixtures)
+
+The corpus had 69 works but only 62 fixtures. Seven works had **no golden
+coverage at all** — including blavatsky-sd itself, the text that started this.
+Authored per-work fixtures (drafted from real chunks, paraphrased against FTS
+circularity, reader-honest anchors only) for all seven:
+
+`blavatsky-sd`, `apocryphon-of-john`, `gospel-of-judas`,
+`yoga-sutras-book-01..04`.
+
+Result: **69/69 works covered**, 25 new recall-probes + 13 relevance, all
+independently verified surfacing their work into top-15. Shipped as **PR #133
+(merged)**, which also **promoted `golden-queries.test.ts` to source of truth**
+and **deprecated `golden-retrieval.test.ts`** (frozen legacy at v37; its one
+stale assertion — "the One and emanation from the Nous" — moved into that file's
+`knownGaps` since it fails identically regardless of ranking).
+
+**blavatsky-sd is fully covered and passes its own gate.** Nothing outstanding
+there.
+
+---
+
+## 4. The walkGraph ordering bug (and the graph-weight dead end)
+
+Investigating why no tuning knob moved the hard cases surfaced a real defect in
+the graph leg. `walkGraph` selected co-expressor chunks with:
+
+```sql
+SELECT ... FROM chunks WHERE id = ANY($1) AND <scope> LIMIT $n
+```
+
+— **no `ORDER BY`.** It `LIMIT`ed an *unordered* scan, handing the reranker an
+arbitrary DB-order sample of every chunk expressing any matched concept. No
+weight could then promote the right chunk (a graph-weight sweep just amplified
+whichever arbitrary hits it returned — e.g. flooding a Sefer Yetzirah query with
+Mabinogion). The leg was also **nondeterministic**, flapping run to run.
+
+Fix: rank co-expressors by relevance (Σ match-weight over the *distinct* matched
+concepts a chunk expresses) before limiting, with a deterministic id tiebreak.
+
+**Measured on the frozen set at the shipped graph weight (0.3):**
+
+| ordering | missing works | deterministic |
+|---|---|---|
+| off (original unordered LIMIT) | 7 | no |
+| **on** | **6** | **yes** |
+
+So ordering-on is a small net win (recovers `dionysius-mystical-theology`) and
+removes the nondeterminism → **shipped ON** (`RETRIEVAL_GRAPH_RANK=off` is the
+kill-switch).
+
+**The graph-weight lever was a dead end.** Raising `RETRIEVAL_GRAPH_WEIGHT` to
+lean on the ranked leg *net-regressed* the frozen set (6 → 12/13 missing works),
+because the remaining gaps are narrative-recall the graph leg cannot reach.
+Weight stays at its 0.3 default. (An early "5/8 → 6/8" headline was on the
+`golden-check.ts` canary and did not survive re-validation on the real set.)
+
+Cosine dup-collapse was also prototyped (`RETRIEVAL_DUP_COLLAPSE`): it improves
+head diversity (+15% distinct texts across the golden heads) but does **not**
+move the binary gate, so it ships **opt-in, off**.
+
+This is **PR #132** (walkGraph ranking on/deterministic + opt-in dup-collapse +
+the per-work cap of §6).
+
+---
+
+## 5. The six real failures — what they return, and why
+
+At the shipped config (ranking on, default weights), the frozen gate has **6
+failing recall-probes across 6 works**. Each was run at the exact gate config
+(top-15, scope=all) and the full top-15 captured. The unifying force is a
+**fluency inversion**: a modern synthesis in clean prose out-embeds the archaic
+primary. **blavatsky-sd appears in 5 of the 6 heads.**
+
+To distinguish *crowding* (target scored high, pushed below the cut) from
+*recall miss* (target scored low or absent), the exact top-15 candidate pool was
+reproduced and fully scored **without truncation**, reading each target's true
+rank and which works hold the slots above it:
+
+| work | expected tradition | target's true score-rank | who crowds above it |
+|---|---|---|---|
+| poetic-edda-voluspo | norse | 36 / 205 | **blavatsky:19**, secret-teachings:3 |
+| paracelsus-aurora | renaissance_hermeticism | 16 / 175 | blavatsky:2, secret-teachings:2 |
+| pistis-sophia | gnosticism | 19 / 202 | *(none — max 2/work)* |
+| mabinogion | celtic | 25 / 207 | **kalevala:6**, blavatsky:2 |
+| iamblichus-on-the-mysteries | neoplatonism | 48 / 203 | **blavatsky:18**, plotinus:7, boehme:5 |
+| isa-upanishad | upanishads | **ABSENT from the 202-pool** | blavatsky:32, +30 others |
+
+This decomposes the "one bug" into **three distinct causes**:
+
+1. **Crowding, cap-fixable (2):** poetic-edda, paracelsus. A big work sits above
+   an otherwise rank-16–36 target.
+2. **Too deep for a cap (2):** iamblichus (rank 48), mabinogion (rank 25). Even
+   removing every duplicate, too many *distinct* works are above. mabinogion's
+   top crowder is **Kalevala** — a genuine parallel dying-hero myth, arguably
+   *correct* retrieval failing a work-level assertion.
+3. **Genuine recall failures (2):** pistis-sophia (rank 19, **no crowder** — a
+   pure scoring miss) and isa-upanishad (**never retrieved into the candidate
+   pool** — no reranking cap can fix what the vector/lexical/graph legs never
+   fetched).
+
+Two structural aggravators, both measured:
+- **blavatsky's omnipresence is real and counted** — 18–32 of the top scored
+  slots in three of these queries. (In the *emitted* top-15 the per-tradition
+  cap already limits it to 3; the 18–32 is its share of the pre-cap scored pool.)
+- **Thin traditions have no safety net.** `celtic` and `upanishads` are **single
+  text** each — the work missing = the tradition missing, so there is no sibling
+  to satisfy `mustIncludeTraditions`.
+
+A separate correctness check: **blavatsky's tags are genuinely semantic, not
+lexical.** Of its 4,772 EXPRESSES edges, 89% do not contain the concept's full
+label and **58% share not one content word** with it — a keyword matcher cannot
+produce those. So the crowding is not a tagging artifact; the concept layer is
+inferring category from meaning.
+
+---
+
+## 6. The max-per-work cap experiment
+
+The proposed fix was a per-work slot cap (analogous to `MAX_PER_TRADITION = 3`,
+but per `text_id`, since an omnibus that is nearly its whole tradition slips
+under the tradition cap). It was **implemented and measured**, not assumed.
+
+Design (`retriever.ts`, `MAX_PER_TEXT`):
+- Env `RETRIEVAL_MAX_PER_TEXT` (number retunes, `off` disables). **Ships OFF
+  (0)** — a no-op verified byte-identical to prior behaviour.
+- **Study-mode aware:** disabled (0) when a study work is pinned, so a reader
+  asking about one book still gets many of its passages.
+- **Starvation mitigation (backfill):** if a narrow whitelist/blacklist leaves
+  fewer than `topK / cap` works, the per-text cap is relaxed for the leftover
+  slots so results are never short of topK. Verified: cap=1 + 5-text whitelist
+  returns 13 (not 5); the per-tradition cap remains the only other binding limit.
+- Monotonically safe for the golden assertions: the cap only ever removes a
+  work's *2nd+* chunk, never its first appearance or its tradition, so it can
+  help `mustIncludeWork` / `mustIncludeTraditions` but never break them.
+
+**Full 320-probe golden gate, ranking on:**
+
+| config | passed / failed | golden failures recovered |
+|---|---|---|
+| baseline (no per-work cap) | 314 / 6 | — |
+| **cap = 2** | 314 / 6 | **0** |
+| **cap = 1** | **316 / 4** | **2** (paracelsus + poetic-edda) |
+
+Both matched the pre-run simulation exactly. **No regression at any value.** The
+4 still failing at cap=1 are precisely the non-cap-fixable cases from §5
+(iamblichus, isa-upanishad, mabinogion, pistis-sophia).
+
+**Verdict: the cap works exactly as measured, but it is a weak lever.** Only
+cap=1 helps, cap=1 is the UX-aggressive setting (one chunk per work would hurt a
+normal single-book chat question), and it buys only 2 of 6 recoveries. The data
+argues **against enabling it by default** — hence it ships OFF, available as a
+tool for study/experiment via `RETRIEVAL_MAX_PER_TEXT`.
+
+---
+
+## 7. Final summary & recommendation
+
+**Established, shipped:**
+- Golden coverage is complete (**69/69 works**); `golden-queries.test.ts` is the
+  source of truth; `golden-retrieval.test.ts` is deprecated (PR #133, merged).
+- walkGraph ranking on + deterministic; graph weight held at 0.3; dup-collapse
+  and per-work cap both built, both **off by default** (PR #132).
+- The blavatsky "regression" was diagnosed, not papered over: it is a crowder,
+  its tags are semantically sound, and it passes its own gate.
+
+**The residual 6 failures are proven to be vector-side, not fixable by output
+capping:**
+- 2 are cap-fixable only at an aggressive cap value (not worth the UX cost).
+- 4 live in candidate generation / score calibration (fluent modern prose
+  out-scoring archaic primaries; and, for isa-upanishad, the target never
+  entering the candidate pool at all).
+
+**Recommended path to go-live:**
+1. Merge the cap as-is (OFF) — a correct, tested, measured tool at zero default
+   cost.
+2. Record the 6 as `knownGaps` with the §5 rank evidence (crowding / deep /
+   recall bucket per work), so the gate is green and go-live is not blocked by
+   works now proven to be a deeper problem.
+3. Pursue **score calibration** as the real follow-up: length-normalise the
+   vector similarity and/or dampen a work's score by its global hit-frequency
+   (blavatsky matches everything → discount it), evaluated against this same
+   frozen gate. This is the lever the measurement points at for the remaining 4.
+
+**Open decisions for the owner:**
+- whether to enable the cap (and at what value) vs. leave it off;
+- whether to record the 6 as `knownGaps` now (unblocks go-live) or hold the gate
+  red pending the score-calibration work;
+- whether to wire `golden-queries.test.ts` into the corpus-load-to-VPS step as a
+  hard blocker;
+- `frozenEval` ratification on the 3 frozen works added in PR #133.
