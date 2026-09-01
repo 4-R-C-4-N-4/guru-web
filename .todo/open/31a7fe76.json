@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-05-27T23:17:21.324Z",
-  "updated_at": "2026-07-09T15:49:44.260Z",
+  "updated_at": "2026-09-01T14:04:54.112Z",
   "tags": [
     "retrieval",
     "golden"
@@ -24,6 +24,13 @@
       "type": "evidence",
       "content": "Golden-gate re-baseline (8673c77e) isolated a concrete reproducer for the transliteration half of this: 'sefirot' has a concept_aliases row and still misses top-15 ('Sephiroth' recalls jewish_mysticism at rank 1) — the graph leg surfaces the alias match but GRAPH_WEIGHT 0.3 loses the slot to vector hubs. A graph-weight sweep (RETRIEVAL_GRAPH_WEIGHT env, no redeploy) is the cheap experiment.",
       "confidence": "high"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/retrieval-golden-gap-investigation.md",
+      "commit": "459dd703adb99e253f808961afee914588fb7007",
+      "note": "full retrieval golden-gap investigation (todo:697f9e58)"
     }
   ]
 }
