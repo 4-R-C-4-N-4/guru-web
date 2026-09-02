@@ -362,10 +362,52 @@ centrality fail because verbosity and breadth are not era. The signal has to be 
   scoring hack. Start from the tradition flag; refine per-work only if the
   tradition granularity proves too coarse.
 
-**Disposition: no calibration lever shipped.** The residual 4 (iamblichus, isa,
-mabinogion, pistis) now point at (a) a curated modern-synthesis dampen keyed on
-tradition/era, (b) §8.2 (fire the graph leg on paraphrase), and (c) §8.3
-(candidate recall) — not at any transform of the vector score.
+**Disposition: no calibration lever shipped.** The residual 6 pointed at (a) a
+primary-vs-synthesis mechanism keyed on tradition (built as the primary floor,
+§8.1a below), (b) §8.2 (fire the graph leg on paraphrase), and (c) §8.3 (candidate
+recall) — not at any transform of the vector score.
+
+#### 8.1a — the primary floor (todo:1a8c3bbf): +2, no regression, synthesis unharmed
+
+A key correction from the owner: **don't penalize synthesis, promote the primary.**
+A global score penalty (era, centrality, whatever the key) lowers a synthesis work
+on *every* query and buries its genuine insight; the right instrument is a
+**slot-level promotion**. `mergeAndRerank` gains an emit-time floor (env
+`RETRIEVAL_PRIMARY_FLOOR` = N, off by default): when a query has a **relevant**
+primary root text (raw vector similarity ≥ τ = `RETRIEVAL_PRIMARY_FLOOR_SIM`, default
+0.5) that the ranking crowded out, give it a top-K slot by **yielding the weakest
+_redundant_ synthesis slot** — a synthesis work's 2nd+ appearance only, so no
+synthesis work is ever dropped from top-K (its own `mustIncludeWork` is safe) and
+**no score changes**. On a mixed query the reader ends up with the primary *and* the
+synthesis. Synthesis is identified by tradition for now (proxy
+`{theosophy, western_esoteric}`; the curated per-work `works.kind` replaces it in
+todo:6702edd0). Off in study mode (single pinned work).
+
+**Full gate (baseline 314/6):**
+
+| config | gate | Δ | notes |
+|---|---|---|---|
+| floor off | 314 / 6 | — | baseline |
+| floor N=1, τ=0.5 (no guard) | 315 / 5 | +1 | recovered poetic-edda + paracelsus, but **regressed kybalion** (its sole slot yielded on its own probe) |
+| **floor N=1, τ=0.5 (redundant-slot guard)** | **316 / 4** | **+2** | recovered poetic-edda + paracelsus, **no regression** |
+
+This equals the best the per-work cap reached (§6, cap=1 → 316/4) but **without its
+cost**: the cap truncated *every* work to one chunk (bad for single-book questions,
+why §6 shipped it off), whereas the floor only trims a synthesis work's *redundant*
+cross-tradition slot when a relevant primary is crowded, and never touches a score.
+The residual **4** are out of the floor's reach by construction and stay §8.2/§8.3
+work: **pistis** (crowded by *other-tradition primaries* — no synthesis slot to
+yield), **iamblichus** (its tradition is already covered by sibling plotinus, so a
+per-*tradition* floor can't target the specific work), **mabinogion** (crowder
+kalevala is a primary, and/or its similarity is below τ), **isa-upanishad** (never
+enters the candidate pool — §8.3 recall; a floor can't promote what wasn't fetched).
+
+Next: curate `works.kind` from the dossiers (todo:9445cd73 — they already state it:
+blavatsky "synthesis", secret-teachings "encyclopedic survey" vs pistis "revelation
+discourse"), which also catches the one work the tradition proxy misses,
+`life-and-doctrines-boehme` (christian_mysticism, but a secondary exposition); wire
+it in and decide the shipped default (todo:6702edd0); and gate new-work ingestion on
+the same classification (todo:fb522ee1, guru workbook).
 
 ### 8.2 Concept-extraction upgrade (`todo:53480da1`)
 
