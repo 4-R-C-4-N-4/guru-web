@@ -464,12 +464,15 @@ const LEX_GATE_CAP = 0.49;
 const DUP_COLLAPSE_THRESHOLD = 0.80;
 // Primary floor (todo:1a8c3bbf, §8.1 follow-through). Slot-level PROMOTION, not a
 // score penalty: when a query has a RELEVANT primary root text that the ranking
-// crowded out of top-K, give it a slot by yielding the weakest SYNTHESIS slot —
-// synthesis scores are untouched, so its genuine insight is never buried and, on a
-// mixed query, the reader gets primary AND synthesis both. OFF by default (0).
-// PRIMARY_FLOOR_SIM is the relevance gate τ on raw vector similarity — a primary
-// below it is never promoted. Synthesis is identified by tradition (c1 proxy:
-// theosophy/western_esoteric; c3 swaps in a curated works.kind).
+// crowded out of top-K, give it a slot by yielding the weakest _redundant_
+// SYNTHESIS slot — synthesis scores are untouched and no synthesis work is ever
+// dropped, so its genuine insight is never buried and, on a mixed query, the reader
+// gets primary AND synthesis both. ON by default (N=1) — validated at 316/4 vs the
+// 314/6 baseline (docs §8.1a); RETRIEVAL_PRIMARY_FLOOR=off (or 0) disables, a number
+// retunes. PRIMARY_FLOOR_SIM is the relevance gate τ on raw vector similarity — a
+// primary below it is never promoted. Synthesis is identified by tradition (c1
+// proxy: theosophy/western_esoteric; c3/todo:6702edd0 swaps in a curated works.kind).
+const PRIMARY_FLOOR_DEFAULT = 1;
 const PRIMARY_FLOOR_SIM = 0.5;
 const SYNTHESIS_TRADITIONS_DEFAULT = 'theosophy,western_esoteric';
 // 'summary' starts at inferred's weight deliberately (unswept — generated
@@ -498,12 +501,15 @@ export interface PrimaryFloor {
 }
 
 // Read the §8.1 primary-floor env knobs (todo:1a8c3bbf). Shared by retrieve() and
-// scripts/measure-retrieval.ts so the diagnostic mirrors the gate. Off unless
-// RETRIEVAL_PRIMARY_FLOOR > 0. RETRIEVAL_PRIMARY_FLOOR_SIM retunes τ;
-// RETRIEVAL_SYNTHESIS_TRADITIONS overrides the proxy set (c3 replaces this whole
-// path with a per-work works.kind lookup).
+// scripts/measure-retrieval.ts so the diagnostic mirrors the gate. ON by default
+// (N=PRIMARY_FLOOR_DEFAULT); RETRIEVAL_PRIMARY_FLOOR=off (or 0) is the kill-switch,
+// a number retunes. RETRIEVAL_PRIMARY_FLOOR_SIM retunes τ; RETRIEVAL_SYNTHESIS_TRADITIONS
+// overrides the proxy set (c3 replaces this whole path with a per-work works.kind lookup).
 export function loadPrimaryFloor(): PrimaryFloor | undefined {
-  const count = Number(process.env.RETRIEVAL_PRIMARY_FLOOR) || 0;
+  const raw = process.env.RETRIEVAL_PRIMARY_FLOOR;
+  const count = raw == null || raw === '' ? PRIMARY_FLOOR_DEFAULT
+    : raw === 'off' ? 0
+    : (Number(raw) || 0);
   if (count <= 0) return undefined;
   const simThreshold = process.env.RETRIEVAL_PRIMARY_FLOOR_SIM != null
     ? Number(process.env.RETRIEVAL_PRIMARY_FLOOR_SIM)

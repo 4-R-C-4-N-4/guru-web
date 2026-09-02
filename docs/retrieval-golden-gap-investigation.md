@@ -373,7 +373,8 @@ A key correction from the owner: **don't penalize synthesis, promote the primary
 A global score penalty (era, centrality, whatever the key) lowers a synthesis work
 on *every* query and buries its genuine insight; the right instrument is a
 **slot-level promotion**. `mergeAndRerank` gains an emit-time floor (env
-`RETRIEVAL_PRIMARY_FLOOR` = N, off by default): when a query has a **relevant**
+`RETRIEVAL_PRIMARY_FLOOR` = N, **on by default at N=1**; `=off` disables): when a
+query has a **relevant**
 primary root text (raw vector similarity ≥ τ = `RETRIEVAL_PRIMARY_FLOOR_SIM`, default
 0.5) that the ranking crowded out, give it a top-K slot by **yielding the weakest
 _redundant_ synthesis slot** — a synthesis work's 2nd+ appearance only, so no
@@ -475,11 +476,13 @@ export $(grep -E '^(DATABASE_URL|OLLAMA_URL)=' .env | xargs)
 INTEGRATION_TEST=1 npx vitest run src/__tests__/golden-queries.test.ts   # ~14 min, all 69 works
 ```
 
-Current best baseline at shipped defaults: **316 passed / 4 failed (320
-recall-probes)** — the 4 are iamblichus / isa-upanishad / mabinogion /
-pistis-sophia (§5). **No change may regress below this.** (It is a long run; drive
-it via `agent-run start guru-web <task> -- bash -lc '...'` so it survives
-disconnect, then `agent-run list` to poll.)
+Current best at shipped defaults: **316 passed / 4 failed (320 recall-probes)** —
+the 4 are iamblichus / isa-upanishad / mabinogion / pistis-sophia (§5). This is with
+the **primary floor on by default** (N=1, §8.1a); with the floor off
+(`RETRIEVAL_PRIMARY_FLOOR=off`) the base is **314/6** (adds poetic-edda +
+paracelsus). **No change may regress below 316/4.** (It is a long run; drive it via
+`agent-run start guru-web <task> -- bash -lc '...'` so it survives disconnect, then
+`agent-run list` to poll.)
 
 Iterate on a single work while authoring/debugging:
 `npx tsx scripts/verify-golden-queries.ts <work>`. Validate fixture shape
@@ -527,6 +530,9 @@ a deeper `retrieve(q, 120)` as if it were the gate's list.
 | `RETRIEVAL_DUP_COLLAPSE` | `on` enables cosine dup-collapse | off |
 | `RETRIEVAL_GRAPH_WEIGHT` / `RETRIEVAL_LEXICAL_WEIGHT` | leg weights (sweeps) | 0.3 / 1.0 |
 | `RETRIEVAL_DIVERSITY` | `fixed` = pool-independent rarity | live |
+| `RETRIEVAL_PRIMARY_FLOOR` | primary-floor promotions N (§8.1a; `off`/0 disables) | `1` (on) |
+| `RETRIEVAL_PRIMARY_FLOOR_SIM` | floor relevance gate τ (raw vector similarity) | 0.5 |
+| `RETRIEVAL_SYNTHESIS_TRADITIONS` | synthesis proxy set (c1; c3 uses `works.kind`) | theosophy,western_esoteric |
 | `RETRIEVAL_TRACE` | `1` prints the score breakdown | off |
 
 A calibration change (§8.1) should add its own knob in the same style — default
