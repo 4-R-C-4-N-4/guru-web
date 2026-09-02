@@ -85,7 +85,7 @@ async function scoredOrder(q: string, topK: number): Promise<{ order: RetrievedC
   // the floor is a top-K slot op, invisible in the untruncated order, so membership
   // has to be read off the real emit.
   const order = mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0 });
-  const emitted = mergeAndRerank(v, g, topK, { lexicalResults: lex, primaryFloor: loadPrimaryFloor() });
+  const emitted = mergeAndRerank(v, g, topK, { lexicalResults: lex, primaryFloor: await loadPrimaryFloor() });
   return { order, emitted };
 }
 
@@ -97,11 +97,11 @@ async function main(): Promise<void> {
   }
   const { order, emitted } = await scoredOrder(q, topK);
   const members = target ? await memberTextIds(target) : [];
-  const floor = loadPrimaryFloor();
+  const floor = await loadPrimaryFloor();
 
   console.log(`query: ${q}`);
   console.log(`pool: ${order.length} candidates (topK=${topK} => vector ${topK * 10}, graph/lexical ${topK * 2})`);
-  console.log(`primary floor: ${floor ? `on (count=${floor.count} τ=${floor.simThreshold} synthesis={${[...floor.synthesis].join(',')}})` : 'off'}`);
+  console.log(`primary floor: ${floor ? `on (count=${floor.count} τ=${floor.simThreshold} synthesis=${floor.kind ? `works.kind[${floor.kind.size} texts]` : `traditions{${[...floor.synthesis].join(',')}}`})` : 'off'}`);
 
   if (target) {
     const rank = order.findIndex(c => members.includes(c.text_id ?? ''));

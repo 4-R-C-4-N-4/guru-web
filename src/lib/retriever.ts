@@ -159,7 +159,7 @@ export async function retrieve(
     perTextCap,
     // Primary floor (todo:1a8c3bbf) — off in study mode (single pinned work has no
     // cross-tradition crowding to correct).
-    primaryFloor: studyWorkId ? undefined : loadPrimaryFloor(),
+    primaryFloor: studyWorkId ? undefined : await loadPrimaryFloor(),
   });
 }
 
@@ -497,15 +497,36 @@ function tierWeight(tier: Tier): number {
 export interface PrimaryFloor {
   count: number;          // max promotions per retrieve() (F); 0 = off
   simThreshold: number;   // relevance gate τ on raw vector similarity
-  synthesis: Set<string>; // traditions treated as synthesis (c1 proxy for works.kind)
+  synthesis: Set<string>; // synthesis TRADITIONS — the c1 proxy, fallback when `kind` is absent
+  kind?: Map<string, string>; // text_id → works.kind (todo:6702edd0); when present, overrides `synthesis`
+}
+
+// Per-text works.kind map (todo:6702edd0): text_id → 'primary' | 'synthesis'. The
+// curated per-work label (guru PR #125) that replaces the tradition proxy — it also
+// catches works the proxy misses (life-and-doctrines-boehme). Cached like the other
+// corpus maps. FALLS BACK GRACEFULLY: if the column isn't in the corpus yet (pre
+// re-export) the query throws and we return null, so the floor keeps using the
+// tradition proxy — byte-identical to the validated 316/4 until works.kind lands.
+let _kind: Map<string, string> | null | undefined;
+async function corpusKind(): Promise<Map<string, string> | null> {
+  if (_kind !== undefined) return _kind;
+  try {
+    const rows = await query<{ text_id: string; kind: string }>(
+      `SELECT unnest(member_text_ids) AS text_id, kind FROM works`,
+    );
+    _kind = rows.length ? new Map(rows.map(r => [r.text_id, r.kind])) : null;
+  } catch {
+    _kind = null; // column absent (pre re-export) → tradition proxy
+  }
+  return _kind;
 }
 
 // Read the §8.1 primary-floor env knobs (todo:1a8c3bbf). Shared by retrieve() and
 // scripts/measure-retrieval.ts so the diagnostic mirrors the gate. ON by default
 // (N=PRIMARY_FLOOR_DEFAULT); RETRIEVAL_PRIMARY_FLOOR=off (or 0) is the kill-switch,
 // a number retunes. RETRIEVAL_PRIMARY_FLOOR_SIM retunes τ; RETRIEVAL_SYNTHESIS_TRADITIONS
-// overrides the proxy set (c3 replaces this whole path with a per-work works.kind lookup).
-export function loadPrimaryFloor(): PrimaryFloor | undefined {
+// overrides the fallback proxy set. Prefers the curated works.kind map when present.
+export async function loadPrimaryFloor(): Promise<PrimaryFloor | undefined> {
   const raw = process.env.RETRIEVAL_PRIMARY_FLOOR;
   const count = raw == null || raw === '' ? PRIMARY_FLOOR_DEFAULT
     : raw === 'off' ? 0
@@ -518,7 +539,9 @@ export function loadPrimaryFloor(): PrimaryFloor | undefined {
     (process.env.RETRIEVAL_SYNTHESIS_TRADITIONS ?? SYNTHESIS_TRADITIONS_DEFAULT)
       .split(',').map(s => s.trim()).filter(Boolean),
   );
-  return { count, simThreshold, synthesis };
+  // Env override forces the tradition proxy (for A/B against the curated label).
+  const kind = process.env.RETRIEVAL_SYNTHESIS_TRADITIONS ? null : await corpusKind();
+  return { count, simThreshold, synthesis, kind: kind ?? undefined };
 }
 
 interface MergedEntry {
@@ -784,17 +807,21 @@ export function mergeAndRerank(
   // fluency is pulled up.
   const floor = opts.primaryFloor;
   if (floor && floor.count > 0) {
+    // Synthesis test: the curated per-work works.kind when present (todo:6702edd0),
+    // else the c1 tradition proxy. Same call everywhere so the two never diverge.
+    const isSynth = (c: RetrievedChunk) =>
+      floor.kind ? floor.kind.get(c.text_id ?? '') === 'synthesis' : floor.synthesis.has(c.tradition);
     const scoreById = new Map(scored.map(s => [s.entry.chunk.id, s.score]));
     // traditions already represented by a primary in the emitted set — the floor
     // is satisfied for those.
     const coveredTrads = new Set<string>();
-    for (const c of out) if (!floor.synthesis.has(c.tradition)) coveredTrads.add(c.tradition);
+    for (const c of out) if (!isSynth(c)) coveredTrads.add(c.tradition);
     // strongest relevant primary per not-yet-covered tradition, in score order.
     const candidates: RetrievedChunk[] = [];
     const seenTrad = new Set<string>();
     for (const s of scored) {
       const t = s.entry.chunk.tradition;
-      if (floor.synthesis.has(t)) continue;                 // synthesis, not a primary
+      if (isSynth(s.entry.chunk)) continue;                 // synthesis, not a primary
       if (coveredTrads.has(t) || seenTrad.has(t)) continue; // tradition already has/gets a primary
       if (s.entry.similarity < floor.simThreshold) continue; // relevance gate τ (excludes sim-0 graph/lex-only)
       if (emitted.has(s.entry.chunk.id)) continue;
@@ -806,7 +833,7 @@ export function mergeAndRerank(
     // would fail the work's own mustIncludeWork on a query genuinely about it (the
     // kybalion regression). Monotonically safe for synthesis works, like the §6 cap.
     const synthSlots = new Map<string, number>();
-    for (const c of out) if (floor.synthesis.has(c.tradition)) {
+    for (const c of out) if (isSynth(c)) {
       synthSlots.set(c.text_id ?? '', (synthSlots.get(c.text_id ?? '') ?? 0) + 1);
     }
     let promotions = 0;
@@ -817,7 +844,7 @@ export function mergeAndRerank(
       // drop a synthesis work entirely.
       let victim = -1, victimScore = Infinity;
       for (let i = 0; i < out.length; i++) {
-        if (!floor.synthesis.has(out[i].tradition)) continue;
+        if (!isSynth(out[i])) continue;
         if ((synthSlots.get(out[i].text_id ?? '') ?? 0) <= 1) continue; // keep its only slot
         const sc = scoreById.get(out[i].id) ?? -Infinity;
         if (sc < victimScore) { victimScore = sc; victim = i; }
