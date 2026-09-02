@@ -1,13 +1,13 @@
 {
   "id": "1a8c3bbf",
   "type": "feature",
-  "state": "open",
+  "state": "active",
   "summary": "Prototype per-tradition primary floor in mergeAndRerank using the tradition proxy, and gate it (decision point)",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-09-02T12:37:41.867Z",
-  "updated_at": "2026-09-02T12:37:41.907Z",
+  "updated_at": "2026-09-02T18:57:54.280Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"

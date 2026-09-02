@@ -27,7 +27,7 @@
  *     --target pistis-sophia
  */
 import 'dotenv/config';
-import { vectorSearch, lexicalSearch, mergeAndRerank } from '../src/lib/retriever';
+import { vectorSearch, lexicalSearch, mergeAndRerank, loadPrimaryFloor } from '../src/lib/retriever';
 import { extractConcepts, walkGraph } from '../src/lib/graph';
 import { query } from '../src/lib/db';
 import type { UserPreferences, RetrievedChunk } from '../src/lib/types';
@@ -73,14 +73,20 @@ async function memberTextIds(target: string): Promise<string[]> {
 
 // Faithful topK candidate pool, fully scored, UNTRUNCATED, in pure score order
 // (perTraditionCap:0 so nothing is dropped or reordered by the cap).
-async function scoredOrder(q: string, topK: number): Promise<RetrievedChunk[]> {
+async function scoredOrder(q: string, topK: number): Promise<{ order: RetrievedChunk[]; emitted: RetrievedChunk[] }> {
   const [v, lex] = await Promise.all([
     vectorSearch(q, PREFS, topK * 10),
     lexicalSearch(q, PREFS, topK * 2),
   ]);
   const concepts = await extractConcepts(q);
   const g = concepts.length ? await walkGraph(concepts, PREFS, topK * 2) : [];
-  return mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0 });
+  // `order`: untruncated pure score order (the §5 rank diagnostic). `emitted`: the
+  // REAL top-K with the production caps + the §8.1 primary floor (todo:1a8c3bbf) —
+  // the floor is a top-K slot op, invisible in the untruncated order, so membership
+  // has to be read off the real emit.
+  const order = mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0 });
+  const emitted = mergeAndRerank(v, g, topK, { lexicalResults: lex, primaryFloor: loadPrimaryFloor() });
+  return { order, emitted };
 }
 
 async function main(): Promise<void> {
@@ -89,11 +95,13 @@ async function main(): Promise<void> {
     console.error('usage: measure-retrieval.ts "<query>" [--target <work>] [--topk 15] [--cap 0] [--show 20]');
     process.exit(1);
   }
-  const order = await scoredOrder(q, topK);
+  const { order, emitted } = await scoredOrder(q, topK);
   const members = target ? await memberTextIds(target) : [];
+  const floor = loadPrimaryFloor();
 
   console.log(`query: ${q}`);
   console.log(`pool: ${order.length} candidates (topK=${topK} => vector ${topK * 10}, graph/lexical ${topK * 2})`);
+  console.log(`primary floor: ${floor ? `on (count=${floor.count} τ=${floor.simThreshold} synthesis={${[...floor.synthesis].join(',')}})` : 'off'}`);
 
   if (target) {
     const rank = order.findIndex(c => members.includes(c.text_id ?? ''));
@@ -105,6 +113,10 @@ async function main(): Promise<void> {
       const hoggers = Object.entries(byWork).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
       console.log(`works taking >=2 slots above it: ${hoggers.map(([w, n]) => `${w}:${n}`).join('  ') || '(none)'}`);
     }
+    // The gate's actual assertion: is the target in the emitted top-K (after caps +
+    // primary floor)? This is what a floor sweep should read, not the score-rank.
+    const inTopK = emitted.some(c => members.includes(c.text_id ?? ''));
+    console.log(`in emitted top-${topK} (caps${floor ? ' + primary floor' : ''}): ${inTopK ? 'YES' : 'no'}`);
   }
 
   console.log(`\ntop ${show} by pure score:`);

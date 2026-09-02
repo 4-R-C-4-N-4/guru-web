@@ -157,6 +157,9 @@ export async function retrieve(
     // to MAX_PER_TRADITION regardless of topK.
     perTraditionCap: studyWorkId ? 0 : undefined,
     perTextCap,
+    // Primary floor (todo:1a8c3bbf) — off in study mode (single pinned work has no
+    // cross-tradition crowding to correct).
+    primaryFloor: studyWorkId ? undefined : loadPrimaryFloor(),
   });
 }
 
@@ -459,6 +462,16 @@ const LEX_GATE_CAP = 0.49;
 // same-text head triples (secret-teachings 0.82-0.85, blavatsky 0.77-0.79);
 // env-tunable via RETRIEVAL_DUP_COLLAPSE_THRESHOLD. Off unless RETRIEVAL_DUP_COLLAPSE=on.
 const DUP_COLLAPSE_THRESHOLD = 0.80;
+// Primary floor (todo:1a8c3bbf, §8.1 follow-through). Slot-level PROMOTION, not a
+// score penalty: when a query has a RELEVANT primary root text that the ranking
+// crowded out of top-K, give it a slot by yielding the weakest SYNTHESIS slot —
+// synthesis scores are untouched, so its genuine insight is never buried and, on a
+// mixed query, the reader gets primary AND synthesis both. OFF by default (0).
+// PRIMARY_FLOOR_SIM is the relevance gate τ on raw vector similarity — a primary
+// below it is never promoted. Synthesis is identified by tradition (c1 proxy:
+// theosophy/western_esoteric; c3 swaps in a curated works.kind).
+const PRIMARY_FLOOR_SIM = 0.5;
+const SYNTHESIS_TRADITIONS_DEFAULT = 'theosophy,western_esoteric';
 // 'summary' starts at inferred's weight deliberately (unswept — generated
 // apparatus competes on similarity, not tier); retune independently of
 // 'inferred' when the study-mode sweep lands.
@@ -476,6 +489,30 @@ const TIER_WEIGHTS: Record<string, number> = { verified: 1.0, proposed: 1.0, inf
 type Tier = NonNullable<RetrievedChunk['tier']>;
 function tierWeight(tier: Tier): number {
   return TIER_WEIGHTS[tier] ?? TIER_WEIGHTS.inferred;
+}
+
+export interface PrimaryFloor {
+  count: number;          // max promotions per retrieve() (F); 0 = off
+  simThreshold: number;   // relevance gate τ on raw vector similarity
+  synthesis: Set<string>; // traditions treated as synthesis (c1 proxy for works.kind)
+}
+
+// Read the §8.1 primary-floor env knobs (todo:1a8c3bbf). Shared by retrieve() and
+// scripts/measure-retrieval.ts so the diagnostic mirrors the gate. Off unless
+// RETRIEVAL_PRIMARY_FLOOR > 0. RETRIEVAL_PRIMARY_FLOOR_SIM retunes τ;
+// RETRIEVAL_SYNTHESIS_TRADITIONS overrides the proxy set (c3 replaces this whole
+// path with a per-work works.kind lookup).
+export function loadPrimaryFloor(): PrimaryFloor | undefined {
+  const count = Number(process.env.RETRIEVAL_PRIMARY_FLOOR) || 0;
+  if (count <= 0) return undefined;
+  const simThreshold = process.env.RETRIEVAL_PRIMARY_FLOOR_SIM != null
+    ? Number(process.env.RETRIEVAL_PRIMARY_FLOOR_SIM)
+    : PRIMARY_FLOOR_SIM;
+  const synthesis = new Set(
+    (process.env.RETRIEVAL_SYNTHESIS_TRADITIONS ?? SYNTHESIS_TRADITIONS_DEFAULT)
+      .split(',').map(s => s.trim()).filter(Boolean),
+  );
+  return { count, simThreshold, synthesis };
 }
 
 interface MergedEntry {
@@ -528,6 +565,10 @@ export function mergeAndRerank(
      * no embedding in the map are never suppressed.
      */
     dupCollapse?: { threshold: number; sameTextOnly: boolean; embeddings: Map<string, number[]> };
+    /** Primary floor (todo:1a8c3bbf, §8.1): promote up to `count` relevant primary
+     *  root texts into top-K by yielding the weakest synthesis slot. No score
+     *  change, never displaces another primary. Absent = off. */
+    primaryFloor?: PrimaryFloor;
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
@@ -727,6 +768,56 @@ export function mergeAndRerank(
   }
   if (dup && process.env.RETRIEVAL_TRACE) {
     console.log(`  [dup-collapse] ${collapsed} chunk(s) collapsed (threshold ${dup.threshold}, ${dup.sameTextOnly ? 'same-text' : 'cross-text'})`);
+  }
+
+  // Primary floor (todo:1a8c3bbf): slot-level promotion of relevant primaries the
+  // ranking crowded out — by yielding the weakest SYNTHESIS slot, never another
+  // primary, never a score change. Runs last so it composes with the caps/backfill.
+  // The relevance gate (raw similarity ≥ τ) is what makes it honest: a primary that
+  // genuinely doesn't match is left buried; only a *relevant* one that lost on
+  // fluency is pulled up.
+  const floor = opts.primaryFloor;
+  if (floor && floor.count > 0) {
+    const scoreById = new Map(scored.map(s => [s.entry.chunk.id, s.score]));
+    // traditions already represented by a primary in the emitted set — the floor
+    // is satisfied for those.
+    const coveredTrads = new Set<string>();
+    for (const c of out) if (!floor.synthesis.has(c.tradition)) coveredTrads.add(c.tradition);
+    // strongest relevant primary per not-yet-covered tradition, in score order.
+    const candidates: RetrievedChunk[] = [];
+    const seenTrad = new Set<string>();
+    for (const s of scored) {
+      const t = s.entry.chunk.tradition;
+      if (floor.synthesis.has(t)) continue;                 // synthesis, not a primary
+      if (coveredTrads.has(t) || seenTrad.has(t)) continue; // tradition already has/gets a primary
+      if (s.entry.similarity < floor.simThreshold) continue; // relevance gate τ (excludes sim-0 graph/lex-only)
+      if (emitted.has(s.entry.chunk.id)) continue;
+      candidates.push(s.entry.chunk);
+      seenTrad.add(t);
+    }
+    let promotions = 0;
+    for (const cand of candidates) {
+      if (promotions >= floor.count) break;
+      // yield the weakest synthesis slot; if there is none, leave the ranking alone
+      // rather than displace a primary.
+      let victim = -1, victimScore = Infinity;
+      for (let i = 0; i < out.length; i++) {
+        if (!floor.synthesis.has(out[i].tradition)) continue;
+        const sc = scoreById.get(out[i].id) ?? -Infinity;
+        if (sc < victimScore) { victimScore = sc; victim = i; }
+      }
+      if (victim < 0) break;
+      if (process.env.RETRIEVAL_TRACE) {
+        console.log(`  [primary-floor] promote ${cand.id} [${cand.tradition}] (sim≥${floor.simThreshold}); yield synthesis ${out[victim].id} [${out[victim].tradition}]`);
+      }
+      emitted.delete(out[victim].id);
+      out[victim] = cand;
+      emitted.add(cand.id);
+      promotions++;
+    }
+    // Re-sort the emitted set by score so display stays score-ordered (the promoted
+    // primary keeps its true, lower score — it earned a SLOT, not a rank).
+    if (promotions > 0) out.sort((a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0));
   }
   return out;
 }

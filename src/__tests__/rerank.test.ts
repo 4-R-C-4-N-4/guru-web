@@ -254,3 +254,63 @@ describe('mergeAndRerank — lexical gate-cap (todo:8bc7698b)', () => {
     expect(out[0].id).toBe('flood');
   });
 });
+
+// Primary floor (todo:1a8c3bbf, §8.1): a slot-level PROMOTION of a relevant primary
+// the ranking crowded out, paid for by yielding the weakest SYNTHESIS slot — no
+// score change, never displacing another primary, gated by a relevance threshold.
+describe('mergeAndRerank — primary floor (todo:1a8c3bbf)', () => {
+  const floor = (count: number, synthesis: string[], simThreshold = 0.5) =>
+    ({ count, simThreshold, synthesis: new Set(synthesis) });
+
+  // Three synthesis (theosophy) chunks fill the top-3; a relevant primary (norse,
+  // sim 0.6) is crowded to rank 4 despite the diversity bump.
+  const synthTrip = () => [
+    chunk('th1', 'theosophy', { source: 'vector', distance: 0.10 }),
+    chunk('th2', 'theosophy', { source: 'vector', distance: 0.12 }),
+    chunk('th3', 'theosophy', { source: 'vector', distance: 0.14 }),
+  ];
+
+  it('is a no-op when no floor is supplied — the primary stays crowded out', () => {
+    const primary = chunk('norse1', 'norse', { source: 'vector', distance: 0.4 });
+    const out = mergeAndRerank([...synthTrip(), primary], [], 3).map(c => c.id);
+    expect(out).toEqual(['th1', 'th2', 'th3']);
+  });
+
+  it('promotes a relevant primary into top-K by yielding the weakest synthesis slot', () => {
+    const primary = chunk('norse1', 'norse', { source: 'vector', distance: 0.4 }); // sim 0.6 ≥ τ
+    const out = mergeAndRerank([...synthTrip(), primary], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    expect(out).toContain('norse1');   // primary pulled in
+    expect(out).not.toContain('th3');  // weakest synthesis slot yielded (not th1/th2)
+    expect(out).toHaveLength(3);
+  });
+
+  it('does NOT promote a primary below the relevance gate τ (stays buried)', () => {
+    const weak = chunk('norse1', 'norse', { source: 'vector', distance: 0.6 }); // sim 0.4 < τ=0.5
+    const out = mergeAndRerank([...synthTrip(), weak], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    expect(out).toEqual(['th1', 'th2', 'th3']);
+  });
+
+  it('never displaces another primary — no synthesis slot means no change', () => {
+    const prims = [
+      chunk('p1', 'platonism', { source: 'vector', distance: 0.10 }),
+      chunk('p2', 'gnosticism', { source: 'vector', distance: 0.12 }),
+      chunk('p3', 'hinduism', { source: 'vector', distance: 0.14 }),
+    ];
+    const crowded = chunk('norse1', 'norse', { source: 'vector', distance: 0.4 });
+    const base = mergeAndRerank([...prims, crowded], [], 3).map(c => c.id);
+    const out = mergeAndRerank([...prims, crowded], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    expect(out).toEqual(base); // no theosophy slot to yield → ranking untouched
+  });
+
+  it('respects count: two qualifying primaries + count 1 promotes exactly one', () => {
+    const synth = [
+      chunk('th1', 'theosophy', { source: 'vector', distance: 0.10 }),
+      chunk('th2', 'theosophy', { source: 'vector', distance: 0.12 }),
+    ];
+    const primA = chunk('norse1', 'norse', { source: 'vector', distance: 0.40 });
+    const primB = chunk('celtic1', 'celtic', { source: 'vector', distance: 0.42 });
+    const out = mergeAndRerank([...synth, primA, primB], [], 2, { primaryFloor: floor(1, ['theosophy']) });
+    expect(out.filter(c => c.tradition === 'norse' || c.tradition === 'celtic')).toHaveLength(1);
+    expect(out).toHaveLength(2);
+  });
+});
