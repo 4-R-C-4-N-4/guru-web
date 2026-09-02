@@ -146,9 +146,6 @@ export async function retrieve(
     ? 0
     : maxPerTextEnv === 'off' ? 0 : (Number(maxPerTextEnv) || MAX_PER_TEXT);
 
-  // Score calibration (todo:19ea34ea, §8.1). Off by default → byte-identical.
-  const calibration = await loadCalibration();
-
   return mergeAndRerank([...vectorResults, ...summaryResults], graphResults, topK, {
     traditionRarity,
     lexicalResults,
@@ -160,7 +157,6 @@ export async function retrieve(
     // to MAX_PER_TRADITION regardless of topK.
     perTraditionCap: studyWorkId ? 0 : undefined,
     perTextCap,
-    ...calibration,
   });
 }
 
@@ -296,77 +292,6 @@ async function corpusRarity(): Promise<Map<string, number>> {
   const span = (Math.max(...logs) - lo) || 1;
   _rarity = new Map(rows.map(r => [r.tradition, (Math.max(...logs) - Math.log(r.n)) / span]));
   return _rarity;
-}
-
-// ---------------------------------------------------------------------------
-// Score calibration (todo:19ea34ea, docs §8.1)
-// ---------------------------------------------------------------------------
-// Two independent, individually-swept levers against the fluency inversion —
-// modern-synthesis prose (blavatsky-sd et al.) out-scoring archaic primaries
-// (§5). Both act ONLY on the vector similarity term, both DEFAULT OFF, and both
-// precompute their maps once (the corpus is static between deploys, like
-// corpusRarity). Env knobs follow the §9.5 convention: default = current
-// behaviour, so git-reverting the default is a redeploy-free rollback.
-
-// Corpus mean chunk token_count — the BM25 length-normalization pivot. Cached.
-let _avgTokens: number | null = null;
-async function corpusAvgTokens(): Promise<number> {
-  if (_avgTokens != null) return _avgTokens;
-  const r = await one<{ avg: number }>(`SELECT AVG(token_count)::float8 AS avg FROM chunks`);
-  _avgTokens = r?.avg && r.avg > 0 ? r.avg : 1;
-  return _avgTokens;
-}
-
-// Per-text hub score in [0,1] — the geometric realization of §8.1's "discount a
-// work by how often it matches across unrelated queries." A work whose mean
-// embedding sits near the corpus centroid is close to *every* query direction,
-// so it surfaces on unrelated topics; distance-to-centroid is that hubness,
-// normalized so central = 1 (max dampening), peripheral = 0. Cached.
-//
-// MEASURED (2026-09-02, docs §8.1): centrality separates the omnibus crowders
-// well (secret-teachings rank 1/246, blavatsky-sd rank 8) but conflates them with
-// genuinely broad PRIMARIES — iamblichus-on-the-mysteries is rank 9/246, so this
-// lever dampens a target it is meant to rescue. FULL GATE at β=0.15 REGRESSED to
-// 306/14 (baseline 314/6): it knocked out central primaries (yoga-sutras ×3,
-// tao-te-ching, plotinus, gospel-of-thomas, iamblichus). Ships OFF; a viable
-// version needs literal cross-query hit-frequency, not this static geometry
-// proxy (§8.1).
-let _hub: Map<string, number> | null = null;
-async function corpusHubScores(): Promise<Map<string, number>> {
-  if (_hub) return _hub;
-  const rows = await query<{ text_id: string; dist: number }>(
-    `WITH gc AS (SELECT AVG(embedding) AS c FROM chunks)
-     SELECT text_id, (AVG(embedding) <=> (SELECT c FROM gc))::float8 AS dist
-     FROM chunks GROUP BY text_id`,
-  );
-  const dists = rows.map(r => r.dist);
-  const lo = Math.min(...dists);
-  const span = (Math.max(...dists) - lo) || 1;
-  _hub = new Map(rows.map(r => [r.text_id, 1 - (r.dist - lo) / span])); // central → 1
-  return _hub;
-}
-
-export interface Calibration {
-  /** BM25 length normalization of the vector similarity term. b in [0,1]; the
-   *  corpus mean token_count is the pivot. Absent = disabled. */
-  lengthNorm?: { b: number; avgTokens: number };
-  /** Hub-frequency (centrality) dampening. beta in [0,1]; hub maps text_id →
-   *  centrality in [0,1]. Absent = disabled. */
-  hubDampen?: { beta: number; hub: Map<string, number> };
-}
-
-// Read the §8.1 env knobs and precompute whatever maps they need. Shared by
-// retrieve() AND scripts/measure-retrieval.ts so both apply IDENTICAL scoring —
-// a measurement that silently skipped calibration would misreport ranks (§9.4
-// trap). Number('off')/Number('') is NaN/0, so an unset or non-numeric knob is
-// simply off; a value <= 0 is off too.
-export async function loadCalibration(): Promise<Calibration> {
-  const b = process.env.RETRIEVAL_LENGTH_NORM != null ? Number(process.env.RETRIEVAL_LENGTH_NORM) : LENGTH_NORM_B;
-  const beta = process.env.RETRIEVAL_HUB_DAMPEN != null ? Number(process.env.RETRIEVAL_HUB_DAMPEN) : HUB_DAMPEN_BETA;
-  const cal: Calibration = {};
-  if (b > 0) cal.lengthNorm = { b, avgTokens: await corpusAvgTokens() };
-  if (beta > 0) cal.hubDampen = { beta, hub: await corpusHubScores() };
-  return cal;
 }
 
 // ---------------------------------------------------------------------------
@@ -534,12 +459,6 @@ const LEX_GATE_CAP = 0.49;
 // same-text head triples (secret-teachings 0.82-0.85, blavatsky 0.77-0.79);
 // env-tunable via RETRIEVAL_DUP_COLLAPSE_THRESHOLD. Off unless RETRIEVAL_DUP_COLLAPSE=on.
 const DUP_COLLAPSE_THRESHOLD = 0.80;
-// Score-calibration defaults (todo:19ea34ea, §8.1). Both OFF (0) → byte-identical
-// to prior scoring. RETRIEVAL_LENGTH_NORM (BM25 length-norm strength b) and
-// RETRIEVAL_HUB_DAMPEN (centrality dampening strength beta) sweep them without a
-// redeploy; see loadCalibration() and the corpusAvgTokens/corpusHubScores maps.
-const LENGTH_NORM_B = 0;
-const HUB_DAMPEN_BETA = 0;
 // 'summary' starts at inferred's weight deliberately (unswept — generated
 // apparatus competes on similarity, not tier); retune independently of
 // 'inferred' when the study-mode sweep lands.
@@ -609,20 +528,12 @@ export function mergeAndRerank(
      * no embedding in the map are never suppressed.
      */
     dupCollapse?: { threshold: number; sameTextOnly: boolean; embeddings: Map<string, number[]> };
-    /** BM25 length normalization of the vector similarity term (todo:19ea34ea,
-     *  §8.1). Absent = disabled (default). */
-    lengthNorm?: Calibration['lengthNorm'];
-    /** Hub-frequency (centrality) dampening of the vector similarity term
-     *  (todo:19ea34ea, §8.1). Absent = disabled (default). */
-    hubDampen?: Calibration['hubDampen'];
   } = {},
 ): RetrievedChunk[] {
   const merged = new Map<string, MergedEntry>();
   const lexicalResults = opts.lexicalResults ?? [];
   const lexicalWeight = opts.lexicalWeight ?? LEXICAL_WEIGHT;
   const graphWeight = opts.graphWeight ?? GRAPH_WEIGHT;
-  const lengthNorm = opts.lengthNorm;
-  const hubDampen = opts.hubDampen;
   // Default on: only an explicit `null` (env kill-switch) disables the gate.
   const lexGateCap = opts.lexGateCap === undefined ? LEX_GATE_CAP : opts.lexGateCap;
 
@@ -713,23 +624,6 @@ export function mergeAndRerank(
   // RETRIEVAL_TRACE breakdown below is the real scoring, not a re-derivation.
   const scored = entries.map(entry => {
     const tierW = tierWeight(entry.tier);
-    // Score calibration (todo:19ea34ea, §8.1): adjust the vector similarity term
-    // ONLY. The graph/lexical rescue legs (the §8.2/§8.3 levers) are left intact,
-    // and graph-only hits (similarity 0) are untouched by construction.
-    let similarity = entry.similarity;
-    if (lengthNorm && similarity > 0) {
-      // BM25 length normalization: chunks longer than the corpus mean are damped,
-      // shorter ones lifted, so verbose prose stops winning on token mass. b=0 is
-      // a no-op (factor 1); token_count is always selected by the chunk legs.
-      const tc = entry.chunk.token_count ?? lengthNorm.avgTokens;
-      similarity *= 1 / (1 - lengthNorm.b + lengthNorm.b * (tc / lengthNorm.avgTokens));
-    }
-    if (hubDampen && similarity > 0) {
-      // Discount a work by its corpus centrality — a "matches everything" hub
-      // (blavatsky-sd) loses up to beta of its similarity contribution.
-      const h = hubDampen.hub.get(entry.chunk.text_id ?? '') ?? 0;
-      similarity *= 1 - hubDampen.beta * h;
-    }
     // Scale ONLY the graph term by the query-expansion match weight — the vector
     // leg and the additive combination are untouched (todo:08503113 §6). A
     // domain-tier graph hit thus contributes ¼ of a concept-tier hit's graph term.
@@ -745,29 +639,22 @@ export function mergeAndRerank(
     // Gate-cap (todo:8bc7698b): a lexical-only hit (no vector support) can't
     // outscore a genuine vector answer — kills long-paraphrase FTS flooding
     // while leaving vector-corroborated hits and strong entity rescues intact.
-    // Keyed on RAW similarity: calibration scales vector support but never
-    // fabricates or removes it.
     if (lexGateCap != null && entry.similarity <= 0) lexTerm = Math.min(lexTerm, lexGateCap);
-    const score = VECTOR_WEIGHT * similarity + graphWeight * graphTerm + lexTerm + diversity;
-    return { entry, score, tierW, diversity, lexTerm, similarity };
+    const score = VECTOR_WEIGHT * entry.similarity + graphWeight * graphTerm + lexTerm + diversity;
+    return { entry, score, tierW, diversity, lexTerm };
   });
 
   scored.sort((a, b) => b.score - a.score);
 
   // Opt-in score trace (set RETRIEVAL_TRACE=1). Off by default — no prod cost.
   if (process.env.RETRIEVAL_TRACE) {
-    const cal = `len_norm=${lengthNorm ? lengthNorm.b : 'off'} hub_dampen=${hubDampen ? hubDampen.beta : 'off'}`;
     console.log(
-      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${graphWeight} lex_w=${lexicalWeight} lex_gate_cap=${lexGateCap ?? 'off'} cap=${MAX_PER_TRADITION} ${cal}):`,
+      `[retrieval-trace] ${scored.length} candidates (vec_w=${VECTOR_WEIGHT} graph_w=${graphWeight} lex_w=${lexicalWeight} lex_gate_cap=${lexGateCap ?? 'off'} cap=${MAX_PER_TRADITION}):`,
     );
     for (const s of scored.slice(0, topK)) {
-      // sim= is the CALIBRATED similarity used in the score (raw in parens when
-      // calibration moved it), so the trace is the real scoring, not a re-derivation.
-      const moved = Math.abs(s.similarity - s.entry.similarity) > 1e-9;
-      const simStr = moved ? `${s.similarity.toFixed(3)}(raw ${s.entry.similarity.toFixed(3)})` : s.similarity.toFixed(3);
       console.log(
         `  ${s.score.toFixed(3)}  ${s.entry.chunk.source.padEnd(7)} ${s.entry.chunk.tradition.padEnd(20)}` +
-          ` sim=${simStr} tierW=${s.tierW.toFixed(2)}(${s.entry.tier})` +
+          ` sim=${s.entry.similarity.toFixed(3)} tierW=${s.tierW.toFixed(2)}(${s.entry.tier})` +
           ` graphS=${s.entry.graphScore.toFixed(2)} matchW=${s.entry.matchWeight.toFixed(2)}` +
           ` lex=${s.lexTerm.toFixed(3)} div=${s.diversity.toFixed(3)}  ${s.entry.chunk.id}`,
       );

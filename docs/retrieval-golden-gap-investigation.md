@@ -303,22 +303,18 @@ deep-crowding pair (iamblichus, mabinogion). **Risk:** a scoring change touches
 every query, so it *can* regress the 314 passing — the full gate is the
 guardrail, not optional.
 
-#### 8.1 — measured (todo:19ea34ea): both levers built, swept, ship OFF
+#### 8.1 — measured (todo:19ea34ea): both vector-score levers regress; reverted
 
-Both sub-experiments were implemented as env-gated knobs on the **vector
+Both sub-experiments were prototyped as env-gated knobs on the **vector
 similarity term only** (leaving the graph/lexical rescue legs untouched), each
-defaulting OFF so the shipped config is byte-identical. `loadCalibration()` in
-`retriever.ts` reads them and is shared by `scripts/measure-retrieval.ts`, so the
-diagnostic mirrors the gate exactly (§9.4 trap). Then each was run against the
-FULL gate — not a spot check.
+defaulting OFF, then run against the **FULL** 320-probe gate — not a spot check.
 
-- `RETRIEVAL_LENGTH_NORM` (b) — BM25 length normalization pivoted on the corpus
-  mean chunk token_count. `1/(1 - b + b·(tc/avg))`; b=0 is a no-op.
-- `RETRIEVAL_HUB_DAMPEN` (β) — centrality dampening. A per-text hub score in
-  [0,1] = distance-to-corpus-centroid normalized so central = 1; similarity is
-  scaled by `(1 - β·hub)`. Centroid proximity is the geometric realization of
-  "matches across unrelated queries": a work near the centroid is close to every
-  query direction. Precomputed once (`AVG(embedding)` per text vs global), cached.
+- **Length normalization** — BM25 pivoted on the corpus mean chunk token_count,
+  `1/(1 - b + b·(tc/avg))`.
+- **Hub-frequency dampening** — a per-text centrality score (distance to the
+  corpus embedding centroid, normalized so central = 1), scaling similarity by
+  `(1 - β·hub)`. Centroid proximity was the geometric proxy for "matches across
+  unrelated queries."
 
 **Baseline (re-established at true defaults, corpus v63): 314 / 6.** This is the
 *cap-off* number — §9.2's "316/4" is the `RETRIEVAL_MAX_PER_TEXT=1` figure (§6),
@@ -328,34 +324,48 @@ poetic-edda-voluspo.
 
 | config | gate | Δ vs 314/6 | what happened |
 |---|---|---|---|
-| defaults (both off) | **314 / 6** | — | byte-identical baseline |
-| `RETRIEVAL_LENGTH_NORM=0.5` | **301 / 19** | **−13** | recovered iamblichus (rank 48→5) but broke 13 previously-passing **short-text** probes (dhammapada, diamond-sutra, heart-sutra, pythagorean, gathas, corpus-hermeticum ×3, …) |
-| `RETRIEVAL_HUB_DAMPEN=0.15` | **306 / 14** | **−8** | dampened the **central primaries** it can't distinguish from the crowders (yoga-sutras ×3, tao-te-ching, plotinus, gospel-of-thomas — and iamblichus itself, rank 9/246) |
+| defaults | **314 / 6** | — | baseline |
+| length-norm b=0.5 | **301 / 19** | **−13** | recovered iamblichus (rank 48→5) but broke 13 previously-passing **short-text** probes (dhammapada, diamond-sutra, heart-sutra, pythagorean, gathas, corpus-hermeticum ×3, …) |
+| hub-dampen β=0.15 | **306 / 14** | **−8** | dampened the **central primaries** it can't distinguish from the crowders (yoga-sutras ×3, tao-te-ching, plotinus, gospel-of-thomas — and iamblichus itself, rank 9/246) |
 
-**Why each fails, structurally (not tuning):**
+**Both regressed, for the same root reason: neither proxy actually measures what
+the inversion is.** BM25 is *symmetric* — strong enough to lift a long crowded
+target, it also boosts every short chunk corpus-wide and floods the aphoristic
+traditions. Centrality conflates omnibus synthesizers with genuinely *broad*
+primaries (iamblichus is centrality-rank 9/246; the Neoplatonic/Vedic material is
+broad because it *is* broad), so it lowers targets as hard as crowders. **The
+machinery was reverted, not shipped even off** — dead env knobs are net weight;
+the value kept is this measurement (don't re-try these two shapes) and the
+direction below.
 
-- **Length norm is the wrong shape.** BM25 is *symmetric* — it penalizes long
-  chunks AND boosts short ones — and short chunks are corpus-wide, so at any b
-  strong enough to lift a buried long-crowded target it also floods every query
-  with short off-target chunks. The aphoristic traditions (dhammapada, the
-  sutras, the golden verses) are collateral. A viable version would be
-  **one-sided**: damp only outlier-long chunks, never reward short.
-- **Centrality conflates synthesizers with broad primaries.** The measured hub
-  order puts the omnibus crowders at the top (secret-teachings 1/246,
-  blavatsky-sd 8) — but iamblichus is 9, plato-timaeus 10, and other genuine
-  primaries sit high because Neoplatonist/Vedic material *is* broad. Dampening by
-  centrality therefore lowers targets (iamblichus, the yoga-sutras) as much as
-  crowders. And it does nothing for mabinogion, whose crowder (kalevala) is
-  peripheral too. A viable version needs a **literal cross-query hit-frequency**
-  (how often a work enters the top pool of *unrelated* queries), excluding
-  on-topic queries — not a static geometry proxy.
+**The real indicator is authorship era, and it is not in the vectors.** The
+fluency inversion is specifically *modern synthesis* (Blavatsky 1888, the
+Hall/Waite/Ouspensky compilations 1900s–1930s) out-embedding *archaic primaries*.
+Era is **orthogonal to the semantic axis an embedding encodes** — a modern and an
+ancient cosmogony passage are near-neighbours precisely because they share a
+topic — so no vector-*score* transform can recover it, and both length and
+centrality fail because verbosity and breadth are not era. The signal has to be an
+**external, curated label**, and the corpus half-carries it already:
 
-**Disposition: ship both OFF** (defaults unchanged → gate stays 314/6, no
-regression). The knobs are retained for the reformulated sweeps above, exactly as
-the per-work cap (§6) is retained though off. **These two formulations do not fix
-the fluency inversion; the residual 4 (iamblichus, isa, mabinogion, pistis) now
-point harder at §8.2 (fire the graph leg on paraphrase) and §8.3 (candidate
-recall) than at vector-score calibration.**
+- **`tradition` is a clean proxy.** The modern-synthesis crowders live in exactly
+  two traditions — **`theosophy`** (blavatsky-sd) and **`western_esoteric`**
+  (secret-teachings, kybalion, tertium-organum, transcendental-magic, …) — while
+  every casualty of the hub run is ancient (iamblichus/neoplatonism,
+  yoga-sutras/hinduism, tao-te-ching/taoism, plotinus/platonism,
+  gospel-of-thomas/gnosticism). A per-tradition modern-synthesis flag (those two,
+  possibly `renaissance_hermeticism` at half weight) dampens the actual crowders
+  and touches **none** of the targets — the exact conflation that sank hub-dampen
+  disappears.
+- There is **no composition-date column** (`works` has none; `work_dossiers`
+  states the era only in prose `context`), so a finer per-work era would need a
+  small curated addition to the corpus export (guru-repo owned), not a guru-web
+  scoring hack. Start from the tradition flag; refine per-work only if the
+  tradition granularity proves too coarse.
+
+**Disposition: no calibration lever shipped.** The residual 4 (iamblichus, isa,
+mabinogion, pistis) now point at (a) a curated modern-synthesis dampen keyed on
+tradition/era, (b) §8.2 (fire the graph leg on paraphrase), and (c) §8.3
+(candidate recall) — not at any transform of the vector score.
 
 ### 8.2 Concept-extraction upgrade (`todo:53480da1`)
 

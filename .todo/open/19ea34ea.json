@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-09-02T00:24:19.003Z",
-  "updated_at": "2026-09-02T11:54:37.395Z",
+  "updated_at": "2026-09-02T12:12:22.656Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"
@@ -47,6 +47,13 @@
       "author": "Backend Engineer",
       "type": "conclusion",
       "content": "Both §8.1 levers built as env-gated knobs (default OFF, vector-similarity-term only) and swept against the full gate. Baseline at true defaults = 314/6 (the doc's 316/4 is the cap=1 figure, not the shipped default). Results: RETRIEVAL_LENGTH_NORM=0.5 -> 301/19 (-13: recovers iamblichus 48->5 but BM25's symmetric short-boost floods short-text precision — dhammapada/sutras/pythagorean/gathas); RETRIEVAL_HUB_DAMPEN=0.15 -> 306/14 (-8: centroid-proximity conflates omnibus crowders with broad primaries — iamblichus is centrality-rank 9/246 — so it dampens targets, knocking out yoga-sutras/tao-te-ching/plotinus/gospel-of-thomas). Neither beats baseline; both ship OFF (defaults unchanged, gate stays 314/6). These two FORMULATIONS do not fix the fluency inversion. Reformulation paths (one-sided long-only length penalty; literal cross-query hit-frequency excluding on-topic queries) recorded in docs §8.1. The residual 4 (iamblichus/isa/mabinogion/pistis) now point harder at §8.2 (extractConcepts) and §8.3 (recall) than at vector-score calibration. Committed 59737d3.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-02T12:12:22.656Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "SUPERSEDES the ship-OFF note: owner's call is that dead env machinery is net-negative, so the two calibration levers were REVERTED (not shipped even off). Kept: the measurement (both regress — length 301/19, hub 306/14 vs 314/6) and the redirect. Real lever = a curated MODERN-SYNTHESIS dampen keyed on tradition/era, NOT any vector-score transform. Era is orthogonal to the embedding's semantic axis (modern+ancient same-topic passages are neighbours), which is why length (verbosity != era) and centrality (breadth != era; iamblichus is central rank 9/246) both regressed. tradition is a clean proxy: dampen {theosophy, western_esoteric} (+ renaissance_hermeticism at half weight) — hits the actual crowders (blavatsky, secret-teachings), touches none of the ancient targets. No composition-date column exists (works/ work_dossiers prose only), so a finer per-work era is a guru-repo corpus-export addition. Ticket stays OPEN, re-pointed at the era lever. See docs §8.1.",
       "confidence": "high"
     }
   ]
