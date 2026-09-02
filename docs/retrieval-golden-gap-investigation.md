@@ -386,31 +386,31 @@ lex / diversity terms, plus any dup-collapse / per-work-cap skips) for the
 emitted top-K of every `retrieve()` call. This is the first tool for "why did
 this chunk rank here."
 
-### 9.4 The measurement harness (how §5/§6's rank numbers were produced)
+### 9.4 The measurement harness — `scripts/measure-retrieval.ts` (committed)
 
 `retrieve()` truncates to topK and applies the caps, so it can't show you *where
-a missing target actually scored*. Reproduce the **exact topK=15 candidate pool**
-and read the full, untruncated score order via the exported internals — this is
-the technique behind the §5 rank table and the §6 cap simulation:
+a missing target actually scored*. `scripts/measure-retrieval.ts` reproduces the
+**exact topK candidate pool** and prints the full, untruncated score order — the
+tool behind the §5 rank table and the §6 cap simulation. It is committed, not
+throwaway, so this measurement is reproducible without re-deriving it:
 
-```ts
-import { vectorSearch, lexicalSearch, mergeAndRerank } from '@/lib/retriever';
-import { extractConcepts, walkGraph } from '@/lib/graph';
-// faithful topK=15 pool sizes: vector topK*10, graph topK*2, lexical topK*2
-const v   = await vectorSearch(q, prefs, 150);
-const lex = await lexicalSearch(q, prefs, 30);
-const c   = await extractConcepts(q);
-const g   = c.length ? await walkGraph(c, prefs, 30) : [];
-// large topK + perTraditionCap:0  => full pool in pure score order, untruncated
-const order = mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0 });
-// order.findIndex(x => x.text_id === TARGET)  -> the target's TRUE score-rank
+```sh
+export $(grep -E '^(DATABASE_URL|OLLAMA_URL)=' .env | xargs)
+npx tsx scripts/measure-retrieval.ts "<query>" --target <work> [--topk 15] [--cap N] [--show 20]
 ```
 
-**Trap (do not skip):** the intake pools scale with topK, so `retrieve(q, 15)`
-and `retrieve(q, 120)` are *different computations*, not a prefix relationship. A
-"rank" only means something relative to the pool that produced it. Always
-reproduce the topK=15 pool (as above) when reasoning about the gate, not a deeper
-`retrieve(q, 120)`.
+It reports the target's TRUE score-rank, which works crowd the slots above it,
+the head in pure score order, and (with `--cap N`) whether a per-work cap of N
+would lift the target into topK. The reproduction technique it wraps: faithful
+pool (`vectorSearch topK*10`, `graph/lexical topK*2`) fed to
+`mergeAndRerank(..., 99999, { perTraditionCap: 0 })` for the untruncated pure
+score order.
+
+**Trap the script encodes (do not work around it):** the intake pools scale with
+topK, so `retrieve(q, 15)` and `retrieve(q, 120)` are *different computations*,
+not a prefix relationship. A "rank" only means something relative to the pool
+that produced it — always reproduce the topK pool (the script does), never read
+a deeper `retrieve(q, 120)` as if it were the gate's list.
 
 ### 9.5 Env knobs (all default to production behaviour)
 
@@ -430,5 +430,7 @@ to current behaviour, so `git`-reverting the default is a redeploy-free rollback
 
 `scripts/golden-check.ts` (the deprecated staging canary of §1) and any
 `*_probe.ts` files were local scratch, never committed. Do not depend on them;
-`golden-queries.test.ts` is the source of truth. The measurement scripts in §9.4
-are likewise throwaway — write them under `scripts/_*.ts` and delete after.
+`golden-queries.test.ts` is the source of truth and `scripts/measure-retrieval.ts`
+(§9.4) is the committed measurement tool. Any further one-off probes are
+throwaway — write them under `scripts/_*.ts` and delete after (they otherwise
+break the whole-project `tsc` type-check).
