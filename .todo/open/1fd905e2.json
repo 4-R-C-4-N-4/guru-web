@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-09-02T12:37:41.799Z",
-  "updated_at": "2026-09-02T12:37:42.003Z",
+  "updated_at": "2026-09-02T18:52:03.713Z",
   "tags": [
     "retrieval",
     "ranking",
@@ -18,7 +18,8 @@
     "children": [
       "1a8c3bbf",
       "9445cd73",
-      "6702edd0"
+      "6702edd0",
+      "fb522ee1"
     ]
   }
 }

@@ -1,0 +1,21 @@
+{
+  "id": "fb522ee1",
+  "type": "chore",
+  "state": "open",
+  "summary": "Add a primary-vs-synthesis classification step to the guru workbook for new-work ingestion",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-02T18:52:03.713Z",
+  "updated_at": "2026-09-02T18:52:03.755Z",
+  "tags": [
+    "retrieval",
+    "primary-floor",
+    "corpus",
+    "workbook"
+  ],
+  "relationships": {
+    "parent": "1fd905e2"
+  },
+  "description": "GATED ON c2 (the classification mechanism + works.kind schema must exist). In the GURU repo (~/Work/guru), update the workbook register (terse md, per feedback-agent-reference-docs: commands/gates/failure modes) so every NEW work ingested into the corpus passes the SAME primary-vs-synthesis gate: after dossier generation, classify kind from the dossier context, route the proposed kind through the guru-review queue (owner apply gate), and populate works.kind BEFORE export. Without this the floor silently rots as the corpus grows (a new synthesis work would crowd primaries again with no label). DONE CONTRACT: workbook step documented (where in the ingestion sequence, the exact command/queue, and the failure mode if kind is missing) + committed in the guru repo via its PR flow. Cross-repo: ticket tracked here on PR #135, work lands in guru."
+}
