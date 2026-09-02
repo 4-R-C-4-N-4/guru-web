@@ -1,0 +1,32 @@
+{
+  "id": "19ea34ea",
+  "type": "feature",
+  "state": "open",
+  "summary": "Retrieval score calibration: length-normalize vector similarity + hub-frequency dampening to counter the fluency inversion (modern-synthesis prose out-scoring archaic primaries). Score-time fix (vs the emit-time per-work cap). Sweep each against the frozen golden gate; no regression below 316/4. Targets pistis-sophia (rank 19 no crowder) + deep-crowding iamblichus/mabinogion. See docs/retrieval-golden-gap-investigation.md §8.1.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-02T00:24:19.003Z",
+  "updated_at": "2026-09-02T00:24:19.119Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    },
+    {
+      "path": "docs/retrieval-golden-gap-investigation.md",
+      "commit": "a589af81de41cf8cde9e93cf589e8c1bf3ee9f6b",
+      "note": "§8.1 rationale + measurement plan"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "ranking",
+    "golden-set"
+  ],
+  "relationships": {
+    "related": [
+      "697f9e58",
+      "53480da1"
+    ]
+  }
+}

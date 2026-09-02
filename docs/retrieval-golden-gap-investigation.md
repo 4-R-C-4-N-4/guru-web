@@ -266,3 +266,75 @@ capping:**
 - whether to wire `golden-queries.test.ts` into the corpus-load-to-VPS step as a
   hard blocker;
 - `frozenEval` ratification on the 3 frozen works added in PR #133.
+
+---
+
+## 8. Follow-up: the retrieval-quality roadmap
+
+PR #132 (walkGraph ranking + dup-collapse + per-work cap) and PR #133 (per-work
+coverage + source-of-truth promotion) are **merged and deployed**. The go-live /
+unblock steps (record the 6 as `knownGaps`, wire the gate into the corpus-load
+step, fix the confounding corpus defects `49309aa1` / `6e0c2a63`) are the
+mechanical part and are tracked on their own tickets. What follows is the actual
+**retrieval-quality** work — the levers the measurement in §5–§6 points at for
+the residual failures. Every item is a swept experiment, evaluated against the
+frozen 320-probe gate, with **no regression below the current best (316/4)** as
+the ship gate. A `knownGap` is promoted to an asserted gate the moment retrieval
+surfaces it (`todo:31a7fe76`), so the gate ratchets forward and never rots.
+
+### 8.1 Score calibration — highest leverage (NEW ticket)
+
+The dominant force under 4 of the 6 failures is the **fluency inversion**: a
+modern synthesis in clean prose out-embeds the archaic primary. The per-work cap
+(§6) only *removes* a duplicate at emit time; calibration fixes the *score*, so a
+buried primary can actually rise. Two independent, individually-testable
+sub-experiments:
+
+- **Length normalization** of the vector similarity term, so verbose modern
+  prose stops winning on sheer token mass. Sweep the normalization strength
+  against the gate.
+- **Hub-frequency dampening** — discount a work's contribution by how often it
+  matches *across unrelated queries* (blavatsky-sd matches nearly every
+  cosmogony/death/alchemy query; §5 measured it holding 18–32 of the top scored
+  slots). This is the principled, score-time version of the per-work cap.
+
+Target failures: pistis-sophia (rank 19, pure scoring miss, no crowder) and the
+deep-crowding pair (iamblichus, mabinogion). **Risk:** a scoring change touches
+every query, so it *can* regress the 314 passing — the full gate is the
+guardrail, not optional.
+
+### 8.2 Concept-extraction upgrade (`todo:53480da1`)
+
+`extractConcepts` is a Phase-1 LIKE match on concept labels; it goes **fully
+dark** on paraphrased/abstract queries (measured: 0 concepts / 0 graph
+candidates on 2/12 canonical queries). The graph leg is now correctly *ranked*
+(§4), so making it *fire* on paraphrased narrative queries is the second lever —
+move extraction to definition/synonym matching or embedding-based concept
+selection. This is what lets the graph term rescue a rank-19 target the vector
+leg alone can't lift.
+
+### 8.3 Candidate-generation recall (`todo:31a7fe76`, and the isa-upanishad case)
+
+Reranking cannot fix what was never fetched: **isa-upanishad's target never
+entered the 202-candidate pool at all.** For that class:
+
+- re-embed archaic / short-verse texts with a stronger model, or
+- add a guaranteed lexical/entity recall leg, or
+- query expansion at candidate time.
+
+### 8.4 Thin-tradition safety (`todo:31a7fe76`)
+
+`celtic` and `upanishads` are single-text traditions, so a work-miss is a
+tradition-miss with no sibling to catch `mustIncludeTraditions`. Either a floor
+guaranteeing one chunk per scoped tradition a query matches, or accept these as
+permanent `knownGaps`. Decide explicitly rather than let them read as ranking
+bugs.
+
+### Sequencing
+
+**8.1 first** — highest leverage, most measurable, and the lever the data most
+directly implicates. Then **8.2** (unlocks the now-ranked graph leg on the
+queries where the vector leg is weakest). **8.3 / 8.4** are the harder, narrower
+residue — worth doing only after 8.1/8.2 show what they leave behind, since
+calibration + a live graph leg may absorb several of the current failures on
+their own.
