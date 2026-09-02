@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-09-02T12:37:42.003Z",
-  "updated_at": "2026-09-02T19:58:31.635Z",
+  "updated_at": "2026-09-02T20:07:30.957Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"
@@ -21,5 +21,14 @@
   "relationships": {
     "parent": "1fd905e2"
   },
-  "description": "GATED ON c1 (positive) and c2 (label available). Swap the tradition proxy for works.kind in the floor, re-run the full gate, sweep N (slots reserved) and the relevance threshold to the peak, and decide the shipped default (owner's call: default-on vs env-gated). Update docs/retrieval-golden-gap-investigation.md §8.1 with the floor outcome and the final gate number; note isa-upanishad remains a §8.3 recall gap. DONE CONTRACT: final gate number (>= 314/6, ideally recovering the crowding failures), shipped-config decision recorded, doc updated, rerank.test.ts covering the kind-keyed floor."
+  "description": "GATED ON c1 (positive) and c2 (label available). Swap the tradition proxy for works.kind in the floor, re-run the full gate, sweep N (slots reserved) and the relevance threshold to the peak, and decide the shipped default (owner's call: default-on vs env-gated). Update docs/retrieval-golden-gap-investigation.md §8.1 with the floor outcome and the final gate number; note isa-upanishad remains a §8.3 recall gap. DONE CONTRACT: final gate number (>= 314/6, ideally recovering the crowding failures), shipped-config decision recorded, doc updated, rerank.test.ts covering the kind-keyed floor.",
+  "analysis": [
+    {
+      "timestamp": "2026-09-02T20:07:30.957Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Wiring + ship-default DONE. Floor default-on N=1 (316/4). Floor now reads works.kind via isSynth() with graceful fallback to the tradition proxy (byte-identical until the column lands). BLOCKED on corpus re-export: works.kind ships in guru PR #125; once merged + re-exported + reloaded into the guru-web dev DB, run the full gate with the real label (should hold 316/4, ideally recovering boehme-crowded cases) and close c3. RETRIEVAL_SYNTHESIS_TRADITIONS forces the proxy for A/B.",
+      "confidence": "high"
+    }
+  ]
 }
