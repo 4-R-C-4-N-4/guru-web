@@ -795,14 +795,24 @@ export function mergeAndRerank(
       candidates.push(s.entry.chunk);
       seenTrad.add(t);
     }
+    // Count each synthesis work's slots in the emitted set. The floor may trim a
+    // synthesis work's 2nd+ slot but must NEVER drop its only appearance — that
+    // would fail the work's own mustIncludeWork on a query genuinely about it (the
+    // kybalion regression). Monotonically safe for synthesis works, like the §6 cap.
+    const synthSlots = new Map<string, number>();
+    for (const c of out) if (floor.synthesis.has(c.tradition)) {
+      synthSlots.set(c.text_id ?? '', (synthSlots.get(c.text_id ?? '') ?? 0) + 1);
+    }
     let promotions = 0;
     for (const cand of candidates) {
       if (promotions >= floor.count) break;
-      // yield the weakest synthesis slot; if there is none, leave the ranking alone
-      // rather than displace a primary.
+      // yield the weakest REDUNDANT synthesis slot (its work keeps ≥1 slot); if
+      // there is none, leave the ranking alone rather than displace a primary or
+      // drop a synthesis work entirely.
       let victim = -1, victimScore = Infinity;
       for (let i = 0; i < out.length; i++) {
         if (!floor.synthesis.has(out[i].tradition)) continue;
+        if ((synthSlots.get(out[i].text_id ?? '') ?? 0) <= 1) continue; // keep its only slot
         const sc = scoreById.get(out[i].id) ?? -Infinity;
         if (sc < victimScore) { victimScore = sc; victim = i; }
       }
@@ -810,6 +820,7 @@ export function mergeAndRerank(
       if (process.env.RETRIEVAL_TRACE) {
         console.log(`  [primary-floor] promote ${cand.id} [${cand.tradition}] (sim≥${floor.simThreshold}); yield synthesis ${out[victim].id} [${out[victim].tradition}]`);
       }
+      synthSlots.set(out[victim].text_id ?? '', (synthSlots.get(out[victim].text_id ?? '') ?? 0) - 1);
       emitted.delete(out[victim].id);
       out[victim] = cand;
       emitted.add(cand.id);

@@ -302,6 +302,18 @@ describe('mergeAndRerank — primary floor (todo:1a8c3bbf)', () => {
     expect(out).toEqual(base); // no theosophy slot to yield → ranking untouched
   });
 
+  it('never drops a synthesis work’s ONLY slot — keeps its mustIncludeWork (kybalion fix)', () => {
+    // A synthesis chunk that is its work's sole appearance, plus a relevant crowded
+    // primary. The floor wants to promote the primary but the only synthesis slot is
+    // that work's last one → it is not displaced, so the synthesis work stays in.
+    const syn = { ...chunk('syn1', 'theosophy', { source: 'vector', distance: 0.10 }), text_id: 'blavatsky-sd' };
+    const other = { ...chunk('oth', 'platonism', { source: 'vector', distance: 0.11 }), text_id: 'plato' };
+    const primary = { ...chunk('norse1', 'norse', { source: 'vector', distance: 0.40 }), text_id: 'edda' };
+    const out = mergeAndRerank([syn, other, primary], [], 2, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    expect(out).toContain('syn1');       // synthesis work's only slot preserved
+    expect(out).not.toContain('norse1'); // no redundant synthesis to yield → no promotion
+  });
+
   it('respects count: two qualifying primaries + count 1 promotes exactly one', () => {
     const synth = [
       chunk('th1', 'theosophy', { source: 'vector', distance: 0.10 }),
