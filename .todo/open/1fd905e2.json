@@ -1,0 +1,24 @@
+{
+  "id": "1fd905e2",
+  "type": "feature",
+  "state": "open",
+  "summary": "Relevance-gated primary floor: pull relevant primary root texts into top-15 so synthesis works don't crowd them out — NO synthesis score penalty",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-02T12:37:41.799Z",
+  "updated_at": "2026-09-02T12:37:42.003Z",
+  "tags": [
+    "retrieval",
+    "ranking",
+    "primary-floor"
+  ],
+  "description": "Follow-through from the §8.1 calibration finding (todo:19ea34ea, docs/retrieval-golden-gap-investigation.md): both vector-score levers (length-norm, hub-dampen) REGRESSED and were reverted. Root cause — the fluency inversion is a primary-vs-synthesis distinction, not era, and a global score penalty is the wrong instrument (it buries synthesis's genuine insight everywhere). CORRECT instrument: a slot-level PROMOTION — when a query has a relevant primary root text being crowded out, reserve it a top-15 slot; synthesis scores are untouched, so on a mixed query the reader gets primary AND synthesis both. Baseline to hold: 314/6 (cap-off default). Scope note: this addresses the crowding/scoring failures (poetic-edda, paracelsus, iamblichus, mabinogion, and pistis — whose crowders are other-tradition primaries, so a per-tradition floor lifts it); it does NOT address isa-upanishad, which never enters the candidate pool (that is §8.3 recall, out of scope here). Work the children in order; c2/c3 are gated on c1 showing a clean recovery.",
+  "relationships": {
+    "children": [
+      "1a8c3bbf",
+      "9445cd73",
+      "6702edd0"
+    ]
+  }
+}

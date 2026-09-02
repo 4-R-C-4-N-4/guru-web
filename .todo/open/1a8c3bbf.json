@@ -1,0 +1,25 @@
+{
+  "id": "1a8c3bbf",
+  "type": "feature",
+  "state": "open",
+  "summary": "Prototype per-tradition primary floor in mergeAndRerank using the tradition proxy, and gate it (decision point)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-02T12:37:41.867Z",
+  "updated_at": "2026-09-02T12:37:41.907Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "ranking",
+    "primary-floor"
+  ],
+  "relationships": {
+    "parent": "1fd905e2"
+  },
+  "description": "Emit-time, env-gated slot logic in mergeAndRerank — NO score change, NO corpus change. Treat tradition {theosophy, western_esoteric} as the synthesis proxy, everything else = primary. Mechanism: reserve up to N of the top-K slots for the highest-scoring RELEVANT primary per matched tradition, where 'relevant' is a similarity-threshold gate (never drag up a primary that scored poorly). Respect the existing per-tradition cap and backfill so a synthesis-only or primary-scarce query is never starved. Env knob defaulting to current behaviour (floor off). DONE CONTRACT: full 320-probe gate number vs the 314/6 baseline, plus a fast measure-retrieval read on the 6 failing probes; unit test in rerank.test.ts for the floor + its no-op default + the relevance gate. DECISION GATE: keep ONLY if it recovers probes without regressing below 314/6 (per feedback-no-dead-net-negative-machinery — a lever the data rejects gets reverted, not kept off). If it regresses, stop here and record the negative result; do not proceed to c2/c3."
+}

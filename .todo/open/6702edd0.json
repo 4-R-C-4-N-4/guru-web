@@ -1,0 +1,25 @@
+{
+  "id": "6702edd0",
+  "type": "feature",
+  "state": "open",
+  "summary": "Wire the floor to works.kind (replace the tradition proxy), re-gate, ship the final config + docs §8.1 update",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-02T12:37:42.003Z",
+  "updated_at": "2026-09-02T12:37:42.038Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "ranking",
+    "primary-floor"
+  ],
+  "relationships": {
+    "parent": "1fd905e2"
+  },
+  "description": "GATED ON c1 (positive) and c2 (label available). Swap the tradition proxy for works.kind in the floor, re-run the full gate, sweep N (slots reserved) and the relevance threshold to the peak, and decide the shipped default (owner's call: default-on vs env-gated). Update docs/retrieval-golden-gap-investigation.md §8.1 with the floor outcome and the final gate number; note isa-upanishad remains a §8.3 recall gap. DONE CONTRACT: final gate number (>= 314/6, ideally recovering the crowding failures), shipped-config decision recorded, doc updated, rerank.test.ts covering the kind-keyed floor."
+}
