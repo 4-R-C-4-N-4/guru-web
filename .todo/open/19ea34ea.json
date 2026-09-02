@@ -7,7 +7,7 @@
     "type": "human"
   },
   "created_at": "2026-09-02T00:24:19.003Z",
-  "updated_at": "2026-09-02T00:24:19.119Z",
+  "updated_at": "2026-09-02T00:28:02.527Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"
@@ -28,5 +28,6 @@
       "697f9e58",
       "53480da1"
     ]
-  }
+  },
+  "description": "BLIND-PICKUP START: read docs/retrieval-golden-gap-investigation.md end to end first (esp. §9 cold-start guide: prereqs, gate command, the measurement-harness recipe, env knobs), then establish the 316/4 baseline before changing anything.\n\nGOAL: counter the fluency inversion — modern-synthesis prose (blavatsky-sd et al.) out-scoring archaic primaries (§5). Score-TIME fix, distinct from the emit-time per-work cap (§6, which only removes duplicates and can't lift a buried primary).\n\nTWO independent sub-experiments (§8.1), each swept against the frozen 320-probe gate:\n  1. length-normalize the vector similarity term (stop rewarding verbose prose)\n  2. hub-frequency dampening — discount a work by how often it matches across UNRELATED queries (blavatsky held 18-32 of the top scored slots, §5)\n\nSHIP GATE: no regression below 316/4 (a scoring change touches every query — run the FULL gate, not a spot check). Add a new env knob defaulting to current behaviour (redeploy-free rollback), like RETRIEVAL_GRAPH_RANK/MAX_PER_TEXT.\nTARGETS: pistis-sophia (rank 19, no crowder — pure scoring) + deep-crowding iamblichus (rank 48; but first rule out the 6e0c2a63 apparatus-contamination confound on iamblichus .162-.180) / mabinogion (rank 25, loses to Kalevala — a genuine parallel myth, may be unwinnable).\nNOT this ticket: extractConcepts upgrade (todo:53480da1, §8.2), candidate-generation recall for isa-upanishad which never enters the pool (§8.3), thin-tradition safety (todo:31a7fe76, §8.4)."
 }

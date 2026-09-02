@@ -338,3 +338,97 @@ queries where the vector leg is weakest). **8.3 / 8.4** are the harder, narrower
 residue — worth doing only after 8.1/8.2 show what they leave behind, since
 calibration + a live graph leg may absorb several of the current failures on
 their own.
+
+---
+
+## 9. Reproduce this — a cold-start guide (read before touching retrieval)
+
+Everything in §5–§6 was measured; this section is how to re-measure it, so a new
+agent can establish the baseline and evaluate a change without re-deriving the
+harness. **Active ticket: `todo:19ea34ea` (score calibration, §8.1).**
+
+### 9.1 Prerequisites (the gate is an integration test, not CI-run)
+
+The golden gate exercises the real retriever against live infra, so it is gated
+on `INTEGRATION_TEST` and skipped in CI. You need:
+
+- **docker Postgres up with the corpus loaded** — container `guru-web-postgres-1`,
+  reachable at the `.env` `DATABASE_URL` (`postgresql://guru:guru_dev@localhost:5432/guru`).
+  `npm run dev:setup` (or `tsx scripts/dev-setup.ts`) loads
+  `../guru/export/guru-corpus.sql.gz` if the corpus is missing/stale.
+- **Ollama up with the embed model** — `OLLAMA_URL` (`http://localhost:11434`),
+  model `nomic-embed-text` (the retriever embeds every query through it).
+
+Sanity check both: `docker ps | grep postgres` and
+`curl -s localhost:11434/api/tags | grep nomic`.
+
+### 9.2 Run the gate / establish the baseline
+
+```sh
+export $(grep -E '^(DATABASE_URL|OLLAMA_URL)=' .env | xargs)
+INTEGRATION_TEST=1 npx vitest run src/__tests__/golden-queries.test.ts   # ~14 min, all 69 works
+```
+
+Current best baseline at shipped defaults: **316 passed / 4 failed (320
+recall-probes)** — the 4 are iamblichus / isa-upanishad / mabinogion /
+pistis-sophia (§5). **No change may regress below this.** (It is a long run; drive
+it via `agent-run start guru-web <task> -- bash -lc '...'` so it survives
+disconnect, then `agent-run list` to poll.)
+
+Iterate on a single work while authoring/debugging:
+`npx tsx scripts/verify-golden-queries.ts <work>`. Validate fixture shape
+CI-safely with `npx vitest run src/__tests__/golden-queries-schema.test.ts`.
+
+### 9.3 Per-query debugging: `RETRIEVAL_TRACE`
+
+`RETRIEVAL_TRACE=1` prints the full per-component score breakdown (vec / graph /
+lex / diversity terms, plus any dup-collapse / per-work-cap skips) for the
+emitted top-K of every `retrieve()` call. This is the first tool for "why did
+this chunk rank here."
+
+### 9.4 The measurement harness (how §5/§6's rank numbers were produced)
+
+`retrieve()` truncates to topK and applies the caps, so it can't show you *where
+a missing target actually scored*. Reproduce the **exact topK=15 candidate pool**
+and read the full, untruncated score order via the exported internals — this is
+the technique behind the §5 rank table and the §6 cap simulation:
+
+```ts
+import { vectorSearch, lexicalSearch, mergeAndRerank } from '@/lib/retriever';
+import { extractConcepts, walkGraph } from '@/lib/graph';
+// faithful topK=15 pool sizes: vector topK*10, graph topK*2, lexical topK*2
+const v   = await vectorSearch(q, prefs, 150);
+const lex = await lexicalSearch(q, prefs, 30);
+const c   = await extractConcepts(q);
+const g   = c.length ? await walkGraph(c, prefs, 30) : [];
+// large topK + perTraditionCap:0  => full pool in pure score order, untruncated
+const order = mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0 });
+// order.findIndex(x => x.text_id === TARGET)  -> the target's TRUE score-rank
+```
+
+**Trap (do not skip):** the intake pools scale with topK, so `retrieve(q, 15)`
+and `retrieve(q, 120)` are *different computations*, not a prefix relationship. A
+"rank" only means something relative to the pool that produced it. Always
+reproduce the topK=15 pool (as above) when reasoning about the gate, not a deeper
+`retrieve(q, 120)`.
+
+### 9.5 Env knobs (all default to production behaviour)
+
+| env | effect | default |
+|---|---|---|
+| `RETRIEVAL_GRAPH_RANK` | `off` reverts walkGraph to the old unordered LIMIT | on |
+| `RETRIEVAL_MAX_PER_TEXT` | per-work slot cap (number, or `off`) | `0` (off) |
+| `RETRIEVAL_DUP_COLLAPSE` | `on` enables cosine dup-collapse | off |
+| `RETRIEVAL_GRAPH_WEIGHT` / `RETRIEVAL_LEXICAL_WEIGHT` | leg weights (sweeps) | 0.3 / 1.0 |
+| `RETRIEVAL_DIVERSITY` | `fixed` = pool-independent rarity | live |
+| `RETRIEVAL_TRACE` | `1` prints the score breakdown | off |
+
+A calibration change (§8.1) should add its own knob in the same style — default
+to current behaviour, so `git`-reverting the default is a redeploy-free rollback.
+
+### 9.6 What is NOT in a fresh clone
+
+`scripts/golden-check.ts` (the deprecated staging canary of §1) and any
+`*_probe.ts` files were local scratch, never committed. Do not depend on them;
+`golden-queries.test.ts` is the source of truth. The measurement scripts in §9.4
+are likewise throwaway — write them under `scripts/_*.ts` and delete after.
