@@ -303,6 +303,60 @@ deep-crowding pair (iamblichus, mabinogion). **Risk:** a scoring change touches
 every query, so it *can* regress the 314 passing — the full gate is the
 guardrail, not optional.
 
+#### 8.1 — measured (todo:19ea34ea): both levers built, swept, ship OFF
+
+Both sub-experiments were implemented as env-gated knobs on the **vector
+similarity term only** (leaving the graph/lexical rescue legs untouched), each
+defaulting OFF so the shipped config is byte-identical. `loadCalibration()` in
+`retriever.ts` reads them and is shared by `scripts/measure-retrieval.ts`, so the
+diagnostic mirrors the gate exactly (§9.4 trap). Then each was run against the
+FULL gate — not a spot check.
+
+- `RETRIEVAL_LENGTH_NORM` (b) — BM25 length normalization pivoted on the corpus
+  mean chunk token_count. `1/(1 - b + b·(tc/avg))`; b=0 is a no-op.
+- `RETRIEVAL_HUB_DAMPEN` (β) — centrality dampening. A per-text hub score in
+  [0,1] = distance-to-corpus-centroid normalized so central = 1; similarity is
+  scaled by `(1 - β·hub)`. Centroid proximity is the geometric realization of
+  "matches across unrelated queries": a work near the centroid is close to every
+  query direction. Precomputed once (`AVG(embedding)` per text vs global), cached.
+
+**Baseline (re-established at true defaults, corpus v63): 314 / 6.** This is the
+*cap-off* number — §9.2's "316/4" is the `RETRIEVAL_MAX_PER_TEXT=1` figure (§6),
+not the shipped default, which leaves the cap off. The 6 asserted failures are
+iamblichus, isa-upanishad, mabinogion, paracelsus-aurora, pistis-sophia,
+poetic-edda-voluspo.
+
+| config | gate | Δ vs 314/6 | what happened |
+|---|---|---|---|
+| defaults (both off) | **314 / 6** | — | byte-identical baseline |
+| `RETRIEVAL_LENGTH_NORM=0.5` | **301 / 19** | **−13** | recovered iamblichus (rank 48→5) but broke 13 previously-passing **short-text** probes (dhammapada, diamond-sutra, heart-sutra, pythagorean, gathas, corpus-hermeticum ×3, …) |
+| `RETRIEVAL_HUB_DAMPEN=0.15` | **306 / 14** | **−8** | dampened the **central primaries** it can't distinguish from the crowders (yoga-sutras ×3, tao-te-ching, plotinus, gospel-of-thomas — and iamblichus itself, rank 9/246) |
+
+**Why each fails, structurally (not tuning):**
+
+- **Length norm is the wrong shape.** BM25 is *symmetric* — it penalizes long
+  chunks AND boosts short ones — and short chunks are corpus-wide, so at any b
+  strong enough to lift a buried long-crowded target it also floods every query
+  with short off-target chunks. The aphoristic traditions (dhammapada, the
+  sutras, the golden verses) are collateral. A viable version would be
+  **one-sided**: damp only outlier-long chunks, never reward short.
+- **Centrality conflates synthesizers with broad primaries.** The measured hub
+  order puts the omnibus crowders at the top (secret-teachings 1/246,
+  blavatsky-sd 8) — but iamblichus is 9, plato-timaeus 10, and other genuine
+  primaries sit high because Neoplatonist/Vedic material *is* broad. Dampening by
+  centrality therefore lowers targets (iamblichus, the yoga-sutras) as much as
+  crowders. And it does nothing for mabinogion, whose crowder (kalevala) is
+  peripheral too. A viable version needs a **literal cross-query hit-frequency**
+  (how often a work enters the top pool of *unrelated* queries), excluding
+  on-topic queries — not a static geometry proxy.
+
+**Disposition: ship both OFF** (defaults unchanged → gate stays 314/6, no
+regression). The knobs are retained for the reformulated sweeps above, exactly as
+the per-work cap (§6) is retained though off. **These two formulations do not fix
+the fluency inversion; the residual 4 (iamblichus, isa, mabinogion, pistis) now
+point harder at §8.2 (fire the graph leg on paraphrase) and §8.3 (candidate
+recall) than at vector-score calibration.**
+
 ### 8.2 Concept-extraction upgrade (`todo:53480da1`)
 
 `extractConcepts` is a Phase-1 LIKE match on concept labels; it goes **fully

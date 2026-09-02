@@ -27,7 +27,7 @@
  *     --target pistis-sophia
  */
 import 'dotenv/config';
-import { vectorSearch, lexicalSearch, mergeAndRerank } from '../src/lib/retriever';
+import { vectorSearch, lexicalSearch, mergeAndRerank, loadCalibration } from '../src/lib/retriever';
 import { extractConcepts, walkGraph } from '../src/lib/graph';
 import { query } from '../src/lib/db';
 import type { UserPreferences, RetrievedChunk } from '../src/lib/types';
@@ -80,7 +80,10 @@ async function scoredOrder(q: string, topK: number): Promise<RetrievedChunk[]> {
   ]);
   const concepts = await extractConcepts(q);
   const g = concepts.length ? await walkGraph(concepts, PREFS, topK * 2) : [];
-  return mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0 });
+  // Apply the same §8.1 calibration (RETRIEVAL_LENGTH_NORM / RETRIEVAL_HUB_DAMPEN)
+  // the gate would — otherwise a swept measurement would misreport ranks (§9.4).
+  const cal = await loadCalibration();
+  return mergeAndRerank(v, g, 99999, { lexicalResults: lex, perTraditionCap: 0, ...cal });
 }
 
 async function main(): Promise<void> {
@@ -91,9 +94,11 @@ async function main(): Promise<void> {
   }
   const order = await scoredOrder(q, topK);
   const members = target ? await memberTextIds(target) : [];
+  const cal = await loadCalibration();
 
   console.log(`query: ${q}`);
   console.log(`pool: ${order.length} candidates (topK=${topK} => vector ${topK * 10}, graph/lexical ${topK * 2})`);
+  console.log(`calibration: len_norm=${cal.lengthNorm ? cal.lengthNorm.b : 'off'} hub_dampen=${cal.hubDampen ? cal.hubDampen.beta : 'off'}`);
 
   if (target) {
     const rank = order.findIndex(c => members.includes(c.text_id ?? ''));
