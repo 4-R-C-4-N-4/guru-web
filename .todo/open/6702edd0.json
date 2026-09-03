@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-09-02T12:37:42.003Z",
-  "updated_at": "2026-09-02T20:07:30.957Z",
+  "updated_at": "2026-09-03T10:58:48.838Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"
@@ -28,6 +28,13 @@
       "author": "Backend Engineer",
       "type": "conclusion",
       "content": "Wiring + ship-default DONE. Floor default-on N=1 (316/4). Floor now reads works.kind via isSynth() with graceful fallback to the tradition proxy (byte-identical until the column lands). BLOCKED on corpus re-export: works.kind ships in guru PR #125; once merged + re-exported + reloaded into the guru-web dev DB, run the full gate with the real label (should hold 316/4, ideally recovering boehme-crowded cases) and close c3. RETRIEVAL_SYNTHESIS_TRADITIONS forces the proxy for A/B.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-03T10:58:48.838Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "SCHEMA VERSION COUPLING (from guru PR #125 review F2): guru bumped SCHEMA_VERSION 4->5 for works.kind. The re-export deploy MUST also bump guru-web EXPECTED_SCHEMA_VERSION '4'->'5' in src/lib/boot.ts in the SAME deploy that reloads the v5 corpus — else guru-web boot fails the version guard. NOT bumped now on purpose: it would break dev boot against the current v4 corpus before re-export. So the pending c3 step is: merge guru #125 -> re-export (SCHEMA_VERSION=5, works.kind) -> reload guru-web dev DB -> bump boot.ts EXPECTED to '5' -> re-gate with the real works.kind label (isSynth auto-switches off the tradition proxy) -> close.",
       "confidence": "high"
     }
   ]
