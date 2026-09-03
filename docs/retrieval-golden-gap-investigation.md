@@ -266,3 +266,303 @@ capping:**
 - whether to wire `golden-queries.test.ts` into the corpus-load-to-VPS step as a
   hard blocker;
 - `frozenEval` ratification on the 3 frozen works added in PR #133.
+
+---
+
+## 8. Follow-up: the retrieval-quality roadmap
+
+PR #132 (walkGraph ranking + dup-collapse + per-work cap) and PR #133 (per-work
+coverage + source-of-truth promotion) are **merged and deployed**. The go-live /
+unblock steps (record the 6 as `knownGaps`, wire the gate into the corpus-load
+step, fix the confounding corpus defects `49309aa1` / `6e0c2a63`) are the
+mechanical part and are tracked on their own tickets. What follows is the actual
+**retrieval-quality** work — the levers the measurement in §5–§6 points at for
+the residual failures. Every item is a swept experiment, evaluated against the
+frozen 320-probe gate, with **no regression below the current best (316/4)** as
+the ship gate. A `knownGap` is promoted to an asserted gate the moment retrieval
+surfaces it (`todo:31a7fe76`), so the gate ratchets forward and never rots.
+
+### 8.1 Score calibration — highest leverage (NEW ticket)
+
+The dominant force under 4 of the 6 failures is the **fluency inversion**: a
+modern synthesis in clean prose out-embeds the archaic primary. The per-work cap
+(§6) only *removes* a duplicate at emit time; calibration fixes the *score*, so a
+buried primary can actually rise. Two independent, individually-testable
+sub-experiments:
+
+- **Length normalization** of the vector similarity term, so verbose modern
+  prose stops winning on sheer token mass. Sweep the normalization strength
+  against the gate.
+- **Hub-frequency dampening** — discount a work's contribution by how often it
+  matches *across unrelated queries* (blavatsky-sd matches nearly every
+  cosmogony/death/alchemy query; §5 measured it holding 18–32 of the top scored
+  slots). This is the principled, score-time version of the per-work cap.
+
+Target failures: pistis-sophia (rank 19, pure scoring miss, no crowder) and the
+deep-crowding pair (iamblichus, mabinogion). **Risk:** a scoring change touches
+every query, so it *can* regress the 314 passing — the full gate is the
+guardrail, not optional.
+
+#### 8.1 — measured (todo:19ea34ea): both vector-score levers regress; reverted
+
+Both sub-experiments were prototyped as env-gated knobs on the **vector
+similarity term only** (leaving the graph/lexical rescue legs untouched), each
+defaulting OFF, then run against the **FULL** 320-probe gate — not a spot check.
+
+- **Length normalization** — BM25 pivoted on the corpus mean chunk token_count,
+  `1/(1 - b + b·(tc/avg))`.
+- **Hub-frequency dampening** — a per-text centrality score (distance to the
+  corpus embedding centroid, normalized so central = 1), scaling similarity by
+  `(1 - β·hub)`. Centroid proximity was the geometric proxy for "matches across
+  unrelated queries."
+
+**Baseline (re-established at true defaults, corpus v63): 314 / 6.** This is the
+*cap-off* number — §9.2's "316/4" is the `RETRIEVAL_MAX_PER_TEXT=1` figure (§6),
+not the shipped default, which leaves the cap off. The 6 asserted failures are
+iamblichus, isa-upanishad, mabinogion, paracelsus-aurora, pistis-sophia,
+poetic-edda-voluspo.
+
+| config | gate | Δ vs 314/6 | what happened |
+|---|---|---|---|
+| defaults | **314 / 6** | — | baseline |
+| length-norm b=0.5 | **301 / 19** | **−13** | recovered iamblichus (rank 48→5) but broke 13 previously-passing **short-text** probes (dhammapada, diamond-sutra, heart-sutra, pythagorean, gathas, corpus-hermeticum ×3, …) |
+| hub-dampen β=0.15 | **306 / 14** | **−8** | dampened the **central primaries** it can't distinguish from the crowders (yoga-sutras ×3, tao-te-ching, plotinus, gospel-of-thomas — and iamblichus itself, rank 9/246) |
+
+**Both regressed, for the same root reason: neither proxy actually measures what
+the inversion is.** BM25 is *symmetric* — strong enough to lift a long crowded
+target, it also boosts every short chunk corpus-wide and floods the aphoristic
+traditions. Centrality conflates omnibus synthesizers with genuinely *broad*
+primaries (iamblichus is centrality-rank 9/246; the Neoplatonic/Vedic material is
+broad because it *is* broad), so it lowers targets as hard as crowders. **The
+machinery was reverted, not shipped even off** — dead env knobs are net weight;
+the value kept is this measurement (don't re-try these two shapes) and the
+direction below.
+
+**The real indicator is authorship era, and it is not in the vectors.** The
+fluency inversion is specifically *modern synthesis* (Blavatsky 1888, the
+Hall/Waite/Ouspensky compilations 1900s–1930s) out-embedding *archaic primaries*.
+Era is **orthogonal to the semantic axis an embedding encodes** — a modern and an
+ancient cosmogony passage are near-neighbours precisely because they share a
+topic — so no vector-*score* transform can recover it, and both length and
+centrality fail because verbosity and breadth are not era. The signal has to be an
+**external, curated label**, and the corpus half-carries it already:
+
+- **`tradition` is a clean proxy.** The modern-synthesis crowders live in exactly
+  two traditions — **`theosophy`** (blavatsky-sd) and **`western_esoteric`**
+  (secret-teachings, kybalion, tertium-organum, transcendental-magic, …) — while
+  every casualty of the hub run is ancient (iamblichus/neoplatonism,
+  yoga-sutras/hinduism, tao-te-ching/taoism, plotinus/platonism,
+  gospel-of-thomas/gnosticism). A per-tradition modern-synthesis flag (those two,
+  possibly `renaissance_hermeticism` at half weight) dampens the actual crowders
+  and touches **none** of the targets — the exact conflation that sank hub-dampen
+  disappears.
+- There is **no composition-date column** (`works` has none; `work_dossiers`
+  states the era only in prose `context`), so a finer per-work era would need a
+  small curated addition to the corpus export (guru-repo owned), not a guru-web
+  scoring hack. Start from the tradition flag; refine per-work only if the
+  tradition granularity proves too coarse.
+
+**Disposition: no calibration lever shipped.** The residual 6 pointed at (a) a
+primary-vs-synthesis mechanism keyed on tradition (built as the primary floor,
+§8.1a below), (b) §8.2 (fire the graph leg on paraphrase), and (c) §8.3 (candidate
+recall) — not at any transform of the vector score.
+
+#### 8.1a — the primary floor (todo:1a8c3bbf): +2, no regression, synthesis unharmed
+
+A key correction from the owner: **don't penalize synthesis, promote the primary.**
+A global score penalty (era, centrality, whatever the key) lowers a synthesis work
+on *every* query and buries its genuine insight; the right instrument is a
+**slot-level promotion**. `mergeAndRerank` gains an emit-time floor (env
+`RETRIEVAL_PRIMARY_FLOOR` = N, **on by default at N=1**; `=off` disables): when a
+query has a **relevant**
+primary root text (raw vector similarity ≥ τ = `RETRIEVAL_PRIMARY_FLOOR_SIM`, default
+0.5) that the ranking crowded out, give it a top-K slot by **yielding the weakest
+_redundant_ synthesis slot** — a synthesis work's 2nd+ appearance only, so no
+synthesis work is ever dropped from top-K (its own `mustIncludeWork` is safe) and
+**no score changes**. On a mixed query the reader ends up with the primary *and* the
+synthesis. Synthesis is identified by tradition for now (proxy
+`{theosophy, western_esoteric}`; the curated per-work `works.kind` replaces it in
+todo:6702edd0). Off in study mode (single pinned work).
+
+**Full gate (baseline 314/6):**
+
+| config | gate | Δ | notes |
+|---|---|---|---|
+| floor off | 314 / 6 | — | baseline |
+| floor N=1, τ=0.5 (no guard) | 315 / 5 | +1 | recovered poetic-edda + paracelsus, but **regressed kybalion** (its sole slot yielded on its own probe) |
+| **floor N=1, τ=0.5 (redundant-slot guard)** | **316 / 4** | **+2** | recovered poetic-edda + paracelsus, **no regression** |
+
+This equals the best the per-work cap reached (§6, cap=1 → 316/4) but **without its
+cost**: the cap truncated *every* work to one chunk (bad for single-book questions,
+why §6 shipped it off), whereas the floor only trims a synthesis work's *redundant*
+cross-tradition slot when a relevant primary is crowded, and never touches a score.
+The residual **4** are out of the floor's reach by construction and stay §8.2/§8.3
+work: **pistis** (crowded by *other-tradition primaries* — no synthesis slot to
+yield), **iamblichus** (its tradition is already covered by sibling plotinus, so a
+per-*tradition* floor can't target the specific work), **mabinogion** (crowder
+kalevala is a primary, and/or its similarity is below τ), **isa-upanishad** (never
+enters the candidate pool — §8.3 recall; a floor can't promote what wasn't fetched).
+
+Curated `works.kind` (todo:9445cd73, guru PR #125) — the dossiers already state it
+(blavatsky "synthesis", secret-teachings "encyclopedic survey" vs pistis "revelation
+discourse") — catches the one work the tradition proxy misses,
+`life-and-doctrines-boehme`. Wired in with a proxy fallback (todo:6702edd0), it ships
+**on by default**. **Confirmed on the v5 corpus (schema_version 5, `works.kind`
+populated: 60 primary / 9 synthesis) with the real label at production defaults: the
+full gate holds 316/4** (same 4 residual). New-work ingestion is gated on the same
+classification (todo:fb522ee1, guru workbook §02). Deploy is lockstep: the v5 corpus
+push and guru-web `EXPECTED_SCHEMA_VERSION='5'` ship in one window.
+
+**Two invariants hardened after review (PR #135):** (1) **The promotion never breaches
+`MAX_PER_TRADITION`.** Under the tradition proxy a promoted primary is always from a
+non-synthesis tradition, so its victim is a different tradition and the promoted
+tradition sits at 0 primaries — safe. But `works.kind` lets one tradition hold *both*
+primary and synthesis works, so a tradition can be at the cap with synthesis-only slots
+and still queue a relevant primary; yielding *another* tradition's slot would leave the
+promoted one at cap+1. The victim search now requires a **same-tradition** synthesis
+slot whenever the candidate's tradition is already at the cap (a net-zero swap), and
+fills a genuinely free slot only when the tradition has cap headroom. (2) **`works.kind`
+falls back only on a real schema gap, not a transient DB error.** `corpusKind()` caches
+its `null` fallback (→ tradition proxy) only for Postgres `42703`/`42P01`
+(undefined_column/table, i.e. pre-re-export); a transient error (pool exhaustion, reset)
+is logged and returns `null` *uncached*, so the next request retries rather than
+stranding the process on the coarser proxy until restart. The floor config also loads
+concurrently with the search legs (not serialized after them), so its one-shot lookup
+adds no round trip to the cold-cache critical path.
+
+### 8.2 Concept-extraction upgrade (`todo:53480da1`)
+
+`extractConcepts` is a Phase-1 LIKE match on concept labels; it goes **fully
+dark** on paraphrased/abstract queries (measured: 0 concepts / 0 graph
+candidates on 2/12 canonical queries). The graph leg is now correctly *ranked*
+(§4), so making it *fire* on paraphrased narrative queries is the second lever —
+move extraction to definition/synonym matching or embedding-based concept
+selection. This is what lets the graph term rescue a rank-19 target the vector
+leg alone can't lift.
+
+### 8.3 Candidate-generation recall (`todo:31a7fe76`, and the isa-upanishad case)
+
+Reranking cannot fix what was never fetched: **isa-upanishad's target never
+entered the 202-candidate pool at all.** For that class:
+
+- re-embed archaic / short-verse texts with a stronger model, or
+- add a guaranteed lexical/entity recall leg, or
+- query expansion at candidate time.
+
+### 8.4 Thin-tradition safety (`todo:31a7fe76`)
+
+`celtic` and `upanishads` are single-text traditions, so a work-miss is a
+tradition-miss with no sibling to catch `mustIncludeTraditions`. Either a floor
+guaranteeing one chunk per scoped tradition a query matches, or accept these as
+permanent `knownGaps`. Decide explicitly rather than let them read as ranking
+bugs.
+
+### Sequencing
+
+**8.1 first** — highest leverage, most measurable, and the lever the data most
+directly implicates. Then **8.2** (unlocks the now-ranked graph leg on the
+queries where the vector leg is weakest). **8.3 / 8.4** are the harder, narrower
+residue — worth doing only after 8.1/8.2 show what they leave behind, since
+calibration + a live graph leg may absorb several of the current failures on
+their own.
+
+---
+
+## 9. Reproduce this — a cold-start guide (read before touching retrieval)
+
+Everything in §5–§6 was measured; this section is how to re-measure it, so a new
+agent can establish the baseline and evaluate a change without re-deriving the
+harness. **Active ticket: `todo:19ea34ea` (score calibration, §8.1).**
+
+### 9.1 Prerequisites (the gate is an integration test, not CI-run)
+
+The golden gate exercises the real retriever against live infra, so it is gated
+on `INTEGRATION_TEST` and skipped in CI. You need:
+
+- **docker Postgres up with the corpus loaded** — container `guru-web-postgres-1`,
+  reachable at the `.env` `DATABASE_URL` (`postgresql://guru:guru_dev@localhost:5432/guru`).
+  `npm run dev:setup` (or `tsx scripts/dev-setup.ts`) loads
+  `../guru/export/guru-corpus.sql.gz` if the corpus is missing/stale.
+- **Ollama up with the embed model** — `OLLAMA_URL` (`http://localhost:11434`),
+  model `nomic-embed-text` (the retriever embeds every query through it).
+
+Sanity check both: `docker ps | grep postgres` and
+`curl -s localhost:11434/api/tags | grep nomic`.
+
+### 9.2 Run the gate / establish the baseline
+
+```sh
+export $(grep -E '^(DATABASE_URL|OLLAMA_URL)=' .env | xargs)
+INTEGRATION_TEST=1 npx vitest run src/__tests__/golden-queries.test.ts   # ~14 min, all 69 works
+```
+
+Current best at shipped defaults: **316 passed / 4 failed (320 recall-probes)** —
+the 4 are iamblichus / isa-upanishad / mabinogion / pistis-sophia (§5). This is with
+the **primary floor on by default** (N=1, §8.1a); with the floor off
+(`RETRIEVAL_PRIMARY_FLOOR=off`) the base is **314/6** (adds poetic-edda +
+paracelsus). **No change may regress below 316/4.** (It is a long run; drive it via
+`agent-run start guru-web <task> -- bash -lc '...'` so it survives disconnect, then
+`agent-run list` to poll.)
+
+Iterate on a single work while authoring/debugging:
+`npx tsx scripts/verify-golden-queries.ts <work>`. Validate fixture shape
+CI-safely with `npx vitest run src/__tests__/golden-queries-schema.test.ts`.
+
+### 9.3 Per-query debugging: `RETRIEVAL_TRACE`
+
+`RETRIEVAL_TRACE=1` prints the full per-component score breakdown (vec / graph /
+lex / diversity terms, plus any dup-collapse / per-work-cap skips) for the
+emitted top-K of every `retrieve()` call. This is the first tool for "why did
+this chunk rank here."
+
+### 9.4 The measurement harness — `scripts/measure-retrieval.ts` (committed)
+
+`retrieve()` truncates to topK and applies the caps, so it can't show you *where
+a missing target actually scored*. `scripts/measure-retrieval.ts` reproduces the
+**exact topK candidate pool** and prints the full, untruncated score order — the
+tool behind the §5 rank table and the §6 cap simulation. It is committed, not
+throwaway, so this measurement is reproducible without re-deriving it:
+
+```sh
+export $(grep -E '^(DATABASE_URL|OLLAMA_URL)=' .env | xargs)
+npx tsx scripts/measure-retrieval.ts "<query>" --target <work> [--topk 15] [--cap N] [--show 20]
+```
+
+It reports the target's TRUE score-rank, which works crowd the slots above it,
+the head in pure score order, and (with `--cap N`) whether a per-work cap of N
+would lift the target into topK. The reproduction technique it wraps: faithful
+pool (`vectorSearch topK*10`, `graph/lexical topK*2`) fed to
+`mergeAndRerank(..., 99999, { perTraditionCap: 0 })` for the untruncated pure
+score order.
+
+**Trap the script encodes (do not work around it):** the intake pools scale with
+topK, so `retrieve(q, 15)` and `retrieve(q, 120)` are *different computations*,
+not a prefix relationship. A "rank" only means something relative to the pool
+that produced it — always reproduce the topK pool (the script does), never read
+a deeper `retrieve(q, 120)` as if it were the gate's list.
+
+### 9.5 Env knobs (all default to production behaviour)
+
+| env | effect | default |
+|---|---|---|
+| `RETRIEVAL_GRAPH_RANK` | `off` reverts walkGraph to the old unordered LIMIT | on |
+| `RETRIEVAL_MAX_PER_TEXT` | per-work slot cap (number, or `off`) | `0` (off) |
+| `RETRIEVAL_DUP_COLLAPSE` | `on` enables cosine dup-collapse | off |
+| `RETRIEVAL_GRAPH_WEIGHT` / `RETRIEVAL_LEXICAL_WEIGHT` | leg weights (sweeps) | 0.3 / 1.0 |
+| `RETRIEVAL_DIVERSITY` | `fixed` = pool-independent rarity | live |
+| `RETRIEVAL_PRIMARY_FLOOR` | primary-floor promotions N (§8.1a; `off`/0 disables) | `1` (on) |
+| `RETRIEVAL_PRIMARY_FLOOR_SIM` | floor relevance gate τ (raw vector similarity) | 0.5 |
+| `RETRIEVAL_SYNTHESIS_TRADITIONS` | synthesis proxy set (c1; c3 uses `works.kind`) | theosophy,western_esoteric |
+| `RETRIEVAL_TRACE` | `1` prints the score breakdown | off |
+
+A calibration change (§8.1) should add its own knob in the same style — default
+to current behaviour, so `git`-reverting the default is a redeploy-free rollback.
+
+### 9.6 What is NOT in a fresh clone
+
+`scripts/golden-check.ts` (the deprecated staging canary of §1) and any
+`*_probe.ts` files were local scratch, never committed. Do not depend on them;
+`golden-queries.test.ts` is the source of truth and `scripts/measure-retrieval.ts`
+(§9.4) is the committed measurement tool. Any further one-off probes are
+throwaway — write them under `scripts/_*.ts` and delete after (they otherwise
+break the whole-project `tsc` type-check).

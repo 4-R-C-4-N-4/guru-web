@@ -1,0 +1,63 @@
+{
+  "id": "6702edd0",
+  "type": "feature",
+  "state": "done",
+  "summary": "Wire the floor to works.kind (replace the tradition proxy), re-gate, ship the final config + docs §8.1 update",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-02T12:37:42.003Z",
+  "updated_at": "2026-09-03T12:18:48.088Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "ranking",
+    "primary-floor"
+  ],
+  "relationships": {
+    "parent": "1fd905e2"
+  },
+  "description": "GATED ON c1 (positive) and c2 (label available). Swap the tradition proxy for works.kind in the floor, re-run the full gate, sweep N (slots reserved) and the relevance threshold to the peak, and decide the shipped default (owner's call: default-on vs env-gated). Update docs/retrieval-golden-gap-investigation.md §8.1 with the floor outcome and the final gate number; note isa-upanishad remains a §8.3 recall gap. DONE CONTRACT: final gate number (>= 314/6, ideally recovering the crowding failures), shipped-config decision recorded, doc updated, rerank.test.ts covering the kind-keyed floor.",
+  "analysis": [
+    {
+      "timestamp": "2026-09-02T20:07:30.957Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Wiring + ship-default DONE. Floor default-on N=1 (316/4). Floor now reads works.kind via isSynth() with graceful fallback to the tradition proxy (byte-identical until the column lands). BLOCKED on corpus re-export: works.kind ships in guru PR #125; once merged + re-exported + reloaded into the guru-web dev DB, run the full gate with the real label (should hold 316/4, ideally recovering boehme-crowded cases) and close c3. RETRIEVAL_SYNTHESIS_TRADITIONS forces the proxy for A/B.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-03T10:58:48.838Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "SCHEMA VERSION COUPLING (from guru PR #125 review F2): guru bumped SCHEMA_VERSION 4->5 for works.kind. The re-export deploy MUST also bump guru-web EXPECTED_SCHEMA_VERSION '4'->'5' in src/lib/boot.ts in the SAME deploy that reloads the v5 corpus — else guru-web boot fails the version guard. NOT bumped now on purpose: it would break dev boot against the current v4 corpus before re-export. So the pending c3 step is: merge guru #125 -> re-export (SCHEMA_VERSION=5, works.kind) -> reload guru-web dev DB -> bump boot.ts EXPECTED to '5' -> re-gate with the real works.kind label (isSynth auto-switches off the tradition proxy) -> close.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-03T11:55:50.959Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "CORRECTION: EXPECTED_SCHEMA_VERSION IS bumped to '5' in #135 (not deferred) — the schema really changed, so keeping it at 4 was a workaround. Both repos now honestly declare v5: guru SCHEMA_VERSION=5 (#125), guru-web EXPECTED_SCHEMA_VERSION='5' (#135), corpus-schema.sql mirror + .sha256 synced. This COUPLES #135's prod deploy to the v5 corpus: the boot guard requires corpus_metadata.schema_version == EXPECTED exactly, both directions. Go-live (owner-run, only they can deploy corpus): merge guru #125 -> re-export v5 -> deploy v5 corpus to prod AND merge guru-web #135 in one coordinated window (brief mismatch window either direction fails boot). Gate unaffected (doesn't boot-check); floor still runs on v4 locally via the works.kind fallback. c3 closes when the v5 corpus is loaded and the gate re-run confirms 316/4 with the real label.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-03T12:18:48.043Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "VALIDATED END-TO-END on v5, deploy-ready. Regenerated the export (schema_version 5, works.kind populated: 9 synthesis / 60 primary), loaded into docker postgres (atomic swap, 69/69 dossiers, corpus_version 65), boot guard MATCHES (corpus 5 == EXPECTED 5). Full gate at PRODUCTION DEFAULTS (floor on, real works.kind via isSynth, no env override) = 316/4 — same 4 residual (pistis/mabinogion/isa/iamblichus), zero regression vs the proxy. measure confirms floor keys on works.kind[246 texts], not the tradition proxy. Wiring+ship+re-gate all done. Remaining is purely the owner's coordinated prod deploy (v5 corpus push + guru-web EXPECTED=5 in one window) — not a code step.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "995bb392fafca68c0db9e97ce29b6bdd77b414eb",
+    "resolved_at": "2026-09-03T12:18:48.088Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "mergeAndRerank — primary floor (todo:1a8c3bbf)",
+    "note": "Floor wired to works.kind (proxy fallback), shipped default-on; validated 316/4 on v5 with the real label."
+  }
+}

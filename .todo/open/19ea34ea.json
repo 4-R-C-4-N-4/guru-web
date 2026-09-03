@@ -1,0 +1,60 @@
+{
+  "id": "19ea34ea",
+  "type": "feature",
+  "state": "active",
+  "summary": "Retrieval score calibration: length-normalize vector similarity + hub-frequency dampening to counter the fluency inversion (modern-synthesis prose out-scoring archaic primaries). Score-time fix (vs the emit-time per-work cap). Sweep each against the frozen golden gate; no regression below 316/4. Targets pistis-sophia (rank 19 no crowder) + deep-crowding iamblichus/mabinogion. See docs/retrieval-golden-gap-investigation.md §8.1.",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-02T00:24:19.003Z",
+  "updated_at": "2026-09-02T12:12:22.656Z",
+  "files": [
+    {
+      "path": "src/lib/retriever.ts"
+    },
+    {
+      "path": "docs/retrieval-golden-gap-investigation.md",
+      "commit": "a589af81de41cf8cde9e93cf589e8c1bf3ee9f6b",
+      "note": "§8.1 rationale + measurement plan"
+    },
+    {
+      "path": "scripts/measure-retrieval.ts",
+      "commit": "1e5a0d7eefa3b72861137fdc3af577d13dc62680",
+      "note": "committed measurement harness (§9.4)"
+    }
+  ],
+  "tags": [
+    "retrieval",
+    "ranking",
+    "golden-set"
+  ],
+  "relationships": {
+    "related": [
+      "697f9e58",
+      "53480da1"
+    ]
+  },
+  "description": "BLIND-PICKUP START: read docs/retrieval-golden-gap-investigation.md end to end first (esp. §9 cold-start guide: prereqs, gate command, the measurement-harness recipe, env knobs), then establish the 316/4 baseline before changing anything.\n\nGOAL: counter the fluency inversion — modern-synthesis prose (blavatsky-sd et al.) out-scoring archaic primaries (§5). Score-TIME fix, distinct from the emit-time per-work cap (§6, which only removes duplicates and can't lift a buried primary).\n\nTWO independent sub-experiments (§8.1), each swept against the frozen 320-probe gate:\n  1. length-normalize the vector similarity term (stop rewarding verbose prose)\n  2. hub-frequency dampening — discount a work by how often it matches across UNRELATED queries (blavatsky held 18-32 of the top scored slots, §5)\n\nSHIP GATE: no regression below 316/4 (a scoring change touches every query — run the FULL gate, not a spot check). Add a new env knob defaulting to current behaviour (redeploy-free rollback), like RETRIEVAL_GRAPH_RANK/MAX_PER_TEXT.\nTARGETS: pistis-sophia (rank 19, no crowder — pure scoring) + deep-crowding iamblichus (rank 48; but first rule out the 6e0c2a63 apparatus-contamination confound on iamblichus .162-.180) / mabinogion (rank 25, loses to Kalevala — a genuine parallel myth, may be unwinnable).\nNOT this ticket: extractConcepts upgrade (todo:53480da1, §8.2), candidate-generation recall for isa-upanishad which never enters the pool (§8.3), thin-tradition safety (todo:31a7fe76, §8.4).",
+  "work": {
+    "branch": "todo/19ea34ea",
+    "base_branch": "main",
+    "started_at": "2026-09-02T11:04:57.347Z",
+    "started_by": "Backend Engineer"
+  },
+  "analysis": [
+    {
+      "timestamp": "2026-09-02T11:54:37.395Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Both §8.1 levers built as env-gated knobs (default OFF, vector-similarity-term only) and swept against the full gate. Baseline at true defaults = 314/6 (the doc's 316/4 is the cap=1 figure, not the shipped default). Results: RETRIEVAL_LENGTH_NORM=0.5 -> 301/19 (-13: recovers iamblichus 48->5 but BM25's symmetric short-boost floods short-text precision — dhammapada/sutras/pythagorean/gathas); RETRIEVAL_HUB_DAMPEN=0.15 -> 306/14 (-8: centroid-proximity conflates omnibus crowders with broad primaries — iamblichus is centrality-rank 9/246 — so it dampens targets, knocking out yoga-sutras/tao-te-ching/plotinus/gospel-of-thomas). Neither beats baseline; both ship OFF (defaults unchanged, gate stays 314/6). These two FORMULATIONS do not fix the fluency inversion. Reformulation paths (one-sided long-only length penalty; literal cross-query hit-frequency excluding on-topic queries) recorded in docs §8.1. The residual 4 (iamblichus/isa/mabinogion/pistis) now point harder at §8.2 (extractConcepts) and §8.3 (recall) than at vector-score calibration. Committed 59737d3.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-02T12:12:22.656Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "SUPERSEDES the ship-OFF note: owner's call is that dead env machinery is net-negative, so the two calibration levers were REVERTED (not shipped even off). Kept: the measurement (both regress — length 301/19, hub 306/14 vs 314/6) and the redirect. Real lever = a curated MODERN-SYNTHESIS dampen keyed on tradition/era, NOT any vector-score transform. Era is orthogonal to the embedding's semantic axis (modern+ancient same-topic passages are neighbours), which is why length (verbosity != era) and centrality (breadth != era; iamblichus is central rank 9/246) both regressed. tradition is a clean proxy: dampen {theosophy, western_esoteric} (+ renaissance_hermeticism at half weight) — hits the actual crowders (blavatsky, secret-teachings), touches none of the ancient targets. No composition-date column exists (works/ work_dossiers prose only), so a finer per-work era is a guru-repo corpus-export addition. Ticket stays OPEN, re-pointed at the era lever. See docs §8.1.",
+      "confidence": "high"
+    }
+  ]
+}

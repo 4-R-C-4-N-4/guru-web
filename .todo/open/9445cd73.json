@@ -1,0 +1,21 @@
+{
+  "id": "9445cd73",
+  "type": "feature",
+  "state": "open",
+  "summary": "Curate per-work kind label (primary|synthesis) from dossiers via the guru-review queue; add works.kind to the corpus export",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-02T12:37:41.938Z",
+  "updated_at": "2026-09-02T12:37:41.972Z",
+  "tags": [
+    "retrieval",
+    "ranking",
+    "primary-floor",
+    "corpus"
+  ],
+  "relationships": {
+    "parent": "1fd905e2"
+  },
+  "description": "GATED ON c1 showing a clean recovery. The dossiers already characterize kind in prose (work_dossiers.context/summary: blavatsky 'synthesis', secret-teachings 'encyclopedic survey' vs pistis 'revelation discourse', edda 'prophecy-poem'). One LLM pass proposes kind per work; human-review through the guru-review queue-only flow (owner keeps the apply gate). This is a guru-repo corpus-export change (guru-web mirrors the schema byte-for-byte): add a works.kind column, populate the reviewed labels, re-export. DONE CONTRACT: reviewed kind for all 69 works + works.kind in the export schema + the guru-web schema mirror updated. Coarse binary to start (apparatus is already handled by the quality filter); renaissance_hermeticism (Agrippa/Paracelsus, early-modern) is the one real judgment call — decide explicitly."
+}

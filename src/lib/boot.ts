@@ -48,7 +48,10 @@ const EXPECTED_EMBED_DIM = 768;
 // v4 (2026-07-07): document-knowledge layer — works, texts.work_id,
 // work_dossiers, summary_nodes(+embedding) (todo:55aa9982 W1; guru campaign
 // c1). Same lockstep rule: corpus swap and this bump ship in one deploy.
-export const EXPECTED_SCHEMA_VERSION = '4';
+// v5 (todo:9445cd73): works.kind (primary vs synthesis) — drives the retrieval
+// primary floor (docs/retrieval §8.1a). Lockstep: the v5 corpus export and this
+// bump ship together; the boot guard tolerates no mismatch in either direction.
+export const EXPECTED_SCHEMA_VERSION = '5';
 
 export class BootError extends Error {
   constructor(message: string) {
