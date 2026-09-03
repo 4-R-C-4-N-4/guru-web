@@ -73,6 +73,15 @@ export async function retrieve(
   // (revert without a redeploy). The lexical pool is fixed at topK*2 (like graph):
   // FTS is not corpus-size-biased the way the vector leg is, so it skips poolMult.
   const runLexical = process.env.RETRIEVAL_LEXICAL !== 'off';
+  // Primary-floor config (todo:1a8c3bbf) reads a cached corpus map — a one-shot
+  // works.kind lookup on cold cache. Kick it off HERE so it runs concurrently
+  // with the search legs instead of serialized after them: otherwise it adds a
+  // round trip to the critical path exactly when it hurts most — right after a
+  // deploy, when every concurrent request still sees the empty cache. Off in
+  // study mode (single pinned work has no cross-tradition crowding to correct).
+  // loadPrimaryFloor() never rejects (its DB read is internally caught), so this
+  // floating promise is safe to await downstream.
+  const primaryFloorPromise = studyWorkId ? Promise.resolve(undefined) : loadPrimaryFloor();
   // eslint-disable-next-line prefer-const -- first three are reassigned by the quality filter
   let [vectorResults, graphResults, lexicalResults, summaryResults] = await Promise.all([
     vectorSearch(queryText, prefs, topK * poolMult),
@@ -157,9 +166,9 @@ export async function retrieve(
     // to MAX_PER_TRADITION regardless of topK.
     perTraditionCap: studyWorkId ? 0 : undefined,
     perTextCap,
-    // Primary floor (todo:1a8c3bbf) — off in study mode (single pinned work has no
-    // cross-tradition crowding to correct).
-    primaryFloor: studyWorkId ? undefined : await loadPrimaryFloor(),
+    // Primary floor (todo:1a8c3bbf) — resolved from the concurrent load kicked off
+    // above (already undefined in study mode).
+    primaryFloor: await primaryFloorPromise,
   });
 }
 
@@ -515,8 +524,22 @@ async function corpusKind(): Promise<Map<string, string> | null> {
       `SELECT unnest(member_text_ids) AS text_id, kind FROM works`,
     );
     _kind = rows.length ? new Map(rows.map(r => [r.text_id, r.kind])) : null;
-  } catch {
-    _kind = null; // column absent (pre re-export) → tradition proxy
+  } catch (err) {
+    // Distinguish a PERMANENT schema gap — the column/table isn't in the corpus
+    // yet (pre re-export) — from a TRANSIENT DB error (pool exhaustion, connection
+    // reset). Only the former should be cached: caching a transient failure would
+    // strand every later request on the coarser tradition proxy until the next
+    // restart, silently undoing the works.kind upgrade. Postgres 42703 =
+    // undefined_column, 42P01 = undefined_table.
+    const code = (err as { code?: string }).code;
+    if (code === '42703' || code === '42P01') {
+      _kind = null; // column absent → tradition proxy (permanent until re-export + restart)
+    } else {
+      console.warn(
+        `[retrieval] corpusKind() transient error (${code ?? 'unknown'}) — using tradition proxy for this request, will retry next call`,
+      );
+      return null; // NOT cached: leave _kind undefined so the next request retries
+    }
   }
   return _kind;
 }
@@ -836,27 +859,65 @@ export function mergeAndRerank(
     for (const c of out) if (isSynth(c)) {
       synthSlots.set(c.text_id ?? '', (synthSlots.get(c.text_id ?? '') ?? 0) + 1);
     }
+    // Slots already free (out under-filled by a narrow scope or dup-collapse). A
+    // relevant primary can take one of these without evicting anything — but ONLY
+    // while cand's tradition has cap headroom, so filling a slot never breaches
+    // MAX_PER_TRADITION either. (In a full top-K, freeSlots is 0 and this is inert,
+    // so the validated gate is byte-for-byte unchanged.)
     let promotions = 0;
     for (const cand of candidates) {
       if (promotions >= floor.count) break;
-      // yield the weakest REDUNDANT synthesis slot (its work keeps ≥1 slot); if
-      // there is none, leave the ranking alone rather than displace a primary or
-      // drop a synthesis work entirely.
+      const candTrad = cand.tradition;
+      // A promotion adds one slot to cand's tradition, so it must not breach
+      // MAX_PER_TRADITION — the hard cap the emit loop (above) enforces for every
+      // other slot. That stays safe two ways only: fill a genuinely free slot while
+      // cand's tradition has cap headroom, or evict a synthesis slot from cand's
+      // OWN tradition (net-zero for it). If cand's tradition is already AT the cap
+      // (e.g. 3 co-tradition synthesis slots, no primary — possible once works.kind
+      // mixes primary+synthesis within a tradition), a CROSS-tradition victim would
+      // push it to cap+1, so that victim is disallowed.
+      const candTradCount = tradCounts.get(candTrad) ?? 0;
+      const candTradAtCap = tradCap > 0 && candTradCount >= tradCap;
+
+      // Free-slot fill: out under topK and cand's tradition has headroom — append
+      // the qualifying primary instead of dropping it (the swap path only reshuffles
+      // a full top-K). Never breaches the cap (guarded by !candTradAtCap).
+      if (out.length < topK && !candTradAtCap) {
+        if (process.env.RETRIEVAL_TRACE) {
+          console.log(`  [primary-floor] promote ${cand.id} [${candTrad}] (sim≥${floor.simThreshold}); fill free slot`);
+        }
+        out.push(cand);
+        emitted.add(cand.id);
+        tradCounts.set(candTrad, candTradCount + 1);
+        promotions++;
+        continue;
+      }
+
+      // Otherwise yield the weakest REDUNDANT synthesis slot (its work keeps ≥1
+      // slot), honoring the cap guard above. If none qualifies, `continue` (not
+      // `break`): a later candidate in a different tradition may still have an
+      // eligible victim — the old `break` gave up on all of them.
       let victim = -1, victimScore = Infinity;
       for (let i = 0; i < out.length; i++) {
         if (!isSynth(out[i])) continue;
         if ((synthSlots.get(out[i].text_id ?? '') ?? 0) <= 1) continue; // keep its only slot
+        if (candTradAtCap && out[i].tradition !== candTrad) continue;   // cap guard (see above)
         const sc = scoreById.get(out[i].id) ?? -Infinity;
         if (sc < victimScore) { victimScore = sc; victim = i; }
       }
-      if (victim < 0) break;
+      if (victim < 0) continue;
+      const victimTrad = out[victim].tradition;
       if (process.env.RETRIEVAL_TRACE) {
-        console.log(`  [primary-floor] promote ${cand.id} [${cand.tradition}] (sim≥${floor.simThreshold}); yield synthesis ${out[victim].id} [${out[victim].tradition}]`);
+        console.log(`  [primary-floor] promote ${cand.id} [${candTrad}] (sim≥${floor.simThreshold}); yield synthesis ${out[victim].id} [${victimTrad}]`);
       }
       synthSlots.set(out[victim].text_id ?? '', (synthSlots.get(out[victim].text_id ?? '') ?? 0) - 1);
       emitted.delete(out[victim].id);
       out[victim] = cand;
       emitted.add(cand.id);
+      // Keep tradCounts consistent for later candidates' cap checks. Order matters
+      // only when victimTrad === candTrad: +1 then −1 nets to zero, as intended.
+      tradCounts.set(candTrad, candTradCount + 1);
+      tradCounts.set(victimTrad, (tradCounts.get(victimTrad) ?? 1) - 1);
       promotions++;
     }
     // Re-sort the emitted set by score so display stays score-ordered (the promoted

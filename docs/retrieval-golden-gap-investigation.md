@@ -413,6 +413,23 @@ full gate holds 316/4** (same 4 residual). New-work ingestion is gated on the sa
 classification (todo:fb522ee1, guru workbook §02). Deploy is lockstep: the v5 corpus
 push and guru-web `EXPECTED_SCHEMA_VERSION='5'` ship in one window.
 
+**Two invariants hardened after review (PR #135):** (1) **The promotion never breaches
+`MAX_PER_TRADITION`.** Under the tradition proxy a promoted primary is always from a
+non-synthesis tradition, so its victim is a different tradition and the promoted
+tradition sits at 0 primaries — safe. But `works.kind` lets one tradition hold *both*
+primary and synthesis works, so a tradition can be at the cap with synthesis-only slots
+and still queue a relevant primary; yielding *another* tradition's slot would leave the
+promoted one at cap+1. The victim search now requires a **same-tradition** synthesis
+slot whenever the candidate's tradition is already at the cap (a net-zero swap), and
+fills a genuinely free slot only when the tradition has cap headroom. (2) **`works.kind`
+falls back only on a real schema gap, not a transient DB error.** `corpusKind()` caches
+its `null` fallback (→ tradition proxy) only for Postgres `42703`/`42P01`
+(undefined_column/table, i.e. pre-re-export); a transient error (pool exhaustion, reset)
+is logged and returns `null` *uncached*, so the next request retries rather than
+stranding the process on the coarser proxy until restart. The floor config also loads
+concurrently with the search legs (not serialized after them), so its one-shot lookup
+adds no round trip to the cold-cache critical path.
+
 ### 8.2 Concept-extraction upgrade (`todo:53480da1`)
 
 `extractConcepts` is a Phase-1 LIKE match on concept labels; it goes **fully

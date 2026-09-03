@@ -21,10 +21,14 @@ function chunk(
     distance?: number;
     tier?: RetrievedChunk['tier'];
     conceptMatchWeight?: number;
+    text_id?: string;
   },
 ): RetrievedChunk {
   return {
-    id, text_id: 't', tradition, text_name: 'tn', section: 's',
+    // text_id defaults to 't' for the scoring/tier/lexical tests where per-work
+    // counting is irrelevant; the primary-floor tests set it explicitly because
+    // the floor's synthesis-slot bookkeeping is PER text_id (todo:6702edd0).
+    id, text_id: opts.text_id ?? 't', tradition, text_name: 'tn', section: 's',
     translator: null, body: 'b', token_count: 1,
     source: opts.source, distance: opts.distance, tier: opts.tier,
     conceptMatchWeight: opts.conceptMatchWeight,
@@ -261,68 +265,128 @@ describe('mergeAndRerank — lexical gate-cap (todo:8bc7698b)', () => {
 describe('mergeAndRerank — primary floor (todo:1a8c3bbf)', () => {
   const floor = (count: number, synthesis: string[], simThreshold = 0.5) =>
     ({ count, simThreshold, synthesis: new Set(synthesis) });
+  // works.kind variant (todo:6702edd0): classify by a per-text_id kind map (the
+  // shipped default path) instead of the tradition proxy — the only way to make a
+  // primary and a synthesis work share one tradition, which the cap-guard test needs.
+  const kindFloor = (count: number, kind: Record<string, string>, simThreshold = 0.5) =>
+    ({ count, simThreshold, synthesis: new Set<string>(), kind: new Map(Object.entries(kind)) });
 
-  // Three synthesis (theosophy) chunks fill the top-3; a relevant primary (norse,
-  // sim 0.6) is crowded to rank 4 despite the diversity bump.
+  // Theosophy fills the top-3 via TWO DISTINCT synthesis works — secret-doctrine
+  // takes 2 slots (redundant), isis-unveiled 1 (its sole slot). Distinct text_ids
+  // (not the shared default) so the floor's PER-WORK slot counting is actually
+  // exercised (finding: shared text_id masked it). A relevant primary (norse edda,
+  // sim 0.6 ≥ τ) is crowded to rank 4.
   const synthTrip = () => [
-    chunk('th1', 'theosophy', { source: 'vector', distance: 0.10 }),
-    chunk('th2', 'theosophy', { source: 'vector', distance: 0.12 }),
-    chunk('th3', 'theosophy', { source: 'vector', distance: 0.14 }),
+    chunk('sd1', 'theosophy', { source: 'vector', distance: 0.10, text_id: 'secret-doctrine' }),
+    chunk('sd2', 'theosophy', { source: 'vector', distance: 0.12, text_id: 'secret-doctrine' }),
+    chunk('iu1', 'theosophy', { source: 'vector', distance: 0.14, text_id: 'isis-unveiled' }),
   ];
+  const norse = () => chunk('edda1', 'norse', { source: 'vector', distance: 0.40, text_id: 'edda' }); // sim 0.60
 
   it('is a no-op when no floor is supplied — the primary stays crowded out', () => {
-    const primary = chunk('norse1', 'norse', { source: 'vector', distance: 0.4 });
-    const out = mergeAndRerank([...synthTrip(), primary], [], 3).map(c => c.id);
-    expect(out).toEqual(['th1', 'th2', 'th3']);
+    const out = mergeAndRerank([...synthTrip(), norse()], [], 3).map(c => c.id);
+    expect(out).toEqual(['sd1', 'sd2', 'iu1']);
   });
 
-  it('promotes a relevant primary into top-K by yielding the weakest synthesis slot', () => {
-    const primary = chunk('norse1', 'norse', { source: 'vector', distance: 0.4 }); // sim 0.6 ≥ τ
-    const out = mergeAndRerank([...synthTrip(), primary], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
-    expect(out).toContain('norse1');   // primary pulled in
-    expect(out).not.toContain('th3');  // weakest synthesis slot yielded (not th1/th2)
+  it('promotes a relevant primary by yielding the weakest REDUNDANT slot, not the globally weakest', () => {
+    // iu1 is the globally weakest synthesis slot but isis-unveiled's SOLE slot →
+    // protected. secret-doctrine has 2 slots, so its weaker one (sd2) is the victim.
+    // With a shared text_id this distinction is invisible — that's the point.
+    const out = mergeAndRerank([...synthTrip(), norse()], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    expect(out).toContain('edda1');   // primary pulled in
+    expect(out).toContain('iu1');     // isis-unveiled's sole slot preserved
+    expect(out).not.toContain('sd2'); // secret-doctrine's redundant slot yielded
     expect(out).toHaveLength(3);
   });
 
   it('does NOT promote a primary below the relevance gate τ (stays buried)', () => {
-    const weak = chunk('norse1', 'norse', { source: 'vector', distance: 0.6 }); // sim 0.4 < τ=0.5
+    const weak = chunk('edda1', 'norse', { source: 'vector', distance: 0.6, text_id: 'edda' }); // sim 0.4 < τ=0.5
     const out = mergeAndRerank([...synthTrip(), weak], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
-    expect(out).toEqual(['th1', 'th2', 'th3']);
+    expect(out).toEqual(['sd1', 'sd2', 'iu1']);
   });
 
   it('never displaces another primary — no synthesis slot means no change', () => {
     const prims = [
-      chunk('p1', 'platonism', { source: 'vector', distance: 0.10 }),
-      chunk('p2', 'gnosticism', { source: 'vector', distance: 0.12 }),
-      chunk('p3', 'hinduism', { source: 'vector', distance: 0.14 }),
+      chunk('p1', 'platonism', { source: 'vector', distance: 0.10, text_id: 'plato' }),
+      chunk('p2', 'gnosticism', { source: 'vector', distance: 0.12, text_id: 'pistis-sophia' }),
+      chunk('p3', 'hinduism', { source: 'vector', distance: 0.14, text_id: 'bhagavad-gita' }),
     ];
-    const crowded = chunk('norse1', 'norse', { source: 'vector', distance: 0.4 });
-    const base = mergeAndRerank([...prims, crowded], [], 3).map(c => c.id);
-    const out = mergeAndRerank([...prims, crowded], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    const base = mergeAndRerank([...prims, norse()], [], 3).map(c => c.id);
+    const out = mergeAndRerank([...prims, norse()], [], 3, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
     expect(out).toEqual(base); // no theosophy slot to yield → ranking untouched
   });
 
   it('never drops a synthesis work’s ONLY slot — keeps its mustIncludeWork (kybalion fix)', () => {
-    // A synthesis chunk that is its work's sole appearance, plus a relevant crowded
-    // primary. The floor wants to promote the primary but the only synthesis slot is
-    // that work's last one → it is not displaced, so the synthesis work stays in.
-    const syn = { ...chunk('syn1', 'theosophy', { source: 'vector', distance: 0.10 }), text_id: 'blavatsky-sd' };
-    const other = { ...chunk('oth', 'platonism', { source: 'vector', distance: 0.11 }), text_id: 'plato' };
-    const primary = { ...chunk('norse1', 'norse', { source: 'vector', distance: 0.40 }), text_id: 'edda' };
-    const out = mergeAndRerank([syn, other, primary], [], 2, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
-    expect(out).toContain('syn1');       // synthesis work's only slot preserved
-    expect(out).not.toContain('norse1'); // no redundant synthesis to yield → no promotion
+    // TWO distinct synthesis works, one slot each — NEITHER is redundant. Promoting
+    // the crowded primary would drop a synthesis work's sole appearance, so the
+    // ranking is left untouched. (Distinct text_ids: with a shared one these would
+    // count as a single 2-slot work and the guard would wrongly allow a yield.)
+    const syn1 = chunk('sd1', 'theosophy', { source: 'vector', distance: 0.10, text_id: 'secret-doctrine' });
+    const syn2 = chunk('iu1', 'theosophy', { source: 'vector', distance: 0.11, text_id: 'isis-unveiled' });
+    const out = mergeAndRerank([syn1, syn2, norse()], [], 2, { primaryFloor: floor(1, ['theosophy']) }).map(c => c.id);
+    expect(out).toEqual(['sd1', 'iu1']); // both sole slots kept
+    expect(out).not.toContain('edda1'); // no redundant synthesis to yield → no promotion
   });
 
   it('respects count: two qualifying primaries + count 1 promotes exactly one', () => {
     const synth = [
-      chunk('th1', 'theosophy', { source: 'vector', distance: 0.10 }),
-      chunk('th2', 'theosophy', { source: 'vector', distance: 0.12 }),
+      chunk('sd1', 'theosophy', { source: 'vector', distance: 0.10, text_id: 'secret-doctrine' }),
+      chunk('sd2', 'theosophy', { source: 'vector', distance: 0.12, text_id: 'secret-doctrine' }),
     ];
-    const primA = chunk('norse1', 'norse', { source: 'vector', distance: 0.40 });
-    const primB = chunk('celtic1', 'celtic', { source: 'vector', distance: 0.42 });
+    const primA = chunk('edda1', 'norse', { source: 'vector', distance: 0.40, text_id: 'edda' });
+    const primB = chunk('mab1', 'celtic', { source: 'vector', distance: 0.42, text_id: 'mabinogion' });
     const out = mergeAndRerank([...synth, primA, primB], [], 2, { primaryFloor: floor(1, ['theosophy']) });
     expect(out.filter(c => c.tradition === 'norse' || c.tradition === 'celtic')).toHaveLength(1);
     expect(out).toHaveLength(2);
+  });
+
+  // Finding: promotion must never breach MAX_PER_TRADITION. Once works.kind lets a
+  // tradition hold BOTH primary and synthesis works, a tradition can be at the cap
+  // with synthesis-only slots and still have a relevant primary queued. The victim
+  // must come from that SAME tradition (net-zero), never from another tradition
+  // (which would leave the promoted tradition at cap+1).
+  it('keeps promotion within MAX_PER_TRADITION — evicts a same-tradition slot, not another tradition’s', () => {
+    // esoteric is AT the cap (3) with two synthesis works: work-a (2 slots, redundant)
+    // + work-b (1, sole). A relevant esoteric primary (work-d) is crowded out by the
+    // cap. theosophy holds the globally-weakest redundant slots (work-c ×2) — the
+    // trap the old code fell into: yielding work-c would push esoteric to 4.
+    const chunks = [
+      chunk('e1', 'esoteric',  { source: 'vector', distance: 0.10, text_id: 'work-a' }),
+      chunk('e2', 'esoteric',  { source: 'vector', distance: 0.11, text_id: 'work-a' }),
+      chunk('e3', 'esoteric',  { source: 'vector', distance: 0.12, text_id: 'work-b' }),
+      chunk('ep', 'esoteric',  { source: 'vector', distance: 0.20, text_id: 'work-d' }), // primary, sim 0.80
+      chunk('t1', 'theosophy', { source: 'vector', distance: 0.30, text_id: 'work-c' }),
+      chunk('t2', 'theosophy', { source: 'vector', distance: 0.31, text_id: 'work-c' }),
+    ];
+    const pf = kindFloor(1, {
+      'work-a': 'synthesis', 'work-b': 'synthesis', 'work-c': 'synthesis', 'work-d': 'primary',
+    });
+    const out = mergeAndRerank(chunks, [], 5, { primaryFloor: pf });
+    const ids = out.map(c => c.id);
+    expect(ids).toContain('ep');                                    // relevant primary promoted
+    expect(out.filter(c => c.tradition === 'esoteric')).toHaveLength(3); // cap holds — not 4
+    expect(ids).toContain('t2');                                    // another tradition's slot NOT stolen
+    expect(ids).not.toContain('e2');                                // esoteric's own redundant slot yielded
+  });
+
+  // Finding: fill a genuinely free slot instead of dropping a qualifying primary.
+  // dup-collapse frees a slot (out under-filled); the crowded relevant primary
+  // should take it rather than be discarded because no synthesis slot was yielded.
+  it('fills a free slot with a relevant primary when out is under-filled (does not drop it)', () => {
+    const emb = new Map<string, number[]>([
+      ['sd1', [1, 0, 0]],
+      ['edda1', [1, 0, 0]], // identical → collapses against sd1 during emit
+    ]);
+    const sd1 = chunk('sd1', 'theosophy', { source: 'vector', distance: 0.10, text_id: 'secret-doctrine' });
+    const sd2 = chunk('sd2', 'theosophy', { source: 'vector', distance: 0.12, text_id: 'secret-doctrine' });
+    const prim = chunk('edda1', 'norse', { source: 'vector', distance: 0.40, text_id: 'edda' }); // sim 0.60 ≥ τ
+    // edda1 is dup-collapsed cross-text against sd1 → skipped in emit, leaving out at
+    // 2/3. norse is below its cap, so the floor fills the free 3rd slot with it.
+    const out = mergeAndRerank([sd1, sd2, prim], [], 3, {
+      primaryFloor: floor(1, ['theosophy']),
+      dupCollapse: { threshold: 0.99, sameTextOnly: false, embeddings: emb },
+    }).map(c => c.id);
+    expect(out).toContain('edda1'); // filled the free slot, not dropped
+    expect(out).toHaveLength(3);
   });
 });
