@@ -7,7 +7,7 @@
     "type": "agent"
   },
   "created_at": "2026-09-02T12:37:42.003Z",
-  "updated_at": "2026-09-03T10:58:48.838Z",
+  "updated_at": "2026-09-03T11:55:50.960Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"
@@ -35,6 +35,13 @@
       "author": "Backend Engineer",
       "type": "conclusion",
       "content": "SCHEMA VERSION COUPLING (from guru PR #125 review F2): guru bumped SCHEMA_VERSION 4->5 for works.kind. The re-export deploy MUST also bump guru-web EXPECTED_SCHEMA_VERSION '4'->'5' in src/lib/boot.ts in the SAME deploy that reloads the v5 corpus — else guru-web boot fails the version guard. NOT bumped now on purpose: it would break dev boot against the current v4 corpus before re-export. So the pending c3 step is: merge guru #125 -> re-export (SCHEMA_VERSION=5, works.kind) -> reload guru-web dev DB -> bump boot.ts EXPECTED to '5' -> re-gate with the real works.kind label (isSynth auto-switches off the tradition proxy) -> close.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-03T11:55:50.959Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "CORRECTION: EXPECTED_SCHEMA_VERSION IS bumped to '5' in #135 (not deferred) — the schema really changed, so keeping it at 4 was a workaround. Both repos now honestly declare v5: guru SCHEMA_VERSION=5 (#125), guru-web EXPECTED_SCHEMA_VERSION='5' (#135), corpus-schema.sql mirror + .sha256 synced. This COUPLES #135's prod deploy to the v5 corpus: the boot guard requires corpus_metadata.schema_version == EXPECTED exactly, both directions. Go-live (owner-run, only they can deploy corpus): merge guru #125 -> re-export v5 -> deploy v5 corpus to prod AND merge guru-web #135 in one coordinated window (brief mismatch window either direction fails boot). Gate unaffected (doesn't boot-check); floor still runs on v4 locally via the works.kind fallback. c3 closes when the v5 corpus is loaded and the gate re-run confirms 316/4 with the real label.",
       "confidence": "high"
     }
   ]
