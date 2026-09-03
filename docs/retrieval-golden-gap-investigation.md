@@ -403,12 +403,15 @@ per-*tradition* floor can't target the specific work), **mabinogion** (crowder
 kalevala is a primary, and/or its similarity is below τ), **isa-upanishad** (never
 enters the candidate pool — §8.3 recall; a floor can't promote what wasn't fetched).
 
-Next: curate `works.kind` from the dossiers (todo:9445cd73 — they already state it:
-blavatsky "synthesis", secret-teachings "encyclopedic survey" vs pistis "revelation
-discourse"), which also catches the one work the tradition proxy misses,
-`life-and-doctrines-boehme` (christian_mysticism, but a secondary exposition); wire
-it in and decide the shipped default (todo:6702edd0); and gate new-work ingestion on
-the same classification (todo:fb522ee1, guru workbook).
+Curated `works.kind` (todo:9445cd73, guru PR #125) — the dossiers already state it
+(blavatsky "synthesis", secret-teachings "encyclopedic survey" vs pistis "revelation
+discourse") — catches the one work the tradition proxy misses,
+`life-and-doctrines-boehme`. Wired in with a proxy fallback (todo:6702edd0), it ships
+**on by default**. **Confirmed on the v5 corpus (schema_version 5, `works.kind`
+populated: 60 primary / 9 synthesis) with the real label at production defaults: the
+full gate holds 316/4** (same 4 residual). New-work ingestion is gated on the same
+classification (todo:fb522ee1, guru workbook §02). Deploy is lockstep: the v5 corpus
+push and guru-web `EXPECTED_SCHEMA_VERSION='5'` ship in one window.
 
 ### 8.2 Concept-extraction upgrade (`todo:53480da1`)
 

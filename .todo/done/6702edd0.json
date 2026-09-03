@@ -1,13 +1,13 @@
 {
   "id": "6702edd0",
   "type": "feature",
-  "state": "active",
+  "state": "done",
   "summary": "Wire the floor to works.kind (replace the tradition proxy), re-gate, ship the final config + docs §8.1 update",
   "source": {
     "type": "agent"
   },
   "created_at": "2026-09-02T12:37:42.003Z",
-  "updated_at": "2026-09-03T11:55:50.960Z",
+  "updated_at": "2026-09-03T12:18:48.088Z",
   "files": [
     {
       "path": "src/lib/retriever.ts"
@@ -43,6 +43,21 @@
       "type": "conclusion",
       "content": "CORRECTION: EXPECTED_SCHEMA_VERSION IS bumped to '5' in #135 (not deferred) — the schema really changed, so keeping it at 4 was a workaround. Both repos now honestly declare v5: guru SCHEMA_VERSION=5 (#125), guru-web EXPECTED_SCHEMA_VERSION='5' (#135), corpus-schema.sql mirror + .sha256 synced. This COUPLES #135's prod deploy to the v5 corpus: the boot guard requires corpus_metadata.schema_version == EXPECTED exactly, both directions. Go-live (owner-run, only they can deploy corpus): merge guru #125 -> re-export v5 -> deploy v5 corpus to prod AND merge guru-web #135 in one coordinated window (brief mismatch window either direction fails boot). Gate unaffected (doesn't boot-check); floor still runs on v4 locally via the works.kind fallback. c3 closes when the v5 corpus is loaded and the gate re-run confirms 316/4 with the real label.",
       "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-03T12:18:48.043Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "VALIDATED END-TO-END on v5, deploy-ready. Regenerated the export (schema_version 5, works.kind populated: 9 synthesis / 60 primary), loaded into docker postgres (atomic swap, 69/69 dossiers, corpus_version 65), boot guard MATCHES (corpus 5 == EXPECTED 5). Full gate at PRODUCTION DEFAULTS (floor on, real works.kind via isSynth, no env override) = 316/4 — same 4 residual (pistis/mabinogion/isa/iamblichus), zero regression vs the proxy. measure confirms floor keys on works.kind[246 texts], not the tradition proxy. Wiring+ship+re-gate all done. Remaining is purely the owner's coordinated prod deploy (v5 corpus push + guru-web EXPECTED=5 in one window) — not a code step.",
+      "confidence": "high"
     }
-  ]
+  ],
+  "resolution": {
+    "commit": "995bb392fafca68c0db9e97ce29b6bdd77b414eb",
+    "resolved_at": "2026-09-03T12:18:48.088Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/rerank.test.ts",
+    "test_function": "mergeAndRerank — primary floor (todo:1a8c3bbf)",
+    "note": "Floor wired to works.kind (proxy fallback), shipped default-on; validated 316/4 on v5 with the real label."
+  }
 }
