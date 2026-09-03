@@ -71,8 +71,8 @@ export type { CuratedSlug } from './curated-models';
 // citations block).  Previous 2048 cap was eating the citations section
 // mid-token on long responses (todo:fac34c35).  Output tokens are billed
 // only when actually used, so this is purely a "don't truncate" guard,
-// not a typical-cost increase.  Both deepseek-chat and Claude Sonnet 4.5
-// support at least 8192 output tokens.
+// not a typical-cost increase.  Every curated model supports at least
+// 8192 output tokens.
 export const MAX_OUTPUT_TOKENS = 8192;
 
 // ---------------------------------------------------------------------------
