@@ -39,9 +39,19 @@ describe('PROVIDER_DISPLAY', () => {
     expect(new Set(colors).size).toBe(colors.length);
   });
 
-  it('default (deepseek) has the highest questionsPerDay', () => {
-    const counts = Object.values(PROVIDER_DISPLAY).map((d) => d.questionsPerDay);
-    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBe(Math.max(...counts));
+  // The default (deepseek) must stay economical, but it is no longer
+  // required to be *strictly* the cheapest. A promo-priced, agentic-
+  // coding-tuned model (Gemini Flash) can temporarily undercut it on
+  // raw per-query cost without being the right default for Guru's
+  // retrieval workload — so the guardrail is "default stays in the two
+  // most economical curated options", which catches the default
+  // silently drifting expensive without pinning it to a promo price.
+  it('default (deepseek) stays among the two most economical options', () => {
+    const ranked = Object.values(PROVIDER_DISPLAY)
+      .map((d) => d.questionsPerDay)
+      .sort((a, b) => b - a);
+    const secondBest = ranked[1]!;
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeGreaterThanOrEqual(secondBest);
   });
 
   // Lock the derivation: questionsPerDay must come from
@@ -69,16 +79,18 @@ describe('PROVIDER_DISPLAY', () => {
 
   // Sanity bounds — separate from the derivation test so a flipped
   // formula (round, ceil, etc.) that compiles cleanly still gets
-  // caught by the order-of-magnitude check. These ranges reflect
-  // BRD §3.2 expectations under the current $5/30d cap; bump if the
-  // policy moves materially.
+  // caught by the order-of-magnitude check. Ranges reflect BRD §3.2
+  // expectations under the current $5/30d cap, calibrated to real
+  // OpenRouter list prices (deepseek ~9, xai ~5, google ~11,
+  // anthropic ~4, openai ~3). Bump if the policy or list prices move
+  // materially — headroom absorbs routine price drift.
   it('questionsPerDay falls in expected ranges per provider', () => {
-    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeGreaterThanOrEqual(20);
-    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeLessThanOrEqual(40);
-    expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeGreaterThanOrEqual(8);
-    expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeLessThanOrEqual(15);
-    expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeGreaterThanOrEqual(4);
-    expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeLessThanOrEqual(8);
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeGreaterThanOrEqual(6);
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeLessThanOrEqual(14);
+    expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeGreaterThanOrEqual(3);
+    expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeLessThanOrEqual(8);
+    expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeGreaterThanOrEqual(8);
+    expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeLessThanOrEqual(16);
     expect(PROVIDER_DISPLAY.anthropic.questionsPerDay).toBeGreaterThanOrEqual(2);
     expect(PROVIDER_DISPLAY.anthropic.questionsPerDay).toBeLessThanOrEqual(6);
     expect(PROVIDER_DISPLAY.openai.questionsPerDay).toBeGreaterThanOrEqual(2);
