@@ -20,6 +20,7 @@ import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
 import Citation from '@/components/citation';
 import GuestWall from '@/components/guest-wall';
+import GuestConvert from '@/components/guest-convert';
 import { parseCitationsBlock } from '@/lib/citations';
 import { remarkCiteLinks } from '@/lib/remark-citations';
 import { MD_COMPONENTS } from '@/lib/markdown';
@@ -36,7 +37,7 @@ interface CitationData {
 // Mirrors MAX_QUERY_CHARS in /api/query/guest. Server is authoritative.
 const MAX_QUERY_CHARS = 4000;
 
-export default function AskView() {
+export default function AskView({ clerkReady = false }: { clerkReady?: boolean }) {
   const [input, setInput] = useState('');
   const [question, setQuestion] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
@@ -124,6 +125,11 @@ export default function AskView() {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px 64px', color: tokens.text.primary }}>
+      {/* Finishes a guest→account conversion when Clerk returns the visitor
+          here with ?continue=1 after signup. Only mounted where ClerkProvider
+          exists (its useUser() would crash on the tailnet host). */}
+      {clerkReady && <GuestConvert />}
+
       <div style={{ maxWidth: 680, margin: '48px auto 28px', textAlign: 'center' }}>
         <h1 style={{ fontFamily: tokens.font.display, fontSize: 34, fontWeight: 500, margin: '0 0 10px', color: tokens.text.primary }}>
           Ask Guru anything

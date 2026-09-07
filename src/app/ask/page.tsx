@@ -8,6 +8,7 @@
 
 import type { Metadata } from 'next';
 import AskView from '@/components/ask-view';
+import { clerkEnabled } from '@/lib/host';
 
 export const metadata: Metadata = {
   title: 'Ask Guru — One Free Question',
@@ -16,6 +17,9 @@ export const metadata: Metadata = {
   alternates: { canonical: '/ask' },
 };
 
-export default function AskPage() {
-  return <AskView />;
+export default async function AskPage() {
+  // clerkReady gates the conversion effect: it uses useUser(), which needs
+  // ClerkProvider (absent on the tailnet host, per the root layout).
+  const clerkReady = await clerkEnabled();
+  return <AskView clerkReady={clerkReady} />;
 }
