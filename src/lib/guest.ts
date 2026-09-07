@@ -34,7 +34,7 @@
  * ip-rate-limit's header calls out the move to a shared store.
  */
 
-import { createHmac, timingSafeEqual, randomBytes } from 'crypto';
+import { createHash, createHmac, timingSafeEqual, randomBytes } from 'crypto';
 import { ipRateLimit } from './ip-rate-limit';
 
 /** Cookie name carrying the signed guest token. */
@@ -95,6 +95,16 @@ export function verifyGuestToken(token: string | undefined | null): string | nul
   if (provided.length !== expected.length) return null;
   if (!timingSafeEqual(provided, expected)) return null;
   return id;
+}
+
+/**
+ * Deterministic hash of the entitlement id, stored on the guest's queries
+ * row (queries.guest_token_hash) and recomputed at signup to adopt that
+ * row (todo:45598ce4). We store the hash, not the raw id, so the DB never
+ * holds the live cookie value.
+ */
+export function guestTokenHash(tokenId: string): string {
+  return createHash('sha256').update(tokenId).digest('hex');
 }
 
 export interface GuestVerdict {
