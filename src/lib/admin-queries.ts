@@ -32,6 +32,16 @@ export interface OverviewStats {
   spend_week_free: number;
   spend_month_pro: number;
   spend_month_free: number;
+  // Anonymous-guest bucket (todo:85125f9e). Kept SEPARATE from the pro/free
+  // tier totals — a guest question (queries.tier_used='guest', user_id NULL)
+  // is real spend but not attributable to a user. On conversion the row flips
+  // to tier_used='free', so these figures are the *unconverted* guest cost.
+  spend_today_guest: number;
+  spend_week_guest: number;
+  spend_month_guest: number;
+  guest_queries_today: number;
+  guest_queries_this_week: number;
+  guest_queries_this_month: number;
   spend_mtd_total: number;
   spend_mtd_projection: number;
   active_rate_limits: number;
@@ -43,6 +53,8 @@ export interface DayPoint {
   date: string;
   pro_value: number;
   free_value: number;
+  /** Anonymous-guest volume/spend for the day (todo:85125f9e). */
+  guest_value: number;
 }
 
 export interface TopUserRow {
@@ -96,15 +108,24 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
       (SELECT COUNT(DISTINCT user_id) FROM queries WHERE created_at >= now() - interval '7 days')                AS users_active_7d,
       (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL AND tier = 'pro')                                     AS pro_count,
       (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL AND tier = 'free')                                    AS free_count,
-      (SELECT COUNT(*) FROM queries WHERE created_at >= date_trunc('day',   now() AT TIME ZONE 'UTC'))           AS queries_today,
-      (SELECT COUNT(*) FROM queries WHERE created_at >= date_trunc('week',  now() AT TIME ZONE 'UTC'))           AS queries_this_week,
-      (SELECT COUNT(*) FROM queries WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'UTC'))           AS queries_this_month,
+      -- Authenticated query counts exclude unconverted guests (user_id NULL);
+      -- a guest is not a "query by a user" until it converts. Guest volume is
+      -- reported separately below (todo:85125f9e).
+      (SELECT COUNT(*) FROM queries WHERE user_id IS NOT NULL AND created_at >= date_trunc('day',   now() AT TIME ZONE 'UTC'))  AS queries_today,
+      (SELECT COUNT(*) FROM queries WHERE user_id IS NOT NULL AND created_at >= date_trunc('week',  now() AT TIME ZONE 'UTC'))  AS queries_this_week,
+      (SELECT COUNT(*) FROM queries WHERE user_id IS NOT NULL AND created_at >= date_trunc('month', now() AT TIME ZONE 'UTC'))  AS queries_this_month,
       (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'pro'  AND created_at >= date_trunc('day',   now() AT TIME ZONE 'UTC'))  AS spend_today_pro,
       (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'free' AND created_at >= date_trunc('day',   now() AT TIME ZONE 'UTC'))  AS spend_today_free,
       (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'pro'  AND created_at >= date_trunc('week',  now() AT TIME ZONE 'UTC'))  AS spend_week_pro,
       (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'free' AND created_at >= date_trunc('week',  now() AT TIME ZONE 'UTC'))  AS spend_week_free,
       (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'pro'  AND created_at >= date_trunc('month', now() AT TIME ZONE 'UTC'))  AS spend_month_pro,
       (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'free' AND created_at >= date_trunc('month', now() AT TIME ZONE 'UTC'))  AS spend_month_free,
+      (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'guest' AND created_at >= date_trunc('day',   now() AT TIME ZONE 'UTC'))  AS spend_today_guest,
+      (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'guest' AND created_at >= date_trunc('week',  now() AT TIME ZONE 'UTC'))  AS spend_week_guest,
+      (SELECT COALESCE(SUM(cost_usd),0) FROM queries WHERE tier_used = 'guest' AND created_at >= date_trunc('month', now() AT TIME ZONE 'UTC'))  AS spend_month_guest,
+      (SELECT COUNT(*) FROM queries WHERE tier_used = 'guest' AND created_at >= date_trunc('day',   now() AT TIME ZONE 'UTC'))  AS guest_queries_today,
+      (SELECT COUNT(*) FROM queries WHERE tier_used = 'guest' AND created_at >= date_trunc('week',  now() AT TIME ZONE 'UTC'))  AS guest_queries_this_week,
+      (SELECT COUNT(*) FROM queries WHERE tier_used = 'guest' AND created_at >= date_trunc('month', now() AT TIME ZONE 'UTC'))  AS guest_queries_this_month,
       (SELECT COUNT(*) FROM rate_limits WHERE last_at > now() - interval '5 minutes')                            AS active_rate_limits,
       (SELECT COUNT(*) FROM user_budgets
         WHERE (query_limit IS NOT NULL AND query_limit > 0 AND queries_used::float / query_limit > 0.8)
@@ -135,6 +156,12 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     spend_week_free:      n('spend_week_free'),
     spend_month_pro:      n('spend_month_pro'),
     spend_month_free:     n('spend_month_free'),
+    spend_today_guest:    n('spend_today_guest'),
+    spend_week_guest:     n('spend_week_guest'),
+    spend_month_guest:    n('spend_month_guest'),
+    guest_queries_today:      n('guest_queries_today'),
+    guest_queries_this_week:  n('guest_queries_this_week'),
+    guest_queries_this_month: n('guest_queries_this_month'),
     spend_mtd_total,
     spend_mtd_projection: projectMtd(spend_mtd_total),
     active_rate_limits:   n('active_rate_limits'),
@@ -150,6 +177,8 @@ function zeroStats(): OverviewStats {
     spend_today_pro: 0, spend_today_free: 0,
     spend_week_pro: 0,  spend_week_free: 0,
     spend_month_pro: 0, spend_month_free: 0,
+    spend_today_guest: 0, spend_week_guest: 0, spend_month_guest: 0,
+    guest_queries_today: 0, guest_queries_this_week: 0, guest_queries_this_month: 0,
     spend_mtd_total: 0, spend_mtd_projection: 0,
     active_rate_limits: 0, users_at_budget_risk: 0,
   };
@@ -172,6 +201,7 @@ export async function fetchDailySeries(
     date: string;
     pro_value: string | number;
     free_value: string | number;
+    guest_value: string | number;
   }>(
     `
     WITH days AS (
@@ -190,22 +220,30 @@ export async function fetchDailySeries(
       SELECT (created_at AT TIME ZONE 'UTC')::date AS d, ${expr} AS v
         FROM queries WHERE tier_used = 'free' AND created_at >= now() - ($1::int || ' days')::interval
         GROUP BY 1
+    ),
+    guest AS (
+      SELECT (created_at AT TIME ZONE 'UTC')::date AS d, ${expr} AS v
+        FROM queries WHERE tier_used = 'guest' AND created_at >= now() - ($1::int || ' days')::interval
+        GROUP BY 1
     )
     SELECT to_char(days.d, 'YYYY-MM-DD') AS date,
            COALESCE(pro.v, 0)            AS pro_value,
-           COALESCE(free.v, 0)           AS free_value
+           COALESCE(free.v, 0)           AS free_value,
+           COALESCE(guest.v, 0)          AS guest_value
       FROM days
-      LEFT JOIN pro  ON pro.d  = days.d
-      LEFT JOIN free ON free.d = days.d
+      LEFT JOIN pro   ON pro.d   = days.d
+      LEFT JOIN free  ON free.d  = days.d
+      LEFT JOIN guest ON guest.d = days.d
       ORDER BY days.d ASC
     `,
     [days],
   );
 
   return rows.map((r) => ({
-    date:       r.date,
-    pro_value:  Number(r.pro_value),
-    free_value: Number(r.free_value),
+    date:        r.date,
+    pro_value:   Number(r.pro_value),
+    free_value:  Number(r.free_value),
+    guest_value: Number(r.guest_value),
   }));
 }
 
@@ -642,6 +680,74 @@ export async function getSessionDeepDive(sessionId: string): Promise<SessionDeep
   );
 
   return { session, totals, queries: normalised };
+}
+
+// ---------------------------------------------------------------------------
+// Guests (todo:85125f9e)
+// ---------------------------------------------------------------------------
+
+export interface GuestQueryRow {
+  id: string;
+  ip_name: string | null;
+  guest_ip: string | null;
+  query_text: string;
+  response_text: string;
+  model_used: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cost_usd: number | null;
+  created_at: string;
+}
+
+/**
+ * Unconverted anonymous guest questions, newest first. These are the
+ * queries rows that never got adopted into an account (user_id IS NULL,
+ * tier_used='guest') — the non-converted funnel top the operator wants
+ * visibility on: who asked (ip_name / IP), what they asked and got
+ * (query/response), and what it cost. A converted guest is a normal free
+ * query and appears in the ordinary user/session views, not here.
+ */
+export async function fetchGuestQueries(limit = 100, offset = 0): Promise<GuestQueryRow[]> {
+  const rows = await query<{
+    id: string;
+    ip_name: string | null;
+    guest_ip: string | null;
+    query_text: string;
+    response_text: string;
+    model_used: string | null;
+    input_tokens: string | number | null;
+    output_tokens: string | number | null;
+    cost_usd: string | number | null;
+    created_at: string;
+  }>(
+    `SELECT id, ip_name, guest_ip, query_text, response_text,
+            model_used, input_tokens, output_tokens, cost_usd, created_at
+       FROM queries
+      WHERE tier_used = 'guest' AND user_id IS NULL
+      ORDER BY created_at DESC
+      LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  return rows.map((r) => ({
+    id:            r.id,
+    ip_name:       r.ip_name,
+    guest_ip:      r.guest_ip,
+    query_text:    r.query_text,
+    response_text: r.response_text,
+    model_used:    r.model_used,
+    input_tokens:  r.input_tokens  === null ? null : Number(r.input_tokens),
+    output_tokens: r.output_tokens === null ? null : Number(r.output_tokens),
+    cost_usd:      r.cost_usd === null ? null : Number(r.cost_usd),
+    created_at:    r.created_at,
+  }));
+}
+
+/** Total unconverted guest questions (for the Guests page header / paging). */
+export async function fetchGuestCount(): Promise<number> {
+  const row = await one<{ n: string | number }>(
+    `SELECT COUNT(*) AS n FROM queries WHERE tier_used = 'guest' AND user_id IS NULL`,
+  );
+  return row ? Number(row.n) : 0;
 }
 
 export interface QueryDeepDive {

@@ -1,15 +1,21 @@
 {
   "id": "85125f9e",
   "type": "feature",
-  "state": "open",
+  "state": "active",
   "summary": "Admin UI: surface guest queries from the queries table — ip-name, in/out, spend; guest bucket in overview",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.941Z",
-  "updated_at": "2026-09-07T13:59:11.207Z",
+  "updated_at": "2026-09-07T14:29:01.124Z",
   "relationships": {
     "parent": "ee3736aa"
   },
-  "description": "Depends on guest rows existing in queries. Give admin visibility on guests (incl. non-converted = user_id IS NULL, tier_used='guest'): (1) a Guests list + detail under (admin)/admin/guests reading queries WHERE tier_used='guest' with ip_name, guest_ip, query_text/response_text (in/out), model, cost_usd, created_at, and a converted-vs-not filter (converted = the row later got a user_id). Reuse the admin/queries/[id] detail shape. (2) In src/lib/admin-queries.ts + /api/admin/overview add a guest spend bucket alongside pro/free (SUM(cost_usd) WHERE tier_used='guest') in fetchOverviewStats + fetchDailySeries, and guest query counts. (3) Decide the bare COUNT(*) FROM queries (queries_today/week/month) — either keep authed-only (add WHERE user_id IS NOT NULL) or split guest out explicitly; do NOT let guests silently inflate authed counts. Note the existing admin queries detail JOIN users stays INNER (guests live on their own page). Tests for the new aggregates."
+  "description": "Depends on guest rows existing in queries. Give admin visibility on guests (incl. non-converted = user_id IS NULL, tier_used='guest'): (1) a Guests list + detail under (admin)/admin/guests reading queries WHERE tier_used='guest' with ip_name, guest_ip, query_text/response_text (in/out), model, cost_usd, created_at, and a converted-vs-not filter (converted = the row later got a user_id). Reuse the admin/queries/[id] detail shape. (2) In src/lib/admin-queries.ts + /api/admin/overview add a guest spend bucket alongside pro/free (SUM(cost_usd) WHERE tier_used='guest') in fetchOverviewStats + fetchDailySeries, and guest query counts. (3) Decide the bare COUNT(*) FROM queries (queries_today/week/month) — either keep authed-only (add WHERE user_id IS NOT NULL) or split guest out explicitly; do NOT let guests silently inflate authed counts. Note the existing admin queries detail JOIN users stays INNER (guests live on their own page). Tests for the new aggregates.",
+  "work": {
+    "branch": "feat/anon-first-question",
+    "base_branch": "main",
+    "started_at": "2026-09-07T14:29:01.124Z",
+    "started_by": "Backend Engineer"
+  }
 }

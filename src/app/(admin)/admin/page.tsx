@@ -57,6 +57,9 @@ export default async function AdminOverview() {
           <StatTile label="Active Rate Limits" value={num(stats.active_rate_limits)}  delta={null} />
           <StatTile label="Queries Today"     value={num(stats.queries_today)}        delta={null} />
           <StatTile label="Spend Today"       value={usd(stats.spend_today_pro + stats.spend_today_free)} delta={tierSplit(stats.spend_today_pro, stats.spend_today_free)} />
+          {/* Anonymous funnel (todo:85125f9e): unconverted guest questions +
+              their cost, its own bucket — the full picture lives at /admin/guests. */}
+          <StatTile label="Guest Spend Today" value={usd(stats.spend_today_guest)}    delta={{ text: `${num(stats.guest_queries_today)} guest Q today`, positive: null }} />
           <StatTile label="Active Users (7d)" value={num(stats.users_active_7d)}      delta={null} />
           <StatTile label="Pro / Free"        value={`${num(stats.pro_count)} / ${num(stats.free_count)}`} delta={null} />
           <StatTile label="Total Users"       value={num(stats.users_total)}          delta={{ text: `+${num(stats.users_new_30d)} in 30d`, positive: null }} />

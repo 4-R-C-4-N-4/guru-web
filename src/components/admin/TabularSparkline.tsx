@@ -17,6 +17,8 @@ export interface SparklinePoint {
   date: string;
   pro_value: number;
   free_value: number;
+  /** Anonymous-guest bucket, stacked after free (todo:85125f9e). */
+  guest_value: number;
 }
 
 export interface TabularSparklineProps {
@@ -27,7 +29,7 @@ export interface TabularSparklineProps {
 }
 
 export function TabularSparkline({ title, points, format }: TabularSparklineProps) {
-  const max = Math.max(1, ...points.map((p) => p.pro_value + p.free_value));
+  const max = Math.max(1, ...points.map((p) => p.pro_value + p.free_value + p.guest_value));
   const fmt = (n: number) =>
     format === 'usd' ? `$${n.toFixed(2)}` : Intl.NumberFormat().format(Math.round(n));
 
@@ -46,9 +48,10 @@ export function TabularSparkline({ title, points, format }: TabularSparklineProp
             </tr>
           ) : (
             points.map((p) => {
-              const total = p.pro_value + p.free_value;
-              const proPct  = (p.pro_value  / max) * 100;
-              const freePct = (p.free_value / max) * 100;
+              const total = p.pro_value + p.free_value + p.guest_value;
+              const proPct   = (p.pro_value   / max) * 100;
+              const freePct  = (p.free_value  / max) * 100;
+              const guestPct = (p.guest_value / max) * 100;
               return (
                 <tr key={p.date}>
                   <td style={{ color: tokens.text.muted, padding: '2px 8px 2px 0', whiteSpace: 'nowrap' }}>
@@ -61,6 +64,9 @@ export function TabularSparkline({ title, points, format }: TabularSparklineProp
                       )}
                       {p.free_value > 0 && (
                         <div style={{ width: `${freePct}%`, background: tokens.text.muted }} />
+                      )}
+                      {p.guest_value > 0 && (
+                        <div style={{ width: `${guestPct}%`, background: tokens.text.accent }} />
                       )}
                     </div>
                   </td>
@@ -76,6 +82,7 @@ export function TabularSparkline({ title, points, format }: TabularSparklineProp
       <div style={{ marginTop: 6, fontSize: 10, color: tokens.text.muted, display: 'flex', gap: 12 }}>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, background: tokens.tier.verified, marginRight: 4, verticalAlign: 'middle' }} /> pro</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, background: tokens.text.muted,    marginRight: 4, verticalAlign: 'middle' }} /> free</span>
+        <span><span style={{ display: 'inline-block', width: 10, height: 10, background: tokens.text.accent,  marginRight: 4, verticalAlign: 'middle' }} /> guest</span>
       </div>
     </div>
   );
