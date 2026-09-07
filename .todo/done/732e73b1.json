@@ -1,13 +1,13 @@
 {
   "id": "732e73b1",
   "type": "feature",
-  "state": "active",
+  "state": "done",
   "summary": "Guest query API path: real answer, cost tracked as a guest row in queries, no session/budget writes",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.539Z",
-  "updated_at": "2026-09-07T14:09:11.229Z",
+  "updated_at": "2026-09-07T14:13:38.100Z",
   "relationships": {
     "parent": "ee3736aa"
   },
@@ -17,5 +17,11 @@
     "base_branch": "main",
     "started_at": "2026-09-07T14:09:11.229Z",
     "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "e2371343651b5db79c3a1971e94f7d553d082e1e",
+    "resolved_at": "2026-09-07T14:13:38.100Z",
+    "resolved_by": "unknown",
+    "note": "New POST /api/query/guest reuses buildAnswerStream; free-tier pins (DEFAULT_PREFERENCES + DEFAULT_VOICE + DEFAULT_CURATED_SLUG); consumeGuestQuery gate; persists queries row user_id/session_id NULL, tier_used='guest', cost+ip_name+guest_token_hash. Authed route refactored onto the same helper. Tests land in child 2d4bdd96."
   }
 }
