@@ -1,0 +1,29 @@
+{
+  "id": "6e5d50fa",
+  "type": "chore",
+  "state": "done",
+  "summary": "Guest entitlement primitive: signed guest cookie + guest/IP quota gate + stable ip-name",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.405Z",
+  "updated_at": "2026-09-07T14:06:28.627Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Foundation, no UI, no route wiring. Add src/lib/guest.ts that: mints/verifies a signed 'guru_guest' cookie token (HMAC over a random id, secret from env); exposes a one-shot entitlement check reusing the fixed-window limiter concept from src/lib/ip-rate-limit.ts (in-memory, per-process, single 'next start' — same topology caveat) for BOTH the guest-token count (1-free-question cap) and a guest:<ip> throttle (defeats cookie-clearing); and derives a STABLE deterministic ip-name pseudonym from the IP (e.g. adjective-noun hash) for admin display so raw IP isn't the primary label. Do NOT touch users/rate_limits DB tables (FK to users can't key anon callers — see ip-rate-limit.ts header). Verdict: {allowed, retryAfterSeconds, token, ipName}.",
+  "work": {
+    "branch": "feat/anon-first-question",
+    "base_branch": "main",
+    "started_at": "2026-09-07T14:05:15.838Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "09cf208c24875dd0e1f169d4db40d1d5ef1dcb39",
+    "resolved_at": "2026-09-07T14:06:28.627Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/guest.test.ts",
+    "test_function": "consumeGuestQuery gate",
+    "note": "src/lib/guest.ts: mint/verifyGuestToken (HMAC), consumeGuestQuery (token-then-IP fixed-window gate reusing ip-rate-limit), ipName pseudonym, clientIpFrom"
+  }
+}
