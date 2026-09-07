@@ -64,6 +64,18 @@ export function peekIpRateLimit(key: string, limit: number): IpRateVerdict {
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
+/**
+ * Extract the client IP used as the rate-limit key. Caddy fronts prod, so the
+ * first hop of x-forwarded-for is the real client; falls back to 'local' for
+ * direct/dev requests. This is a security-relevant trust decision (XFF is
+ * client-spoofable, and it keys the limiter), so it lives in ONE place —
+ * every rate-limited surface (guest funnel, /read/search) must call this
+ * rather than re-inlining the split.
+ */
+export function clientIpFrom(headers: Headers): string {
+  return headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
+}
+
 /** Test hook. */
 export function resetIpRateLimiter(): void {
   windows.clear();

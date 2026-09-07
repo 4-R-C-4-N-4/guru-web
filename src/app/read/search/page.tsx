@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import { searchCorpus, SEARCH_TOP_K } from '@/lib/search';
-import { ipRateLimit } from '@/lib/ip-rate-limit';
+import { ipRateLimit, clientIpFrom } from '@/lib/ip-rate-limit';
 import { listTraditionsForReader } from '@/lib/reader';
 import { chunkIdToPath } from '@/lib/read-path';
 import type { RetrievedChunk } from '@/lib/types';
@@ -44,10 +44,10 @@ function first(v: string | string[] | undefined): string | undefined {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined;
 }
 
+// Client IP for the rate-limit key — the XFF trust decision lives in
+// lib/ip-rate-limit (clientIpFrom), shared with the guest funnel.
 async function clientIp(): Promise<string> {
-  const h = await headers();
-  // Caddy fronts prod; first hop of x-forwarded-for is the client.
-  return h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
+  return clientIpFrom(await headers());
 }
 
 function ResultCard({ c }: { c: RetrievedChunk }) {

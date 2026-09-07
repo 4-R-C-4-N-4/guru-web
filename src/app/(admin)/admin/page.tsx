@@ -56,9 +56,10 @@ export default async function AdminOverview() {
           <StatTile label="Users at Budget Risk" value={num(stats.users_at_budget_risk)} delta={null} />
           <StatTile label="Active Rate Limits" value={num(stats.active_rate_limits)}  delta={null} />
           <StatTile label="Queries Today"     value={num(stats.queries_today)}        delta={null} />
-          <StatTile label="Spend Today"       value={usd(stats.spend_today_pro + stats.spend_today_free)} delta={tierSplit(stats.spend_today_pro, stats.spend_today_free)} />
-          {/* Anonymous funnel (todo:85125f9e): unconverted guest questions +
-              their cost, its own bucket — the full picture lives at /admin/guests. */}
+          {/* Spend Today is the day's total bill — includes guest, consistent
+              with MTD. The split below breaks it out; the guest bucket also
+              has its own tile + the full list at /admin/guests. */}
+          <StatTile label="Spend Today"       value={usd(stats.spend_today_pro + stats.spend_today_free + stats.spend_today_guest)} delta={tierSplit(stats.spend_today_pro, stats.spend_today_free, stats.spend_today_guest)} />
           <StatTile label="Guest Spend Today" value={usd(stats.spend_today_guest)}    delta={{ text: `${num(stats.guest_queries_today)} guest Q today`, positive: null }} />
           <StatTile label="Active Users (7d)" value={num(stats.users_active_7d)}      delta={null} />
           <StatTile label="Pro / Free"        value={`${num(stats.pro_count)} / ${num(stats.free_count)}`} delta={null} />
@@ -100,10 +101,10 @@ function mtdProjection(stats: OverviewStats) {
   };
 }
 
-function tierSplit(pro: number, free: number) {
-  if (pro + free === 0) return null;
+function tierSplit(pro: number, free: number, guest: number) {
+  if (pro + free + guest === 0) return null;
   return {
-    text:     `pro $${pro.toFixed(2)} · free $${free.toFixed(2)}`,
+    text:     `pro $${pro.toFixed(2)} · free $${free.toFixed(2)} · guest $${guest.toFixed(2)}`,
     positive: null,
   };
 }

@@ -27,7 +27,7 @@
  */
 
 import { requireUser } from '@/lib/auth';
-import { one, exec, query } from '@/lib/db';
+import { withTransaction } from '@/lib/db';
 import { DEFAULT_VOICE } from '@/lib/prompt';
 import { GUEST_COOKIE, verifyGuestToken, guestTokenHash, readCookie } from '@/lib/guest';
 
@@ -48,50 +48,56 @@ export async function POST(req: Request) {
   if (!tokenId) return nothingToAdopt();
   const hash = guestTokenHash(tokenId);
 
-  // Atomically CLAIM the pending guest row(s) in a single UPDATE gated on
-  // `user_id IS NULL`. This is the race guard: two tabs both returning from
-  // signup with ?continue=1 both hit this, but only one UPDATE matches the
-  // row — the loser gets zero rows and adopts nothing, so no orphan empty
-  // session is ever created and no false `adopted:true` is returned. One-shot
-  // means at most one row; if the IP backstop let a token accrue several,
-  // they share one identity and are adopted together.
-  const claimed = await query<{ id: string; query_text: string }>(
-    `UPDATE queries SET user_id = $1
-       WHERE guest_token_hash = $2 AND user_id IS NULL
-       RETURNING id, query_text`,
-    [user.id, hash]
-  );
-  if (claimed.length === 0) return nothingToAdopt();
-  const primary = claimed[0]!;
-  const claimedIds = claimed.map((r) => r.id);
+  // The whole adoption runs in one transaction so it is all-or-nothing: a
+  // failed session INSERT can never leave a half-adopted row (user_id set but
+  // still tier_used='guest' with the IP un-shed, which would be counted as
+  // guest spend forever and be unrecoverable). Returns the new session id, or
+  // null when there was nothing to adopt.
+  let sessionId: string | null;
+  try {
+    sessionId = await withTransaction(async (c) => {
+      // Atomically CLAIM the pending guest row(s) AND fully convert them in the
+      // same statement — set user_id, flip tier_used→'free', shed guest_ip —
+      // gated on `user_id IS NULL`. This is the race guard: two tabs both
+      // returning with ?continue=1 both run this, but only one UPDATE matches
+      // the row; the loser claims zero rows and creates no session. One-shot
+      // means at most one row; an IP-backstop accrual of several shares one
+      // identity and is adopted together. session_id is set below once created.
+      const claimed = (await c.query(
+        `UPDATE queries
+            SET user_id = $1, tier_used = 'free', guest_ip = NULL
+          WHERE guest_token_hash = $2 AND user_id IS NULL
+          RETURNING id, query_text`,
+        [user.id, hash]
+      )).rows as { id: string; query_text: string }[];
+      if (claimed.length === 0) return null;
 
-  // We won the claim — create the session the adopted query will live in.
-  // Free-tier voice: a brand-new account is always free (BRD-chat-voice §5).
-  const session = await one<{ id: string }>(
-    `INSERT INTO sessions (user_id, title, voice, created_at, updated_at)
-     VALUES ($1, $2, $3, now(), now())
-     RETURNING id`,
-    [user.id, primary.query_text.slice(0, 80), DEFAULT_VOICE]
-  );
-  if (!session) {
-    // Session insert failed after we already claimed the row(s). They now
-    // belong to the user (user_id set) but have no session; report failure so
-    // the client falls back to /chat. A retry can't re-claim (user_id no
-    // longer NULL); the rows are simply owned-but-sessionless — harmless.
-    return Response.json({ adopted: false, error: 'Could not create session' }, { status: 500 });
+      // Create the session the adopted query will live in. Free-tier voice:
+      // a brand-new account is always free (BRD-chat-voice §5).
+      const session = (await c.query(
+        `INSERT INTO sessions (user_id, title, voice, created_at, updated_at)
+         VALUES ($1, $2, $3, now(), now())
+         RETURNING id`,
+        [user.id, claimed[0]!.query_text.slice(0, 80), DEFAULT_VOICE]
+      )).rows[0] as { id: string } | undefined;
+      if (!session) throw new Error('session insert returned no row'); // → ROLLBACK
+
+      await c.query(
+        `UPDATE queries SET session_id = $1 WHERE id = ANY($2)`,
+        [session.id, claimed.map((r) => r.id)]
+      );
+      return session.id;
+    });
+  } catch (err) {
+    // Rolled back — the guest row is untouched and a retry can re-claim it.
+    console.error('[api/guest/convert] adoption failed, rolled back:', err);
+    return Response.json({ adopted: false, error: 'Could not adopt guest question' }, { status: 500 });
   }
 
-  // Attach the claimed row(s) to the new session and normalise them to a
-  // free query with the IP shed. Targets exactly the ids we claimed.
-  await exec(
-    `UPDATE queries
-        SET session_id = $1, tier_used = 'free', guest_ip = NULL
-      WHERE id = ANY($2)`,
-    [session.id, claimedIds]
-  );
+  if (sessionId === null) return nothingToAdopt();
 
   return Response.json(
-    { adopted: true, sessionId: session.id },
+    { adopted: true, sessionId },
     { headers: { 'Set-Cookie': CLEAR_COOKIE } },
   );
 }

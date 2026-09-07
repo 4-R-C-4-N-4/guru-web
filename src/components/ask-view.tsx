@@ -14,7 +14,7 @@
  */
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { tokens } from '@/styles/tokens';
@@ -105,6 +105,11 @@ export default function AskView({ clerkReady = false }: { clerkReady?: boolean }
         full += decoder.decode(value, { stream: true });
         setAnswer(full);
       }
+      // Flush any bytes the decoder is holding for an incomplete trailing
+      // multibyte codepoint (em-dashes, Greek/Sanskrit terms) so the last
+      // character of an answer isn't silently dropped.
+      full += decoder.decode();
+      setAnswer(full);
 
       // One free question, now spent — show the wall below the answer.
       setConsumed(true);
@@ -118,7 +123,11 @@ export default function AskView({ clerkReady = false }: { clerkReady?: boolean }
 
   // Strip the model's raw CITATIONS tail from the prose; cards render below
   // from the authoritative X-Citations set, or the parsed block as fallback.
-  const parsed = parseCitationsBlock(answer);
+  // Only parse once streaming has finished — parseCitationsBlock rescans the
+  // whole accumulated answer, so parsing on every token would be O(n²) on the
+  // client hot path. The CITATIONS tail only exists at the end anyway, so the
+  // partial stream renders raw.
+  const parsed = useMemo(() => (loading ? null : parseCitationsBlock(answer)), [answer, loading]);
   const bodyText = parsed ? parsed.body : answer;
   const cards: CitationData[] = citations.length > 0 ? citations : parsed?.citations ?? [];
   const modelDisplay = displayForModelId(modelUsed);

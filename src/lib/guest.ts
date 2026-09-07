@@ -37,6 +37,10 @@
 import { createHash, createHmac, timingSafeEqual, randomBytes } from 'crypto';
 import { ipRateLimit, peekIpRateLimit } from './ip-rate-limit';
 
+// clientIpFrom lives with the IP limiter (the XFF trust decision keys it) and
+// is re-exported here so guest-funnel callers have a single import surface.
+export { clientIpFrom } from './ip-rate-limit';
+
 /** Cookie name carrying the signed guest token. */
 export const GUEST_COOKIE = 'guru_guest';
 
@@ -190,11 +194,3 @@ export function readCookie(headers: Headers, name: string): string | null {
   return null;
 }
 
-/**
- * Extract the client IP from request headers. Caddy fronts prod; the
- * first hop of x-forwarded-for is the real client. Mirrors the helper
- * in read/search. Falls back to 'local' for direct/dev requests.
- */
-export function clientIpFrom(headers: Headers): string {
-  return headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
-}

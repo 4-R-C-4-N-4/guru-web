@@ -18,7 +18,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { tokens } from '@/styles/tokens';
@@ -29,6 +29,8 @@ export default function GuestConvert() {
   const router = useRouter();
   const { isSignedIn } = useUser();
   const [restoring, setRestoring] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const inFlight = useRef(false);
 
   useEffect(() => {
     if (!isSignedIn) return; // undefined while Clerk loads — wait
@@ -36,34 +38,44 @@ export default function GuestConvert() {
     const t = setTimeout(async () => {
       const params = new URLSearchParams(window.location.search);
       if (params.get('continue') !== '1') return;
-
-      // Strip the marker first (refresh-safe) and dedupe (bfcache-safe).
-      params.delete('continue');
-      const qs = params.toString();
-      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      // Persistent "already done" guard (bfcache-safe) + in-flight guard
+      // (StrictMode double-mount / concurrent). Neither the guard NOR the URL
+      // marker is touched until a convert actually SUCCEEDS — so a transient
+      // failure leaves both intact and a reload can retry, rather than
+      // silently abandoning the just-signed-up user's question.
       if (sessionStorage.getItem(GUARD_KEY)) return;
-      sessionStorage.setItem(GUARD_KEY, '1');
+      if (inFlight.current) return;
+      inFlight.current = true;
 
+      setFailed(false);
       setRestoring(true);
       try {
         const res = await fetch('/api/guest/convert', { method: 'POST' });
-        const body = await res.json().catch(() => ({}));
-        if (res.ok && (body as { adopted?: boolean }).adopted) {
-          router.push(`/chat/${(body as { sessionId: string }).sessionId}`);
-        } else {
-          // Nothing to adopt (cookie cleared, already converted) — just
-          // drop them into the app.
-          router.push('/chat');
-        }
+        if (!res.ok) throw new Error(`convert ${res.status}`);
+        const body = await res.json().catch(() => ({})) as { adopted?: boolean; sessionId?: string };
+
+        // Confirmed success — NOW commit: mark done + strip the marker so a
+        // refresh won't re-fire, then route.
+        sessionStorage.setItem(GUARD_KEY, '1');
+        params.delete('continue');
+        const qs = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+
+        if (body.adopted && body.sessionId) router.push(`/chat/${body.sessionId}`);
+        else router.push('/chat'); // nothing to adopt (cookie cleared / already converted)
       } catch {
-        router.push('/chat');
+        // Transient failure — leave the marker + guard untouched so a reload
+        // retries. Surface a retry affordance instead of dropping the question.
+        inFlight.current = false;
+        setRestoring(false);
+        setFailed(true);
       }
     }, 0);
 
     return () => clearTimeout(t);
   }, [isSignedIn, router]);
 
-  if (!restoring) return null;
+  if (!restoring && !failed) return null;
 
   return (
     <div
@@ -72,8 +84,10 @@ export default function GuestConvert() {
         inset: 0,
         background: tokens.bg.deep,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 16,
         zIndex: 200,
         fontFamily: tokens.font.mono,
         fontSize: 12,
@@ -82,7 +96,21 @@ export default function GuestConvert() {
         color: tokens.text.muted,
       }}
     >
-      Restoring your conversation…
+      {failed ? (
+        <>
+          <span>Couldn&apos;t restore your conversation.</span>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="btn btn-primary"
+            style={{ padding: '10px 20px', letterSpacing: 1 }}
+          >
+            Retry
+          </button>
+        </>
+      ) : (
+        <span>Restoring your conversation…</span>
+      )}
     </div>
   );
 }
