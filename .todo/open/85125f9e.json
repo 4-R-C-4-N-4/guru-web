@@ -1,0 +1,15 @@
+{
+  "id": "85125f9e",
+  "type": "feature",
+  "state": "open",
+  "summary": "Admin UI: surface guest queries — ip-name, query in/out, spend; add guest bucket to overview",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.941Z",
+  "updated_at": "2026-09-07T13:54:56.974Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Depends on guest_queries being populated. Give admin visibility on guests (incl. non-converted): (1) a Guests list page under (admin)/admin/guests with ip_name, IP, query_text/response_text (in/out), model, cost_usd, converted_user_id, created_at, and a converted-vs-not filter; a detail view like admin/queries/[id]. (2) Add guest aggregates to src/lib/admin-queries.ts + /api/admin/overview: a guest spend bucket alongside pro/free in fetchOverviewStats + fetchDailySeries (SUM(cost_usd) FROM guest_queries), and guest query counts. Keep guest spend in a SEPARATE bucket — do not silently merge into the free/pro tier totals. Tests for the new aggregates."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "45598ce4",
+  "type": "feature",
+  "state": "open",
+  "summary": "Preserve the anonymous Q&A through Clerk signup, import to a session, and stamp conversion",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.873Z",
+  "updated_at": "2026-09-07T13:54:56.907Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Depends on the CTA + guest_queries. Stash the guest Q&A keyed to the signed guest token; after Clerk signup completes, import: create a real sessions row + queries row for the new user so they land mid-research at /chat/<sessionId>, snapshot free-tier voice per BRD-chat-voice §5, and UPDATE the originating guest_queries row SET converted_user_id = new user (so admin can measure conversion and the row isn't double-counted as spend against a user). Guard against double-import on refresh. Include a test."
+}

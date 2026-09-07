@@ -1,0 +1,15 @@
+{
+  "id": "f138c9ad",
+  "type": "feature",
+  "state": "open",
+  "summary": "Public ask surface: anonymous entry that streams the real Guru answer with citations",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.738Z",
+  "updated_at": "2026-09-07T13:54:56.771Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Depends on the guest API + proxy allowlist. Public route OUTSIDE the (app) Clerk gate (e.g. /ask) rendering a chat entry that POSTs /api/query/guest and streams the answer with full citations — reuse chat-view.tsx machinery or a trimmed variant, not a bespoke demo. Landing copy: 'Ask Guru anything.' The answer must look identical to the authenticated product."
+}
