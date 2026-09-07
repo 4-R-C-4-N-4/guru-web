@@ -1,13 +1,13 @@
 {
   "id": "97cb0222",
   "type": "chore",
-  "state": "active",
+  "state": "done",
   "summary": "Post-answer signup CTA at the highest-intent moment (non-blocking)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.805Z",
-  "updated_at": "2026-09-07T14:22:54.475Z",
+  "updated_at": "2026-09-07T14:24:26.497Z",
   "relationships": {
     "parent": "ee3736aa"
   },
@@ -17,5 +17,11 @@
     "base_branch": "main",
     "started_at": "2026-09-07T14:22:54.475Z",
     "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "2770313fc4cc6cef3e4141288636741be29a7b68",
+    "resolved_at": "2026-09-07T14:24:26.497Z",
+    "resolved_by": "unknown",
+    "note": "GuestWall buttons route to /sign-up|/sign-in with redirect_url=/ask?continue=1 (Clerk honors redirect_url over fallback), hook-free so it renders without ClerkProvider. Copy matches spec; carry-over reassurance added. Return-trip import is child 45598ce4."
   }
 }
