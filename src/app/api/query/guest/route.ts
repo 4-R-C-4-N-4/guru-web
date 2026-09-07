@@ -40,10 +40,12 @@ import {
   GUEST_COOKIE,
   verifyGuestToken,
   mintGuestToken,
+  peekGuestQuery,
   consumeGuestQuery,
   guestTokenHash,
   ipName,
   clientIpFrom,
+  readCookie,
 } from '@/lib/guest';
 
 export const runtime = 'nodejs';
@@ -52,18 +54,6 @@ export const runtime = 'nodejs';
 const MAX_QUERY_CHARS = 4000;
 
 const GUEST_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days, matches the token window
-
-/** Read a single cookie value from the request's Cookie header. */
-function readCookie(headers: Headers, name: string): string | null {
-  const raw = headers.get('cookie');
-  if (!raw) return null;
-  for (const part of raw.split(';')) {
-    const eq = part.indexOf('=');
-    if (eq < 0) continue;
-    if (part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
-  }
-  return null;
-}
 
 function guestCookie(token: string): string {
   const secure = (process.env.NEXT_PUBLIC_APP_URL ?? '').startsWith('https')
@@ -78,23 +68,29 @@ export async function POST(req: Request) {
   // 1. Resolve or mint the guest token; the entitlement id is the token's
   //    verified inner id. A missing/forged cookie mints a fresh token (and
   //    the IP throttle is what stops cookie-clearing from farming questions).
+  //    Verify once (#5): a fresh mint verifies by construction.
   const existing = readCookie(req.headers, GUEST_COOKIE);
-  const token = verifyGuestToken(existing) ? existing! : mintGuestToken();
-  const tokenId = verifyGuestToken(token)!; // freshly minted verifies by construction
+  const existingId = verifyGuestToken(existing);
+  const token = existingId ? existing! : mintGuestToken();
+  const tokenId = existingId ?? verifyGuestToken(token)!;
   const ip = clientIpFrom(req.headers);
 
-  // 2. Consume one guest question up front (token one-shot, then IP throttle).
-  const verdict = consumeGuestQuery(tokenId, ip);
-  if (!verdict.allowed) {
-    const msg = verdict.reason === 'ip'
+  // 2. Pre-flight entitlement check — NON-consuming. Reject an already-spent
+  //    guest before doing any work, but do NOT burn their question yet: the
+  //    consume happens only once we're committed to producing an answer
+  //    (after validation + the stream opens). A 400/429/500 must never cost
+  //    a first-time visitor their one free question.
+  const pre = peekGuestQuery(tokenId, ip);
+  if (!pre.allowed) {
+    const msg = pre.reason === 'ip'
       ? 'Too many free questions from your network. Create a free account to continue.'
       : "You've used your free question. Create a free account to keep exploring.";
     return Response.json(
-      { error: msg, reason: verdict.reason },
+      { error: msg, reason: pre.reason },
       {
         status: 429,
         headers: {
-          'Retry-After': String(verdict.retryAfterSeconds),
+          'Retry-After': String(pre.retryAfterSeconds),
           'X-Guest-Remaining': '0',
           'Set-Cookie': guestCookie(token),
         },
@@ -135,8 +131,14 @@ export async function POST(req: Request) {
     { role: 'user',   content: prompt },
   ];
 
-  // 5. Stream. Opening upstream here keeps the 500-on-open contract.
+  // 5. Stream. Opening upstream here keeps the 500-on-open contract: if the
+  //    model can't be reached this throws before we return (and before the
+  //    consume below), so the visitor keeps their free question.
   const stream = await completeStream(messages, modelId, slug);
+
+  // Commit point (#1): the answer is now being produced, so spend the one
+  // free question. Everything that could 400/429/500 has already passed.
+  consumeGuestQuery(tokenId, ip);
 
   const readable = buildAnswerStream({
     stream,

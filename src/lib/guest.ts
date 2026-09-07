@@ -35,7 +35,7 @@
  */
 
 import { createHash, createHmac, timingSafeEqual, randomBytes } from 'crypto';
-import { ipRateLimit } from './ip-rate-limit';
+import { ipRateLimit, peekIpRateLimit } from './ip-rate-limit';
 
 /** Cookie name carrying the signed guest token. */
 export const GUEST_COOKIE = 'guru_guest';
@@ -114,17 +114,38 @@ export interface GuestVerdict {
   reason: 'token' | 'ip' | null;
 }
 
+const TOKEN_KEY = (tokenId: string) => `guest-token:${tokenId}`;
+const IP_KEY    = (ip: string)      => `guest-ip:${ip}`;
+
 /**
- * Check-and-consume one guest question for (tokenId, ip). Consumes on
- * call — the caller has already committed to running the query. Token
- * layer first (see module header for ordering rationale).
+ * Non-consuming pre-flight check for (tokenId, ip): is a free question
+ * available right now? Use this to reject an already-spent guest BEFORE
+ * doing any work (retrieval, model call), without burning their question —
+ * the actual consume happens once we're committed to producing an answer.
+ * Token layer first (see module header for ordering rationale).
+ */
+export function peekGuestQuery(tokenId: string, ip: string): GuestVerdict {
+  const tok = peekIpRateLimit(TOKEN_KEY(tokenId), FREE_GUEST_QUERIES);
+  if (!tok.allowed) return { allowed: false, retryAfterSeconds: tok.retryAfterSeconds, reason: 'token' };
+  const ip_ = peekIpRateLimit(IP_KEY(ip), GUEST_IP_LIMIT);
+  if (!ip_.allowed) return { allowed: false, retryAfterSeconds: ip_.retryAfterSeconds, reason: 'ip' };
+  return { allowed: true, retryAfterSeconds: 0, reason: null };
+}
+
+/**
+ * Consume one guest question for (tokenId, ip). Call this only at the point
+ * of commitment — after the body validates and the model stream has opened —
+ * so a 400/429/500 never burns the visitor's one free question. Token layer
+ * first. (peekGuestQuery → consumeGuestQuery has a benign TOCTOU: two truly
+ * concurrent first-questions can both pass the peek and over-grant by one;
+ * the IP layer bounds it.)
  */
 export function consumeGuestQuery(tokenId: string, ip: string): GuestVerdict {
-  const tok = ipRateLimit(`guest-token:${tokenId}`, FREE_GUEST_QUERIES, GUEST_TOKEN_WINDOW_MS);
+  const tok = ipRateLimit(TOKEN_KEY(tokenId), FREE_GUEST_QUERIES, GUEST_TOKEN_WINDOW_MS);
   if (!tok.allowed) {
     return { allowed: false, retryAfterSeconds: tok.retryAfterSeconds, reason: 'token' };
   }
-  const ip_ = ipRateLimit(`guest-ip:${ip}`, GUEST_IP_LIMIT, GUEST_IP_WINDOW_MS);
+  const ip_ = ipRateLimit(IP_KEY(ip), GUEST_IP_LIMIT, GUEST_IP_WINDOW_MS);
   if (!ip_.allowed) {
     return { allowed: false, retryAfterSeconds: ip_.retryAfterSeconds, reason: 'ip' };
   }
@@ -152,6 +173,21 @@ export function ipName(ip: string): string {
   const adj = ADJECTIVES[h[0] % ADJECTIVES.length];
   const creature = CREATURES[h[1] % CREATURES.length];
   return `${adj}-${creature}`;
+}
+
+/**
+ * Read a single cookie value from a request's Cookie header. Shared by the
+ * guest query and convert routes so cookie-parsing lives in one place.
+ */
+export function readCookie(headers: Headers, name: string): string | null {
+  const raw = headers.get('cookie');
+  if (!raw) return null;
+  for (const part of raw.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
+  }
+  return null;
 }
 
 /**

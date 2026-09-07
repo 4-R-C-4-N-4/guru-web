@@ -35,6 +35,9 @@ describe('fetchOverviewStats — guest bucket', () => {
     expect(stats.spend_today_guest).toBe(0.02);
     expect(stats.guest_queries_today).toBe(2);
     expect(stats.guest_queries_this_month).toBe(9);
+    // MTD total is the operator's real bill — it includes the guest bucket
+    // (spend_month_pro 0 + free 0.01 + guest 0.09). Review finding #2.
+    expect(stats.spend_mtd_total).toBeCloseTo(0.10, 5);
 
     const sql = mockOne.mock.calls[0]![0] as string;
     // Guest spend + count buckets present.

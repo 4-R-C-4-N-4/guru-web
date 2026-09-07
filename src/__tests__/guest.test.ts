@@ -9,9 +9,11 @@ import { resetIpRateLimiter } from '@/lib/ip-rate-limit';
 import {
   mintGuestToken,
   verifyGuestToken,
+  peekGuestQuery,
   consumeGuestQuery,
   ipName,
   clientIpFrom,
+  readCookie,
   FREE_GUEST_QUERIES,
 } from '@/lib/guest';
 
@@ -72,6 +74,27 @@ describe('consumeGuestQuery gate', () => {
     // A different fresh token from the same IP should still be allowed —
     // the denied calls above must not have burned IP budget.
     expect(consumeGuestQuery('tok_c', ip).allowed).toBe(true);
+  });
+});
+
+describe('peekGuestQuery (non-consuming)', () => {
+  it('does not consume: repeated peeks stay allowed until an actual consume', () => {
+    const id = 'peek_tok';
+    expect(peekGuestQuery(id, '3.3.3.3').allowed).toBe(true);
+    expect(peekGuestQuery(id, '3.3.3.3').allowed).toBe(true); // still available
+    consumeGuestQuery(id, '3.3.3.3');                          // now spend it
+    const after = peekGuestQuery(id, '3.3.3.3');
+    expect(after.allowed).toBe(false);
+    expect(after.reason).toBe('token');
+  });
+});
+
+describe('readCookie', () => {
+  it('extracts a named cookie value and returns null when absent', () => {
+    const h = new Headers({ cookie: 'a=1; guru_guest=xyz.sig; b=2' });
+    expect(readCookie(h, 'guru_guest')).toBe('xyz.sig');
+    expect(readCookie(h, 'missing')).toBeNull();
+    expect(readCookie(new Headers(), 'guru_guest')).toBeNull();
   });
 });
 

@@ -139,7 +139,10 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
   }
 
   const n = (k: string) => Number(row[k] ?? 0);
-  const spend_mtd_total = n('spend_month_pro') + n('spend_month_free');
+  // MTD is the operator's actual bill, so it includes the guest bucket —
+  // guest questions incur real OpenRouter charges. The per-tier tiles keep
+  // guest separate; only this headline total (and its projection) rolls it in.
+  const spend_mtd_total = n('spend_month_pro') + n('spend_month_free') + n('spend_month_guest');
 
   return {
     users_total:          n('users_total'),

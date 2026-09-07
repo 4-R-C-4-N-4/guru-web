@@ -27,22 +27,11 @@
  */
 
 import { requireUser } from '@/lib/auth';
-import { one, exec } from '@/lib/db';
+import { one, exec, query } from '@/lib/db';
 import { DEFAULT_VOICE } from '@/lib/prompt';
-import { GUEST_COOKIE, verifyGuestToken, guestTokenHash } from '@/lib/guest';
+import { GUEST_COOKIE, verifyGuestToken, guestTokenHash, readCookie } from '@/lib/guest';
 
 export const runtime = 'nodejs';
-
-function readCookie(headers: Headers, name: string): string | null {
-  const raw = headers.get('cookie');
-  if (!raw) return null;
-  for (const part of raw.split(';')) {
-    const eq = part.indexOf('=');
-    if (eq < 0) continue;
-    if (part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
-  }
-  return null;
-}
 
 /** Expire the guest cookie once its question has been adopted (or found spent). */
 const CLEAR_COOKIE = `${GUEST_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
@@ -59,38 +48,46 @@ export async function POST(req: Request) {
   if (!tokenId) return nothingToAdopt();
   const hash = guestTokenHash(tokenId);
 
-  // The pending guest question for this token. One-shot means at most one,
-  // but LIMIT 1 (newest) is defensive.
-  const pending = await one<{ id: string; query_text: string }>(
-    `SELECT id, query_text FROM queries
-      WHERE guest_token_hash = $1 AND user_id IS NULL
-      ORDER BY created_at DESC
-      LIMIT 1`,
-    [hash]
+  // Atomically CLAIM the pending guest row(s) in a single UPDATE gated on
+  // `user_id IS NULL`. This is the race guard: two tabs both returning from
+  // signup with ?continue=1 both hit this, but only one UPDATE matches the
+  // row — the loser gets zero rows and adopts nothing, so no orphan empty
+  // session is ever created and no false `adopted:true` is returned. One-shot
+  // means at most one row; if the IP backstop let a token accrue several,
+  // they share one identity and are adopted together.
+  const claimed = await query<{ id: string; query_text: string }>(
+    `UPDATE queries SET user_id = $1
+       WHERE guest_token_hash = $2 AND user_id IS NULL
+       RETURNING id, query_text`,
+    [user.id, hash]
   );
-  if (!pending) return nothingToAdopt();
+  if (claimed.length === 0) return nothingToAdopt();
+  const primary = claimed[0]!;
+  const claimedIds = claimed.map((r) => r.id);
 
-  // Create the session the adopted query will live in. Free-tier voice —
-  // a brand-new account is always free (BRD-chat-voice §5).
+  // We won the claim — create the session the adopted query will live in.
+  // Free-tier voice: a brand-new account is always free (BRD-chat-voice §5).
   const session = await one<{ id: string }>(
     `INSERT INTO sessions (user_id, title, voice, created_at, updated_at)
      VALUES ($1, $2, $3, now(), now())
      RETURNING id`,
-    [user.id, pending.query_text.slice(0, 80), DEFAULT_VOICE]
+    [user.id, primary.query_text.slice(0, 80), DEFAULT_VOICE]
   );
   if (!session) {
-    // Session insert failed — leave the guest row untouched so a retry can
-    // still adopt it. Don't clear the cookie.
+    // Session insert failed after we already claimed the row(s). They now
+    // belong to the user (user_id set) but have no session; report failure so
+    // the client falls back to /chat. A retry can't re-claim (user_id no
+    // longer NULL); the rows are simply owned-but-sessionless — harmless.
     return Response.json({ adopted: false, error: 'Could not create session' }, { status: 500 });
   }
 
-  // Adopt in place. The WHERE user_id IS NULL keeps this idempotent: a
-  // second fire matches nothing.
+  // Attach the claimed row(s) to the new session and normalise them to a
+  // free query with the IP shed. Targets exactly the ids we claimed.
   await exec(
     `UPDATE queries
-        SET user_id = $1, session_id = $2, tier_used = 'free', guest_ip = NULL
-      WHERE guest_token_hash = $3 AND user_id IS NULL`,
-    [user.id, session.id, hash]
+        SET session_id = $1, tier_used = 'free', guest_ip = NULL
+      WHERE id = ANY($2)`,
+    [session.id, claimedIds]
   );
 
   return Response.json(

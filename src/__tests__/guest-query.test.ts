@@ -28,6 +28,7 @@ import * as prompt from '@/lib/prompt';
 import * as model from '@/lib/model';
 import * as cost from '@/lib/cost';
 import { resetIpRateLimiter } from '@/lib/ip-rate-limit';
+import { mintGuestToken } from '@/lib/guest';
 
 const mockExec     = db.exec               as MockedFunction<typeof db.exec>;
 const mockOne      = db.one                as MockedFunction<typeof db.one>;
@@ -160,5 +161,46 @@ describe('POST /api/query/guest — robustness', () => {
     const res = await guestPOST(req({ query: '   ' }, { 'x-forwarded-for': '1.2.3.4' }));
     expect(res.status).toBe(400);
     expect(mockStream).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/query/guest — does not burn the free question on failure (todo:732e73b1 review #1)', () => {
+  it('a 400 (bad body) does not consume the token: a valid retry still succeeds', async () => {
+    const token = mintGuestToken();
+    const cookie = `guru_guest=${token}`;
+
+    const bad = await guestPOST(req({ query: '   ' }, { 'x-forwarded-for': '4.4.4.4', cookie }));
+    expect(bad.status).toBe(400);
+
+    const ok = await guestPOST(req({ query: 'What is gnosis?' }, { 'x-forwarded-for': '4.4.4.4', cookie }));
+    expect(ok.status).toBe(200); // question was NOT burned by the 400
+    await ok.text();
+  });
+
+  it('an upstream open failure does not consume the token: a valid retry still succeeds', async () => {
+    const token = mintGuestToken();
+    const cookie = `guru_guest=${token}`;
+
+    mockStream.mockRejectedValueOnce(new Error('upstream down'));
+    await expect(
+      guestPOST(req({ query: 'q1' }, { 'x-forwarded-for': '5.5.5.5', cookie })),
+    ).rejects.toThrow(); // 500-on-open contract; happens before consume
+
+    const ok = await guestPOST(req({ query: 'q2' }, { 'x-forwarded-for': '5.5.5.5', cookie }));
+    expect(ok.status).toBe(200); // question survived the transient failure
+    await ok.text();
+  });
+
+  it('consumes exactly once on success: the SECOND real question is refused', async () => {
+    const token = mintGuestToken();
+    const cookie = `guru_guest=${token}`;
+
+    const first = await guestPOST(req({ query: 'q1' }, { 'x-forwarded-for': '6.6.6.6', cookie }));
+    expect(first.status).toBe(200);
+    await first.text();
+
+    const second = await guestPOST(req({ query: 'q2' }, { 'x-forwarded-for': '6.6.6.6', cookie }));
+    expect(second.status).toBe(429);
+    expect((await second.json()).reason).toBe('token');
   });
 });

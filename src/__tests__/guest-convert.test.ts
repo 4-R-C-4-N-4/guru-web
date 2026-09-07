@@ -17,9 +17,10 @@ import * as db from '@/lib/db';
 import * as auth from '@/lib/auth';
 import { mintGuestToken, verifyGuestToken, guestTokenHash } from '@/lib/guest';
 
-const mockOne  = db.one           as MockedFunction<typeof db.one>;
-const mockExec = db.exec          as MockedFunction<typeof db.exec>;
-const mockAuth = auth.requireUser as MockedFunction<typeof auth.requireUser>;
+const mockOne   = db.one           as MockedFunction<typeof db.one>;
+const mockExec  = db.exec          as MockedFunction<typeof db.exec>;
+const mockQuery = db.query         as MockedFunction<typeof db.query>;
+const mockAuth  = auth.requireUser as MockedFunction<typeof auth.requireUser>;
 
 const { POST } = await import('@/app/api/guest/convert/route');
 
@@ -39,32 +40,37 @@ beforeEach(() => {
 });
 
 describe('POST /api/guest/convert', () => {
-  it('adopts the pending guest row in place and returns the new session', async () => {
+  it('atomically claims the guest row, creates a session, and attaches it', async () => {
     const token = mintGuestToken();
     const hash = guestTokenHash(verifyGuestToken(token)!);
 
-    mockOne
-      .mockResolvedValueOnce({ id: 'q1', query_text: 'What is gnosis?' }) // pending SELECT
-      .mockResolvedValueOnce({ id: 's_new' });                            // session INSERT
+    mockQuery.mockResolvedValueOnce([{ id: 'q1', query_text: 'What is gnosis?' }]); // claim UPDATE ... RETURNING
+    mockOne.mockResolvedValueOnce({ id: 's_new' });                                 // session INSERT
 
     const res = await POST(req(`guru_guest=${token}`));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ adopted: true, sessionId: 's_new' });
 
-    // Session created for the user with free-tier scholar voice.
-    const [sessionSql, sessionParams] = mockOne.mock.calls[1]!;
+    // Claim is a single atomic UPDATE gated on user_id IS NULL (race guard).
+    const [claimSql, claimParams] = mockQuery.mock.calls[0]!;
+    expect(claimSql).toMatch(/UPDATE queries SET user_id = \$1/);
+    expect(claimSql).toMatch(/WHERE guest_token_hash = \$2 AND user_id IS NULL/);
+    expect(claimSql).toMatch(/RETURNING id, query_text/);
+    expect(claimParams).toEqual(['user_1', hash]);
+
+    // Session created only after winning the claim (no orphan sessions).
+    const [sessionSql, sessionParams] = mockOne.mock.calls[0]!;
     expect(sessionSql).toMatch(/INSERT INTO sessions/i);
     expect(sessionParams).toEqual(['user_1', 'What is gnosis?', 'scholar']);
 
-    // Row adopted in place — UPDATE, not a second INSERT into queries.
+    // Attach the claimed ids to the session; adopted in place (no copy).
     expect(mockExec).toHaveBeenCalledTimes(1);
-    const [updSql, updParams] = mockExec.mock.calls[0]!;
-    expect(updSql).toMatch(/UPDATE queries/i);
-    expect(updSql).toMatch(/SET user_id = \$1, session_id = \$2, tier_used = 'free', guest_ip = NULL/);
-    expect(updSql).toMatch(/WHERE guest_token_hash = \$3 AND user_id IS NULL/); // idempotent
-    expect(updParams).toEqual(['user_1', 's_new', hash]);
+    const [attachSql, attachParams] = mockExec.mock.calls[0]!;
+    expect(attachSql).toMatch(/UPDATE queries/i);
+    expect(attachSql).toMatch(/SET session_id = \$1, tier_used = 'free', guest_ip = NULL/);
+    expect(attachSql).toMatch(/WHERE id = ANY\(\$2\)/);
+    expect(attachParams).toEqual(['s_new', ['q1']]);
 
-    // Guest cookie is expired so a refresh can't re-fire.
     expect(res.headers.get('set-cookie')).toMatch(/guru_guest=;.*Max-Age=0/);
   });
 
@@ -72,18 +78,20 @@ describe('POST /api/guest/convert', () => {
     const res = await POST(req());
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ adopted: false });
+    expect(mockQuery).not.toHaveBeenCalled();
     expect(mockOne).not.toHaveBeenCalled();
     expect(mockExec).not.toHaveBeenCalled();
   });
 
-  it('is a no-op when the token has no pending row (already converted / cleared)', async () => {
+  it('lost race / nothing pending: claims 0 rows → no session created, adopted:false', async () => {
     const token = mintGuestToken();
-    mockOne.mockResolvedValueOnce(null); // pending SELECT misses
+    mockQuery.mockResolvedValueOnce([]); // claim matched nothing (other tab won, or already converted)
 
     const res = await POST(req(`guru_guest=${token}`));
     expect((await res.json()).adopted).toBe(false);
-    expect(mockOne).toHaveBeenCalledTimes(1);       // only the SELECT
-    expect(mockExec).not.toHaveBeenCalled();          // no session, no update
+    expect(mockQuery).toHaveBeenCalledTimes(1); // only the claim
+    expect(mockOne).not.toHaveBeenCalled();       // NO orphan session
+    expect(mockExec).not.toHaveBeenCalled();
   });
 
   it('401s an unauthenticated caller', async () => {

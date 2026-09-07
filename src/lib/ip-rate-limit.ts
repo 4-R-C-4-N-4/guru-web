@@ -47,6 +47,23 @@ export function ipRateLimit(key: string, limit: number, windowMs: number): IpRat
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
+/**
+ * Non-mutating check: is a call under the limit RIGHT NOW, without consuming
+ * a slot or creating a window? Used to reject over-quota callers before doing
+ * expensive work, deferring the actual increment (ipRateLimit) to the point
+ * of commitment. An absent or expired window reads as allowed and is left
+ * untouched.
+ */
+export function peekIpRateLimit(key: string, limit: number): IpRateVerdict {
+  const now = Date.now();
+  const w = windows.get(key);
+  if (!w || w.resetAt <= now) return { allowed: true, retryAfterSeconds: 0 };
+  if (w.count >= limit) {
+    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((w.resetAt - now) / 1000)) };
+  }
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
 /** Test hook. */
 export function resetIpRateLimiter(): void {
   windows.clear();
