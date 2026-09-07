@@ -29,6 +29,11 @@ import * as model from '@/lib/model';
 import * as cost from '@/lib/cost';
 import { resetIpRateLimiter } from '@/lib/ip-rate-limit';
 import { mintGuestToken } from '@/lib/guest';
+import { resolveCuratedModel, DEFAULT_CURATED_SLUG } from '@/lib/curated-models';
+
+// Resolve the expected free-tier model at runtime, not a literal — the id
+// gets bumped periodically (todo:bb6f9864) and a hardcoded string breaks CI.
+const FREE_MODEL_ID = resolveCuratedModel(DEFAULT_CURATED_SLUG);
 
 const mockExec     = db.exec               as MockedFunction<typeof db.exec>;
 const mockOne      = db.one                as MockedFunction<typeof db.one>;
@@ -84,7 +89,7 @@ describe('POST /api/query/guest — happy path', () => {
   it('streams the real answer with citations and a model header', async () => {
     const res = await guestPOST(req({ query: 'What is gnosis?' }, { 'x-forwarded-for': '203.0.113.5' }));
     expect(res.status).toBe(200);
-    expect(res.headers.get('X-Model-Used')).toBe('deepseek/deepseek-v4-pro');
+    expect(res.headers.get('X-Model-Used')).toBe(FREE_MODEL_ID);
     expect(res.headers.get('X-Guest-Remaining')).toBe('0');
     expect(res.headers.get('X-Citations')).toBeTruthy();
     expect(res.headers.get('set-cookie')).toMatch(/guru_guest=.+; Path=\/; HttpOnly/);
