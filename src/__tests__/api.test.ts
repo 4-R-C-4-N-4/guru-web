@@ -936,7 +936,7 @@ describe('POST /api/query', () => {
     // Resolved model id surfaced in headers so the chat-view can
     // render the attribution line during the live stream (BRD §7.4).
     // Free tier always resolves to the deepseek default.
-    expect(res.headers.get('X-Model-Used')).toBe('deepseek/deepseek-v4-pro');
+    expect(res.headers.get('X-Model-Used')).toBe('deepseek/deepseek-v4-pro-0813');
 
     const text = await res.text();
     expect(text).toBe('Hello world');
@@ -1363,23 +1363,23 @@ describe('POST /api/query — curated slug resolution', () => {
   it('pro user with preferredModel=null falls through to deepseek default', async () => {
     await runQueryWithPrefs(PRO_USER, null);
     const [, modelId, slug] = mockStream.mock.calls[0]!;
-    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(modelId).toBe('deepseek/deepseek-v4-pro-0813');
     expect(slug).toBe('deepseek');
     const [, persistParams] = mockExec.mock.calls[0]!;
-    expect(persistParams![5]).toBe('deepseek/deepseek-v4-pro');
+    expect(persistParams![5]).toBe('deepseek/deepseek-v4-pro-0813');
   });
 
   it('free user with any preferredModel value still resolves to default', async () => {
     await runQueryWithPrefs(FREE_USER, 'anthropic');
     const [, modelId, slug] = mockStream.mock.calls[0]!;
-    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(modelId).toBe('deepseek/deepseek-v4-pro-0813');
     expect(slug).toBe('deepseek');
   });
 
   it('pro user with stale/unknown slug (post-rename) falls through to default', async () => {
     await runQueryWithPrefs(PRO_USER, 'old-removed-slug');
     const [, modelId, slug] = mockStream.mock.calls[0]!;
-    expect(modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(modelId).toBe('deepseek/deepseek-v4-pro-0813');
     expect(slug).toBe('deepseek');
   });
 });

@@ -103,10 +103,10 @@ export const PROVIDER_DISPLAY: Record<CuratedSlug, ProviderDisplay> = {
 
 /**
  * Reverse-map an OpenRouter model id to its CuratedSlug. Robust to
- * version bumps — `anthropic/claude-sonnet-4.6` and a future
- * `anthropic/claude-sonnet-5` both map to 'anthropic'. Returns null
- * for ids outside the curated providers (legacy rows, dev pokes,
- * etc.) so the caller can choose to render or skip the badge.
+ * version bumps — it keys off the provider prefix only, so every
+ * `anthropic/claude-*` id maps to 'anthropic' regardless of version.
+ * Returns null for ids outside the curated providers (legacy rows,
+ * dev pokes, etc.) so the caller can choose to render or skip the badge.
  */
 export function providerSlugFromModelId(modelId: string): CuratedSlug | null {
   // OpenRouter uses 'x-ai/...' but our slug is 'xai' — translate.

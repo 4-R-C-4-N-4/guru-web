@@ -28,8 +28,8 @@ describe('CURATED_MODELS', () => {
   it('every slug maps to a fully-qualified OpenRouter id', () => {
     for (const [slug, id] of Object.entries(CURATED_MODELS)) {
       // OpenRouter ids are <provider>/<model>. The provider portion
-      // doesn't have to match the slug (slug 'xai' resolves to
-      // 'x-ai/grok-4.3', for example), but the structure has to be
+      // doesn't have to match the slug (slug 'xai' resolves to an
+      // 'x-ai/...' id, for example), but the structure has to be
       // <something>/<something>.
       expect(id, `${slug} → ${id}`).toMatch(/^[a-z0-9-]+\/[a-z0-9.-]+$/);
     }
@@ -39,16 +39,16 @@ describe('CURATED_MODELS', () => {
     expect(CURATED_MODELS[DEFAULT_CURATED_SLUG]).toBeDefined();
   });
 
-  it('DEFAULT_CURATED_SLUG is "deepseek" (the cheap floor — BRD §1)', () => {
+  it('DEFAULT_CURATED_SLUG is "deepseek" (the default free-tier model — BRD §1)', () => {
     expect(DEFAULT_CURATED_SLUG).toBe('deepseek');
   });
 });
 
 describe('resolveCuratedModel()', () => {
   it('returns the OpenRouter id for each slug', () => {
-    expect(resolveCuratedModel('deepseek')).toBe('deepseek/deepseek-v4-pro');
-    expect(resolveCuratedModel('xai')).toBe('x-ai/grok-4.3');
-    expect(resolveCuratedModel('google')).toBe('google/gemini-3.6-flash');
+    expect(resolveCuratedModel('deepseek')).toBe('deepseek/deepseek-v4-pro-0813');
+    expect(resolveCuratedModel('xai')).toBe('x-ai/grok-4.6');
+    expect(resolveCuratedModel('google')).toBe('google/gemini-3.8-flash');
     expect(resolveCuratedModel('anthropic')).toBe('anthropic/claude-sonnet-5');
     expect(resolveCuratedModel('openai')).toBe('openai/gpt-5.6-terra');
   });

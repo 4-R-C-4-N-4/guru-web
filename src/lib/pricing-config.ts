@@ -65,10 +65,10 @@ export const PRO_DAILY_QUERY_LIMIT  = 100;
  *    deepseek/deepseek-chat   ~5,200 in / 1,200 out
  *    anthropic/claude-sonnet-4.5  ~12,400 in / 2,000-2,600 out
  *
- *  We have ZERO data on the curated picker models themselves
- *  (deepseek-v4-pro, grok-4.3, sonnet-4.6, gpt-5.4). The 10k/2k
- *  pair is a conservative middle ground that covers DeepSeek's
- *  terse 1.2k case and Sonnet 4.5's 2-2.6k case with headroom.
+ *  We have ZERO data on the current curated picker models
+ *  themselves. The 10k/2k pair is a conservative middle ground that
+ *  covers DeepSeek's terse 1.2k case and Sonnet's 2-2.6k case with
+ *  headroom.
  *
  *  Recalibrate post-launch from real queries data — admin
  *  telemetry script TBD. */

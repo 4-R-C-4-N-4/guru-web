@@ -31,6 +31,41 @@ export const FALLBACK_PRICING: Record<string, ModelPrice> = {
   // src/lib/curated-models.ts gets a row here so a fresh-VPS sync
   // during an OpenRouter outage still seeds rows for everything the
   // live path can pick. BRD-model-selection §6.4.
+  // Approximate bootstrap values; `npm run sync-pricing` overwrites
+  // these with live OpenRouter rates on its next run.
+  'deepseek/deepseek-v4-pro-0813': {
+    input_per_mtok: 1.1154,
+    output_per_mtok: 3.3462,
+    cached_input_per_mtok: 0.0372,
+  },
+  'x-ai/grok-4.6': {
+    input_per_mtok: 2.0,
+    output_per_mtok: 6.0,
+    cached_input_per_mtok: 0.50,
+  },
+  // NB: Gemini Flash is priced well below the other curated models
+  // right now, but it's an agentic-coding-tuned model on introductory
+  // pricing — treat its low per-query cost as promotional, not a
+  // reason to make it the default. sync-pricing tracks the live rate.
+  'google/gemini-3.8-flash': {
+    input_per_mtok: 0.75,
+    output_per_mtok: 3.75,
+    cached_input_per_mtok: 0.075,
+  },
+  'anthropic/claude-sonnet-5': {
+    input_per_mtok: 2.0,
+    output_per_mtok: 10.0,
+    cached_input_per_mtok: 0.20,
+  },
+  'openai/gpt-5.6-terra': {
+    input_per_mtok: 2.50,
+    output_per_mtok: 15.00,
+    cached_input_per_mtok: 0.25,
+  },
+
+  // One-release safety net: the ids just rolled off the picker stay so
+  // any queries still in flight against the previous defaults cost-out
+  // correctly before the network sync runs. Drop on the next bump.
   'deepseek/deepseek-v4-pro': {
     input_per_mtok: 0.435,
     output_per_mtok: 0.870,
@@ -45,30 +80,5 @@ export const FALLBACK_PRICING: Record<string, ModelPrice> = {
     input_per_mtok: 1.50,
     output_per_mtok: 7.50,
     cached_input_per_mtok: 0.15,
-  },
-  'anthropic/claude-sonnet-5': {
-    input_per_mtok: 2.0,
-    output_per_mtok: 10.0,
-    cached_input_per_mtok: 0.20,
-  },
-  'openai/gpt-5.6-terra': {
-    input_per_mtok: 2.50,
-    output_per_mtok: 15.00,
-    cached_input_per_mtok: 0.25,
-  },
-
-  // One-release safety net: sonnet-4.6 and gpt-5.4 stay so any
-  // queries already in flight against the previous picker defaults
-  // still cost-out correctly when the network sync hasn't run yet.
-  // Drop on the next bump.
-  'anthropic/claude-sonnet-4.6': {
-    input_per_mtok: 3.0,
-    output_per_mtok: 15.0,
-    cached_input_per_mtok: 0.30,
-  },
-  'openai/gpt-5.4': {
-    input_per_mtok: 2.50,
-    output_per_mtok: 15.00,
-    cached_input_per_mtok: 0.25,
   },
 };
