@@ -1,0 +1,27 @@
+{
+  "id": "751a356c",
+  "type": "chore",
+  "state": "done",
+  "summary": "Allow the public ask route + guest API through Clerk in src/proxy.ts",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.674Z",
+  "updated_at": "2026-09-07T14:17:09.655Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Clerk middleware lives in src/proxy.ts (Next 16 renamed middleware->proxy). The whole chat UI is gated by (app)/layout.tsx which bounces signed-out users to /sign-in. Add the public ask page path and /api/query/guest to the public (non-protected) matcher so an anonymous visitor reaches them without a redirect. Keep every existing protected route protected — scope the allowlist tightly. Note: /admin stays 404-gated for non-admins.",
+  "work": {
+    "branch": "feat/anon-first-question",
+    "base_branch": "main",
+    "started_at": "2026-09-07T14:15:47.233Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "48982bd7010b846efb2bb3d33761fb960aef259e",
+    "resolved_at": "2026-09-07T14:17:09.655Z",
+    "resolved_by": "unknown",
+    "note": "Added Axis 3 PUBLIC_PATH short-circuit in proxy.ts for /ask + /api/query/guest; precise-match test in admin.test.ts. Handler was already no-op decode-only, so this is contract insurance against future auth.protect()."
+  }
+}

@@ -66,6 +66,21 @@ const clerkHandler = clerkMiddleware(async () => {
 const ADMIN_PATH = /^\/(admin|api\/admin)(\/|$)/;
 
 /**
+ * Explicitly-public surfaces of the anonymous first-question funnel
+ * (todo:751a356c): the public /ask page and the guest query API. These
+ * are already reachable today — the clerkMiddleware handler below is a
+ * no-op that only decodes a session, it never protects a route — but
+ * declaring them here keeps them public by contract, so a future change
+ * that adds route protection to the handler cannot silently gate the one
+ * surface a signed-out visitor must reach. The trailing `(\/|$)` keeps
+ * /ask from also matching /asking, and /api/query/guest from matching a
+ * hypothetical /api/query/guestbook. Note /api/query (authenticated) is
+ * deliberately NOT listed.
+ */
+const PUBLIC_PATH = /^\/(ask|api\/query\/guest)(\/|$)/;
+export { PUBLIC_PATH };
+
+/**
  * Tailnet hostname. Hardcoded to match deploy/Caddyfile — both
  * places need updating together if the tailnet suffix changes.
  */
@@ -80,6 +95,13 @@ export default function middleware(req: NextRequest, ev: NextFetchEvent) {
   // Axis 2: skip Clerk on admin paths even on the public host. Caddy
   // already rewrites /admin → /admin-404 there, so this is defensive.
   if (ADMIN_PATH.test(req.nextUrl.pathname)) {
+    return;
+  }
+
+  // Axis 3: keep the anonymous funnel public by contract. A signed-out
+  // visitor must reach /ask and /api/query/guest; short-circuiting Clerk
+  // here guarantees that regardless of any protection the handler grows.
+  if (PUBLIC_PATH.test(req.nextUrl.pathname)) {
     return;
   }
 

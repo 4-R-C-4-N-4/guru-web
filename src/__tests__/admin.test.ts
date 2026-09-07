@@ -155,6 +155,21 @@ describe('middleware (post-cutover)', () => {
     expect(await middleware(makeReq('/api/admin/overview')    as never, {} as never)).toBeUndefined();
   });
 
+  it('short-circuits Clerk for the public funnel paths, precisely (todo:751a356c)', async () => {
+    const { PUBLIC_PATH } = await import('@/proxy');
+    // Matches the two public surfaces and their subpaths…
+    expect(PUBLIC_PATH.test('/ask')).toBe(true);
+    expect(PUBLIC_PATH.test('/api/query/guest')).toBe(true);
+    // …but not the authenticated query API or prefix look-alikes.
+    expect(PUBLIC_PATH.test('/api/query')).toBe(false);
+    expect(PUBLIC_PATH.test('/asking')).toBe(false);
+    expect(PUBLIC_PATH.test('/api/query/guestbook')).toBe(false);
+
+    const middleware = (await import('@/proxy')).default;
+    expect(await middleware(makeReq('/ask')             as never, {} as never)).toBeUndefined();
+    expect(await middleware(makeReq('/api/query/guest') as never, {} as never)).toBeUndefined();
+  });
+
   it('lets clerkMiddleware run on ordinary app paths on the public host', async () => {
     // The mocked clerkMiddleware (top of file) returns whatever
     // clerkHandler returns — for the empty handler we ship, that's
