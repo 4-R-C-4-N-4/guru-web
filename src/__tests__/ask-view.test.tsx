@@ -24,13 +24,16 @@ describe('AskView (initial render)', () => {
 });
 
 describe('GuestWall', () => {
-  it('renders the default CTA with create-account and sign-in actions', () => {
+  it('renders the CTA wired to Clerk sign-up/sign-in with a return-to-/ask redirect', () => {
     const html = renderToStaticMarkup(<GuestWall />);
     expect(html).toContain('Free question used');
     expect(html).toContain('Create free account');
-    expect(html).toContain('href="/sign-up"');
-    expect(html).toContain('href="/sign-in"');
-    expect(html).toContain('Create a free account to keep exploring Guru.');
+    // Buttons carry redirect_url=/ask?continue=1 so the conversion effect
+    // finishes after auth (todo:97cb0222 → todo:45598ce4).
+    const encoded = encodeURIComponent('/ask?continue=1');
+    expect(html).toContain(`href="/sign-up?redirect_url=${encoded}"`);
+    expect(html).toContain(`href="/sign-in?redirect_url=${encoded}"`);
+    expect(html).toContain('create a free account to keep exploring');
   });
 
   it('renders a server-supplied message (e.g. the 429 copy) when given one', () => {
