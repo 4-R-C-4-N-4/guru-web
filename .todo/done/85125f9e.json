@@ -1,13 +1,13 @@
 {
   "id": "85125f9e",
   "type": "feature",
-  "state": "active",
+  "state": "done",
   "summary": "Admin UI: surface guest queries from the queries table — ip-name, in/out, spend; guest bucket in overview",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.941Z",
-  "updated_at": "2026-09-07T14:29:01.124Z",
+  "updated_at": "2026-09-07T14:32:40.488Z",
   "relationships": {
     "parent": "ee3736aa"
   },
@@ -17,5 +17,13 @@
     "base_branch": "main",
     "started_at": "2026-09-07T14:29:01.124Z",
     "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "6449776f4c92551b43b68e6dfd6d89f8f9b6747d",
+    "resolved_at": "2026-09-07T14:32:40.488Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/guest-admin.test.ts",
+    "test_function": "fetchGuestQueries / fetchGuestCount",
+    "note": "admin-queries: OverviewStats guest bucket (spend+counts today/week/month), authed query counts now exclude unconverted guests, fetchDailySeries guest_value, fetchGuestQueries/fetchGuestCount. UI: /admin/guests page (ip-name, IP, Q&A in/out, model, cost), Guest Spend tile, guest sparkline segment, nav link."
   }
 }
