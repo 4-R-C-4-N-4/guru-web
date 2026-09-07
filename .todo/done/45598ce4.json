@@ -1,13 +1,13 @@
 {
   "id": "45598ce4",
   "type": "feature",
-  "state": "active",
+  "state": "done",
   "summary": "On signup, adopt the guest query row in place (set user_id/session_id) and land the user mid-research",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.873Z",
-  "updated_at": "2026-09-07T14:25:05.960Z",
+  "updated_at": "2026-09-07T14:27:02.872Z",
   "relationships": {
     "parent": "ee3736aa"
   },
@@ -17,5 +17,13 @@
     "base_branch": "main",
     "started_at": "2026-09-07T14:25:05.960Z",
     "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "c940040a869f9182dd21670513b88377a9cf7f02",
+    "resolved_at": "2026-09-07T14:27:02.872Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/guest-convert.test.ts",
+    "test_function": "POST /api/guest/convert",
+    "note": "POST /api/guest/convert: in-place UPDATE adoption (no copy), session created w/ scholar voice, guest_ip shed, idempotent WHERE user_id IS NULL, cookie cleared. GuestConvert client effect (StrictMode/refresh/bfcache-safe) lands user on /chat/[sessionId]. Wired via clerkReady gate."
   }
 }
