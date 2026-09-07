@@ -1,0 +1,27 @@
+{
+  "id": "1a766ce5",
+  "type": "chore",
+  "state": "done",
+  "summary": "Migration: make queries.user_id/session_id nullable, add guest columns (guest_ip, ip_name, guest_token_hash)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.472Z",
+  "updated_at": "2026-09-07T14:07:16.704Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Must land BEFORE the guest query path. New migration migrations/016_guest_queries.sql: ALTER TABLE queries ALTER COLUMN user_id DROP NOT NULL, ALTER COLUMN session_id DROP NOT NULL (015 already dropped model_used/tier_used NOT NULL for forked rows — same spirit). ADD COLUMN guest_ip TEXT, ADD COLUMN ip_name TEXT, ADD COLUMN guest_token_hash TEXT (all NULL for authed rows). tier_used carries 'guest' for guest rows so existing pro/free tier aggregates exclude them by default. Add a partial index on (guest_token_hash) WHERE user_id IS NULL for the conversion lookup, and on (created_at) WHERE user_id IS NULL for the guest list + purge. Document in the migration header that a NULL user_id row is a not-yet-converted guest query.",
+  "work": {
+    "branch": "feat/anon-first-question",
+    "base_branch": "main",
+    "started_at": "2026-09-07T14:06:41.261Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "237cadacf0eab9a5562038ea117cd147560493b3",
+    "resolved_at": "2026-09-07T14:07:16.704Z",
+    "resolved_by": "unknown",
+    "note": "migrations/016_guest_queries.sql: DROP NOT NULL on user_id/session_id, add guest columns, partial indexes for conversion lookup + guest-pending scan"
+  }
+}
