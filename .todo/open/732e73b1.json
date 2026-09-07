@@ -2,14 +2,14 @@
   "id": "732e73b1",
   "type": "feature",
   "state": "open",
-  "summary": "Guest query API path: real answer, cost tracked to guest_queries, no user/session/budget writes",
+  "summary": "Guest query API path: real answer, cost tracked as a guest row in queries, no session/budget writes",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.539Z",
-  "updated_at": "2026-09-07T13:54:56.572Z",
+  "updated_at": "2026-09-07T13:59:11.052Z",
   "relationships": {
     "parent": "ee3736aa"
   },
-  "description": "Depends on the guest primitive + guest_queries migration. Dedicated POST /api/query/guest sharing retrieval+prompt+stream helpers with /api/query (extract shared machinery). Pin free-tier defaults: DEFAULT_CURATED_SLUG model, DEFAULT_VOICE (scholar), default retrieval scope — full corpus retrieval + citations, real streamed answer (must NOT feel like a demo). Enforce guest-token one-shot + guest:<ip> throttle up front (429 when exhausted). Compute cost from the usage chunk exactly like the authed path (computeCost) and INSERT one guest_queries row with query/response/tokens/cost_usd/ip/ip_name. Do NOT call reserveBudget/finalizeBudget, do NOT write users/sessions/queries rows. Optional backstop noted in a follow-up: global daily guest-spend cap via SUM(cost_usd) today."
+  "description": "Depends on the guest primitive + migration. Dedicated POST /api/query/guest sharing retrieval+prompt+stream helpers with /api/query (extract shared machinery). Pin free-tier defaults: DEFAULT_CURATED_SLUG model, DEFAULT_VOICE (scholar), default retrieval scope — full corpus retrieval + citations, real streamed answer (must NOT feel like a demo). Enforce guest-token one-shot + guest:<ip> throttle up front (429 when exhausted). Compute cost from the usage chunk exactly like the authed path (computeCost), then INSERT ONE row into queries with user_id=NULL, session_id=NULL, tier_used='guest', guest_ip, ip_name, guest_token_hash, plus query/response/tokens/cost_usd. Do NOT call reserveBudget/finalizeBudget, do NOT create a users or sessions row. Optional follow-up backstop: global daily guest-spend cap via SUM(cost_usd) WHERE tier_used='guest' today."
 }

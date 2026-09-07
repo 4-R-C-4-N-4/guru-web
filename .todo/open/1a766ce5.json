@@ -2,14 +2,14 @@
   "id": "1a766ce5",
   "type": "chore",
   "state": "open",
-  "summary": "Add guest_queries table migration (no users/sessions FK; cost + converted_user_id columns)",
+  "summary": "Migration: make queries.user_id/session_id nullable, add guest columns (guest_ip, ip_name, guest_token_hash)",
   "source": {
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.472Z",
-  "updated_at": "2026-09-07T13:54:56.506Z",
+  "updated_at": "2026-09-07T13:59:10.985Z",
   "relationships": {
     "parent": "ee3736aa"
   },
-  "description": "Depends on nothing else; must land BEFORE the guest query path. New migration migrations/016_guest_queries.sql creating guest_queries: id PK; ip TEXT; ip_name TEXT; guest_token_hash TEXT; query_text TEXT NOT NULL; response_text TEXT NOT NULL; chunks_used JSONB NOT NULL; model_used TEXT; input_tokens INT; output_tokens INT; cached_input_tokens INT; cost_usd NUMERIC; converted_user_id TEXT NULL REFERENCES users(id) ON DELETE SET NULL; created_at TIMESTAMPTZ DEFAULT now(). Index on created_at DESC and on converted_user_id. Rationale: keeps the queries table's user_id/session_id NOT NULL invariant (defended in 015) intact; guest data is segregated for easy retention/purge and clean conversion modeling. converted_user_id IS NULL = a non-converted guest."
+  "description": "Must land BEFORE the guest query path. New migration migrations/016_guest_queries.sql: ALTER TABLE queries ALTER COLUMN user_id DROP NOT NULL, ALTER COLUMN session_id DROP NOT NULL (015 already dropped model_used/tier_used NOT NULL for forked rows — same spirit). ADD COLUMN guest_ip TEXT, ADD COLUMN ip_name TEXT, ADD COLUMN guest_token_hash TEXT (all NULL for authed rows). tier_used carries 'guest' for guest rows so existing pro/free tier aggregates exclude them by default. Add a partial index on (guest_token_hash) WHERE user_id IS NULL for the conversion lookup, and on (created_at) WHERE user_id IS NULL for the guest list + purge. Document in the migration header that a NULL user_id row is a not-yet-converted guest query."
 }

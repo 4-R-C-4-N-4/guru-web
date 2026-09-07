@@ -7,9 +7,9 @@
     "type": "human"
   },
   "created_at": "2026-09-07T13:54:56.607Z",
-  "updated_at": "2026-09-07T13:54:56.640Z",
+  "updated_at": "2026-09-07T13:59:11.085Z",
   "relationships": {
     "parent": "ee3736aa"
   },
-  "description": "Depends on the guest query path. Integration tests: (a) first guest query returns a full streamed answer with citations AND writes exactly one guest_queries row with cost_usd + tokens + ip_name populated; (b) second query on same guest token refused (one-shot); (c) guest:<ip> throttle rejects after N across rotated tokens; (d) assert NO users/sessions/queries row and NO user_budgets reservation created for a guest call; (e) signed-cookie tamper rejected. Mirror existing style in src/__tests__."
+  "description": "Depends on the guest query path. Integration tests: (a) first guest query returns a full streamed answer with citations AND writes exactly one queries row with user_id IS NULL, session_id IS NULL, tier_used='guest', cost_usd + tokens + ip_name populated; (b) second query on same guest token refused (one-shot); (c) guest:<ip> throttle rejects after N across rotated tokens; (d) assert NO users row, NO sessions row, and NO user_budgets reservation for a guest call; (e) signed-cookie tamper rejected; (f) guest rows are excluded from the per-tier spend aggregates (tier_used='guest' not counted as free/pro). Mirror existing style in src/__tests__."
 }
