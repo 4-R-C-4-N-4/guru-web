@@ -114,7 +114,17 @@ if [[ -f "$NEW_SCRIPT" ]] && ! cmp -s "$SELF" "$NEW_SCRIPT"; then
     exec "$SELF" "$@"
 fi
 
-# (No install/build step: the tarball already contains the production
+# 1b. Fix ownership. The tarball is built in CI (root-owned or whatever the
+#    GitHub Actions runner extracted as) and may land with files not owned
+#    by `deploy`. The top-level chown at line 66 only covers files that
+#    existed BEFORE the tarball landed — it runs before unpack. After unpack,
+#    files extracted from the tarball keep the tarball's ownership. This is
+#    idempotent: chown -R on already-correct ownership is a no-op.
+#    Critical: `next start` needs to write .next/cache (mkdir) as `deploy`,
+#    so a root:root .next/cache causes EACCES on the first dynamic request —
+#    observed live after merge of 3cae5ea (guest /ask endpoint 500'd).
+log "fix release ownership"
+sudo /bin/chown -R deploy:deploy "$RELEASE"
 # build. `next build` baked NEXT_PUBLIC_* into the client bundle in CI —
 # deploy.yml fetches /etc/guru-web.public.env from this box first, so that
 # file remains the single source of truth for those values. The bundler
