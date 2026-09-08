@@ -23,6 +23,7 @@ import { summarizeExpansion } from '@/lib/graph';
 import { buildPrompt, buildStudyPrompt, getSystemPrompt, DEFAULT_VOICE, isVoiceSlug } from '@/lib/prompt';
 import type { VoiceSlug } from '@/lib/types';
 import { completeStream } from '@/lib/model';
+import { buildAnswerStream } from '@/lib/query-stream';
 import { loadSessionHistory, type ChatMessage } from '@/lib/history';
 import { getDossierForText } from '@/lib/dossier';
 import {
@@ -267,99 +268,29 @@ export async function POST(req: Request) {
     ...history,
     { role: 'user',   content: prompt },
   ];
+  // Opening the upstream stream here (not inside the ReadableStream) keeps
+  // the 500-on-open contract: a failure to reach the model surfaces before
+  // any Response is returned. The streaming/usage-capture/drain-on-disconnect
+  // machinery is shared with the guest path via buildAnswerStream.
   const stream = await completeStream(messages, modelId, slug);
 
-  let fullResponse = '';
-  let inputTokens: number | null = null;
-  let outputTokens: number | null = null;
-  let cachedInputTokens = 0;
-  let streamError: Error | null = null;
-
-  const readable = new ReadableStream({
-    async start(controller) {
-      // Idempotent close: the controller can already be closed/errored if
-      // the client disconnects mid-stream or the upstream LLM stream errors.
-      // A throw here would skip the persistence block below.
-      let closed = false;
-      const safeClose = () => {
-        if (closed) return;
-        closed = true;
-        try { controller.close(); } catch { /* already closed/errored */ }
-      };
-
-      // When the client socket goes away we stop pushing bytes (the socket is
-      // dead) but KEEP draining the upstream stream to completion — generation
-      // finishes server-side, so the full response + real usage still get
-      // persisted and billed. Matches the ChatGPT-style expectation that an
-      // answer completes even if the user navigated away. (todo:38fb34db)
-      let clientGone = false;
-      try {
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content ?? '';
-          if (text) {
-            fullResponse += text;
-            if (!clientGone) {
-              try {
-                controller.enqueue(new TextEncoder().encode(text));
-              } catch {
-                // Client disconnected. Stop enqueuing, but DON'T break: keep
-                // consuming so the upstream stream runs to completion and the
-                // final usage chunk still arrives.
-                clientGone = true;
-              }
-            }
-          }
-          if (chunk.usage) {
-            inputTokens  = chunk.usage.prompt_tokens     ?? null;
-            outputTokens = chunk.usage.completion_tokens ?? null;
-            // Cached-token field name varies by provider through OpenRouter:
-            //   OpenAI:    prompt_tokens_details.cached_tokens
-            //   Anthropic: cache_read_input_tokens (sometimes top-level)
-            // Cast loosely so we read whichever the provider supplied.
-            const u = chunk.usage as {
-              prompt_tokens_details?: { cached_tokens?: number };
-              cache_read_input_tokens?: number;
-            };
-            cachedInputTokens =
-              u.prompt_tokens_details?.cached_tokens ??
-              u.cache_read_input_tokens ??
-              0;
-          }
-        }
-      } catch (err) {
-        streamError = err instanceof Error ? err : new Error(String(err));
-        console.error('[api/query] stream error:', streamError);
-      } finally {
-        safeClose();
-      }
-
-      // 6. Compute actual cost + reconcile budget.
-      // The usage chunk arrives at the natural end of the stream — including
-      // when the client has already disconnected, since we drain to completion
-      // above. It's absent only on a genuine upstream failure (the for-await
-      // threw); in that case leave the estimate locked in usd_used and persist
-      // cost_usd as NULL — honest about not knowing.
-      let costUsd: number | null = null;
-      if (inputTokens !== null && outputTokens !== null) {
+  const readable = buildAnswerStream({
+    stream,
+    modelId,
+    logTag: 'api/query',
+    onComplete: async ({ fullResponse, inputTokens, outputTokens, cachedInputTokens, costUsd }) => {
+      // Cost reconciliation: adjust usd_used by (actual − estimated). Only
+      // when cost is known; on an upstream failure the estimate stays locked
+      // in usd_used and cost_usd persists as NULL — honest about not knowing.
+      if (costUsd !== null) {
         try {
-          const { cost_usd } = await computeCost({
-            modelId,
-            inputTokens,
-            outputTokens,
-            cachedInputTokens,
-          });
-          costUsd = cost_usd;
-          await finalizeBudget({
-            userId: user.id,
-            estimatedCostUsd,
-            actualCostUsd: cost_usd,
-          });
+          await finalizeBudget({ userId: user.id, estimatedCostUsd, actualCostUsd: costUsd });
         } catch (err) {
           console.error('[api/query] cost reconciliation failed:', err);
         }
       }
 
-      // 7. Persist after stream closes — save partial response on error.
+      // Persist after stream closes — save partial response on error.
       try {
         if (!sessionId) {
           // Auto-create a session if none provided. Snapshot the resolved
@@ -403,6 +334,7 @@ export async function POST(req: Request) {
     },
   });
 
+
   // Authoritative citations for the LIVE render. The chat client used to
   // recover citations by parsing the model's free-text CITATIONS tail out of
   // the stream — fragile, since the model varies that format (inline quotes,
@@ -445,7 +377,10 @@ export async function POST(req: Request) {
       // nothing expanded (concept-only / no match) so no chip renders.
       ...(expansion.length > 0 && { 'X-Query-Expansion': encodeURIComponent(JSON.stringify(expansion)) }),
       ...(citationsHeader && { 'X-Citations': citationsHeader }),
-      ...(streamError ? { 'X-Stream-Error': 'truncated' } : {}),
+      // (The former X-Stream-Error header was dead: response headers are
+      // evaluated synchronously at Response construction, before the stream
+      // runs, so streamError was always false here. Stream failures now
+      // surface only via the persisted row's NULL cost + partial response.)
     },
   });
 }

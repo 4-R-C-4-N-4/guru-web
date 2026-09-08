@@ -1,0 +1,29 @@
+{
+  "id": "45598ce4",
+  "type": "feature",
+  "state": "done",
+  "summary": "On signup, adopt the guest query row in place (set user_id/session_id) and land the user mid-research",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.873Z",
+  "updated_at": "2026-09-07T14:27:02.872Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Depends on the CTA + guest migration. Carry the signed guest token through Clerk signup. After signup completes: create a real sessions row for the new user (snapshot free-tier voice per BRD-chat-voice §5), then UPDATE queries SET user_id=<new user>, session_id=<new session>, tier_used='free', guest_ip=NULL WHERE guest_token_hash= AND user_id IS NULL — a single in-place adoption, no copy, no second table, PII (IP) shed on conversion. Redirect to /chat/<sessionId> so they resume mid-research. Guard against double-adopt on refresh (the WHERE user_id IS NULL makes it idempotent). Include a test asserting the row's user_id/session_id are set and guest_ip cleared.",
+  "work": {
+    "branch": "feat/anon-first-question",
+    "base_branch": "main",
+    "started_at": "2026-09-07T14:25:05.960Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "c940040a869f9182dd21670513b88377a9cf7f02",
+    "resolved_at": "2026-09-07T14:27:02.872Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/guest-convert.test.ts",
+    "test_function": "POST /api/guest/convert",
+    "note": "POST /api/guest/convert: in-place UPDATE adoption (no copy), session created w/ scholar voice, guest_ip shed, idempotent WHERE user_id IS NULL, cookie cleared. GuestConvert client effect (StrictMode/refresh/bfcache-safe) lands user on /chat/[sessionId]. Wired via clerkReady gate."
+  }
+}

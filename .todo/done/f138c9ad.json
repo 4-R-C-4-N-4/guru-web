@@ -1,0 +1,29 @@
+{
+  "id": "f138c9ad",
+  "type": "feature",
+  "state": "done",
+  "summary": "Public ask surface: anonymous entry that streams the real Guru answer with citations",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-07T13:54:56.738Z",
+  "updated_at": "2026-09-07T14:22:32.642Z",
+  "relationships": {
+    "parent": "ee3736aa"
+  },
+  "description": "Depends on the guest API + proxy allowlist. Public route OUTSIDE the (app) Clerk gate (e.g. /ask) rendering a chat entry that POSTs /api/query/guest and streams the answer with full citations — reuse chat-view.tsx machinery or a trimmed variant, not a bespoke demo. Landing copy: 'Ask Guru anything.' The answer must look identical to the authenticated product.",
+  "work": {
+    "branch": "feat/anon-first-question",
+    "base_branch": "main",
+    "started_at": "2026-09-07T14:18:36.308Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "bcd46b3b41bce5672dd8d89d09f53a2b3ed7ba94",
+    "resolved_at": "2026-09-07T14:22:32.642Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/ask-view.test.tsx",
+    "test_function": "AskView (initial render)",
+    "note": "src/app/ask (page+layout), src/components/ask-view.tsx (streams /api/query/guest, reuses ReactMarkdown+remarkCiteLinks+MD_COMPONENTS+Citation), src/components/guest-wall.tsx. Static-render tests; streaming covered at API layer."
+  }
+}

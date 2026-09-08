@@ -47,6 +47,35 @@ export function ipRateLimit(key: string, limit: number, windowMs: number): IpRat
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
+/**
+ * Non-mutating check: is a call under the limit RIGHT NOW, without consuming
+ * a slot or creating a window? Used to reject over-quota callers before doing
+ * expensive work, deferring the actual increment (ipRateLimit) to the point
+ * of commitment. An absent or expired window reads as allowed and is left
+ * untouched.
+ */
+export function peekIpRateLimit(key: string, limit: number): IpRateVerdict {
+  const now = Date.now();
+  const w = windows.get(key);
+  if (!w || w.resetAt <= now) return { allowed: true, retryAfterSeconds: 0 };
+  if (w.count >= limit) {
+    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((w.resetAt - now) / 1000)) };
+  }
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
+/**
+ * Extract the client IP used as the rate-limit key. Caddy fronts prod, so the
+ * first hop of x-forwarded-for is the real client; falls back to 'local' for
+ * direct/dev requests. This is a security-relevant trust decision (XFF is
+ * client-spoofable, and it keys the limiter), so it lives in ONE place —
+ * every rate-limited surface (guest funnel, /read/search) must call this
+ * rather than re-inlining the split.
+ */
+export function clientIpFrom(headers: Headers): string {
+  return headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
+}
+
 /** Test hook. */
 export function resetIpRateLimiter(): void {
   windows.clear();

@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 
 // connectionTimeoutMillis: pg.Pool's default is 0 (wait forever). Under
 // pool exhaustion, requests would hang indefinitely instead of erroring,
@@ -26,4 +26,26 @@ export async function one<T = unknown>(text: string, params?: unknown[]): Promis
 
 export async function exec(text: string, params?: unknown[]): Promise<void> {
   await pool.query(text, params);
+}
+
+/**
+ * Run `fn` inside a single BEGIN/COMMIT transaction on one pooled client.
+ * Rolls back and rethrows on any error, so a multi-statement operation is
+ * all-or-nothing (used by the guest→account conversion so a failed session
+ * insert can't leave a half-adopted queries row). The client is released in
+ * every path.
+ */
+export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch { /* connection already broken */ }
+    throw err;
+  } finally {
+    client.release();
+  }
 }

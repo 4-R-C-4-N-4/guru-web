@@ -61,11 +61,13 @@ describe('GET /api/admin/overview', () => {
       spend_today_pro: 1.2, spend_today_free: 0.1,
       spend_week_pro: 8.4, spend_week_free: 0.7,
       spend_month_pro: 32, spend_month_free: 2.1,
+      spend_today_guest: 0.05, spend_week_guest: 0.3, spend_month_guest: 1.1,
+      guest_queries_today: 4, guest_queries_this_week: 22, guest_queries_this_month: 90,
       spend_mtd_total: 34.1, spend_mtd_projection: 80,
       active_rate_limits: 0,
       users_at_budget_risk: 2,
     });
-    mockSeries.mockResolvedValue([{ date: '2026-04-01', pro_value: 5, free_value: 1 }]);
+    mockSeries.mockResolvedValue([{ date: '2026-04-01', pro_value: 5, free_value: 1, guest_value: 2 }]);
     mockTopUsers.mockResolvedValueOnce([{
       user_id: 'u1', email: 'a@b.com',
       spend_this_week: 1.5, spend_prior_week: 0.8, queries_this_week: 12,

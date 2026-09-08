@@ -7,7 +7,14 @@
 import { one, exec } from './db';
 import type { UserPreferences } from './types';
 
-const DEFAULT_PREFS: UserPreferences = {
+/**
+ * The tier-default preferences: full corpus, no scope filters, tier-pinned
+ * model, scholar voice. Returned for a user with no saved row, and reused
+ * verbatim by the anonymous guest query path (todo:732e73b1) — a guest has
+ * no preferences row, and "full corpus + scholar" is exactly the default
+ * first experience we want them to see.
+ */
+export const DEFAULT_PREFERENCES: UserPreferences = {
   scopeMode: 'all',
   blockedTraditions: [],
   blockedTexts: [],
@@ -35,7 +42,7 @@ export async function loadPreferences(userId: string): Promise<UserPreferences> 
     [userId]
   );
 
-  if (!row) return { ...DEFAULT_PREFS };
+  if (!row) return { ...DEFAULT_PREFERENCES };
 
   // Defensive: if a future deployment somehow lands a value that isn't
   // a known voice slug, fall back to the default rather than letting an

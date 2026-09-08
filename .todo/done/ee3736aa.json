@@ -1,0 +1,30 @@
+{
+  "id": "ee3736aa",
+  "type": "feature",
+  "state": "done",
+  "summary": "Anonymous first-question funnel: let a visitor ask Guru one free question before the signup wall, with guest spend/query tracking in admin",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-07T13:54:12.492Z",
+  "updated_at": "2026-09-07T14:33:09.182Z",
+  "relationships": {
+    "children": [
+      "6e5d50fa",
+      "1a766ce5",
+      "732e73b1",
+      "2d4bdd96",
+      "751a356c",
+      "f138c9ad",
+      "97cb0222",
+      "45598ce4",
+      "85125f9e"
+    ]
+  },
+  "resolution": {
+    "commit": "acfdcd164b26c14ed47e71c1d632721164605a13",
+    "resolved_at": "2026-09-07T14:33:09.182Z",
+    "resolved_by": "unknown",
+    "note": "All 9 subtasks complete. Anonymous first-question funnel shipped: guest entitlement primitive, migration 016 (single-table guest rows), /api/query/guest, public /ask surface, Clerk-wired signup wall, in-place signup conversion, and admin guest visibility. Full suite green (799 passing)."
+  }
+}
