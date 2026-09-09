@@ -5,8 +5,10 @@
  *
  * The signed-out marketing landing (moved out of src/app/page.tsx so that file
  * can be an async server component that fetches posts). Renders the GURU hero +
- * Begin/Sign In CTA, then a "Latest Essays" feed of real published posts below
- * the fold. Signed-in visitors are bounced to /chat from an effect (never see
+ * Try it free / Sign In CTA, then a "Latest Essays" feed of real published
+ * posts below the fold. "Try it free" leads into the anonymous first-question
+ * funnel (/ask) — a signed-out visitor gets one real answer before any signup
+ * wall. Signed-in visitors are bounced to /chat from an effect (never see
  * this) — the redirect must stay in useEffect, not render (todo:08fd0a9a); the
  * landing-page-redirect guard pins that contract to this file.
  */
@@ -15,6 +17,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import AskView from '@/components/ask-view';
 import EssayCard from '@/components/essay-card';
 import type { PublishedListItem } from '@/lib/blog-public';
 import { tokens } from '@/styles/tokens';
@@ -114,17 +117,19 @@ export default function Landing(
             every claim cited.
           </p>
 
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexDirection: mobile ? 'column' : 'row', padding: mobile ? '0 24px' : 0 }}>
-            <Link href="/sign-up" className="btn btn-primary" style={{
-              padding: mobile ? '14px 32px' : '12px 32px',
-              letterSpacing: 1, textTransform: 'uppercase',
-              textDecoration: 'none', display: 'inline-block', textAlign: 'center',
-            }}>Begin</Link>
-            <Link href="/sign-in" className="btn btn-ghost" style={{
-              padding: mobile ? '14px 32px' : '12px 32px',
-              letterSpacing: 1, textDecoration: 'none', display: 'inline-block', textAlign: 'center',
-            }}>Sign in</Link>
+          {/* Primary path is the live composer itself — a visitor asks one
+              real question right here, no click-through (todo:f138c9ad). The
+              headingless AskView slots under the GURU wordmark above.
+              clerkReady is left false: conversion runs on /ask?continue=1 after
+              signup (the guest cookie rides across pages), and signed-in users
+              never see this hero — they're bounced to /chat by the effect. */}
+          <AskView showHeading={false} />
+
+          {/* Returning users can jump straight to sign in. */}
+          <div style={{ marginTop: mobile ? 18 : 22 }}>
+            <Link href="/sign-in" className="text-link" style={{
+              fontFamily: tokens.font.mono, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase',
+            }}>Already have an account? Sign in</Link>
           </div>
         </div>
       </section>
