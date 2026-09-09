@@ -22,6 +22,12 @@ const LINK_STYLE = {
   textTransform: 'uppercase',
 } as const;
 
+// After auth, come back to /ask and finish the guest→account conversion
+// via the ?continue=1 effect in GuestConvert. Clerk honours redirect_url
+// over the page's fallbackRedirectUrl, so this wins for signed-in returns.
+const RETURN_TO = '/ask?continue=1';
+const SIGN_IN_HREF = `/sign-in?redirect_url=${encodeURIComponent(RETURN_TO)}`;
+
 export default async function AskLayout({ children }: { children: ReactNode }) {
   const clerk = await clerkEnabled();
 
@@ -42,7 +48,7 @@ export default async function AskLayout({ children }: { children: ReactNode }) {
       >
         <Link href="/" style={LINK_STYLE}>← Guru</Link>
         {clerk && (
-          <Link href="/sign-in" style={LINK_STYLE}>Sign in</Link>
+          <Link href={SIGN_IN_HREF} style={LINK_STYLE}>Sign in</Link>
         )}
       </div>
       {children}

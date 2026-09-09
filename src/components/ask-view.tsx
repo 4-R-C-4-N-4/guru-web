@@ -37,7 +37,9 @@ interface CitationData {
 // Mirrors MAX_QUERY_CHARS in /api/query/guest. Server is authoritative.
 const MAX_QUERY_CHARS = 4000;
 
-export default function AskView({ clerkReady = false }: { clerkReady?: boolean }) {
+export default function AskView(
+  { clerkReady = false, showHeading = true }: { clerkReady?: boolean; showHeading?: boolean },
+) {
   const [input, setInput] = useState('');
   const [question, setQuestion] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
@@ -139,14 +141,18 @@ export default function AskView({ clerkReady = false }: { clerkReady?: boolean }
           exists (its useUser() would crash on the tailnet host). */}
       {clerkReady && <GuestConvert />}
 
-      <div style={{ maxWidth: 680, margin: '48px auto 28px', textAlign: 'center' }}>
-        <h1 style={{ fontFamily: tokens.font.display, fontSize: 34, fontWeight: 500, margin: '0 0 10px', color: tokens.text.primary }}>
-          Ask Guru anything
-        </h1>
-        <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.muted, lineHeight: 1.6, margin: 0 }}>
-          One free question across the world&apos;s esoteric traditions — traced to its sources, every claim cited.
-        </p>
-      </div>
+      {/* Heading is skipped when embedded under another hero (e.g. the
+          homepage GURU wordmark passes showHeading={false}). */}
+      {showHeading && (
+        <div style={{ maxWidth: 680, margin: '48px auto 28px', textAlign: 'center' }}>
+          <h1 style={{ fontFamily: tokens.font.display, fontSize: 34, fontWeight: 500, margin: '0 0 10px', color: tokens.text.primary }}>
+            Ask Guru anything
+          </h1>
+          <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.muted, lineHeight: 1.6, margin: 0 }}>
+            One free question across the world&apos;s esoteric traditions — traced to its sources, every claim cited.
+          </p>
+        </div>
+      )}
 
       {/* Composer — hidden once the free question is spent. */}
       {!consumed && (
