@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import AskView from '@/components/ask-view';
 import EssayCard from '@/components/essay-card';
+import { SIGN_IN_HREF } from '@/lib/funnel-links';
 import type { PublishedListItem } from '@/lib/blog-public';
 import { tokens } from '@/styles/tokens';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -125,9 +126,12 @@ export default function Landing(
               never see this hero — they're bounced to /chat by the effect. */}
           <AskView showHeading={false} />
 
-          {/* Returning users can jump straight to sign in. */}
+          {/* Returning users can jump straight to sign in. Carries the guest
+              return anchor (SIGN_IN_HREF): a visitor who asks here on / then
+              signs in via THIS link still returns through /ask?continue=1 so
+              GuestConvert adopts their just-asked question (PR #140 review). */}
           <div style={{ marginTop: mobile ? 18 : 22 }}>
-            <Link href="/sign-in" className="text-link" style={{
+            <Link href={SIGN_IN_HREF} className="text-link" style={{
               fontFamily: tokens.font.mono, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase',
             }}>Already have an account? Sign in</Link>
           </div>

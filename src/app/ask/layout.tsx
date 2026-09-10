@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { clerkEnabled } from '@/lib/host';
 import { tokens } from '@/styles/tokens';
+import { SIGN_IN_HREF } from '@/lib/funnel-links';
 
 const LINK_STYLE = {
   fontFamily: tokens.font.mono,
@@ -21,12 +22,6 @@ const LINK_STYLE = {
   textDecoration: 'none',
   textTransform: 'uppercase',
 } as const;
-
-// After auth, come back to /ask and finish the guest→account conversion
-// via the ?continue=1 effect in GuestConvert. Clerk honours redirect_url
-// over the page's fallbackRedirectUrl, so this wins for signed-in returns.
-const RETURN_TO = '/ask?continue=1';
-const SIGN_IN_HREF = `/sign-in?redirect_url=${encodeURIComponent(RETURN_TO)}`;
 
 export default async function AskLayout({ children }: { children: ReactNode }) {
   const clerk = await clerkEnabled();
