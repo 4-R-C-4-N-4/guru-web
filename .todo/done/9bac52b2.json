@@ -1,0 +1,47 @@
+{
+  "id": "9bac52b2",
+  "type": "bug",
+  "state": "done",
+  "summary": "Generate Atlas edition button silently produces nothing — reasoning-model default burns full token budget on reasoning, returns empty essay (HTTP 500, no row)",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-11T19:03:53.844Z",
+  "updated_at": "2026-09-11T19:07:12.946Z",
+  "files": [
+    {
+      "path": "src/lib/atlas-generate.ts"
+    }
+  ],
+  "tags": [
+    "atlas",
+    "blog",
+    "llm",
+    "cost",
+    "admin-ui"
+  ],
+  "analysis": [
+    {
+      "timestamp": "2026-09-11T19:04:21.597Z",
+      "author": "Backend Engineer",
+      "type": "evidence",
+      "content": "Reproduced end-to-end via 'npx tsx scripts/atlas.ts --force'. Default model deepseek-v4-pro (reasoning) with the atlas prompt (~29,700 input tokens; buildAtlasPrompt filled the 32k pro window with source-passage bodies) returned finish_reason=length, completion_tokens=8192 all reasoning_tokens, content=0 chars. MIN_BODY_CHARS guard throws -> route 500 -> no blog_posts row inserted. UI shows only a tiny error string; ~$0.03 billed per failed click.",
+      "confidence": "high"
+    },
+    {
+      "timestamp": "2026-09-11T19:04:21.632Z",
+      "author": "Backend Engineer",
+      "type": "conclusion",
+      "content": "Two defects: (1) reasoning model can never emit content on this prompt at an 8192 shared budget; (2) generateAtlasEdition throws instead of leaving a visible row, so failures vanish. Fix (implemented, uncommitted): atlas defaults to a cheap non-reasoning model (ATLAS_DEFAULT_SLUG='google'); source passages capped (ATLAS_PASSAGE_TOKEN_BUDGET=4000) shrinking prompt ~29.7k->12.2k tokens; on empty generation land a needs_attention row instead of throwing into the void. Verified: real draft at $0.02, tsc + 15 atlas tests green. Test added in atlas-generate.test.ts.",
+      "confidence": "high"
+    }
+  ],
+  "resolution": {
+    "commit": "30293ae",
+    "resolved_at": "2026-09-11T19:07:12.946Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/atlas-generate.test.ts",
+    "test_function": "parks a needs_attention row when the model returns an empty body",
+    "note": "Fixed: cheap non-reasoning atlas default (ATLAS_DEFAULT_SLUG='google'), source-passage cap (prompt ~29.7k->12.2k tokens), and needs_attention row on empty generation. Verified real draft at ~$0.02."
+  }
+}

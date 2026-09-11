@@ -12,7 +12,7 @@
  * existing public blog surface.
  */
 
-import { one } from './db';
+import { one, exec } from './db';
 import { computeAtlasSnapshot, hasAnyParallels, type AtlasSnapshot, type AtlasChunk } from './atlas';
 import { getAtlasSystemPrompt, buildAtlasPrompt } from './prompt';
 import { completeStream } from './model';
@@ -21,7 +21,7 @@ import { uniqueSlug } from './slug';
 import {
   resolveCuratedModel,
   isCuratedSlug,
-  DEFAULT_CURATED_SLUG,
+  ATLAS_DEFAULT_SLUG,
   type CuratedSlug,
 } from './curated-models';
 import { computeCost } from './cost';
@@ -115,7 +115,7 @@ export async function generateAtlasEdition(opts: {
   // Deterministic analysis. Grounding guard already ran above (hasAnyParallels).
   const snapshot = await computeAtlasSnapshot(generatedAt);
 
-  const slugStr = isCuratedSlug(opts.model ?? '') ? (opts.model as CuratedSlug) : DEFAULT_CURATED_SLUG;
+  const slugStr = isCuratedSlug(opts.model ?? '') ? (opts.model as CuratedSlug) : ATLAS_DEFAULT_SLUG;
   const modelId = resolveCuratedModel(slugStr);
 
   const messages: ChatMessage[] = [
@@ -145,7 +145,22 @@ export async function generateAtlasEdition(opts: {
   const fallbackTitle = `State of the Atlas №${editionNo}`;
   const { title: parsedTitle, dek, body } = parseGenerated(raw, fallbackTitle);
   if (body.trim().length < MIN_BODY_CHARS) {
-    throw new Error(`atlas: empty generation (${body.trim().length} chars < ${MIN_BODY_CHARS}).`);
+    // Don't vanish on failure. Unlike the seed generator (which parks its
+    // pre-existing queued row), the atlas flow has no row until now — so a
+    // silent throw here left the operator's click with nothing to see in
+    // /admin/blog (the original "nothing happened" bug). Land a needs_attention
+    // row instead so the failure is visible and reviewable, mirroring
+    // blog-generate.ts. It counts as in-flight for the dup-guard, so it must be
+    // rejected before a retry — the explicit, visible state we want.
+    const slug = await uniqueSlug(`state of the atlas no ${editionNo}`);
+    const note = `empty generation (${body.trim().length} chars < ${MIN_BODY_CHARS}) — the model returned no essay body`;
+    await exec(
+      `INSERT INTO blog_posts
+         (status, seed_kind, model, edition_no, title, slug, atlas_snapshot, error_note, created_by)
+       VALUES ('needs_attention', 'atlas', $1, $2, $3, $4, $5, $6, 'atlas-generator')`,
+      [slugStr, editionNo, fallbackTitle, slug, JSON.stringify(snapshot), note],
+    );
+    throw new Error(`atlas: ${note} — parked as needs_attention for review.`);
   }
 
   // Canonical, stable title + slug for the almanac; the model's title becomes a subtitle.
