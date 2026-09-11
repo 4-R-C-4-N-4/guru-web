@@ -13,7 +13,7 @@
  * landing-page-redirect guard pins that contract to this file.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
@@ -30,6 +30,15 @@ export default function Landing(
   const mobile = useIsMobile();
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
+
+  // True once the visitor has actually asked a guest question in the hero's
+  // embedded composer (AskView.onGuestAsked). Only then does the hero's own
+  // sign-in link need to carry the ?continue=1 return anchor so GuestConvert
+  // can adopt that question after auth. Until then the link is a plain
+  // returning-user sign-in — carrying the anchor unconditionally flashed a
+  // spurious "Restoring your conversation…" overlay + fired a needless
+  // convert POST for every returning user (PR #140 review).
+  const [hasAsked, setHasAsked] = useState(false);
 
   // Redirect signed-in users to /chat. Must run from an effect, not during
   // render — calling router.replace() inline triggers React's "Cannot update a
@@ -124,16 +133,19 @@ export default function Landing(
               clerkReady is left false: conversion runs on /ask?continue=1 after
               signup (the guest cookie rides across pages), and signed-in users
               never see this hero — they're bounced to /chat by the effect. */}
-          <AskView showHeading={false} />
+          <AskView showHeading={false} onGuestAsked={() => setHasAsked(true)} />
 
-          {/* Returning users can jump straight to sign in. Carries the guest
-              return anchor (SIGN_IN_HREF): a visitor who asks here on / then
-              signs in via THIS link still returns through /ask?continue=1 so
-              GuestConvert adopts their just-asked question (PR #140 review). */}
+          {/* Single auth entry point for both returning and new visitors —
+              Clerk's sign-in card surfaces "Sign up" beneath it (signUpUrl on
+              the sign-in page), so "Sign in" is the umbrella label. It carries
+              the guest return anchor (SIGN_IN_HREF → /ask?continue=1) ONLY once
+              a question has been asked here, so GuestConvert adopts it after
+              auth; a returning user who never asked gets a plain /sign-in that
+              lands on /chat, with no spurious restore flash (PR #140 review). */}
           <div style={{ marginTop: mobile ? 18 : 22 }}>
-            <Link href={SIGN_IN_HREF} className="text-link" style={{
+            <Link href={hasAsked ? SIGN_IN_HREF : '/sign-in'} className="text-link" style={{
               fontFamily: tokens.font.mono, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase',
-            }}>Already have an account? Sign in</Link>
+            }}>Sign in</Link>
           </div>
         </div>
       </section>

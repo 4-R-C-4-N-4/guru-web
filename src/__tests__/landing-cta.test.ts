@@ -10,11 +10,14 @@
  * a signed-out visitor asks one real question on / with no click-through and
  * gets a streamed answer before the signup wall.
  *
- * Every "Sign in" / "Create account" affordance a guest might click — the
- * homepage hero link, the /ask header, and the signup wall — must carry the
- * same redirect_url=/ask?continue=1 return anchor, or a question asked before
- * signing in is orphaned (GuestConvert never fires). That anchor lives once in
- * @/lib/funnel-links; these tests pin the single source and its consumers.
+ * Every "Sign in" / "Create account" affordance a guest who HAS asked might
+ * click — the /ask header, the signup wall, and the homepage hero link once a
+ * question has been asked there — must carry the same redirect_url=/ask?continue=1
+ * return anchor, or that question is orphaned (GuestConvert never fires). The
+ * homepage link is the one conditional case: before a question is asked it is a
+ * plain returning-user /sign-in (no anchor, no spurious restore flash — review
+ * #1). That anchor lives once in @/lib/funnel-links; these tests pin the single
+ * source and its consumers.
  *
  * Behaviour isn't testable without Clerk + Next runtime, so we assert the
  * shared link values (runtime) + that each surface imports them (source).
@@ -42,13 +45,21 @@ describe('Landing primary CTA (todo:f138c9ad)', () => {
     expect(LANDING_SRC).not.toMatch(/>Try it free<\/Link>/);
   });
 
-  it('its "Sign in" link carries the guest-funnel return anchor (not a bare /sign-in)', () => {
-    // Regression (PR #140 review #1): a bare href="/sign-in" here sends a guest
-    // who asked on / to the Clerk fallback (/chat), orphaning their question.
+  it('its "Sign in" link carries the return anchor ONLY once a guest has asked', () => {
+    // PR #140 review #1 cuts both ways, so the href is conditional:
+    //   • asked here → SIGN_IN_HREF (/ask?continue=1) so GuestConvert adopts
+    //     the question after auth — a bare /sign-in would orphan it;
+    //   • never asked → plain /sign-in → Clerk fallback (/chat) — carrying the
+    //     anchor unconditionally flashed "Restoring your conversation…" + fired
+    //     a needless convert POST at every returning user.
+    // The gate is AskView's onGuestAsked callback lifted into hero state.
     expect(importsFunnelLinks(LANDING_SRC)).toBe(true);
-    expect(LANDING_SRC).toContain('href={SIGN_IN_HREF}');
-    expect(LANDING_SRC).not.toContain('href="/sign-in"');
-    expect(LANDING_SRC).toContain('Sign in</Link>');
+    expect(LANDING_SRC).toContain('onGuestAsked={() => setHasAsked(true)}');
+    expect(LANDING_SRC).toMatch(/href=\{hasAsked \? SIGN_IN_HREF : '\/sign-in'\}/);
+    // Label is the umbrella "Sign in" (Clerk's card offers sign-up beneath it),
+    // not the returning-user-only "Already have an account?" framing.
+    expect(LANDING_SRC).toContain('>Sign in</Link>');
+    expect(LANDING_SRC).not.toContain('Already have an account?');
   });
 
   it('no longer renders a Begin button routing to /sign-up', () => {

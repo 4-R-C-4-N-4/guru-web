@@ -38,7 +38,19 @@ interface CitationData {
 const MAX_QUERY_CHARS = 4000;
 
 export default function AskView(
-  { clerkReady = false, showHeading = true }: { clerkReady?: boolean; showHeading?: boolean },
+  { clerkReady = false, showHeading = true, onGuestAsked }: {
+    clerkReady?: boolean;
+    showHeading?: boolean;
+    // Fired once a guest question has been asked AND answered here — i.e. a
+    // guest cookie now exists on this browser and there is a real question to
+    // adopt. An embedding parent (the homepage hero) uses this to decide
+    // whether its own auth links must carry the ?continue=1 return anchor;
+    // before it fires, a sign-in is a plain returning-user sign-in (PR #140
+    // review: don't flash "Restoring your conversation…" at users who never
+    // asked). Not fired on the 429/entitlement-spent path — that already
+    // renders GuestWall with its own conversion links.
+    onGuestAsked?: () => void;
+  },
 ) {
   const [input, setInput] = useState('');
   const [question, setQuestion] = useState<string | null>(null);
@@ -115,13 +127,17 @@ export default function AskView(
 
       // One free question, now spent — show the wall below the answer.
       setConsumed(true);
+      // A real guest question is now on the server, keyed to a fresh guest
+      // cookie — an embedding hero can safely point its sign-in link through
+      // /ask?continue=1 so GuestConvert adopts it after auth.
+      onGuestAsked?.();
     } catch (err) {
       console.error('[ask] guest query error:', err);
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [input, loading, consumed, overLimit]);
+  }, [input, loading, consumed, overLimit, onGuestAsked]);
 
   // Strip the model's raw CITATIONS tail from the prose; cards render below
   // from the authoritative X-Citations set, or the parsed block as fallback.
