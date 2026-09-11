@@ -123,8 +123,17 @@ fi
 #    Critical: `next start` needs to write .next/cache (mkdir) as `deploy`,
 #    so a root:root .next/cache causes EACCES on the first dynamic request —
 #    observed live after merge of 3cae5ea (guest /ask endpoint 500'd).
+#
+#    We chown the whole releases/ tree, not just "$RELEASE": the sudoers
+#    grant (vps-bootstrap.sh /etc/sudoers.d/deploy) is an EXACT-command rule —
+#    `NOPASSWD: /bin/chown -R deploy:deploy /srv/guru-web/releases`. Passing a
+#    subpath like /srv/guru-web/releases/<sha> doesn't match it, so sudo
+#    prompts for a password and the non-interactive deploy dies (observed on
+#    the first post-merge deploy after this chown was added). `-R` over
+#    releases/ still recurses into the freshly-unpacked <sha> dir, so the new
+#    release's .next/cache is fixed either way.
 log "fix release ownership"
-sudo /bin/chown -R deploy:deploy "$RELEASE"
+sudo /bin/chown -R deploy:deploy "$ROOT/releases"
 # build. `next build` baked NEXT_PUBLIC_* into the client bundle in CI —
 # deploy.yml fetches /etc/guru-web.public.env from this box first, so that
 # file remains the single source of truth for those values. The bundler
