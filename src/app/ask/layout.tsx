@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { clerkEnabled } from '@/lib/host';
 import { tokens } from '@/styles/tokens';
+import { SIGN_IN_HREF } from '@/lib/funnel-links';
 
 const LINK_STYLE = {
   fontFamily: tokens.font.mono,
@@ -42,7 +43,7 @@ export default async function AskLayout({ children }: { children: ReactNode }) {
       >
         <Link href="/" style={LINK_STYLE}>← Guru</Link>
         {clerk && (
-          <Link href="/sign-in" style={LINK_STYLE}>Sign in</Link>
+          <Link href={SIGN_IN_HREF} style={LINK_STYLE}>Sign in</Link>
         )}
       </div>
       {children}

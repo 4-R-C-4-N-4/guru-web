@@ -18,12 +18,7 @@
 
 import Link from 'next/link';
 import { tokens } from '@/styles/tokens';
-
-// After auth, come back to the ask page and finish the conversion. The
-// ?continue=1 marker is what the conversion effect keys on.
-const RETURN_TO = '/ask?continue=1';
-const SIGN_UP_HREF = `/sign-up?redirect_url=${encodeURIComponent(RETURN_TO)}`;
-const SIGN_IN_HREF = `/sign-in?redirect_url=${encodeURIComponent(RETURN_TO)}`;
+import { SIGN_UP_HREF, SIGN_IN_HREF } from '@/lib/funnel-links';
 
 export default function GuestWall({ message }: { message?: string }) {
   return (

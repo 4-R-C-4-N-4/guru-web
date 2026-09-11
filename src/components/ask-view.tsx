@@ -37,7 +37,21 @@ interface CitationData {
 // Mirrors MAX_QUERY_CHARS in /api/query/guest. Server is authoritative.
 const MAX_QUERY_CHARS = 4000;
 
-export default function AskView({ clerkReady = false }: { clerkReady?: boolean }) {
+export default function AskView(
+  { clerkReady = false, showHeading = true, onGuestAsked }: {
+    clerkReady?: boolean;
+    showHeading?: boolean;
+    // Fired once a guest question has been asked AND answered here — i.e. a
+    // guest cookie now exists on this browser and there is a real question to
+    // adopt. An embedding parent (the homepage hero) uses this to decide
+    // whether its own auth links must carry the ?continue=1 return anchor;
+    // before it fires, a sign-in is a plain returning-user sign-in (PR #140
+    // review: don't flash "Restoring your conversation…" at users who never
+    // asked). Not fired on the 429/entitlement-spent path — that already
+    // renders GuestWall with its own conversion links.
+    onGuestAsked?: () => void;
+  },
+) {
   const [input, setInput] = useState('');
   const [question, setQuestion] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
@@ -113,13 +127,17 @@ export default function AskView({ clerkReady = false }: { clerkReady?: boolean }
 
       // One free question, now spent — show the wall below the answer.
       setConsumed(true);
+      // A real guest question is now on the server, keyed to a fresh guest
+      // cookie — an embedding hero can safely point its sign-in link through
+      // /ask?continue=1 so GuestConvert adopts it after auth.
+      onGuestAsked?.();
     } catch (err) {
       console.error('[ask] guest query error:', err);
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [input, loading, consumed, overLimit]);
+  }, [input, loading, consumed, overLimit, onGuestAsked]);
 
   // Strip the model's raw CITATIONS tail from the prose; cards render below
   // from the authoritative X-Citations set, or the parsed block as fallback.
@@ -139,14 +157,18 @@ export default function AskView({ clerkReady = false }: { clerkReady?: boolean }
           exists (its useUser() would crash on the tailnet host). */}
       {clerkReady && <GuestConvert />}
 
-      <div style={{ maxWidth: 680, margin: '48px auto 28px', textAlign: 'center' }}>
-        <h1 style={{ fontFamily: tokens.font.display, fontSize: 34, fontWeight: 500, margin: '0 0 10px', color: tokens.text.primary }}>
-          Ask Guru anything
-        </h1>
-        <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.muted, lineHeight: 1.6, margin: 0 }}>
-          One free question across the world&apos;s esoteric traditions — traced to its sources, every claim cited.
-        </p>
-      </div>
+      {/* Heading is skipped when embedded under another hero (e.g. the
+          homepage GURU wordmark passes showHeading={false}). */}
+      {showHeading && (
+        <div style={{ maxWidth: 680, margin: '48px auto 28px', textAlign: 'center' }}>
+          <h1 style={{ fontFamily: tokens.font.display, fontSize: 34, fontWeight: 500, margin: '0 0 10px', color: tokens.text.primary }}>
+            Ask Guru anything
+          </h1>
+          <p style={{ fontFamily: tokens.font.display, fontSize: 16, color: tokens.text.muted, lineHeight: 1.6, margin: 0 }}>
+            One free question across the world&apos;s esoteric traditions — traced to its sources, every claim cited.
+          </p>
+        </div>
+      )}
 
       {/* Composer — hidden once the free question is spent. */}
       {!consumed && (
