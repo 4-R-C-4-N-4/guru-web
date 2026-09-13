@@ -32,7 +32,12 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+# current → the release dir (deploy-owned). The Next.js runtime cache lives
+# OUTSIDE the release at /srv/guru-web/next-cache (guru-owned, persistent);
+# deploy.sh symlinks each release's .next/cache there. Both must be writable
+# under ProtectSystem=strict. (todo:4f515e43)
 ReadWritePaths=/srv/guru-web/current
+ReadWritePaths=/srv/guru-web/next-cache
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictNamespaces=true

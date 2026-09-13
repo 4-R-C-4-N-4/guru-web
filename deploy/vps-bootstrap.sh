@@ -369,6 +369,16 @@ EOF
     install -d -o deploy -g deploy -m 0755 /srv/guru-web
     install -d -o deploy -g deploy -m 0755 /srv/guru-web/releases
 
+    # Persistent Next.js cache, owned by the RUNTIME user (guru), living
+    # OUTSIDE any release dir. The CI tarball excludes .next/cache, so the
+    # app must create it at runtime — but releases are chowned deploy:deploy
+    # (deploy.sh), and `next start` runs as guru, so an in-release .next/cache
+    # is unwritable → EACCES → dynamic routes (e.g. guest /ask) 500. deploy.sh
+    # symlinks each release's .next/cache here; guru-web.service lists this in
+    # ReadWritePaths so ProtectSystem=strict permits writes. Surviving across
+    # deploys also keeps the ISR/fetch cache warm. (todo:4f515e43)
+    install -d -o guru -g guru -m 0750 /srv/guru-web/next-cache
+
     # Install deploy.sh as a fixed surface at /srv/guru-web/deploy.sh.
     # CI invokes `./deploy.sh <sha>` from /srv/guru-web/ on each push; this
     # script doesn't change between deploys (only when bootstrap re-runs).
