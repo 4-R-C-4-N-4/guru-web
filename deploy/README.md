@@ -13,6 +13,7 @@ Operational playbook for the production VPS. Read this before paging anyone; mos
 | Domain | `guru-ai.org`, proxied through Cloudflare |
 | App systemd unit | `guru-web.service` (runs as `guru` user) |
 | App working dir | `/srv/guru-web/current` → symlink → `/srv/guru-web/releases/<sha>/` (pre-built release, unpacked from the CI tarball) |
+| Next.js runtime cache | `/srv/guru-web/next-cache` (`guru:guru`, 0750, persistent across deploys). Each release's `.next/cache` is a symlink to it (`deploy.sh`); in the unit's `ReadWritePaths`. |
 | App env (secrets, runtime-only) | `/etc/guru-web.env` (mode 600, root:guru) |
 | App env (`NEXT_PUBLIC_*`, build + runtime) | `/etc/guru-web.public.env` (mode 644, root:root) |
 | Bootstrap config | `/etc/guru-bootstrap.env` (mode 600, root:root) |
@@ -127,6 +128,34 @@ sudo -u ollama ollama pull nomic-embed-text:v1.5
 ```
 
 If `127.0.0.1:11434` is unreachable but service shows running, the unit may have reverted to `0.0.0.0` binding. Verify `/etc/systemd/system/ollama.service` matches the repo version (`Environment="OLLAMA_HOST=127.0.0.1:11434"`).
+
+---
+
+## Incident: dynamic routes 500 (`Something went wrong`) on `.next/cache` EACCES
+
+Symptom: a dynamic route — notably guest `/ask` (`POST /api/query/guest`) — returns "Something went wrong", and the journal shows:
+
+```
+Failed to update prerender cache for <hash> Error: EACCES: permission denied, mkdir '/srv/guru-web/releases/<sha>/.next/cache'
+```
+
+Cause: `next start` runs as **`guru`**, but releases are chowned **`deploy:deploy`** and the CI tarball excludes `.next/cache` — so the runtime can't create it inside a `deploy`-owned `.next/`. Fixed permanently (todo:4f515e43) by keeping the cache OUTSIDE the release at `/srv/guru-web/next-cache` (`guru`-owned, in `ReadWritePaths`), with `deploy.sh` symlinking each release's `.next/cache` there and a pre-restart guard that aborts the deploy if the symlink or ownership is wrong.
+
+Check:
+```
+ls -ld /srv/guru-web/next-cache            # want: drwxr-x--- guru guru
+ls -l /srv/guru-web/current/.next/cache    # want: symlink → /srv/guru-web/next-cache
+```
+
+If the dir is missing or mis-owned (e.g. after a bootstrap that predates this fix):
+```
+sudo install -d -o guru -g guru -m 0750 /srv/guru-web/next-cache
+# ensure the unit lists it, then:
+sudo install -m 0644 /srv/guru-web/current/deploy/guru-web.service /etc/systemd/system/guru-web.service
+sudo systemctl daemon-reload && sudo systemctl restart guru-web
+```
+
+The next deploy re-establishes the symlink; the guard blocks the deploy if it can't.
 
 ---
 
