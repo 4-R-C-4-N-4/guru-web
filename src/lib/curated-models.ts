@@ -36,6 +36,22 @@ export type CuratedSlug = keyof typeof CURATED_MODELS;
 export const DEFAULT_CURATED_SLUG: CuratedSlug = 'deepseek';
 
 /**
+ * Default model for the "State of the Atlas" edition. The atlas is a cheap,
+ * recurring corpus *checkpoint*: its substance is the deterministic FACTS
+ * snapshot (src/lib/atlas.ts) and the model only narrates it — it is not a
+ * reasoning-heavy composition. It therefore defaults to a cheap, non-reasoning
+ * model rather than the site default.
+ *
+ * Why not the site default (a reasoning model): on the large atlas prompt,
+ * deepseek spent its entire completion-token budget on reasoning tokens
+ * (finish_reason=length, 0 content tokens) and returned an empty essay every
+ * time — the generation could never succeed, and each attempt still billed for
+ * the wasted reasoning. A non-reasoning model has no such budget contention.
+ * Overridable per run via `npm run atlas -- --model=<slug>`.
+ */
+export const ATLAS_DEFAULT_SLUG: CuratedSlug = 'google';
+
+/**
  * Resolve a slug to its current OpenRouter model id. Throws on
  * unknown slug — TypeScript should catch this at compile time, but
  * the runtime check guards against stale preference rows that

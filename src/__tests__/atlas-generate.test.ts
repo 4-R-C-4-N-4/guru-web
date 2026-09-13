@@ -15,13 +15,14 @@ vi.mock('@/lib/cost', () => ({ computeCost: vi.fn() }));
 
 import { generateAtlasEdition, AtlasRefusal } from '@/lib/atlas-generate';
 import { computeAtlasSnapshot, hasAnyParallels } from '@/lib/atlas';
-import { one } from '@/lib/db';
+import { one, exec } from '@/lib/db';
 import { completeStream } from '@/lib/model';
 import { computeCost } from '@/lib/cost';
 
 const mSnap = computeAtlasSnapshot as MockedFunction<typeof computeAtlasSnapshot>;
 const mHasParallels = hasAnyParallels as MockedFunction<typeof hasAnyParallels>;
 const mOne = one as MockedFunction<typeof one>;
+const mExec = exec as MockedFunction<typeof exec>;
 const mStream = completeStream as MockedFunction<typeof completeStream>;
 const mCost = computeCost as MockedFunction<typeof computeCost>;
 
@@ -82,6 +83,23 @@ describe('generateAtlasEdition', () => {
     const chunksUsed = JSON.parse(params.find(p => typeof p === 'string' && (p as string).includes('"a1"')) as string);
     expect(chunksUsed.map((c: { id: string }) => c.id).sort()).toEqual(['a1', 'b1', 'c1', 'c2']);
     expect(params.some(p => typeof p === 'string' && (p as string).includes('"schemaVersion":"3"'))).toBe(true);
+  });
+
+  it('parks a needs_attention row (not a silent throw) when the model returns an empty body', async () => {
+    // Regression: a reasoning model spent its whole token budget thinking and
+    // returned zero content tokens, so the essay was empty. The old code threw
+    // and inserted nothing — the operator's click vanished. It must now leave a
+    // visible needs_attention row behind.
+    mStream.mockReturnValue(streamOf('') as never);
+    await expect(generateAtlasEdition({ generatedAt: 'x' })).rejects.toThrow(/needs_attention/);
+
+    const parked = mExec.mock.calls.find(c => (c[0] as string).includes('INSERT INTO blog_posts'));
+    expect(parked).toBeTruthy();
+    expect(parked![0] as string).toMatch(/'needs_attention', 'atlas'/);
+    expect(parked![1] as unknown[]).toContain(1); // edition_no still assigned
+    // No draft was written.
+    const draftInsert = mOne.mock.calls.find(c => (c[0] as string).includes("'draft', 'atlas'"));
+    expect(draftInsert).toBeUndefined();
   });
 
   it('refuses (AtlasRefusal) to stack a second edition while one is in flight', async () => {

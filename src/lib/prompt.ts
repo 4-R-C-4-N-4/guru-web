@@ -384,6 +384,11 @@ export function buildBlogPromptFromTopic(
 // passages the analysis selected (not a semantic retrieval). It reuses the blog
 // grounding/citation contract and the TITLE/DEK/CITATIONS output shape.
 
+// Token cap for the SOURCE PASSAGES block. Deliberately small: the atlas is a
+// checkpoint over the FACTS snapshot, and passages are a handful of illustrative
+// quotes, not a fill of the whole context window. See buildAtlasPrompt().
+const ATLAS_PASSAGE_TOKEN_BUDGET = 4_000;
+
 const ATLAS_OVERLAY = `You are a comparative-religion essayist writing "State of the Atlas" — a recurring,
 data-led essay on an evolving catalog of cross-tradition esoteric resonances. You
 do not trace a single parallel; you read the aggregate and say what the whole map
@@ -571,15 +576,17 @@ export function buildAtlasPrompt(snapshot: AtlasSnapshot): string {
   }
   for (const ct of snapshot.contrasts) { push(ct.a); push(ct.b); }
 
-  // Fit to the pro window, reserving room for the FACTS + dossier blocks + the
-  // response. Reserve for the full capsule set — a slight over-reserve if
-  // fitting then drops a work, which only errs toward shorter prompts.
-  const factsTokens = Math.ceil((facts.length + renderDossierBlock(capsules).length) / 4);
-  const budget = makeBudget("pro", factsTokens);
+  // Source passages are a few illustrative quotes for a checkpoint essay, not a
+  // context-window fill: the FACTS block is the substance. Cap them to a small
+  // fixed budget rather than the whole pro window. The old makeBudget("pro")
+  // fill produced ~30k-token prompts — most of it passage bodies — an inference
+  // cost the wrong shape for a recurring, deterministic corpus checkpoint, and
+  // it starved a reasoning model's response budget besides (finish_reason
+  // =length, empty essay).
   let used = 0;
   const fitted: AtlasChunk[] = [];
   for (const c of passages) {
-    if (used + c.token_count > budget.available) break;
+    if (used + c.token_count > ATLAS_PASSAGE_TOKEN_BUDGET) break;
     used += c.token_count;
     fitted.push(c);
   }

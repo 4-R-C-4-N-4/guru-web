@@ -120,8 +120,16 @@ fi
 #    existed BEFORE the tarball landed — it runs before unpack. After unpack,
 #    files extracted from the tarball keep the tarball's ownership. This is
 #    idempotent: chown -R on already-correct ownership is a no-op.
+#
+#    We chown the whole releases/ tree, not just "$RELEASE": the sudoers grant
+#    (vps-bootstrap.sh /etc/sudoers.d/deploy) is an EXACT-command rule —
+#    `NOPASSWD: /bin/chown -R deploy:deploy /srv/guru-web/releases`. Passing a
+#    subpath like /srv/guru-web/releases/<sha> doesn't match it, so sudo
+#    prompts for a password and the non-interactive deploy dies (observed on
+#    the first post-merge deploy after this chown was added). `-R` over
+#    releases/ still recurses into the freshly-unpacked <sha> dir.
 log "fix release ownership"
-sudo /bin/chown -R deploy:deploy "$RELEASE"
+sudo /bin/chown -R deploy:deploy "$ROOT/releases"
 
 # 1c. Point this release's Next.js runtime cache at the persistent, guru-owned
 #    dir OUTSIDE the release. `next start` runs as guru (guru-web.service
@@ -131,9 +139,11 @@ sudo /bin/chown -R deploy:deploy "$RELEASE"
 #    That is what 500'd guest /ask (observed live after merge of 3cae5ea).
 #    Symlinking makes guru write THROUGH to a dir it owns (/srv/guru-web/
 #    next-cache — created guru:guru by vps-bootstrap.sh, listed in the unit's
-#    ReadWritePaths). Created AFTER the chown above so `chown -R` never
-#    traverses it. .next itself is always present (the tarball excludes only
-#    .next/cache), so no mkdir is needed.
+#    ReadWritePaths). Created AFTER the ownership chown, and `chown -R` does
+#    not follow symlinks (-P default), so neither this deploy's chown of
+#    releases/ nor a later one ever rewrites the guru-owned target. .next
+#    itself is always present (the tarball excludes only .next/cache), so no
+#    mkdir is needed.
 #
 #    Behavior change vs. pre-PR: the cache was formerly cold each deploy
 #    (excluded from the tarball, recreated empty in-release); it now persists
