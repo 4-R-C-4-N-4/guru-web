@@ -35,9 +35,14 @@ ProtectHome=true
 # current → the release dir (deploy-owned). The Next.js runtime cache lives
 # OUTSIDE the release at /srv/guru-web/next-cache (guru-owned, persistent);
 # deploy.sh symlinks each release's .next/cache there. Both must be writable
-# under ProtectSystem=strict. (todo:4f515e43)
+# under ProtectSystem=strict. The leading `-` on next-cache makes it OPTIONAL:
+# a non-optional ReadWritePaths on a missing dir fails the unit at *start*
+# (namespace setup), which would turn the per-request cache EACCES into a
+# total outage — e.g. if this unit is installed before the dir is created on
+# a box whose bootstrap predates the dir (todo:a9ecb61b). With `-`, a missing
+# dir degrades to the old per-request EACCES instead. (todo:4f515e43)
 ReadWritePaths=/srv/guru-web/current
-ReadWritePaths=/srv/guru-web/next-cache
+ReadWritePaths=-/srv/guru-web/next-cache
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictNamespaces=true
