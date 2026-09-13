@@ -181,6 +181,29 @@ log "symlink swap"
 ln -sfn "$RELEASE" "$CURRENT.new"
 mv -Tf "$CURRENT.new" "$CURRENT"
 
+# 3b. Guard the cache invariant BEFORE restart. This is the regression test
+#    for the EACCES that 500'd guest /ask (todo:4f515e43): if a future change
+#    ever breaks the symlink or the target's ownership, fail the deploy loudly
+#    here instead of shipping a broken dynamic-route surface. `systemctl
+#    is-active` (below) can't catch this — the process comes up fine and only
+#    500s per-request. Verifiable as deploy without becoming guru: the link
+#    must resolve to $CACHE_DIR, and $CACHE_DIR must be owned by guru and
+#    owner-writable. (`stat` needs only search on the world-readable parents,
+#    not read on the 0750 dir itself.)
+CACHE_DIR=/srv/guru-web/next-cache
+CACHE_LINK="$RELEASE/.next/cache"
+log "verify runtime cache is guru-writable"
+if [[ ! -L "$CACHE_LINK" || "$(readlink -f "$CACHE_LINK")" != "$CACHE_DIR" ]]; then
+    echo "deploy.sh: $CACHE_LINK is not a symlink to $CACHE_DIR (target may be missing) — guru would EACCES writing .next/cache and guest /ask would 500. Aborting before restart." >&2
+    exit 1
+fi
+cache_owner="$(stat -c '%U' "$CACHE_DIR" 2>/dev/null || true)"
+cache_mode="$(stat -c '%A' "$CACHE_DIR" 2>/dev/null || true)"
+if [[ "$cache_owner" != guru || "${cache_mode:2:1}" != w ]]; then
+    echo "deploy.sh: $CACHE_DIR must be owned by guru and owner-writable (found owner='${cache_owner:-?}' mode='${cache_mode:-?}'); runtime writes as guru would EACCES. Fix: sudo install -d -o guru -g guru -m 0750 $CACHE_DIR (see vps-bootstrap.sh). Aborting before restart." >&2
+    exit 1
+fi
+
 # 4. Restart the app (sudoers permits this single command)
 log "restart guru-web"
 sudo /bin/systemctl restart guru-web
