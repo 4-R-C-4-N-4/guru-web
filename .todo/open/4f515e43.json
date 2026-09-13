@@ -1,0 +1,21 @@
+{
+  "id": "4f515e43",
+  "type": "bug",
+  "state": "open",
+  "summary": "Permanently fix .next/cache EACCES that 500s dynamic routes after deploy",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-13T14:52:55.574Z",
+  "updated_at": "2026-09-13T14:53:21.549Z",
+  "description": "Guest /ask (POST /api/query/guest) 500s with 'Something went wrong' after a deploy. Root cause: the runtime systemd unit runs as user 'guru' (deploy/guru-web.service User=guru), but deploy/deploy.sh chowns the release tree to deploy:deploy (line 66 self-heal + line 127), and the CI tarball EXCLUDES .next/cache (deploy.sh line 86). So guru must mkdir .next/cache at runtime inside a deploy-owned .next/ -> EACCES -> Next surfaces it as a request failure on dynamic routes. Manual chown on prod (2026-09-13) patched the live release but every deploy re-breaks it; line 66 even re-clobbers it mid-deploy.\n\nCHOSEN APPROACH: relocate the runtime-writable cache OUT of the release to a stable, guru-owned path, wired through systemd ReadWritePaths, and symlink .next/cache -> that path on every unpack. Release ownership stays deploy:deploy (no change to the self-heal, no mid-deploy ownership window on the live release), and the cache persists across deploys (warm cache, better hit rate). deploy.sh line 66 only touches releases/, so an external /srv/guru-web/next-cache is immune.\n\nREJECTED ALT: flip line 127 chown to guru:guru. Correct in principle but leaves line 66's 'chown -R deploy:deploy releases/' clobbering the still-live release's cache at the start of the next deploy (transient EACCES window on prod), and needs line 66 reworked into a container=deploy / children=guru split. More surface, more risk than the external-dir approach.\n\nNOTE: vps-bootstrap.sh is one-time and prod already exists, so the cache dir + unit edit need a one-time manual apply on prod in addition to landing in the repo (see child tickets).",
+  "relationships": {
+    "children": [
+      "d295d350",
+      "60219f46",
+      "eeea17fc",
+      "a9ecb61b",
+      "8273fe6c"
+    ]
+  }
+}

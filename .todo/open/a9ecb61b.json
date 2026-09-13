@@ -1,0 +1,15 @@
+{
+  "id": "a9ecb61b",
+  "type": "chore",
+  "state": "open",
+  "summary": "One-time prod apply of cache dir + unit edit, then verify guest /ask",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-13T14:53:21.481Z",
+  "updated_at": "2026-09-13T14:53:21.513Z",
+  "relationships": {
+    "parent": "4f515e43"
+  },
+  "description": "vps-bootstrap.sh is one-time and prod already exists, so land the runtime state by hand on guru-web-prod: create /srv/guru-web/next-cache (guru:guru 0750); install the updated guru-web.service with the new ReadWritePaths and 'systemctl daemon-reload'; deploy (or symlink current release's .next/cache to the shared dir) and 'systemctl restart guru-web'. Verify: guest ask on guru-ai.org returns a streamed answer, and 'journalctl -u guru-web' shows NO 'Failed to update prerender cache ... EACCES' for the request. Remove any leftover manual-chown workaround. Depends on d295d350-eeea17fc landing. Done: prod serves guest /ask; journal clean; note added to the ticket with the verification output."
+}
