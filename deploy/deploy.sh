@@ -120,11 +120,24 @@ fi
 #    existed BEFORE the tarball landed — it runs before unpack. After unpack,
 #    files extracted from the tarball keep the tarball's ownership. This is
 #    idempotent: chown -R on already-correct ownership is a no-op.
-#    Critical: `next start` needs to write .next/cache (mkdir) as `deploy`,
-#    so a root:root .next/cache causes EACCES on the first dynamic request —
-#    observed live after merge of 3cae5ea (guest /ask endpoint 500'd).
 log "fix release ownership"
 sudo /bin/chown -R deploy:deploy "$RELEASE"
+
+# 1c. Point this release's Next.js runtime cache at the persistent, guru-owned
+#    dir OUTSIDE the release. `next start` runs as guru (guru-web.service
+#    User=guru) — NOT deploy — but the release is deploy-owned (above) and the
+#    CI tarball excludes .next/cache, so the runtime would mkdir .next/cache
+#    inside a deploy-owned .next/ and hit EACCES on the first dynamic request.
+#    That is what 500'd guest /ask (observed live after merge of 3cae5ea).
+#    Symlinking makes guru write THROUGH to a dir it owns (/srv/guru-web/
+#    next-cache — created guru:guru by vps-bootstrap.sh, listed in the unit's
+#    ReadWritePaths), and the cache survives deploys (warm ISR/fetch cache).
+#    Created AFTER the chown above so `chown -R` never traverses it.
+#    todo:4f515e43
+log "link .next/cache → /srv/guru-web/next-cache (persistent, guru-owned)"
+rm -rf "$RELEASE/.next/cache"
+mkdir -p "$RELEASE/.next"
+ln -sfn /srv/guru-web/next-cache "$RELEASE/.next/cache"
 # build. `next build` baked NEXT_PUBLIC_* into the client bundle in CI —
 # deploy.yml fetches /etc/guru-web.public.env from this box first, so that
 # file remains the single source of truth for those values. The bundler
