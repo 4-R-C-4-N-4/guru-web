@@ -1,0 +1,21 @@
+{
+  "id": "d295d350",
+  "type": "chore",
+  "state": "done",
+  "summary": "Add guru-owned persistent cache dir + ReadWritePaths (bootstrap + systemd unit)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-13T14:53:21.252Z",
+  "updated_at": "2026-09-13T15:25:10.640Z",
+  "relationships": {
+    "parent": "4f515e43"
+  },
+  "description": "Repo changes so a fresh box provisions the stable cache path. deploy/vps-bootstrap.sh: create /srv/guru-web/next-cache owned guru:guru mode 0750 (idempotent, guarded like the other steps). deploy/guru-web.service: add 'ReadWritePaths=/srv/guru-web/next-cache' alongside the existing ReadWritePaths=/srv/guru-web/current, so ProtectSystem=strict permits writes there. No behavior change until deploy.sh points the symlink at it (next child). Done: both files updated + committed.",
+  "resolution": {
+    "commit": "eeb486c4cf8c054c8a0244a11349c6aefd0e2faf",
+    "resolved_at": "2026-09-13T15:25:10.640Z",
+    "resolved_by": "unknown",
+    "note": "vps-bootstrap.sh creates /srv/guru-web/next-cache (guru:guru 0750); guru-web.service adds ReadWritePaths for it so ProtectSystem=strict permits writes. No behavior change until deploy.sh symlinks .next/cache there (child 60219f46)."
+  }
+}

@@ -120,20 +120,64 @@ fi
 #    existed BEFORE the tarball landed — it runs before unpack. After unpack,
 #    files extracted from the tarball keep the tarball's ownership. This is
 #    idempotent: chown -R on already-correct ownership is a no-op.
-#    Critical: `next start` needs to write .next/cache (mkdir) as `deploy`,
-#    so a root:root .next/cache causes EACCES on the first dynamic request —
-#    observed live after merge of 3cae5ea (guest /ask endpoint 500'd).
 #
-#    We chown the whole releases/ tree, not just "$RELEASE": the sudoers
-#    grant (vps-bootstrap.sh /etc/sudoers.d/deploy) is an EXACT-command rule —
+#    We chown the whole releases/ tree, not just "$RELEASE": the sudoers grant
+#    (vps-bootstrap.sh /etc/sudoers.d/deploy) is an EXACT-command rule —
 #    `NOPASSWD: /bin/chown -R deploy:deploy /srv/guru-web/releases`. Passing a
 #    subpath like /srv/guru-web/releases/<sha> doesn't match it, so sudo
 #    prompts for a password and the non-interactive deploy dies (observed on
 #    the first post-merge deploy after this chown was added). `-R` over
-#    releases/ still recurses into the freshly-unpacked <sha> dir, so the new
-#    release's .next/cache is fixed either way.
+#    releases/ still recurses into the freshly-unpacked <sha> dir.
 log "fix release ownership"
 sudo /bin/chown -R deploy:deploy "$ROOT/releases"
+
+# 1c. Point this release's Next.js runtime cache at the persistent, guru-owned
+#    dir OUTSIDE the release. `next start` runs as guru (guru-web.service
+#    User=guru) — NOT deploy — but the release is deploy-owned (above) and the
+#    CI tarball excludes .next/cache, so the runtime would mkdir .next/cache
+#    inside a deploy-owned .next/ and hit EACCES on the first dynamic request.
+#    That is what 500'd guest /ask (observed live after merge of 3cae5ea).
+#    Symlinking makes guru write THROUGH to a dir it owns (/srv/guru-web/
+#    next-cache — created guru:guru by vps-bootstrap.sh, listed in the unit's
+#    ReadWritePaths). Created AFTER the ownership chown, and `chown -R` does
+#    not follow symlinks (-P default), so neither this deploy's chown of
+#    releases/ nor a later one ever rewrites the guru-owned target. .next
+#    itself is always present (the tarball excludes only .next/cache), so no
+#    mkdir is needed.
+#
+#    Behavior change vs. pre-PR: the cache was formerly cold each deploy
+#    (excluded from the tarball, recreated empty in-release); it now persists
+#    across deploys. Next's data cache (unstable_cache/fetch) is keyed
+#    independent of build id, so entries survive a deploy and can serve stale
+#    up to each entry's own `revalidate` TTL (blog 60s, corpus 1h) — this is
+#    Next's intended data-cache model, and code needing an immediate refresh
+#    already calls revalidateTag. The full-route/ISR cache is build-id-keyed,
+#    so stale pages from an old build are ignored. todo:4f515e43
+log "link .next/cache → /srv/guru-web/next-cache (persistent, guru-owned)"
+rm -rf "$RELEASE/.next/cache"
+ln -sfn /srv/guru-web/next-cache "$RELEASE/.next/cache"
+
+# 1d. Guard the cache invariant NOW — before migrations and the symlink swap —
+#    so a failure leaves the previous release FULLY live (current still points
+#    at it, service not restarted). This is the regression test for the EACCES
+#    that 500'd guest /ask (todo:4f515e43); `systemctl is-active` (below) can't
+#    catch it — the process boots fine and only 500s per-request. Everything
+#    checked is known at this point: the link must resolve to $CACHE_DIR, and
+#    $CACHE_DIR must be a directory owned by guru and owner-writable. (`stat`
+#    needs only search on the world-readable parents, not read on the 0750 dir.)
+CACHE_DIR=/srv/guru-web/next-cache
+CACHE_LINK="$RELEASE/.next/cache"
+log "verify runtime cache is guru-writable"
+if [[ ! -L "$CACHE_LINK" || "$(readlink -f "$CACHE_LINK")" != "$CACHE_DIR" ]]; then
+    echo "deploy.sh: $CACHE_LINK is not a symlink to $CACHE_DIR (target may be missing) — guru would EACCES writing .next/cache and guest /ask would 500. Aborting before swap." >&2
+    exit 1
+fi
+cache_owner="$(stat -c '%U' "$CACHE_DIR" 2>/dev/null || true)"
+cache_mode="$(stat -c '%A' "$CACHE_DIR" 2>/dev/null || true)"
+if [[ ! -d "$CACHE_DIR" || "$cache_owner" != guru || "${cache_mode:2:1}" != w ]]; then
+    echo "deploy.sh: $CACHE_DIR must be a directory owned by guru and owner-writable (found owner='${cache_owner:-?}' mode='${cache_mode:-?}'); runtime writes as guru would EACCES. Fix: sudo install -d -o guru -g guru -m 0750 $CACHE_DIR (see vps-bootstrap.sh). Aborting before swap." >&2
+    exit 1
+fi
 # build. `next build` baked NEXT_PUBLIC_* into the client bundle in CI —
 # deploy.yml fetches /etc/guru-web.public.env from this box first, so that
 # file remains the single source of truth for those values. The bundler

@@ -1,0 +1,21 @@
+{
+  "id": "eeea17fc",
+  "type": "chore",
+  "state": "done",
+  "summary": "deploy.sh: pre-restart guard asserting guru can write the cache, fail loud",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-13T14:53:21.418Z",
+  "updated_at": "2026-09-13T15:27:30.154Z",
+  "relationships": {
+    "parent": "4f515e43"
+  },
+  "description": "Add a hard check in deploy/deploy.sh before 'systemctl restart guru-web': assert the runtime user can create+write a file under the cache path, e.g. sudo -u guru /usr/bin/test -w /srv/guru-web/next-cache && sudo -u guru /bin/touch /srv/guru-web/next-cache/.deploy-writecheck (rm after), exit non-zero with a clear message otherwise. This is the regression test: any future ownership/path drift that would reintroduce the EACCES fails the deploy loudly instead of shipping a broken guest /ask. Depends on 60219f46. Done: guard added + committed; verified it exits non-zero when the dir is intentionally made unwritable.",
+  "resolution": {
+    "commit": "646808b1f943be8eafd9f92204aab47db8d744fb",
+    "resolved_at": "2026-09-13T15:27:30.154Z",
+    "resolved_by": "unknown",
+    "note": "Added pre-restart guard: aborts the deploy (exit 1) unless $RELEASE/.next/cache is a symlink to /srv/guru-web/next-cache AND that dir is owned by guru and owner-writable. Verified all branches via scratchpad guardtest.sh: missing-link/wrong-target/non-writable all rc=1, good case rc=0. is-active can't catch this (process boots, only 500s per-request), so this is the regression test that keeps the EACCES from ever silently shipping again."
+  }
+}
