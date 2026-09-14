@@ -40,6 +40,13 @@ export default function Landing(
   // convert POST for every returning user (PR #140 review).
   const [hasAsked, setHasAsked] = useState(false);
 
+  // True the moment a question is submitted in the embedded composer
+  // (AskView.onActive). The hero centers its content vertically until then;
+  // once asking, it top-anchors so the streaming answer grows downward instead
+  // of re-centering the whole column on every token (which shifted the text
+  // being read — todo:ff85dc98). Distinct from hasAsked (fires post-answer).
+  const [asking, setAsking] = useState(false);
+
   // Redirect signed-in users to /chat. Must run from an effect, not during
   // render — calling router.replace() inline triggers React's "Cannot update a
   // component while rendering a different component" warning under React 19 /
@@ -56,7 +63,7 @@ export default function Landing(
       <section style={{
         minHeight: '88vh',
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
+        alignItems: 'center', justifyContent: asking ? 'flex-start' : 'center',
         position: 'relative', overflow: 'hidden',
         padding: mobile ? '40px 20px' : '60px 24px',
       }}>
@@ -133,7 +140,7 @@ export default function Landing(
               clerkReady is left false: conversion runs on /ask?continue=1 after
               signup (the guest cookie rides across pages), and signed-in users
               never see this hero — they're bounced to /chat by the effect. */}
-          <AskView showHeading={false} onGuestAsked={() => setHasAsked(true)} />
+          <AskView showHeading={false} onActive={() => setAsking(true)} onGuestAsked={() => setHasAsked(true)} />
 
           {/* Single auth entry point for both returning and new visitors —
               Clerk's sign-in card surfaces "Sign up" beneath it (signUpUrl on

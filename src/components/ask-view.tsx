@@ -38,9 +38,15 @@ interface CitationData {
 const MAX_QUERY_CHARS = 4000;
 
 export default function AskView(
-  { clerkReady = false, showHeading = true, onGuestAsked }: {
+  { clerkReady = false, showHeading = true, onGuestAsked, onActive }: {
     clerkReady?: boolean;
     showHeading?: boolean;
+    // Fired once, the moment a question is submitted (before the answer
+    // streams). An embedding hero uses this to stop vertically centering its
+    // content: as the streamed answer grows, a centered flex column re-centers
+    // on every token and visibly shifts the text being read (todo:ff85dc98).
+    // Distinct from onGuestAsked, which fires only after a full answer.
+    onActive?: () => void;
     // Fired once a guest question has been asked AND answered here — i.e. a
     // guest cookie now exists on this browser and there is a real question to
     // adopt. An embedding parent (the homepage hero) uses this to decide
@@ -77,6 +83,9 @@ export default function AskView(
     setModelUsed(null);
     setInput('');
     setLoading(true);
+    // Signal the embedding hero to top-anchor before the answer starts
+    // growing, so streaming doesn't re-center (and shift) the view.
+    onActive?.();
 
     try {
       const res = await fetch('/api/query/guest', {
@@ -137,7 +146,7 @@ export default function AskView(
     } finally {
       setLoading(false);
     }
-  }, [input, loading, consumed, overLimit, onGuestAsked]);
+  }, [input, loading, consumed, overLimit, onGuestAsked, onActive]);
 
   // Strip the model's raw CITATIONS tail from the prose; cards render below
   // from the authoritative X-Citations set, or the parsed block as fallback.
