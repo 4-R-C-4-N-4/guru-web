@@ -178,6 +178,26 @@ if [[ ! -d "$CACHE_DIR" || "$cache_owner" != guru || "${cache_mode:2:1}" != w ]]
     echo "deploy.sh: $CACHE_DIR must be a directory owned by guru and owner-writable (found owner='${cache_owner:-?}' mode='${cache_mode:-?}'); runtime writes as guru would EACCES. Fix: sudo install -d -o guru -g guru -m 0750 $CACHE_DIR (see vps-bootstrap.sh). Aborting before swap." >&2
     exit 1
 fi
+# The filesystem being correct is necessary but NOT sufficient: the unit runs
+# ProtectSystem=strict, so guru can only write $CACHE_DIR if the *active* unit
+# lists it in ReadWritePaths. This script ships the symlink but never
+# reinstalls the unit (only vps-bootstrap.sh installs guru-web.service +
+# daemon-reload), so a repo unit that adds the grant silently never reaches
+# prod — the deploy goes green while the runtime write still fails. That is
+# how guest /ask broke *again* after todo:4f515e43: dir + symlink + ownership
+# all correct, but the installed unit predated `ReadWritePaths=-$CACHE_DIR`,
+# so writes through the symlink escaped every writable mount. Assert the
+# EFFECTIVE grant, not just the on-disk unit file. `systemctl show` reports
+# the loaded config (updated by daemon-reload, even before a restart) and
+# echoes the directive VERBATIM, space-separated on one line — so the
+# optional marker survives as `-/srv/guru-web/next-cache`. Wrap in spaces and
+# accept the path as a whole token with or without that leading `-`.
+# Unprivileged — no sudo. todo:a64cecd9
+rw_paths="$(systemctl show guru-web -p ReadWritePaths --value 2>/dev/null || true)"
+if [[ " $rw_paths " != *" $CACHE_DIR "* && " $rw_paths " != *" -$CACHE_DIR "* ]]; then
+    echo "deploy.sh: the active guru-web unit does not grant ReadWritePaths=$CACHE_DIR (found: '${rw_paths:-none}'). Under ProtectSystem=strict guru cannot write .next/cache, so guest /ask would fail at runtime even though the symlink and dir are correct. The unit file changed in the repo but was never reinstalled — fix: sudo cp $RELEASE/deploy/guru-web.service /etc/systemd/system/guru-web.service && sudo systemctl daemon-reload (then re-run the deploy). Aborting before swap." >&2
+    exit 1
+fi
 # build. `next build` baked NEXT_PUBLIC_* into the client bundle in CI —
 # deploy.yml fetches /etc/guru-web.public.env from this box first, so that
 # file remains the single source of truth for those values. The bundler
