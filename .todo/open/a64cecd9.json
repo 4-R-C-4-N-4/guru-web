@@ -1,0 +1,31 @@
+{
+  "id": "a64cecd9",
+  "type": "bug",
+  "state": "active",
+  "summary": "deploy cache guard misses systemd ReadWritePaths drift — unit-file change never reaches prod, guru can't write next-cache",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-14T20:57:53.132Z",
+  "updated_at": "2026-09-14T20:57:56.980Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh",
+      "lines": [
+        160,
+        180
+      ]
+    }
+  ],
+  "tags": [
+    "deploy",
+    "systemd",
+    "cache"
+  ],
+  "work": {
+    "branch": "todo/a64cecd9",
+    "base_branch": "main",
+    "started_at": "2026-09-14T20:57:56.980Z",
+    "started_by": "Backend Engineer"
+  }
+}
