@@ -1,0 +1,25 @@
+{
+  "id": "e56b0084",
+  "type": "debt",
+  "state": "open",
+  "summary": "deploy.sh self-updates its own script but never reconciles the systemd unit — guru-web.service changes in the repo don't reach prod without a manual vps-bootstrap/reinstall",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-14T21:00:07.185Z",
+  "updated_at": "2026-09-14T21:00:07.185Z",
+  "files": [
+    {
+      "path": "deploy/deploy.sh",
+      "lines": [
+        100,
+        115
+      ]
+    }
+  ],
+  "tags": [
+    "deploy",
+    "systemd",
+    "supply-chain"
+  ]
+}
