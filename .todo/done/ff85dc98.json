@@ -1,0 +1,26 @@
+{
+  "id": "ff85dc98",
+  "type": "bug",
+  "state": "done",
+  "summary": "Homepage hero re-centers on every streamed token — answer shifts the view while reading",
+  "source": {
+    "type": "agent"
+  },
+  "created_at": "2026-09-14T00:25:24.888Z",
+  "updated_at": "2026-09-14T00:26:26.699Z",
+  "description": "The headingless AskView is embedded in landing.tsx's hero <section> (minHeight 88vh, display:flex, column, alignItems/justifyContent:center) inside a maxWidth:560 centered column. As the guest answer streams, setAnswer(full) grows the block on every token; justifyContent:center re-centers the whole hero (GURU wordmark, tagline, composer, question echo) upward on each token, so the text the user is reading visibly shifts. Fix: top-anchor the hero once a question is submitted (justifyContent switches center→flex-start) so the answer grows downward without moving the content above it. Signal: AskView fires a new onActive callback at submit; landing tracks an 'asking' state. Source-level regression guard (project has no jsdom; static-render + source guards per ask-view.test.tsx / landing-cta.test.ts).",
+  "work": {
+    "branch": "todo/ff85dc98",
+    "base_branch": "main",
+    "started_at": "2026-09-14T00:25:24.989Z",
+    "started_by": "Backend Engineer"
+  },
+  "resolution": {
+    "commit": "8ad74593ad30f27c3e26f6af843f1aa0e7972794",
+    "resolved_at": "2026-09-14T00:26:26.699Z",
+    "resolved_by": "unknown",
+    "test_file": "src/__tests__/hero-stream-stable.test.ts",
+    "test_function": "the hero centers only until asking, then top-anchors (no re-center on stream)",
+    "note": "AskView.onActive fires at submit; landing top-anchors the hero once asking so streaming no longer re-centers the column. Source-level guard (no jsdom in project)."
+  }
+}
