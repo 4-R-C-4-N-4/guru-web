@@ -41,10 +41,12 @@ export default function Landing(
   const [hasAsked, setHasAsked] = useState(false);
 
   // True the moment a question is submitted in the embedded composer
-  // (AskView.onActive). The hero centers its content vertically until then;
-  // once asking, it top-anchors so the streaming answer grows downward instead
-  // of re-centering the whole column on every token (which shifted the text
-  // being read — todo:ff85dc98). Distinct from hasAsked (fires post-answer).
+  // (AskView.onActive(true)). The hero centers its content vertically until
+  // then; once asking, it top-anchors so the streaming answer grows downward
+  // instead of re-centering the whole column on every token (which shifted the
+  // text being read — todo:ff85dc98). Reset to false if the query errors before
+  // any answer (onActive(false)), so the hero re-centers around the composer
+  // rather than stranding it above an empty gap. Distinct from hasAsked (post-answer).
   const [asking, setAsking] = useState(false);
 
   // Redirect signed-in users to /chat. Must run from an effect, not during
@@ -75,7 +77,10 @@ export default function Landing(
           filter: 'blur(60px)', pointerEvents: 'none',
         }} />
 
-        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, width: '100%', maxWidth: 560 }}>
+        {/* Widen to AskView's own measure (680) once asking so the streamed
+            answer isn't clamped to the narrow marketing column; the centered
+            wordmark/tagline keep their own inner max-widths above it. */}
+        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, width: '100%', maxWidth: asking ? 680 : 560 }}>
           {/* Logo */}
           <div style={{
             fontFamily: tokens.font.display, fontSize: mobile ? 48 : 72, fontWeight: 300,
@@ -140,7 +145,7 @@ export default function Landing(
               clerkReady is left false: conversion runs on /ask?continue=1 after
               signup (the guest cookie rides across pages), and signed-in users
               never see this hero — they're bounced to /chat by the effect. */}
-          <AskView showHeading={false} onActive={() => setAsking(true)} onGuestAsked={() => setHasAsked(true)} />
+          <AskView showHeading={false} onActive={setAsking} onGuestAsked={() => setHasAsked(true)} />
 
           {/* Single auth entry point for both returning and new visitors —
               Clerk's sign-in card surfaces "Sign up" beneath it (signUpUrl on

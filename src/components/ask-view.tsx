@@ -41,12 +41,15 @@ export default function AskView(
   { clerkReady = false, showHeading = true, onGuestAsked, onActive }: {
     clerkReady?: boolean;
     showHeading?: boolean;
-    // Fired once, the moment a question is submitted (before the answer
-    // streams). An embedding hero uses this to stop vertically centering its
-    // content: as the streamed answer grows, a centered flex column re-centers
-    // on every token and visibly shifts the text being read (todo:ff85dc98).
-    // Distinct from onGuestAsked, which fires only after a full answer.
-    onActive?: () => void;
+    // Fired with `true` the moment a question is submitted (before the answer
+    // streams), and again with `false` if the request fails before any answer
+    // is produced. An embedding hero uses `true` to stop vertically centering
+    // its content — as the streamed answer grows, a centered flex column
+    // re-centers on every token and visibly shifts the text being read
+    // (todo:ff85dc98) — and uses `false` to re-center on error, so a failed
+    // query doesn't strand a mostly-empty hero top-anchored with a large gap
+    // below it. Distinct from onGuestAsked, which fires only after a full answer.
+    onActive?: (active: boolean) => void;
     // Fired once a guest question has been asked AND answered here — i.e. a
     // guest cookie now exists on this browser and there is a real question to
     // adopt. An embedding parent (the homepage hero) uses this to decide
@@ -85,7 +88,7 @@ export default function AskView(
     setLoading(true);
     // Signal the embedding hero to top-anchor before the answer starts
     // growing, so streaming doesn't re-center (and shift) the view.
-    onActive?.();
+    onActive?.(true);
 
     try {
       const res = await fetch('/api/query/guest', {
@@ -106,6 +109,9 @@ export default function AskView(
       if (!res.ok || !res.body) {
         setError('Something went wrong. Please try again.');
         setLoading(false);
+        // No answer will render — let the hero re-center around the composer
+        // + error instead of stranding it top-anchored above an empty gap.
+        onActive?.(false);
         return;
       }
 
@@ -143,6 +149,7 @@ export default function AskView(
     } catch (err) {
       console.error('[ask] guest query error:', err);
       setError('Something went wrong. Please try again.');
+      onActive?.(false);
     } finally {
       setLoading(false);
     }
@@ -159,8 +166,12 @@ export default function AskView(
   const cards: CitationData[] = citations.length > 0 ? citations : parsed?.citations ?? [];
   const modelDisplay = displayForModelId(modelUsed);
 
+  // textAlign:'left' on the root is explicit so the question echo + streamed
+  // answer read left-aligned even when embedded under a centered hero
+  // (landing.tsx sets textAlign:'center' for its wordmark); the heading, char
+  // counter and error blocks below re-center themselves where they need to.
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px 64px', color: tokens.text.primary }}>
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px 64px', color: tokens.text.primary, textAlign: 'left' }}>
       {/* Finishes a guest→account conversion when Clerk returns the visitor
           here with ?continue=1 after signup. Only mounted where ClerkProvider
           exists (its useUser() would crash on the tailnet host). */}

@@ -23,16 +23,19 @@ const LANDING_SRC  = read('../components/landing.tsx');
 const ASK_VIEW_SRC = read('../components/ask-view.tsx');
 
 describe('hero stays anchored while the answer streams (todo:ff85dc98)', () => {
-  it('AskView exposes an onActive callback and fires it when a question is submitted', () => {
-    // Prop is declared…
-    expect(ASK_VIEW_SRC).toMatch(/onActive\?\s*:\s*\(\)\s*=>\s*void/);
-    // …and invoked (in handleAsk, before the answer streams).
-    expect(ASK_VIEW_SRC).toContain('onActive?.()');
+  it('AskView exposes an onActive(active) callback and fires it when a question is submitted', () => {
+    // Prop is declared with a boolean payload…
+    expect(ASK_VIEW_SRC).toMatch(/onActive\?\s*:\s*\(active:\s*boolean\)\s*=>\s*void/);
+    // …invoked with true in handleAsk, before the answer streams…
+    expect(ASK_VIEW_SRC).toContain('onActive?.(true)');
+    // …and with false when a query errors before any answer, so the hero
+    // re-centers instead of stranding the composer above an empty gap.
+    expect(ASK_VIEW_SRC).toContain('onActive?.(false)');
   });
 
   it('landing lifts onActive into an `asking` state', () => {
     expect(LANDING_SRC).toMatch(/const\s*\[\s*asking\s*,\s*setAsking\s*\]\s*=\s*useState\(false\)/);
-    expect(LANDING_SRC).toContain('onActive={() => setAsking(true)}');
+    expect(LANDING_SRC).toContain('onActive={setAsking}');
   });
 
   it('the hero centers only until asking, then top-anchors (no re-center on stream)', () => {
