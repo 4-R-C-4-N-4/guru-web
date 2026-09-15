@@ -33,10 +33,10 @@ export const FALLBACK_PRICING: Record<string, ModelPrice> = {
   // live path can pick. BRD-model-selection §6.4.
   // Approximate bootstrap values; `npm run sync-pricing` overwrites
   // these with live OpenRouter rates on its next run.
-  'deepseek/deepseek-v4-pro-0813': {
-    input_per_mtok: 1.1154,
-    output_per_mtok: 3.3462,
-    cached_input_per_mtok: 0.0372,
+  'deepseek/deepseek-v4.1-flash': {
+    input_per_mtok: 0.15,
+    output_per_mtok: 0.60,
+    cached_input_per_mtok: 0.003,
   },
   'x-ai/grok-4.6': {
     input_per_mtok: 2.0,
@@ -66,10 +66,10 @@ export const FALLBACK_PRICING: Record<string, ModelPrice> = {
   // One-release safety net: the ids just rolled off the picker stay so
   // any queries still in flight against the previous defaults cost-out
   // correctly before the network sync runs. Drop on the next bump.
-  'deepseek/deepseek-v4-pro': {
-    input_per_mtok: 0.435,
-    output_per_mtok: 0.870,
-    cached_input_per_mtok: 0.0036,
+  'deepseek/deepseek-v4-pro-0813': {
+    input_per_mtok: 1.1154,
+    output_per_mtok: 3.3462,
+    cached_input_per_mtok: 0.0372,
   },
   'x-ai/grok-4.3': {
     input_per_mtok: 1.25,

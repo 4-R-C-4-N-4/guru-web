@@ -1,0 +1,31 @@
+{
+  "id": "17431f5f",
+  "type": "chore",
+  "state": "active",
+  "summary": "bump deepseek curated slug to deepseek-v4.1-flash (faster/cheaper; shrinks reasoning gap behind Cloudflare)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-15T22:18:20.860Z",
+  "updated_at": "2026-09-15T22:18:20.906Z",
+  "files": [
+    {
+      "path": "src/lib/curated-models.ts",
+      "lines": [
+        21,
+        27
+      ]
+    }
+  ],
+  "tags": [
+    "model",
+    "deploy",
+    "cloudflare"
+  ],
+  "work": {
+    "branch": "todo/17431f5f",
+    "base_branch": "main",
+    "started_at": "2026-09-15T22:18:20.906Z",
+    "started_by": "Backend Engineer"
+  }
+}
