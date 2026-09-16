@@ -46,7 +46,7 @@ describe('CURATED_MODELS', () => {
 
 describe('resolveCuratedModel()', () => {
   it('returns the OpenRouter id for each slug', () => {
-    expect(resolveCuratedModel('deepseek')).toBe('deepseek/deepseek-v4-pro-0813');
+    expect(resolveCuratedModel('deepseek')).toBe('deepseek/deepseek-v4.1-flash');
     expect(resolveCuratedModel('xai')).toBe('x-ai/grok-4.6');
     expect(resolveCuratedModel('google')).toBe('google/gemini-3.8-flash');
     expect(resolveCuratedModel('anthropic')).toBe('anthropic/claude-sonnet-5');

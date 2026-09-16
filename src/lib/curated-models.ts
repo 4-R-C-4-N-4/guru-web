@@ -19,7 +19,7 @@
  */
 
 export const CURATED_MODELS = {
-  deepseek:  'deepseek/deepseek-v4-pro-0813',
+  deepseek:  'deepseek/deepseek-v4.1-flash',
   xai:       'x-ai/grok-4.6',
   google:    'google/gemini-3.8-flash',
   anthropic: 'anthropic/claude-sonnet-5',
