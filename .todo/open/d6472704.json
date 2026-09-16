@@ -1,0 +1,15 @@
+{
+  "id": "d6472704",
+  "type": "feature",
+  "state": "open",
+  "summary": "Semantic query→concept matching for the graph retrieval leg (pgvector kNN, reuse query embedding)",
+  "source": {
+    "type": "human"
+  },
+  "created_at": "2026-09-19T23:27:41.721Z",
+  "updated_at": "2026-09-19T23:27:41.721Z",
+  "tags": [
+    "retrieval",
+    "concepts"
+  ]
+}

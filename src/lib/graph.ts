@@ -157,6 +157,55 @@ export async function extractConcepts(queryText: string): Promise<ConceptMatch[]
 }
 
 /**
+ * Semantic query→concept matching (ticket d6472704). Where extractConcepts needs
+ * a literal word overlap with a concept label, this matches the query embedding
+ * against concept-definition embeddings via pgvector cosine — so a paraphrased
+ * query ("how does the soul return to God") reaches the right concept (henosis,
+ * apotheosis) without sharing its label words.
+ *
+ * Reuses the query embedding already computed for the vector leg (no extra
+ * embed). ~150 concepts → a sub-ms sequential cosine scan, no ANN index.
+ * `maxDistance` gates by cosine distance (0=identical); concepts without an
+ * embedding are skipped. Matches are returned at tier 'concept' — they are
+ * direct concept hits, just found semantically rather than lexically.
+ */
+export async function extractConceptsSemantic(
+  queryEmbedding: number[],
+  k: number,
+  maxDistance: number
+): Promise<ConceptMatch[]> {
+  const rows = await query<{ concept_id: string; distance: number }>(
+    `SELECT id AS concept_id, (embedding <=> $1::vector) AS distance
+       FROM concepts
+      WHERE embedding IS NOT NULL
+      ORDER BY embedding <=> $1::vector
+      LIMIT $2`,
+    [JSON.stringify(queryEmbedding), k]
+  );
+  return rows
+    .filter(r => r.distance <= maxDistance)
+    .map(r => ({ conceptId: r.concept_id, matchTier: 'concept' as MatchTier }));
+}
+
+/**
+ * Merge keyword and semantic concept matches, keeping the strongest tier per
+ * concept (same strongest-wins rule as extractConcepts). Keyword hits are exact
+ * (precision); semantic hits fill in paraphrase recall.
+ */
+export function mergeConceptMatches(...groups: ConceptMatch[][]): ConceptMatch[] {
+  const best = new Map<string, MatchTier>();
+  for (const g of groups) {
+    for (const m of g) {
+      const cur = best.get(m.conceptId);
+      if (!cur || MATCH_TIER_RANK[m.matchTier] > MATCH_TIER_RANK[cur]) {
+        best.set(m.conceptId, m.matchTier);
+      }
+    }
+  }
+  return Array.from(best, ([conceptId, matchTier]) => ({ conceptId, matchTier }));
+}
+
+/**
  * Summarise how a query fanned out, for query-expansion transparency
  * (todo:9d2ad427 §8): the family/domain labels a query matched and how many
  * concepts each pulled in. Concept-tier (1:1) matches are excluded — only

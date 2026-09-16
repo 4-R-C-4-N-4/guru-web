@@ -7,7 +7,7 @@
 
 import { query, one } from './db';
 import { embed } from './embed';
-import { extractConcepts, walkGraph, buildScopeFilter, buildSummaryScopeFilter } from './graph';
+import { extractConcepts, extractConceptsSemantic, mergeConceptMatches, walkGraph, buildScopeFilter, buildSummaryScopeFilter } from './graph';
 import type { RetrievedChunk, UserPreferences } from './types';
 
 /**
@@ -82,10 +82,16 @@ export async function retrieve(
   // loadPrimaryFloor() never rejects (its DB read is internally caught), so this
   // floating promise is safe to await downstream.
   const primaryFloorPromise = studyWorkId ? Promise.resolve(undefined) : loadPrimaryFloor();
+  // Embed the query ONCE and share it across the vector and graph legs. The
+  // vector leg always needed it; the graph leg's new semantic concept match
+  // (ticket d6472704) reuses the same vector — so no extra Ollama call on the
+  // hot path. vectorSearch/graphSearch still embed themselves if not given one
+  // (keeps direct callers and tests working).
+  const queryEmbedding = await embed(queryText);
   // eslint-disable-next-line prefer-const -- first three are reassigned by the quality filter
   let [vectorResults, graphResults, lexicalResults, summaryResults] = await Promise.all([
-    vectorSearch(queryText, prefs, topK * poolMult),
-    graphSearch(queryText, prefs, topK * 2),
+    vectorSearch(queryText, prefs, topK * poolMult, queryEmbedding),
+    graphSearch(queryText, prefs, topK * 2, queryEmbedding),
     runLexical ? lexicalSearch(queryText, prefs, topK * 2) : Promise.resolve([] as RetrievedChunk[]),
     studyWorkId
       ? summarySearch(queryText, prefs, topK, studyWorkId)
@@ -316,9 +322,10 @@ async function corpusRarity(): Promise<Map<string, number>> {
 export async function vectorSearch(
   queryText: string,
   prefs: UserPreferences,
-  limit: number
+  limit: number,
+  providedEmbedding?: number[]
 ): Promise<RetrievedChunk[]> {
-  const queryEmbedding = await embed(queryText);
+  const queryEmbedding = providedEmbedding ?? await embed(queryText);
   const { where, params, paramIndex } = buildScopeFilter(prefs, 2); // $1 = embedding
 
   const rows = await query<RetrievedChunk & { distance: number }>(
@@ -370,13 +377,24 @@ function cosine(a: number[], b: number[]): number {
 async function graphSearch(
   queryText: string,
   prefs: UserPreferences,
-  limit: number
+  limit: number,
+  queryEmbedding?: number[]
 ): Promise<RetrievedChunk[]> {
   // Measurement toggle (todo:72f1334e): GRAPH_LEG=off isolates the graph leg's
   // contribution to precision so we can tell whether matcher quality even moves
   // the metric. Default on — behaviour-neutral.
   if (process.env.GRAPH_LEG === 'off') return [];
-  const concepts = await extractConcepts(queryText);
+  const keyword = await extractConcepts(queryText);
+  // Semantic concept match (ticket d6472704), env-gated for a clean A/B. Adds
+  // paraphrase recall the keyword LIKE match misses, reusing the query embedding.
+  // CONCEPT_SEMANTIC=on enables; K / MAXDIST tune breadth and the cosine gate.
+  let concepts = keyword;
+  if (process.env.CONCEPT_SEMANTIC === 'on' && queryEmbedding) {
+    const k = Number(process.env.CONCEPT_SEMANTIC_K) || 8;
+    const maxDist = Number(process.env.CONCEPT_SEMANTIC_MAXDIST) || 0.45;
+    const semantic = await extractConceptsSemantic(queryEmbedding, k, maxDist);
+    concepts = mergeConceptMatches(keyword, semantic);
+  }
   if (concepts.length === 0) return [];
   return walkGraph(concepts, prefs, limit);
 }

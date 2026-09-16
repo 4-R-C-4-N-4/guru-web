@@ -81,12 +81,14 @@ describe('PROVIDER_DISPLAY', () => {
   // formula (round, ceil, etc.) that compiles cleanly still gets
   // caught by the order-of-magnitude check. Ranges reflect BRD §3.2
   // expectations under the current $5/30d cap, calibrated to real
-  // OpenRouter list prices (deepseek ~9, xai ~5, google ~11,
+  // OpenRouter list prices (deepseek ~61, xai ~5, google ~11,
   // anthropic ~4, openai ~3). Bump if the policy or list prices move
-  // materially — headroom absorbs routine price drift.
+  // materially — headroom absorbs routine price drift. deepseek jumped
+  // when its slug rolled from v4-pro to the ~7× cheaper v4.1-flash
+  // (todo:17431f5f).
   it('questionsPerDay falls in expected ranges per provider', () => {
-    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeGreaterThanOrEqual(6);
-    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeLessThanOrEqual(14);
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeGreaterThanOrEqual(40);
+    expect(PROVIDER_DISPLAY.deepseek.questionsPerDay).toBeLessThanOrEqual(90);
     expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeGreaterThanOrEqual(3);
     expect(PROVIDER_DISPLAY.xai.questionsPerDay).toBeLessThanOrEqual(8);
     expect(PROVIDER_DISPLAY.google.questionsPerDay).toBeGreaterThanOrEqual(8);

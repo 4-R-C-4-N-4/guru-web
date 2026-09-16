@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({
 import * as db from '@/lib/db';
 const mockQuery = db.query as MockedFunction<typeof db.query>;
 
-import { extractConcepts, walkGraph, summarizeExpansion } from '@/lib/graph';
+import { extractConcepts, extractConceptsSemantic, mergeConceptMatches, walkGraph, summarizeExpansion } from '@/lib/graph';
 import type { UserPreferences } from '@/lib/types';
 
 describe('extractConcepts — three-namespace match (todo:a72128b2)', () => {
@@ -427,5 +427,37 @@ describe('extractConcepts — matcher mode (todo:72f1334e)', () => {
     await extractConcepts('a.b(c'); // one token after tokenisation
     const [, params] = mockQuery.mock.calls[0];
     expect(params).toEqual(['(^|[^[:alpha:]])a\\.b\\(c([^[:alpha:]]|$)']);
+  });
+});
+
+describe('semantic query→concept matching (d6472704)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('mergeConceptMatches keeps the strongest tier per concept', () => {
+    const merged = mergeConceptMatches(
+      [{ conceptId: 'henosis', matchTier: 'family' }, { conceptId: 'logos', matchTier: 'domain' }],
+      [{ conceptId: 'henosis', matchTier: 'concept' }, { conceptId: 'apotheosis', matchTier: 'concept' }],
+    );
+    const byId = Object.fromEntries(merged.map(m => [m.conceptId, m.matchTier]));
+    expect(byId.henosis).toBe('concept');      // semantic (concept) beats keyword family
+    expect(byId.logos).toBe('domain');         // untouched
+    expect(byId.apotheosis).toBe('concept');   // semantic-only
+    expect(merged).toHaveLength(3);            // deduped
+  });
+
+  it('extractConceptsSemantic gates by cosine distance and returns concept-tier matches', async () => {
+    mockQuery.mockResolvedValueOnce([
+      { concept_id: 'henosis', distance: 0.20 },
+      { concept_id: 'apotheosis', distance: 0.42 },
+      { concept_id: 'ritual_purity', distance: 0.80 }, // beyond maxDist → dropped
+    ]);
+    const out = await extractConceptsSemantic([0.1, 0.2, 0.3], 8, 0.45);
+    expect(out).toEqual([
+      { conceptId: 'henosis', matchTier: 'concept' },
+      { conceptId: 'apotheosis', matchTier: 'concept' },
+    ]);
+    // kNN limit passed through
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params?.[1]).toBe(8);
   });
 });
