@@ -391,7 +391,7 @@ async function graphSearch(
   let concepts = keyword;
   if (process.env.CONCEPT_SEMANTIC === 'on' && queryEmbedding) {
     const k = Number(process.env.CONCEPT_SEMANTIC_K) || 8;
-    const maxDist = Number(process.env.CONCEPT_SEMANTIC_MAXDIST) || 0.45;
+    const maxDist = Number(process.env.CONCEPT_SEMANTIC_MAXDIST) || 0.42;
     const semantic = await extractConceptsSemantic(queryEmbedding, k, maxDist);
     concepts = mergeConceptMatches(keyword, semantic);
   }
