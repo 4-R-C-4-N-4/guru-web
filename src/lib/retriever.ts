@@ -8,6 +8,7 @@
 import { query, one } from './db';
 import { embed } from './embed';
 import { extractConcepts, extractConceptsSemantic, mergeConceptMatches, walkGraph, buildScopeFilter, buildSummaryScopeFilter } from './graph';
+import { classifyConcepts } from './concept-head';
 import type { RetrievedChunk, UserPreferences } from './types';
 
 /**
@@ -385,15 +386,24 @@ async function graphSearch(
   // the metric. Default on — behaviour-neutral.
   if (process.env.GRAPH_LEG === 'off') return [];
   const keyword = await extractConcepts(queryText);
-  // Semantic concept match (ticket d6472704), env-gated for a clean A/B. Adds
-  // paraphrase recall the keyword LIKE match misses, reusing the query embedding.
-  // CONCEPT_SEMANTIC=on enables; K / MAXDIST tune breadth and the cosine gate.
+  // Semantic concept match (ticket d6472704) adds paraphrase recall the keyword
+  // LIKE match misses, reusing the query embedding. Two implementations, both
+  // env-gated for clean A/Bs; the trained head wins ~2× over cosine on held-out
+  // query→concept, so it takes precedence when enabled.
+  //   CONCEPT_HEAD=on      trained logistic head (concept-head.json); _K, _THRESHOLD
+  //   CONCEPT_SEMANTIC=on  raw cosine kNN over concept embeddings; _K, _MAXDIST
   let concepts = keyword;
-  if (process.env.CONCEPT_SEMANTIC === 'on' && queryEmbedding) {
-    const k = Number(process.env.CONCEPT_SEMANTIC_K) || 8;
-    const maxDist = Number(process.env.CONCEPT_SEMANTIC_MAXDIST) || 0.42;
-    const semantic = await extractConceptsSemantic(queryEmbedding, k, maxDist);
-    concepts = mergeConceptMatches(keyword, semantic);
+  if (queryEmbedding) {
+    if (process.env.CONCEPT_HEAD === 'on') {
+      const k = Number(process.env.CONCEPT_HEAD_K) || 8;
+      const thr = Number(process.env.CONCEPT_HEAD_THRESHOLD) || 0.5;
+      concepts = mergeConceptMatches(keyword, classifyConcepts(queryEmbedding, k, thr));
+    } else if (process.env.CONCEPT_SEMANTIC === 'on') {
+      const k = Number(process.env.CONCEPT_SEMANTIC_K) || 8;
+      const maxDist = Number(process.env.CONCEPT_SEMANTIC_MAXDIST) || 0.42;
+      const semantic = await extractConceptsSemantic(queryEmbedding, k, maxDist);
+      concepts = mergeConceptMatches(keyword, semantic);
+    }
   }
   if (concepts.length === 0) return [];
   return walkGraph(concepts, prefs, limit);
