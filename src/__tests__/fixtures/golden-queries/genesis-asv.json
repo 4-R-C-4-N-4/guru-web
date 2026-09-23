@@ -1,0 +1,30 @@
+{
+  "work": "genesis-asv",
+  "tradition": "biblical",
+  "corpus_version": "68",
+  "frozenEval": true,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "an ordered account of how the divine brings the cosmos into being over a succession of days, dividing light from dark and the waters below from the waters above, summoning dry land, vegetation, and the greater and lesser lights of the sky, then the swarming creatures of sea, air, and land, and last of all fashioning humankind to resemble its maker and to govern every living thing",
+      "provenanceChunkIds": ["biblical.genesis-asv.001"],
+      "mustIncludeTraditions": ["biblical"],
+      "mustIncludeWork": true,
+      "note": "The six-day creation. 'firmament', 'let there be light', 'in our image', 'dominion', 'be fruitful and multiply' paraphrased away; no proper nouns to anchor on in this opening."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "a man is tested when he is told to take the son he waited a lifetime for, travel to a distant mountain, and kill him as an offering; he ties the boy upon the wood he has laid out and lifts the blade, but a voice from heaven halts him and he offers instead a ram he finds caught by its horns in the brush nearby",
+      "provenanceChunkIds": ["biblical.genesis-asv.026"],
+      "mustIncludeTraditions": ["biblical"],
+      "mustIncludeWork": true,
+      "note": "The binding of Isaac (Gen 22). 'burnt-offering', 'Moriah', 'thicket', 'lay not thy hand upon the lad', 'Jehovah-jireh' paraphrased away; 'Abraham'/'Isaac' deliberately omitted rather than used as anchors, to keep it a real recall test."
+    },
+    {
+      "kind": "relevance",
+      "query": "how did the ordered world and the first human beings come to exist, and why did death, toil, and estrangement enter human life",
+      "provenanceChunkIds": ["biblical.genesis-asv.003"],
+      "note": "Eden and the fall. Cosmogony and the origin of mortality/suffering are answered across many traditions; no asserted target, graded post-hoc."
+    }
+  ]
+}

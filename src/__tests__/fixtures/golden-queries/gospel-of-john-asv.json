@@ -1,0 +1,30 @@
+{
+  "work": "gospel-of-john-asv",
+  "tradition": "biblical",
+  "corpus_version": "68",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "a meditation that sets the divine word at the very beginning, present with God and itself God, the one through whom all things were made, holding a life that shone as a light the dark could not master, and who at last entered the world wrapped in human flesh, brimming with kindness and truth",
+      "provenanceChunkIds": ["biblical.gospel-of-john-asv.001"],
+      "mustIncludeTraditions": ["biblical"],
+      "mustIncludeWork": true,
+      "note": "The Logos prologue (John 1). 'the Word', 'the Word became flesh', 'dwelt among us', 'full of grace and truth', 'the darkness apprehended it not' all paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "the teacher declares himself the true food sent down from above and warns that unless people feed on his body and take in his blood they hold no life within them; the saying repels the crowd and many followers walk away, while the closest disciples remain, asking where else they would go when he alone holds the message of unending life",
+      "provenanceChunkIds": ["biblical.gospel-of-john-asv.011"],
+      "mustIncludeTraditions": ["biblical"],
+      "mustIncludeWork": true,
+      "note": "The bread-of-life discourse and the falling-away (John 6). 'I am the bread of life', 'eat my flesh and drink my blood', 'a hard saying', 'words of eternal life' paraphrased away; 'Peter' omitted."
+    },
+    {
+      "kind": "relevance",
+      "query": "what does it take to be born a second time, from above, into a higher and lasting kind of life",
+      "provenanceChunkIds": ["biblical.gospel-of-john-asv.004"],
+      "note": "The night conversation on being born of water and spirit. Spiritual rebirth/second birth is answered across traditions; no asserted target, graded post-hoc."
+    }
+  ]
+}

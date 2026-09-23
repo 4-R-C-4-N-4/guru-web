@@ -1,0 +1,30 @@
+{
+  "work": "revelation-asv",
+  "tradition": "biblical",
+  "corpus_version": "68",
+  "frozenEval": false,
+  "queries": [
+    {
+      "kind": "recall-probe",
+      "query": "a vision of a radiant throne encircled by robed elders and by four creatures covered in eyes who never rest from praise, where a scroll sealed seven times over can be opened by no one until a lamb that appears to have been killed yet stands alive steps forward to take it, and the whole assembly falls down with harps and vials of incense, singing a fresh song of praise",
+      "provenanceChunkIds": ["biblical.revelation-asv.005"],
+      "mustIncludeTraditions": ["biblical"],
+      "mustIncludeWork": true,
+      "note": "The throne-room and the Lamb taking the sealed book (Rev 4-5). 'twenty-four elders', 'seven seals', 'Lion of the tribe of Judah', 'Worthy is the Lamb', 'new song', 'golden bowls of incense which are the prayers of the saints' paraphrased away."
+    },
+    {
+      "kind": "recall-probe",
+      "query": "as the sealed scroll is unsealed one by one, mounted figures ride out in turn — one crowned on a white horse going out to conquer, one on a fiery-red horse granted power to strip peace from the earth so that people slaughter one another, one on a black horse holding a balance while a voice sets the price of a day's grain, and a sickly pale horse whose rider bears the name Death, with the grave trailing behind",
+      "provenanceChunkIds": ["biblical.revelation-asv.006"],
+      "mustIncludeTraditions": ["biblical"],
+      "mustIncludeWork": true,
+      "note": "The first four seals / the horsemen (Rev 6). Horse colors and the rider named Death kept as reader-honest anchors any reader of the work knows; 'Hades followed with him', 'a measure of wheat for a shilling', 'a great sword' paraphrased away."
+    },
+    {
+      "kind": "relevance",
+      "query": "what happens at the end of time when the dead are finally judged, evil is destroyed for good, and the world is remade",
+      "provenanceChunkIds": ["biblical.revelation-asv.020"],
+      "note": "The great white throne judgment and the new heaven and earth. Final judgment and cosmic renewal are answered across apocalyptic traditions (e.g. Zoroastrian frashokereti); no asserted target, graded post-hoc."
+    }
+  ]
+}
