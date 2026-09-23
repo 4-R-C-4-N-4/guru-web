@@ -57,6 +57,13 @@ export const tokens = {
     norse:                   '#8a9ab8',
     celtic:                  '#6ab04a',
     finnic:                  '#7ac2c2',
+    // Added with the biblical launch — these four were falling back to grey
+    // (no key in the map). Slotted into open arcs of the hue wheel so they do
+    // not collide with existing traditions; keys are corpus tradition slugs.
+    biblical:                '#c04a66',
+    hinduism:                '#e08a20',
+    theosophy:               '#b054c0',
+    native_american:         '#9ab84a',
   },
   tier: {
     verified: '#c4a35a',
