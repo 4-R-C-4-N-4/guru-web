@@ -63,6 +63,7 @@ export const PRESET_AXES: PresetAxis[] = [
           'mesopotamian', 'egyptian', 'upanishads', 'zoroastrianism',
           'taoism', 'buddhism', 'greek_mystery', 'platonism',
           'neoplatonism', 'gnosticism', 'hermeticism', 'mandaean',
+          'biblical', 'hinduism', 'native_american',
         ],
       },
       {
@@ -76,7 +77,7 @@ export const PRESET_AXES: PresetAxis[] = [
       {
         id: 'modern',
         label: 'Modern',
-        members: ['renaissance_hermeticism', 'western_esoteric', 'finnic'],
+        members: ['renaissance_hermeticism', 'western_esoteric', 'finnic', 'theosophy'],
       },
     ],
   },
@@ -89,26 +90,26 @@ export const PRESET_AXES: PresetAxis[] = [
         members: [
           'platonism', 'neoplatonism', 'greek_mystery', 'gnosticism',
           'hermeticism', 'christian_mysticism', 'renaissance_hermeticism',
-          'western_esoteric',
+          'western_esoteric', 'theosophy',
         ],
       },
       {
         id: 'eastern',
         label: 'Eastern',
-        members: ['buddhism', 'taoism', 'upanishads', 'shinto'],
+        members: ['buddhism', 'taoism', 'upanishads', 'shinto', 'hinduism'],
       },
       {
         id: 'near_eastern',
         label: 'Near Eastern',
         members: [
           'egyptian', 'mesopotamian', 'zoroastrianism',
-          'jewish_mysticism', 'sufism', 'mandaean',
+          'jewish_mysticism', 'sufism', 'mandaean', 'biblical',
         ],
       },
       {
         id: 'indigenous',
         label: 'Indigenous',
-        members: ['finnic', 'celtic', 'norse', 'egyptian'],
+        members: ['finnic', 'celtic', 'norse', 'egyptian', 'native_american'],
       },
     ],
   },
@@ -131,7 +132,7 @@ export const PRESET_AXES: PresetAxis[] = [
       {
         id: 'abrahamic',
         label: 'Abrahamic',
-        members: ['christian_mysticism', 'jewish_mysticism', 'sufism', 'mandaean'],
+        members: ['biblical', 'christian_mysticism', 'jewish_mysticism', 'sufism', 'mandaean'],
       },
     ],
   },
